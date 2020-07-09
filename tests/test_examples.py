@@ -1,5 +1,5 @@
 import pytest
-from minirst import reformat
+from minirst import reformat, find_indent_blocks, compute_indents
 
 import glob
 test_files = glob.glob('examples/*.rst')
@@ -13,3 +13,32 @@ def test_reformat_1(test_input, expected):
     with open(expected) as f:
         exp = f.read()
     assert reformat(inp) == exp.strip('\n')
+
+
+
+
+@pytest.mark.parametrize("test_input,expected", [
+("""this
+is an
+example
+""", [0,0,0]),
+("""this
+  
+example
+""", [0,None,0]),
+(""" this
+  
+example
+""", [1,None,0]),
+
+(""" this
+  
+  example
+""", [1,None,2]),
+
+])
+def test_blocks(test_input, expected):
+    assert compute_indents(test_input.splitlines()) == expected
+
+
+
