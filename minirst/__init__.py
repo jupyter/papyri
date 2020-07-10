@@ -88,7 +88,7 @@ class Header:
         return tt + "\n" + "=" * len(tt)
 
     def _repr_html_(self):
-        return "<h2>" + str(self.title) + "</h2>"
+        return f"<h{self.level}>" + str(self.title) + f"</h{self.level}>"
 
     @classmethod
     def parse(cls, lines):
