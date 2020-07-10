@@ -24,9 +24,9 @@ for mod in modules:
             print('skip module', a)
             continue
 
-        #print(qa)
+        print(qa)
         s = (doc := parsedoc(a.__doc__))._repr_html_()
         doc
-        doc.see_also()
+        print(doc.see_also())
         with open(f'html/{qa}.html','w') as f:
             f.write(s)

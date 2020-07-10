@@ -343,7 +343,10 @@ class Doc:
             return []
 
         node = self.nodes[i+1]
-        print(repr(node))
+        if isinstance(node, Mapping):
+            return node.mapping.keys()
+        else:
+            print('not a mapping', node)
 
 
 
