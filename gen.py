@@ -79,6 +79,13 @@ def _b(qa, backref):
     return root + "." + backref
 
 
+def resolver(qa, visited_items, ref):
+    for x in _a, _b:
+        br = x(qa, ref)
+        if br in visited_items:
+            return br
+    return None
+
 for qa, doc in visited_items.items():
     sa = doc.see_also()
     if not sa:
@@ -95,6 +102,6 @@ for qa, doc in visited_items.items():
             pass
 
 for qa, doc in visited_items.items():
-    s = doc._repr_html_()
+    s = doc._repr_html_(lambda ref:resolver(qa, visited_items, ref))
     with open(f"html/{qa}.html", "w") as f:
         f.write(s)

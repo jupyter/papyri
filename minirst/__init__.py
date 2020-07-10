@@ -286,10 +286,19 @@ class Mapping:
     def __str__(self):
         return "\n".join([f"{k}: {v}" for k, v in self.mapping.items()])
 
-    def _repr_html_(self):
+    def _format_one(self, key, resolver):
+        return resolver(key)
+
+    def _format_pair(self, key, value, resolver):
+        k = self._format_one(key, resolver)
+        v = value
+        return f"<dt>{k}</dt>\n<dd>{v}</dd>"
+
+    def _repr_html_(self, resolver):
+
         return (
             """<dl>"""
-            + "\n".join(f"<dt>{k}</dt>\n<dd>{v}</dd>" for k, v in self.mapping.items())
+            + "\n".join([self._format_pair(k, v, resolver) for k, v in self.mapping.items()])
             + """</dl>"""
         )
 
@@ -380,7 +389,7 @@ class Doc:
             # print('not a mapping', repr(node))
             pass
 
-    def _repr_html_(self):
+    def _repr_html_(self, resolver=lambda x:None):
         base = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -416,8 +425,20 @@ class Doc:
             )
         else:
             br_html = ""
+        def _resolver(k):
+            if (ref:= resolver(k)) is None:
+                return k
+            else:
+                print('refering to ', ref)
+                return f"<a href='{ref}.html'>{k}</a>"
+        hrepr = []
+        for n in self.nodes:
+            if isinstance(n, Mapping):
+                hrepr.append(n._repr_html_(_resolver))
+            else:
+                hrepr.append(n._repr_html_())
 
-        return base.format(h1, "\n".join(n._repr_html_() for n in self.nodes), br_html)
+        return base.format(h1, "\n".join(hrepr), br_html)
 
 
 class Section:
