@@ -94,10 +94,16 @@ class Header:
             raise TryNext
         assert lines
         title, _ = Raw.parse(lines)
-        level = allunders(lines[1], len(title.lines[0]))
+        lgth = len(title.lines[0])
+        if len(set(lines[1])) == 1 and len(lines[1]) !=1 and len(lines[1]) != lgth:
+            print('======= WRONG LEN? ======')
+            print(lines[0])
+            print(lines[1])
+        level = allunders(lines[1], lgth)
         return cls(title, level), lines[2:]
 
 def allunders(line, lenght):
+
     if not len(set(line)) == 1 or not len(line) == lenght:
         raise TryNext
     return 0
