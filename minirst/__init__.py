@@ -97,8 +97,9 @@ class Header:
         lgth = len(title.lines[0])
         if len(set(lines[1])) == 1 and len(lines[1]) !=1 and len(lines[1]) != lgth:
             print('======= WRONG LEN? ======')
-            print(lines[0])
-            print(lines[1])
+            print('L0:',lines[0])
+            print('L1:',lines[1])
+            print('=========================')
         level = allunders(lines[1], lgth)
         return cls(title, level), lines[2:]
 
@@ -143,7 +144,10 @@ class RawTilNextHeader:
                 pass
 
             ll.append(l)
-        return cls(ll), lines[i+1:]
+        else:
+            return cls(ll), []
+           
+        return cls(ll), lines[i:]
 
     def __init__(self, items):
         assert isinstance(items, list)
@@ -242,8 +246,11 @@ class Mapping:
             except TryNext:
                 pass
             if l.startswith(' ') and k:
-                mapping[k.strip()] += l.strip()
-                continue
+                try:
+                    mapping[k.strip()] += l.strip()
+                except TypeError:
+                    raise TryNext
+
             if ':' in l:
                 k,v = l.split(':', maxsplit=1)
                 mapping[k.strip()] = v
@@ -337,6 +344,7 @@ class Doc:
 
     def __init__(self, nodes):
         self.nodes = nodes
+        self.backrefs = []
 
     def __repr__(self):
         return f'<{self.__class__.__name__}\n'+'\n'.join([textwrap.indent(repr(n), '    ') for n in self.nodes])+ '\n>'
@@ -352,7 +360,7 @@ class Doc:
         if isinstance(node, Mapping):
             return node.mapping.keys()
         else:
-            print('not a mapping', node)
+            print('not a mapping', repr(node))
 
 
 
@@ -368,11 +376,17 @@ class Doc:
 </head>
 <body>
     {}
+    <h1>Back references</h1>
+    {}
 </body>
 </html>
 """
+        def f_(it):
+            return f'<a href=./{it}.html>{it}</a>'
 
-        return base.format('\n'.join(n._repr_html_() for n in self.nodes))
+        backref_repr = ','.join(self.backrefs)
+
+        return base.format('\n'.join(n._repr_html_() for n in self.nodes), ', '.join(f_(b) for b in self.backrefs))
 
 
 
@@ -386,7 +400,7 @@ class Section:
     @classmethod
     def parse(cls, lines):
         header, rest = Header.parse(lines)
-        if header.title.lines[0] in ('Parameters', 'Returns', 'Attributes', 'Raises', 'Methods', 'Warns', 'Other Parameters'):
+        if header.title.lines[0] in ('Parameters', 'Returns', 'Attributes', 'Raises', 'Methods', 'Warns', 'Other Parameters', 'Warnings'):
             core, rest = DescriptionList.parse(rest)
             return [cls(header), core], rest
         elif header.title.lines[0] in ('See Also', 'Returns', 'See also'):
