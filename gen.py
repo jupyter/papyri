@@ -1,18 +1,30 @@
 
 import numpy as np
 import scipy
+import scipy.special
+import sklearn
 from minirst import parsedoc
 from types import ModuleType
+import matplotlib
+import matplotlib.pyplot
+import inspect
 
-modules=[np, np.fft, np.ndarray]
+modules=[np, np.fft, np.ndarray, scipy, scipy.special, sklearn, matplotlib, matplotlib.pyplot]
 
 visited_items = {}
 
 for mod in modules:
+    if not mod.__name__.startswith(('num', 'sci','skl', 'mat')):
+        continue
+    #print('exploring module', mod)
     for n in dir(mod):
         if n == 'ufunc':
             continue
         a = getattr(mod, n)
+        if isinstance(a, ModuleType):
+            if a not in modules:
+                modules.append(a)
+            continue
         if getattr(a, '__module__', None) is None:
             continue
         if hasattr(a, '__qualname__'):
@@ -21,16 +33,22 @@ for mod in modules:
             qa = a.__module__+'.'+n
             #print('skipping', type(a), getattr(a, '__qualname__', None), f'({n}?)')
             #continue
-        if qa.startswith('nd'):
-            print(qa, mod, mod.__name__)
+        if not qa.startswith(('num', 'sci','skl', 'mat')):
+            continue
         if getattr(a, '__doc__', None) is None:
             #print('no doc for', a)
             continue
-        if isinstance(a, ModuleType):
-            #print('skip module', a)
-            continue
+        sig = None
+        try:
+            sig = str(inspect.signature(a))
+        except (ValueError, TypeError):
+            pass
 
-        doc = parsedoc(a.__doc__)
+        doc, warnings = parsedoc(a.__doc__, name=qa, sig=sig)
+        if warnings:
+            print(qa)
+            for w in warnings:
+                print('  |', w)
         sa = doc.see_also()
         if getattr(visited_items, qa, None):
             raise ValueError(f'{qa} already visited')
@@ -69,5 +87,5 @@ for qa,doc in visited_items.items():
 for qa,doc in visited_items.items():
     s = doc._repr_html_()
     with open(f'html/{qa}.html','w') as f:
-            f.write(s)
+        f.write(s)
 

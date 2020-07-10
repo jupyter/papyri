@@ -86,26 +86,30 @@ class Header:
         return  tt + '\n' + '='*len(tt)
 
     def _repr_html_(self):
-        return '<h1>'+str(self.title)+'</h1>'
+        return '<h2>'+str(self.title)+'</h2>'
 
     @classmethod
     def parse(cls, lines):
         if len(lines) < 2:
             raise TryNext
         assert lines
-        title, _ = Raw.parse(lines)
+        warnings = []
+        title, _, wn = Raw.parse(lines)
         lgth = len(title.lines[0])
-        if len(set(lines[1])) == 1 and len(lines[1]) !=1 and len(lines[1]) != lgth:
-            print('======= WRONG LEN? ======')
-            print('L0:',lines[0])
-            print('L1:',lines[1])
-            print('=========================')
+        if len(set(lines[1])) == 1 and len(lines[1]) !=1 and len(lines[1]) != lgth and '>>>' not in lines[0] and '::' not in lines[1]:
+
+            warnings.append('======= WRONG LEN? ======')
+            warnings.append('L0: '+lines[0])
+            warnings.append('L1: '+lines[1])
+            warnings.append('=========================')
         level = allunders(lines[1], lgth)
-        return cls(title, level), lines[2:]
+        return cls(title, level), lines[2:], wn
 
 def allunders(line, lenght):
 
     if not len(set(line)) == 1 or not len(line) == lenght:
+        raise TryNext
+    if next(iter(set(line))) not in '-=~`':
         raise TryNext
     return 0
 
@@ -126,7 +130,7 @@ class Any:
 
     @classmethod
     def parse(cls, lines):
-        return cls(lines[0]), lines[1:]
+        return cls(lines[0]), lines[1:], []
 
 class Raw(Any):pass
 
@@ -145,9 +149,9 @@ class RawTilNextHeader:
 
             ll.append(l)
         else:
-            return cls(ll), []
+            return cls(ll), [], []
            
-        return cls(ll), lines[i:]
+        return cls(ll), lines[i:], []
 
     def __init__(self, items):
         assert isinstance(items, list)
@@ -185,8 +189,9 @@ class DescriptionList:
                     raise TryNext
             else:
                 values.append(l)
-        del dct[None]
-        return cls(dct), lines[i:]
+        if None in dct:
+            del dct[None]
+        return cls(dct), lines[i:], []
 
     def __init__(self, items):
         assert isinstance(items, dict)
@@ -214,7 +219,7 @@ class Listing:
     def parse(cls, lines):
         assert ',' in lines[0] , lines[0]
         listing = [l.strip() for l in lines[0].split(',')]
-        return cls(listing), lines[1:]
+        return cls(listing), lines[1:], []
 
 
     def __init__(self, listing):
@@ -262,7 +267,7 @@ class Mapping:
                     mapping[k.strip()] = None
 
 
-        return cls(mapping), lines[i:]
+        return cls(mapping), lines[i:], []
 
 
     def __init__(self, mapping):
@@ -294,8 +299,8 @@ class CodeBlock:
                 break
             _lines.append(l)
         else:
-            return cls(_lines), []
-        return cls(_lines), lines[i:]
+            return cls(_lines), [], []
+        return cls(_lines), lines[i:], []
 
 
         
@@ -323,13 +328,15 @@ class Doc:
 
 
     @classmethod
-    def parse(cls, lines):
+    def parse(cls, lines, *, name=None, sig=None):
         parsed = []
         cl = len(lines)
+        warnings = []
         while lines:
             for t in Section.parse, Header.parse, BlankLine.parse, CodeBlock.parse, Paragraph.parse, RawTilNextHeader.parse, failed:
                 try:
-                    node, lines_ = t(lines)
+                    node, lines_, wn = t(lines)
+                    warnings.extend(wn)
                     if isinstance(node, list):
                         parsed.extend(node)
                     else:
@@ -340,10 +347,12 @@ class Doc:
                     break
                 except TryNext:
                     pass
-        return cls(parsed)
+        return cls(parsed, name=name, sig=sig), warnings
 
-    def __init__(self, nodes):
+    def __init__(self, nodes, name=None, sig=None):
         self.nodes = nodes
+        self.name = name
+        self.sig = sig
         self.backrefs = []
 
     def __repr__(self):
@@ -360,7 +369,8 @@ class Doc:
         if isinstance(node, Mapping):
             return node.mapping.keys()
         else:
-            print('not a mapping', repr(node))
+            #print('not a mapping', repr(node))
+            pass
 
 
 
@@ -376,17 +386,30 @@ class Doc:
 </head>
 <body>
     {}
-    <h1>Back references</h1>
+    {}
     {}
 </body>
 </html>
 """
+
+        h1 = ''
+        if self.name:
+            h1 +=self.name
+        if self.sig:
+            h1 += self.sig
+        if h1:
+            h1 = '<h1>'+h1+'</h1>'
         def f_(it):
             return f'<a href=./{it}.html>{it}</a>'
 
-        backref_repr = ','.join(self.backrefs)
+        if self.backrefs:
+            backref_repr = ','.join(self.backrefs)
+            br_html = '<h1>Back references</h1>'+', '.join(f_(b) for b in self.backrefs)
+        else:
+            br_html = ''
 
-        return base.format('\n'.join(n._repr_html_() for n in self.nodes), ', '.join(f_(b) for b in self.backrefs))
+
+        return base.format(h1, '\n'.join(n._repr_html_() for n in self.nodes), br_html)
 
 
 
@@ -399,26 +422,46 @@ class Section:
 
     @classmethod
     def parse(cls, lines):
-        header, rest = Header.parse(lines)
-        if header.title.lines[0] in ('Parameters', 'Returns', 'Attributes', 'Raises', 'Methods', 'Warns', 'Other Parameters', 'Warnings'):
-            core, rest = DescriptionList.parse(rest)
-            return [cls(header), core], rest
+        warnings = []
+        header, rest, wn = Header.parse(lines)
+        warnings.extend(wn)
+        aliases = {
+            'Return':'Returns',
+            'Arguments':'Parameters',
+            'arguments':'Parameters',
+            'additional keyword arguments:':'Parameters',
+            'Other parameters':'Other Parameters',
+            'Exceptions':'Raises'
+
+                }
+        ht = header.title.lines[0]
+        if ht in aliases:
+            warnings.append(f'Found `{ht}`, did you mean `{aliases[ht]}` ?')
+            header.title.lines[0] = aliases[ht]
+        ht = header.title.lines[0]
+        if ht  in ('Parameters', 'Returns', 'Class Attributes', 'Options', 'Attributes','Yields','Raises','Exceptions','Methods', 'Warns', 'Other Parameters', 'Warnings', 'Arguments'):
+
+            core, rest, wn = DescriptionList.parse(rest)
+            warnings.extend(wn)
+            return [cls(header), core], rest, warnings
         elif header.title.lines[0] in ('See Also', 'Returns', 'See also'):
             if header.title.lines[0] == 'See also':
                 header.title.lines[0] = 'See Also'
             try:
-                core, rest = Mapping.parse(rest)
+                core, rest, wn = Mapping.parse(rest)
+                warnings.extend(wn)
             except TryNext:
-                core, rest = DescriptionList.parse(rest)
+                core, rest, wn = DescriptionList.parse(rest)
+                warnings.extend(wn)
 
-            return [cls(header), core], rest
+            return [cls(header), core], rest, warnings
         elif header.title.lines[0] in ('Examples',):
-            return [cls(header)], rest
+            return [cls(header)], rest, warnings
         elif header.title.lines[0] in ('Notes', 'References'):
-            return [cls(header)], rest
+            return [cls(header)], rest, warnings
 
         else:
-            raise ValueError(header.title.lines[0])
+            raise ValueError(repr(header.title.lines[0]))
 
     def __init__(self, header):
         self.header = header
@@ -452,7 +495,7 @@ class Paragraph:
                 break
         if not _lines:
             raise TryNext
-        return cls(_lines), lines[i+1:]
+        return cls(_lines), lines[i+1:], []
 
     def __init__(self,lines):
         self.lines = lines
@@ -472,7 +515,7 @@ class BlankLine:
     @classmethod
     def parse(self, lines):
         if not lines[0].strip():
-            return BlankLine(), lines[1:]
+            return BlankLine(), lines[1:], []
         raise TryNext
 
     def __init__(self):
@@ -490,10 +533,10 @@ class BlankLine:
 def failed(lines):
     raise ValueError('nothign managed to parse', lines)
 
-def parsedoc(doc):
+def parsedoc(doc, *, name=None, sig=None):
 
     lines = dedentfirst(doc).splitlines()
-    return Doc.parse(lines)
+    return Doc.parse(lines, name=name, sig=sig)
 
 
 
