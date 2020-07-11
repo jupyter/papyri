@@ -3,11 +3,11 @@ requires = ["flit_core >=2,<3"]
 build-backend = "flit_core.buildapi"
 
 [tool.flit.metadata]
-module = "minirst"
+module = "velin"
 author = "Matthias Bussonnier"
 author-email = "bussonniermatthias@gmail.com"
-home-page = "https://github.com/Carreau/minirst"
+home-page = "https://github.com/Carreau/velin"
 classifiers = ["License :: OSI Approved :: MIT License"]
 
 [tool.flit.scripts]
-frappuccino = "minirst:main"
+velin = "velin:main"

@@ -801,14 +801,16 @@ def reformat(input):
     return format(transform(parse(format(transform(parse(input))))))
 
 
-def main():
+#def main():
+#
+#    for filename in sys.argv[1:]:
+#        p = Path(filename)
+#
+#        with p.open() as f:
+#            data = f.read()
+#            print(reformat)
 
-    for filename in sys.argv[1:]:
-        p = Path(filename)
-
-        with p.open() as f:
-            data = f.read()
-            print(reformat)
+from .ref import main
 
 
 if __name__ == "__main__":
