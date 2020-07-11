@@ -164,13 +164,17 @@ def test(docstr, fname):
 
 def compute_new_doc(docstr, fname):
     original_docstr = docstr
-    if len(docstr.splitlines()) == 1:
+    if len(docstr.splitlines()) <= 1:
         return ""
     shortdoc=False
     if not docstr.startswith("\n    "):
         docstr = "\n    " + docstr
         shortdoc = True
-        print(shortdoc, docstr)
+
+    long_end = True
+    if original_docstr.splitlines()[-1].strip():
+        long_end = False
+
     doc = numpydoc.docscrape.NumpyDocString(docstr)
 
     fmt = ""
@@ -184,12 +188,15 @@ def compute_new_doc(docstr, fname):
                 fmt += "\n"
             start = False
             fmt += f(doc[s])
-
-    fmt = indent(fmt, "    ") + "    "
+    fmt = indent(fmt, "    ") + '    '
+    if '----' in fmt:
+        fmt += "\n    "
     if shortdoc:
         fmt = fmt.lstrip()
     else:
         fmt = '\n'+fmt
+    if not long_end:
+        fmt = fmt.rstrip()
     return fmt
 
 
