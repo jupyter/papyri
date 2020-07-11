@@ -141,8 +141,24 @@ class DocstringFormatter:
 
 
 def test(docstr, fname):
+    fmt =  compute_new_doc(docstr, fname)
+    dold = docstr.splitlines()
+    dnew = fmt.splitlines()
+    diffs = list(difflib.unified_diff(dold, dnew, n=100, fromfile=fname, tofile=fname),)
+    if diffs:
+        from pygments import highlight
+        from pygments.lexers import DiffLexer
+        from pygments.formatters import TerminalFormatter
+
+
+        code = "\n".join(w(diffs))
+        hldiff = highlight(code, DiffLexer(), TerminalFormatter())
+
+        print(indent(hldiff, " |   ", predicate=lambda x: True))
+
+def compute_new_doc(docstr, fname):
     if len(docstr.splitlines()) == 1:
-        return
+        return ''
     if not docstr.startswith("\n    "):
         docstr = "\n    " + docstr
     doc = numpydoc.docscrape.NumpyDocString(docstr)
@@ -160,21 +176,8 @@ def test(docstr, fname):
             fmt += f(doc[s])
 
     fmt = indent(fmt, "    ") + "    "
-    # print(fmt)
+    return fmt
 
-    dold = docstr.splitlines()
-    dnew = fmt.splitlines()
-    diffs = list(difflib.unified_diff(dold, dnew, n=100, fromfile=fname, tofile=fname),)
-    if diffs:
-        from pygments import highlight
-        from pygments.lexers import DiffLexer
-        from pygments.formatters import TerminalFormatter
-
-
-        code = "\n".join(w(diffs))
-        hldiff = highlight(code, DiffLexer(), TerminalFormatter())
-
-        print(indent(hldiff, " |   ", predicate=lambda x: True))
 
 
 def main():
@@ -184,16 +187,42 @@ def main():
             data = f.read()
 
         tree = ast.parse(data)
+        new = data
 
         funcs = [t for t in tree.body if isinstance(t, ast.FunctionDef)]
         for i, func in enumerate(funcs[:]):
-            print(i, "==", func.name, "==")
+            #print(i, "==", func.name, "==")
             try:
                 docstring = func.body[0].value.s
             except AttributeError:
                 continue
             if not isinstance(docstring, str):
                 continue
-            (func.body[0].lineno, func.body[0].col_offset, func.body[0].end_lineno)
+            start, nindent, stop = (func.body[0].lineno, func.body[0].col_offset, func.body[0].end_lineno)
+            if not docstring in data:
+                print(f"skip {file}: {func.name}, can't do replacement yet")
 
-            test(docstring, file)
+            new_doc = compute_new_doc(docstring, file)
+            #test(docstring, file)
+            if new_doc:
+                if ('"""' in new) or ("'''") in new:
+                    print('SKIPPING', file, func.name, 'triple quote not handled')
+                else:
+                    new = new.replace(docstring, '\n'+new_doc)
+
+
+            #test(docstring, file)
+        if new!=data:
+            dold = data.splitlines()
+            dnew = new.splitlines()
+            diffs = list(difflib.unified_diff(dold, dnew, n=2, fromfile=file, tofile=file),)
+            from pygments import highlight
+            from pygments.lexers import DiffLexer
+            from pygments.formatters import TerminalFormatter
+
+
+            code = "\n".join(diffs)
+            hldiff = highlight(code, DiffLexer(), TerminalFormatter())
+
+            print(hldiff)
+
