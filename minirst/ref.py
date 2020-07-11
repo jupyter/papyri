@@ -28,6 +28,10 @@ def w(orig):
 
 class DocstringFormatter:
     @classmethod
+    def format_Signature(self, s):
+        return s
+
+    @classmethod
     def format_Summary(self, s):
         if len(s) == 1 and not s[0].strip():
             return ""
@@ -39,15 +43,26 @@ class DocstringFormatter:
 
     @classmethod
     def _format_ps(cls, name, ps):
+        res = cls._format_ps_pref(name, ps, compact=True)
+        if res is not None:
+            return res
+        return cls._format_ps_pref(name, ps, compact=False)
+    @classmethod
+    def _format_ps_pref(cls, name, ps, *, compact):
 
         out = name + "\n"
         out += "-" * len(name) + "\n"
-        for p in ps:
+        for i,p in enumerate(ps):
+            if (not compact) and i:
+                out += '\n'
             if p.type:
                 out += f"""{p.name} : {p.type}\n"""
             else:
                 out += f"""{p.name}\n"""
             if p.desc:
+                if any([l.strip() == '' for l in p.desc]) and compact:
+                    return None
+
                 out += indent("\n".join(p.desc), "    ")
                 out += "\n"
         return out
@@ -118,6 +133,11 @@ class DocstringFormatter:
         out += "\n"
         return out
 
+
+    @classmethod
+    def format_Warns(cls, ps):
+        return cls.format_RRY("Warns", ps)
+
     @classmethod
     def format_Raises(cls, ps):
         return cls.format_RRY("Raises", ps)
@@ -143,6 +163,7 @@ class DocstringFormatter:
             if p.desc:
                 out += indent("\n".join(p.desc), "    ")
                 out += "\n"
+
         return out
 
 
@@ -167,19 +188,26 @@ def compute_new_doc(docstr, fname):
     if len(docstr.splitlines()) <= 1:
         return ""
     shortdoc=False
+    short_with_space = False
     if not docstr.startswith("\n    "):
         docstr = "\n    " + docstr
         shortdoc = True
+        if original_docstr[0] == ' ': 
+            short_with_space = True
 
     long_end = True
+    long_with_space = True
     if original_docstr.splitlines()[-1].strip():
         long_end = False
+    if original_docstr.splitlines()[-2].strip():
+        long_with_space = False
 
     doc = numpydoc.docscrape.NumpyDocString(docstr)
 
     fmt = ""
     start = True
-    for s in doc.sections:
+    #print(doc.ordered_sections)
+    for s in doc.ordered_sections:
         if doc[s]:
             f = getattr(
                 DocstringFormatter, "format_" + s.replace(" ", "_"), lambda x: s
@@ -190,9 +218,14 @@ def compute_new_doc(docstr, fname):
             fmt += f(doc[s])
     fmt = indent(fmt, "    ") + '    '
     if '----' in fmt:
-        fmt = fmt.rstrip(' ')+ "\n    "
+        if long_with_space:
+            fmt = fmt.rstrip(' ')+ "\n    "
+        else:
+            fmt = fmt.rstrip(' ')+ "    "
     if shortdoc:
         fmt = fmt.lstrip()
+        if short_with_space:
+            fmt = ' '+fmt
     else:
         fmt = '\n'+fmt
     if not long_end:
@@ -211,7 +244,18 @@ def main():
     )
 
     args = parser.parse_args()
-    for file in args.files:
+    to_format = []
+    from pathlib import Path
+    for f in args.files:
+        p = Path(f)
+        if p.is_dir():
+            for sf in p.glob('**/*.py'):
+                to_format.append(sf)
+        else:
+            to_format.append(p)
+
+
+    for file in to_format:
         #print(file)
         with open(file, "r") as f:
             data = f.read()
@@ -251,7 +295,7 @@ def main():
             dold = data.splitlines()
             dnew = new.splitlines()
             diffs = list(
-                difflib.unified_diff(dold, dnew, n=args.context, fromfile=file, tofile=file),
+                difflib.unified_diff(dold, dnew, n=args.context, fromfile=str(file), tofile=str(file)),
             )
             from pygments import highlight
             from pygments.lexers import DiffLexer
