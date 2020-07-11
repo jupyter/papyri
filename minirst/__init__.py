@@ -81,7 +81,7 @@ class TryNext(Exception):
 class Header:
     def __init__(self, title, level):
         self.title = title
-        #if str(title) not in NumpyDocString.sections.keys():
+        # if str(title) not in NumpyDocString.sections.keys():
         #    print(f'??? |{title}|')
         self.level = level
 
@@ -250,83 +250,84 @@ class Listing:
             """<ul>""" + "\n".join(f"<li>{k}</li>" for k in self.listing) + """</ul>"""
         )
 
+
 class Base:
-    
     def attrs(self):
         stuff = {}
         for it in dir(self):
-            if it.startswith('_'):
+            if it.startswith("_"):
                 continue
             att = getattr(self, it)
             if callable(att):
                 continue
             stuff[it] = att
         return stuff
-    
 
-                
-        
     def __repr__(self):
-        return f"<{self.__class__.__name__} "+', '.join([k+':'+repr(x) for k,x in self.attrs().items()]) +'>'
-    
+        return (
+            f"<{self.__class__.__name__} "
+            + ", ".join([k + ":" + repr(x) for k, x in self.attrs().items()])
+            + ">"
+        )
+
+
 class EntryParser(Base):
-    
     @classmethod
     def parse(cls, lines):
         if len(lines) == 1:
-            l0, l1 = lines[0], ''
+            l0, l1 = lines[0], ""
             rest = []
         elif len(lines) < 3:
             l0, l1 = lines
             rest = []
         else:
             l0, l1, *rest = lines
-        indent = len(l1)-len(l1.lstrip())
-        i=0
+        indent = len(l1) - len(l1.lstrip())
+        i = 0
         if indent:
             cont = [l1]
-            for i,l in enumerate(rest):
-                if l.startswith(' '*indent) or not l.strip():
+            for i, l in enumerate(rest):
+                if l.startswith(" " * indent) or not l.strip():
                     cont.append(l)
                 else:
                     break
             else:
-                i +=1
+                i += 1
         else:
-            i=0
+            i = 0
             cont = []
             rest = lines[1:]
-        if ':' in l0:
+        if ":" in l0:
             try:
-                head,t = [x.strip() for x in l0.split(':', maxsplit=1)]
+                head, t = [x.strip() for x in l0.split(":", maxsplit=1)]
             except ValueError:
-                print('... Entry TryNext', lines[:5])
+                print("... Entry TryNext", lines[:5])
                 raise TryNext
         else:
-            head,t = l0.strip(), ''
+            head, t = l0.strip(), ""
 
-        if ' ' in head:
+        if " " in head:
             if not t and not cont:
-                #print('... list of things ? ', head)
-                return [cls(h.strip(),'', []) for h in head.split(',')], rest[i:]
+                # print('... list of things ? ', head)
+                return [cls(h.strip(), "", []) for h in head.split(",")], rest[i:]
 
-            if 'See Also' in head:
-                print('-------------->',lines[:3])
-            
-        return [cls(head,t, cont)], rest[i:]
-    
-    def __init__(self, head,t,  rest):
-        #assert (head.strip() or t.strip() or [r.strip() for r in rest])
+            if "See Also" in head:
+                print("-------------->", lines[:3])
+
+        return [cls(head, t, cont)], rest[i:]
+
+    def __init__(self, head, t, rest):
+        # assert (head.strip() or t.strip() or [r.strip() for r in rest])
         self.head = head
         self.t = t
         self.rest = rest
-        
+
     def __str__(self):
-        r = '\n'.join(self.rest)
+        r = "\n".join(self.rest)
         if r:
-            extra = f'\n{r}'
+            extra = f"\n{r}"
         else:
-            extra = ''
+            extra = ""
         return f"""{self.head}:{self.t}{extra}"""
 
     def _format_head(self, head, resolver):
@@ -336,28 +337,23 @@ class EntryParser(Base):
         if self.rest:
             return key
         else:
-            return ''
+            return ""
 
     def _format_core(self, core, resolver):
         if self.rest:
-            return '<pre>'+'\n'.join(core)+'</pre>'
+            return "<pre>" + "\n".join(core) + "</pre>"
         else:
-            return f'<pre>{self.t}</pre>'
-
+            return f"<pre>{self.t}</pre>"
 
     def _repr_html_(self, resolver):
 
-        return (
-                f"<dt>{self._format_head(self.head, resolver)}:{self._format_type(self.t, resolver)}</dt><dd>{self._format_core(self.rest, resolver)}</dd>"
-        )
-        
-        
-    
-class  DeflistParser(Base):
-    
+        return f"<dt>{self._format_head(self.head, resolver)}:{self._format_type(self.t, resolver)}</dt><dd>{self._format_core(self.rest, resolver)}</dd>"
+
+
+class DeflistParser(Base):
     def __init__(self, entries):
         self.entries = entries
-        
+
     @classmethod
     def parse(cls, lines):
         ents = []
@@ -372,11 +368,11 @@ class  DeflistParser(Base):
                 pass
             e, lines = EntryParser.parse(lines)
             ents.extend(e)
-            
+
         return cls(ents), lines
-    
+
     def __str__(self):
-        return '\n'.join(str(x) for x in self.entries)
+        return "\n".join(str(x) for x in self.entries)
 
     def _repr_html_(self, resolver=None):
 
@@ -439,7 +435,9 @@ class Mapping:
 
         return (
             """<dl> (Mapping)"""
-            + "\n".join([self._format_pair(k, v, resolver) for k, v in self.mapping.items()])
+            + "\n".join(
+                [self._format_pair(k, v, resolver) for k, v in self.mapping.items()]
+            )
             + """</dl>"""
         )
 
@@ -530,7 +528,7 @@ class Doc:
             # print('not a mapping', repr(node))
             pass
 
-    def _repr_html_(self, resolver=lambda x:None):
+    def _repr_html_(self, resolver=lambda x: None):
         base = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -566,12 +564,14 @@ class Doc:
             )
         else:
             br_html = ""
+
         def _resolver(k):
-            if (ref:= resolver(k)) is None:
-                print('could not resolve', k, f'({self.name})')
+            if (ref := resolver(k)) is None:
+                print("could not resolve", k, f"({self.name})")
                 return k
             else:
                 return f"<a href='{ref}.html'>{k}</a>"
+
         hrepr = []
         for n in self.nodes:
             if isinstance(n, (Mapping, DeflistParser)):
@@ -622,7 +622,7 @@ class Section:
         ):
             try:
                 try:
-                    core, rest,_ = Paragraph.parse(rest)
+                    core, rest, _ = Paragraph.parse(rest)
                 except TryNext:
                     core, rest = DeflistParser.parse(rest)
             except TryNext:
@@ -635,11 +635,11 @@ class Section:
             try:
                 core, rest = DeflistParser.parse(rest)
             except TryNext:
-                print('Deflist failed trying Mapping... ')
+                print("Deflist failed trying Mapping... ")
                 core, rest, wn = Mapping.parse(rest)
                 warnings.extend(wn)
-                #core, rest, wn = DescriptionList.parse(rest)
-                #warnings.extend(wn)
+                # core, rest, wn = DescriptionList.parse(rest)
+                # warnings.extend(wn)
 
             return [cls(header), core], rest, warnings
         elif header.title.lines[0] in ("Examples",):
@@ -670,9 +670,9 @@ class Paragraph:
         l0 = lines[0]
         if not l0 or l0.startswith(" "):
             raise TryNext
-        if len(lines)>=2:
-            if lines[1].startswith(' ') and lines[1].strip():
-                #second line indented this _is_ a deflist
+        if len(lines) >= 2:
+            if lines[1].startswith(" ") and lines[1].strip():
+                # second line indented this _is_ a deflist
                 raise TryNext
         for i, l in enumerate(lines):
             if l and not l.startswith(" "):

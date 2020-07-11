@@ -14,7 +14,7 @@ modules = [
     np.ndarray,
     scipy,
     scipy.special,
-    #sklearn,
+    # sklearn,
     matplotlib,
     matplotlib.pyplot,
 ]
@@ -86,6 +86,7 @@ def resolver(qa, visited_items, ref):
             return br
     return None
 
+
 # for qa, doc in visited_items.items():
 #     sa = doc.see_also()
 #     if not sa:
@@ -100,7 +101,7 @@ def resolver(qa, visited_items, ref):
 #         else:
 #             # print('???', qa, '-?>', backref)
 #             pass
-# 
+#
 # for qa, doc in visited_items.items():
 #     s = doc._repr_html_(lambda ref:resolver(qa, visited_items, ref))
 #     with open(f"html/{qa}.html", "w") as f:

@@ -8,7 +8,6 @@ import numpy as np
 import numpydoc.docscrape
 
 
-
 def w(orig):
     ll = []
     for l in orig:
@@ -31,7 +30,7 @@ class DocstringFormatter:
     @classmethod
     def format_Summary(self, s):
         if len(s) == 1 and not s[0].strip():
-            return ''
+            return ""
         return "\n".join(s) + "\n"
 
     @classmethod
@@ -72,7 +71,7 @@ class DocstringFormatter:
             else:
                 desc = None
             if len(a) > 1:
-                out += ", ".join([x[0] for x in a]) + '\n'
+                out += ", ".join([x[0] for x in a]) + "\n"
             else:
                 if len(b) > 1:
                     rest_desc = b[1:]
@@ -86,8 +85,8 @@ class DocstringFormatter:
                 if desc:
                     out += f" : {desc}"
                 for rd in rest_desc:
-                    out += '\n    '+rd
-                out +='\n'
+                    out += "\n    " + rd
+                out += "\n"
         return out
 
     @classmethod
@@ -116,18 +115,20 @@ class DocstringFormatter:
 
     @classmethod
     def format_Raises(cls, ps):
-        return cls.format_RRY('Raises', ps)
+        return cls.format_RRY("Raises", ps)
+
     @classmethod
     def format_Yields(cls, ps):
-        return cls.format_RRY('Yields', ps)
+        return cls.format_RRY("Yields", ps)
+
     @classmethod
     def format_Returns(cls, ps):
-        return cls.format_RRY('Returns', ps)
+        return cls.format_RRY("Returns", ps)
 
     @classmethod
     def format_RRY(cls, name, ps):
-        out = name+"\n"
-        out += "-"*len(name)+"\n"
+        out = name + "\n"
+        out += "-" * len(name) + "\n"
 
         for p in ps:
             if p.name:
@@ -141,7 +142,7 @@ class DocstringFormatter:
 
 
 def test(docstr, fname):
-    fmt =  compute_new_doc(docstr, fname)
+    fmt = compute_new_doc(docstr, fname)
     dold = docstr.splitlines()
     dnew = fmt.splitlines()
     diffs = list(difflib.unified_diff(dold, dnew, n=100, fromfile=fname, tofile=fname),)
@@ -150,15 +151,15 @@ def test(docstr, fname):
         from pygments.lexers import DiffLexer
         from pygments.formatters import TerminalFormatter
 
-
         code = "\n".join(w(diffs))
         hldiff = highlight(code, DiffLexer(), TerminalFormatter())
 
         print(indent(hldiff, " |   ", predicate=lambda x: True))
 
+
 def compute_new_doc(docstr, fname):
     if len(docstr.splitlines()) == 1:
-        return ''
+        return ""
     if not docstr.startswith("\n    "):
         docstr = "\n    " + docstr
     doc = numpydoc.docscrape.NumpyDocString(docstr)
@@ -179,9 +180,17 @@ def compute_new_doc(docstr, fname):
     return fmt
 
 
-
 def main():
-    for file in sys.argv[1:]:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="reformat the docstrigns of some file")
+    parser.add_argument("files", metavar="files", type=str, nargs="+", help="TODO")
+    parser.add_argument(
+        "--write", dest="write", action="store_true", help="print the diff"
+    )
+
+    args = parser.parse_args()
+    for file in args.files:
         print(file)
         with open(file, "r") as f:
             data = f.read()
@@ -191,38 +200,45 @@ def main():
 
         funcs = [t for t in tree.body if isinstance(t, ast.FunctionDef)]
         for i, func in enumerate(funcs[:]):
-            #print(i, "==", func.name, "==")
+            # print(i, "==", func.name, "==")
             try:
                 docstring = func.body[0].value.s
             except AttributeError:
                 continue
             if not isinstance(docstring, str):
                 continue
-            start, nindent, stop = (func.body[0].lineno, func.body[0].col_offset, func.body[0].end_lineno)
+            start, nindent, stop = (
+                func.body[0].lineno,
+                func.body[0].col_offset,
+                func.body[0].end_lineno,
+            )
             if not docstring in data:
                 print(f"skip {file}: {func.name}, can't do replacement yet")
 
             new_doc = compute_new_doc(docstring, file)
-            #test(docstring, file)
+            # test(docstring, file)
             if new_doc:
-                if ('"""' in new) or ("'''") in new:
-                    print('SKIPPING', file, func.name, 'triple quote not handled')
-                else:
-                    new = new.replace(docstring, '\n'+new_doc)
+                # if ('"""' in new) or ("'''") in new:
+                #    print('SKIPPING', file, func.name, 'triple quote not handled')
+                # else:
+                new = new.replace(docstring, "\n" + new_doc)
 
-
-            #test(docstring, file)
-        if new!=data:
+            # test(docstring, file)
+        if new != data:
             dold = data.splitlines()
             dnew = new.splitlines()
-            diffs = list(difflib.unified_diff(dold, dnew, n=2, fromfile=file, tofile=file),)
+            diffs = list(
+                difflib.unified_diff(dold, dnew, n=2, fromfile=file, tofile=file),
+            )
             from pygments import highlight
             from pygments.lexers import DiffLexer
             from pygments.formatters import TerminalFormatter
 
+            if not args.write:
+                code = "\n".join(diffs)
+                hldiff = highlight(code, DiffLexer(), TerminalFormatter())
 
-            code = "\n".join(diffs)
-            hldiff = highlight(code, DiffLexer(), TerminalFormatter())
-
-            print(hldiff)
-
+                print(hldiff)
+            else:
+                with open(file, "w") as f:
+                    f.write(new)
