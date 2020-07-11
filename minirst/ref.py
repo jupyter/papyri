@@ -48,8 +48,9 @@ class DocstringFormatter:
                 out += f"""{p.name} : {p.type}\n"""
             else:
                 out += f"""{p.name}\n"""
-            out += indent("\n".join(p.desc), "    ")
-            out += "\n"
+            if p.desc:
+                out += indent("\n".join(p.desc), "    ")
+                out += "\n"
         return out
 
     @classmethod
@@ -71,21 +72,22 @@ class DocstringFormatter:
             else:
                 desc = None
             if len(a) > 1:
-                out += "Some See Long A !\n"
-            if len(b) > 1:
-                rest_desc = b[1:]
+                out += ", ".join([x[0] for x in a]) + '\n'
             else:
-                rest_desc = []
-            ref, type_ = a[0]
-            if type_ is not None:
-                out += f":{type_}:`{ref}`"
-            else:
-                out += f"{ref}"
-            if desc:
-                out += f" : {desc}"
-            for rd in rest_desc:
-                out += '\n    '+rd
-            out +='\n'
+                if len(b) > 1:
+                    rest_desc = b[1:]
+                else:
+                    rest_desc = []
+                ref, type_ = a[0]
+                if type_ is not None:
+                    out += f":{type_}:`{ref}`"
+                else:
+                    out += f"{ref}"
+                if desc:
+                    out += f" : {desc}"
+                for rd in rest_desc:
+                    out += '\n    '+rd
+                out +='\n'
         return out
 
     @classmethod
@@ -138,7 +140,7 @@ class DocstringFormatter:
         return out
 
 
-def test(docstr):
+def test(docstr, fname):
     if len(docstr.splitlines()) == 1:
         return
     if not docstr.startswith("\n    "):
@@ -162,10 +164,17 @@ def test(docstr):
 
     dold = docstr.splitlines()
     dnew = fmt.splitlines()
-    diffs = list(difflib.unified_diff(dold, dnew, n=100, fromfile="old", tofile="new"),)
+    diffs = list(difflib.unified_diff(dold, dnew, n=100, fromfile=fname, tofile=fname),)
     if diffs:
+        from pygments import highlight
+        from pygments.lexers import DiffLexer
+        from pygments.formatters import TerminalFormatter
 
-        print(indent("\n".join(w(diffs)), " |   ", predicate=lambda x: True))
+
+        code = "\n".join(w(diffs))
+        hldiff = highlight(code, DiffLexer(), TerminalFormatter())
+
+        print(indent(hldiff, " |   ", predicate=lambda x: True))
 
 
 def main():
@@ -187,4 +196,4 @@ def main():
                 continue
             (func.body[0].lineno, func.body[0].col_offset, func.body[0].end_lineno)
 
-            test(docstring)
+            test(docstring, file)
