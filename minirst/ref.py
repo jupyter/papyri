@@ -70,23 +70,28 @@ class DocstringFormatter:
                 desc = b[0]
             else:
                 desc = None
-            if len(a) > 1:
-                out += ", ".join([x[0] for x in a]) + "\n"
+            if len(b) > 1:
+                rest_desc = b[1:]
             else:
-                if len(b) > 1:
-                    rest_desc = b[1:]
-                else:
-                    rest_desc = []
-                ref, type_ = a[0]
+                rest_desc = []
+            _first = True
+            for ref,type_ in a:
+                if not _first:
+                    out += ', '
                 if type_ is not None:
                     out += f":{type_}:`{ref}`"
                 else:
                     out += f"{ref}"
-                if desc:
+                _first = False
+
+            if desc:
+                if len(a) > 1:
+                    out += f"\n    {desc}"
+                else:
                     out += f" : {desc}"
-                for rd in rest_desc:
-                    out += "\n    " + rd
-                out += "\n"
+            for rd in rest_desc:
+                out += "\n    " + rd
+            out += "\n"
         return out
 
     @classmethod
