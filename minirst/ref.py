@@ -218,10 +218,12 @@ def main():
             new_doc = compute_new_doc(docstring, file)
             # test(docstring, file)
             if new_doc:
-                # if ('"""' in new) or ("'''") in new:
-                #    print('SKIPPING', file, func.name, 'triple quote not handled')
-                # else:
-                new = new.replace(docstring, "\n" + new_doc)
+                if ('"""' in new_doc) or ("'''" in new_doc):
+                    print(
+                        "SKIPPING", file, func.name, "triple quote not handled", new_doc
+                    )
+                else:
+                    new = new.replace(docstring, "\n" + new_doc)
 
             # test(docstring, file)
         if new != data:
