@@ -1,4 +1,10 @@
-# warnign muliple projects are in this repo. 
+# Vélin
+
+French for Vellum
+
+> Vellum is prepared animal skin or "membrane", typically used as a material for writing on. Parchment is another term
+> for this material, and if vellum is distinguished from this, it is by vellum being made from calfskin, as opposed to
+> that from other animals,[1] or otherwise being of higher quality
 
 
 install 
@@ -13,7 +19,7 @@ flit install --sylink
 # 1) Autoreformat docstrings in minirst/ref.py
 
 ```
-python -m minirst [--write] path-to-file.py
+velin [--write] path-to-file.py or path-to-dir
 ```
 
 
