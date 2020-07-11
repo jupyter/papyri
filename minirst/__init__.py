@@ -1,4 +1,5 @@
 """
+stuff
 """
 
 import sys
@@ -801,12 +802,13 @@ def reformat(input):
 
 
 def main():
-    filename = sys.argv[1]
-    p = Path(filename)
 
-    with p.open() as f:
-        data = f.read()
-        print(reformat)
+    for filename in sys.argv[1:]:
+        p = Path(filename)
+
+        with p.open() as f:
+            data = f.read()
+            print(reformat)
 
 
 if __name__ == "__main__":
