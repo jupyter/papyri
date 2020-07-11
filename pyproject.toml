@@ -9,3 +9,5 @@ author-email = "bussonniermatthias@gmail.com"
 home-page = "https://github.com/Carreau/minirst"
 classifiers = ["License :: OSI Approved :: MIT License"]
 
+[tool.flit.scripts]
+frappuccino = "minirst:main"
