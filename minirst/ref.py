@@ -190,7 +190,7 @@ def compute_new_doc(docstr, fname):
             fmt += f(doc[s])
     fmt = indent(fmt, "    ") + '    '
     if '----' in fmt:
-        fmt += "\n    "
+        fmt = fmt.rstrip(' ')+ "\n    "
     if shortdoc:
         fmt = fmt.lstrip()
     else:
