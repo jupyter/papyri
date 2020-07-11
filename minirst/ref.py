@@ -163,10 +163,14 @@ def test(docstr, fname):
 
 
 def compute_new_doc(docstr, fname):
+    original_docstr = docstr
     if len(docstr.splitlines()) == 1:
         return ""
+    shortdoc=False
     if not docstr.startswith("\n    "):
         docstr = "\n    " + docstr
+        shortdoc = True
+        print(shortdoc, docstr)
     doc = numpydoc.docscrape.NumpyDocString(docstr)
 
     fmt = ""
@@ -182,6 +186,10 @@ def compute_new_doc(docstr, fname):
             fmt += f(doc[s])
 
     fmt = indent(fmt, "    ") + "    "
+    if shortdoc:
+        fmt = fmt.lstrip()
+    else:
+        fmt = '\n'+fmt
     return fmt
 
 
@@ -196,7 +204,7 @@ def main():
 
     args = parser.parse_args()
     for file in args.files:
-        print(file)
+        #print(file)
         with open(file, "r") as f:
             data = f.read()
 
@@ -228,7 +236,7 @@ def main():
                         "SKIPPING", file, func.name, "triple quote not handled", new_doc
                     )
                 else:
-                    new = new.replace(docstring, "\n" + new_doc)
+                    new = new.replace(docstring, new_doc)
 
             # test(docstring, file)
         if new != data:
