@@ -198,6 +198,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="reformat the docstrigns of some file")
     parser.add_argument("files", metavar="files", type=str, nargs="+", help="TODO")
+    parser.add_argument("--context", metavar="context", type=int, default=3)
     parser.add_argument(
         "--write", dest="write", action="store_true", help="print the diff"
     )
@@ -243,7 +244,7 @@ def main():
             dold = data.splitlines()
             dnew = new.splitlines()
             diffs = list(
-                difflib.unified_diff(dold, dnew, n=2, fromfile=file, tofile=file),
+                difflib.unified_diff(dold, dnew, n=args.context, fromfile=file, tofile=file),
             )
             from pygments import highlight
             from pygments.lexers import DiffLexer
