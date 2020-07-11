@@ -14,7 +14,7 @@ modules = [
     np.ndarray,
     scipy,
     scipy.special,
-    sklearn,
+    #sklearn,
     matplotlib,
     matplotlib.pyplot,
 ]
@@ -86,22 +86,22 @@ def resolver(qa, visited_items, ref):
             return br
     return None
 
-for qa, doc in visited_items.items():
-    sa = doc.see_also()
-    if not sa:
-        continue
-    for backref in sa:
-        for x in _a, _b:
-            br = x(qa, backref)
-            if br in visited_items:
-                visited_items[br].backrefs.append(qa)
-                # print(br, '<-', qa)
-                break
-        else:
-            # print('???', qa, '-?>', backref)
-            pass
-
-for qa, doc in visited_items.items():
-    s = doc._repr_html_(lambda ref:resolver(qa, visited_items, ref))
-    with open(f"html/{qa}.html", "w") as f:
-        f.write(s)
+# for qa, doc in visited_items.items():
+#     sa = doc.see_also()
+#     if not sa:
+#         continue
+#     for backref in sa:
+#         for x in _a, _b:
+#             br = x(qa, backref)
+#             if br in visited_items:
+#                 visited_items[br].backrefs.append(qa)
+#                 # print(br, '<-', qa)
+#                 break
+#         else:
+#             # print('???', qa, '-?>', backref)
+#             pass
+# 
+# for qa, doc in visited_items.items():
+#     s = doc._repr_html_(lambda ref:resolver(qa, visited_items, ref))
+#     with open(f"html/{qa}.html", "w") as f:
+#         f.write(s)
