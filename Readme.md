@@ -1,4 +1,23 @@
-# Not Sphinx
+# warnign muliple projects are in this repo. 
+
+
+install 
+
+```
+# clone this repo
+# cd this repo
+pip install flit
+flit install --sylink
+```
+
+# 1) Autoreformat docstrings in minirst/ref.py
+
+```
+python -m minirst [--write] path-to-file.py
+```
+
+
+# 2) Not Sphinx
 
 A project which is not sphinx (for current lack of a better name), it is _not meant_ to be a Sphinx replacement either
 but to explore a different approach; mainly:
@@ -17,7 +36,7 @@ project and _efficient_ page rebuild.
 This should also allow to reder documentation on _non html_ backend (think terminal), or provide documentation if
 IDE (Spyder/Jupyterlab), without having to iframe it. 
 
-# Usage
+## Usage
 
 Still quite hackish for now:
 
