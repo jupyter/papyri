@@ -7,51 +7,12 @@ import numpy as np
 
 import numpydoc.docscrape
 
+import ast
 
-class NodeVisitor:
-    """
-    A node visitor base class that walks the abstract syntax tree and calls a
-    visitor function for every node found.  This function may return a value
-    which is forwarded by the `visit` method.
 
-    This class is meant to be subclassed, with the subclass adding visitor
-    methods.
-
-    Per default the visitor functions for the nodes are ``'visit_'`` +
-    class name of the node.  So a `TryFinally` node visit function would
-    be `visit_TryFinally`.  This behavior can be changed by overriding
-    the `visit` method.  If no visitor function exists for a node
-    (return value `None`) the `generic_visit` visitor is used instead.
-
-    Don't use the `NodeVisitor` if you want to apply changes to nodes during
-    traversing.  For this a special visitor exists (`NodeTransformer`) that
-    allows modifications.
-    """
-
+class NodeVisitor(ast.NodeVisitor):
     def __init__(self):
         self.items = []
-
-    def visit(self, node):
-        """Visit a node."""
-        method = "visit_" + node.__class__.__name__
-        visitor = getattr(self, method, self.generic_visit)
-        return visitor(node)
-
-    def generic_visit(self, node):
-        """Called if no explicit visitor function exists for a node."""
-        res = []
-        try:
-            for field, value in ast.iter_fields(node):
-                if isinstance(value, list):
-                    for item in value:
-                        self.visit(item)
-                elif isinstance(value, dict):
-                    for k, v in value:
-                        res.append(self.visit(v))
-                    res.append(self.visit(value))
-        except AttributeError:
-            print("ATTRE:", node)
-            pass
 
     def visit_FunctionDef(self, node):
         # we can collect function args, and _could_ check the Parameter section.
@@ -63,6 +24,7 @@ class NodeVisitor:
 
 
 def w(orig):
+    """Util function that shows whitespace as `·`."""
     ll = []
     for l in orig:
         if l[0] in "+-":
@@ -80,7 +42,39 @@ def w(orig):
     return lll
 
 
-class DocstringFormatter:
+class Conf:
+    """
+    
+    Here are some of the config options
+
+    - F100: Items spacing in Return/Raise/Yield/Parameters/See Also
+        - A(auto) - spaces if some sections have blank lines. (default)
+        - B(compact) - no spaces between items, ever.
+        - C(spaced)  - spaces between items, always
+
+    """
+
+    defaults = {"F100": "A"}
+
+    def __init__(self, conf):
+        self._conf = conf
+
+    def __getattr__(self, key):
+        k = key[:-1]
+        v = key[-1]
+        return self._conf.get(k, self.defaults[k]) == v
+
+
+class SectionFormatter:
+    """
+    Render section of the docs, based on some configuration. Not having
+    configuration is great, but everybody has their pet peevs, and I'm hpping we
+    can progressively convince them to adopt a standard.
+    """
+
+    def __init__(self, *, conf):
+        self.config = Conf(conf)
+
     @classmethod
     def format_Signature(self, s, compact):
         return s
@@ -95,43 +89,37 @@ class DocstringFormatter:
     def format_Extended_Summary(self, es, compact):
         return "\n".join(es) + "\n"
 
-    @classmethod
-    def _format_ps(cls, name, ps, compact):
-        res = cls._format_ps_pref(name, ps, compact=True, force_compact=compact)
-        if res is not None:
+    def _format_ps(self, name, ps, compact):
+        force_compact = self.config.F100B
+        res, try_other = self._format_ps_pref(name, ps, compact=True)
+        if (not try_other and self.config.F100A) or self.config.F100B:
             return res
-        return cls._format_ps_pref(name, ps, compact=False, force_compact=compact)
+        return self._format_ps_pref(name, ps, compact=False)[0]
 
-    @classmethod
-    def _format_ps_pref(cls, name, ps, *, compact, force_compact):
+    def _format_ps_pref(self, name, ps, *, compact):
+        try_other = False
         out = name + "\n"
         out += "-" * len(name) + "\n"
         for i, p in enumerate(ps):
             if (not compact) and i:
                 out += "\n"
             if p.type:
-                out += f"""{p.name} : {p.type}\n"""
+                out += f"""{p.name.strip()} : {p.type.strip()}\n"""
             else:
-                out += f"""{p.name}\n"""
+                out += f"""{p.name.strip()}\n"""
             if p.desc:
-                if (
-                    any([l.strip() == "" for l in p.desc])
-                    and compact
-                    and not force_compact
-                ):
-                    return None
+                if any([l.strip() == "" for l in p.desc]):
+                    try_other = True
 
                 out += indent("\n".join(p.desc), "    ")
                 out += "\n"
-        return out
+        return out, try_other
 
-    @classmethod
-    def format_Parameters(cls, ps, compact):
-        return cls._format_ps("Parameters", ps, compact)
+    def format_Parameters(self, ps, compact):
+        return self._format_ps("Parameters", ps, compact)
 
-    @classmethod
-    def format_Other_Parameters(cls, ps, compact):
-        return cls._format_ps("Other Parameters", ps, compact)
+    def format_Other_Parameters(self, ps, compact):
+        return self._format_ps("Other Parameters", ps, compact)
 
     @classmethod
     def format_See_Also(cls, sas, compact):
@@ -244,9 +232,9 @@ class DocstringFormatter:
             # if i:
             #    out += "\n"
             if p.name:
-                out += f"""{p.name} : {p.type}\n"""
+                out += f"""{p.name.strip()} : {p.type.strip()}\n"""
             else:
-                out += f"""{p.type}\n"""
+                out += f"""{p.type.strip()}\n"""
             if p.desc:
                 out += indent("\n".join(p.desc), "    ")
                 out += "\n"
@@ -305,14 +293,14 @@ def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact):
         long_with_space = False
 
     doc = numpydoc.docscrape.NumpyDocString(dedend_docstring(docstr))
-    print(str(docstr))
 
     fmt = ""
     start = True
     # ordered_section is a local patch to that records the docstring order.
-    for s in getattr(doc, "sections", doc.sections):
+    df = SectionFormatter(conf={"F100": "A"})
+    for s in getattr(doc, "ordered_sections", doc.sections):
         if doc[s]:
-            f = getattr(DocstringFormatter, "format_" + s.replace(" ", "_"))
+            f = getattr(df, "format_" + s.replace(" ", "_"))
             res = f(doc[s], compact)
             if not res:
                 continue
@@ -323,7 +311,7 @@ def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact):
     fmt = indent(fmt, INDENT) + INDENT
 
     # hack to detect if we have seen a header section.
-    if "----" in fmt:
+    if "----" in fmt or True:
         if long_with_space:
             fmt = fmt.rstrip(" ") + NINDENT
         else:
@@ -410,8 +398,8 @@ def main():
                 func.body[0].col_offset,
                 func.body[0].end_lineno,
             )
-            if not docstring in data:
-                print(f"skip {file}: {func.name}, can't do replacement yet")
+            # if not docstring in data:
+            #    print(f"skip {file}: {func.name}, can't do replacement yet")
 
             new_doc = compute_new_doc(
                 docstring,
@@ -427,8 +415,8 @@ def main():
                         "SKIPPING", file, func.name, "triple quote not handled", new_doc
                     )
                 else:
-                    if docstring not in new:
-                        print("ESCAPE issue:", docstring)
+                    # if docstring not in new:
+                    #    print("ESCAPE issue:", docstring)
                     new = new.replace(docstring, new_doc)
 
             # test(docstring, file)
