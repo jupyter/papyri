@@ -13,7 +13,7 @@ install
 # clone this repo
 # cd this repo
 pip install flit
-flit install --sylink
+flit install --symlink
 ```
 
 # 1) Autoreformat docstrings in minirst/ref.py
