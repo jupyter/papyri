@@ -524,8 +524,10 @@ class Doc:
         node = self.nodes[i + 1]
         if isinstance(node, Mapping):
             return node.mapping.keys()
+        elif isinstance(node, DeflistParser):
+            return [x.head for x in node.entries]
         else:
-            # print('not a mapping', repr(node))
+            print("not a mapping", repr(node))
             pass
 
     def _repr_html_(self, resolver=lambda x: None):
@@ -567,9 +569,10 @@ class Doc:
 
         def _resolver(k):
             if (ref := resolver(k)) is None:
-                print("could not resolve", k, f"({self.name})")
+                # print("could not resolve", k, f"({self.name})")
                 return k
             else:
+                # print("resolved", k, f"({self.name})")
                 return f"<a href='{ref}.html'>{k}</a>"
 
         hrepr = []
@@ -722,9 +725,12 @@ def failed(lines):
 
 def parsedoc(doc, *, name=None, sig=None):
 
-    NumpyDocString(doc)
-    lines = dedentfirst(doc).splitlines()
-    return Doc.parse(lines, name=name, sig=sig)
+    try:
+        NumpyDocString(doc)
+        lines = dedentfirst(doc).splitlines()
+        return Doc.parse(lines, name=name, sig=sig)
+    except Exception:
+        return ""
 
 
 def find_indent_blocks(lines):
