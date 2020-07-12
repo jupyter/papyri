@@ -801,7 +801,7 @@ def reformat(input):
     return format(transform(parse(format(transform(parse(input))))))
 
 
-#def main():
+# def main():
 #
 #    for filename in sys.argv[1:]:
 #        p = Path(filename)

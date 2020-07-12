@@ -47,20 +47,20 @@ class DocstringFormatter:
         if res is not None:
             return res
         return cls._format_ps_pref(name, ps, compact=False)
+
     @classmethod
     def _format_ps_pref(cls, name, ps, *, compact):
-
         out = name + "\n"
         out += "-" * len(name) + "\n"
-        for i,p in enumerate(ps):
+        for i, p in enumerate(ps):
             if (not compact) and i:
-                out += '\n'
+                out += "\n"
             if p.type:
                 out += f"""{p.name} : {p.type}\n"""
             else:
                 out += f"""{p.name}\n"""
             if p.desc:
-                if any([l.strip() == '' for l in p.desc]) and compact:
+                if any([l.strip() == "" for l in p.desc]) and compact:
                     return None
 
                 out += indent("\n".join(p.desc), "    ")
@@ -90,9 +90,9 @@ class DocstringFormatter:
             else:
                 rest_desc = []
             _first = True
-            for ref,type_ in a:
+            for ref, type_ in a:
                 if not _first:
-                    out += ', '
+                    out += ", "
                 if type_ is not None:
                     out += f":{type_}:`{ref}`"
                 else:
@@ -133,7 +133,6 @@ class DocstringFormatter:
         out += "\n"
         return out
 
-
     @classmethod
     def format_Warns(cls, ps):
         return cls.format_RRY("Warns", ps)
@@ -155,7 +154,9 @@ class DocstringFormatter:
         out = name + "\n"
         out += "-" * len(name) + "\n"
 
-        for p in ps:
+        for i, p in enumerate(ps):
+            if i:
+                out += "\n"
             if p.name:
                 out += f"""{p.name} : {p.type}\n"""
             else:
@@ -187,12 +188,12 @@ def compute_new_doc(docstr, fname):
     original_docstr = docstr
     if len(docstr.splitlines()) <= 1:
         return ""
-    shortdoc=False
+    shortdoc = False
     short_with_space = False
     if not docstr.startswith("\n    "):
         docstr = "\n    " + docstr
         shortdoc = True
-        if original_docstr[0] == ' ': 
+        if original_docstr[0] == " ":
             short_with_space = True
 
     long_end = True
@@ -206,28 +207,26 @@ def compute_new_doc(docstr, fname):
 
     fmt = ""
     start = True
-    #print(doc.ordered_sections)
-    for s in doc.ordered_sections:
+    # ordered_section is a local patch to that records the docstring order.
+    for s in getattr(doc.ordered_sections, doc.sections):
         if doc[s]:
-            f = getattr(
-                DocstringFormatter, "format_" + s.replace(" ", "_"), lambda x: s
-            )
+            f = getattr(DocstringFormatter, "format_" + s.replace(" ", "_"))
             if not start:
                 fmt += "\n"
             start = False
             fmt += f(doc[s])
-    fmt = indent(fmt, "    ") + '    '
-    if '----' in fmt:
+    fmt = indent(fmt, "    ") + "    "
+    if "----" in fmt:
         if long_with_space:
-            fmt = fmt.rstrip(' ')+ "\n    "
+            fmt = fmt.rstrip(" ") + "\n    "
         else:
-            fmt = fmt.rstrip(' ')+ "    "
+            fmt = fmt.rstrip(" ") + "    "
     if shortdoc:
         fmt = fmt.lstrip()
         if short_with_space:
-            fmt = ' '+fmt
+            fmt = " " + fmt
     else:
-        fmt = '\n'+fmt
+        fmt = "\n" + fmt
     if not long_end:
         fmt = fmt.rstrip()
     return fmt
@@ -246,17 +245,17 @@ def main():
     args = parser.parse_args()
     to_format = []
     from pathlib import Path
+
     for f in args.files:
         p = Path(f)
         if p.is_dir():
-            for sf in p.glob('**/*.py'):
+            for sf in p.glob("**/*.py"):
                 to_format.append(sf)
         else:
             to_format.append(p)
 
-
     for file in to_format:
-        #print(file)
+        # print(file)
         with open(file, "r") as f:
             data = f.read()
 
@@ -295,7 +294,9 @@ def main():
             dold = data.splitlines()
             dnew = new.splitlines()
             diffs = list(
-                difflib.unified_diff(dold, dnew, n=args.context, fromfile=str(file), tofile=str(file)),
+                difflib.unified_diff(
+                    dold, dnew, n=args.context, fromfile=str(file), tofile=str(file)
+                ),
             )
             from pygments import highlight
             from pygments.lexers import DiffLexer
