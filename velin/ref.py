@@ -160,8 +160,8 @@ class DocstringFormatter:
                 pass
 
         for i, p in enumerate(ps):
-            if i:
-                out += "\n"
+            #if i:
+            #    out += "\n"
             if p.name:
                 out += f"""{p.name} : {p.type}\n"""
             else:
