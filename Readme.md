@@ -7,7 +7,9 @@ French for Vellum
 > that from other animals,[1] or otherwise being of higher quality
 
 
-install 
+## install 
+
+You may need to get a modified version of numpydoc depending on the stage of development.
 
 ```
 # clone this repo
@@ -16,14 +18,19 @@ pip install flit
 flit install --symlink
 ```
 
-# 1) Autoreformat docstrings in minirst/ref.py
+## Autoreformat docstrings in minirst/ref.py
 
 ```
 velin [--write] path-to-file.py or path-to-dir
 ```
 
+Without `--write` vélin will print the suggested diff, with `--write` it will _attempt_  to update the files.
 
-# 2) Not Sphinx
+
+
+## other things part of this repo that will need to be pulled out at some point
+
+### Not Sphinx
 
 A project which is not sphinx (for current lack of a better name), it is _not meant_ to be a Sphinx replacement either
 but to explore a different approach; mainly:
@@ -42,7 +49,7 @@ project and _efficient_ page rebuild.
 This should also allow to reder documentation on _non html_ backend (think terminal), or provide documentation if
 IDE (Spyder/Jupyterlab), without having to iframe it. 
 
-## Usage
+### Usage
 
 Still quite hackish for now:
 
