@@ -154,6 +154,11 @@ class DocstringFormatter:
         out = name + "\n"
         out += "-" * len(name) + "\n"
 
+        if name == "Returns":
+            if len(ps) > 1:
+                # do heuristic to check we actually have a description list and not a paragraph
+                pass
+
         for i, p in enumerate(ps):
             if i:
                 out += "\n"
@@ -168,7 +173,7 @@ class DocstringFormatter:
         return out
 
 
-def test(docstr, fname):
+def test(docstr, fname, *, indempotenty_check):
     fmt = compute_new_doc(docstr, fname)
     dold = docstr.splitlines()
     dnew = fmt.splitlines()
@@ -184,7 +189,7 @@ def test(docstr, fname):
         print(indent(hldiff, " |   ", predicate=lambda x: True))
 
 
-def compute_new_doc(docstr, fname):
+def compute_new_doc(docstr, fname, *, indempotenty_check):
     original_docstr = docstr
     if len(docstr.splitlines()) <= 1:
         return ""
@@ -208,7 +213,7 @@ def compute_new_doc(docstr, fname):
     fmt = ""
     start = True
     # ordered_section is a local patch to that records the docstring order.
-    for s in getattr(doc.ordered_sections, doc.sections):
+    for s in getattr(doc, "ordered_sections", doc.sections):
         if doc[s]:
             f = getattr(DocstringFormatter, "format_" + s.replace(" ", "_"))
             if not start:
@@ -229,6 +234,15 @@ def compute_new_doc(docstr, fname):
         fmt = "\n" + fmt
     if not long_end:
         fmt = fmt.rstrip()
+    if indempotenty_check:
+        d2 = numpydoc.docscrape.NumpyDocString(fmt)
+        if not d2._parsed_data == doc._parsed_data:
+            raise ValueError(
+                "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with --unsafe",
+                fname,
+                d2._parsed_data,
+                doc._parsed_data,
+            )
     return fmt
 
 
@@ -238,6 +252,7 @@ def main():
     parser = argparse.ArgumentParser(description="reformat the docstrigns of some file")
     parser.add_argument("files", metavar="files", type=str, nargs="+", help="TODO")
     parser.add_argument("--context", metavar="context", type=int, default=3)
+    parser.add_argument("--unsafe", action="store_true")
     parser.add_argument(
         "--write", dest="write", action="store_true", help="print the diff"
     )
@@ -266,7 +281,11 @@ def main():
         for i, func in enumerate(funcs[:]):
             # print(i, "==", func.name, "==")
             try:
-                docstring = func.body[0].value.s
+                e0 = func.body[0]
+                if not isinstance(e0, ast.Expr):
+                    continue
+                # e0.value is _likely_ a Constant node.
+                docstring = e0.value.s
             except AttributeError:
                 continue
             if not isinstance(docstring, str):
@@ -279,7 +298,9 @@ def main():
             if not docstring in data:
                 print(f"skip {file}: {func.name}, can't do replacement yet")
 
-            new_doc = compute_new_doc(docstring, file)
+            new_doc = compute_new_doc(
+                docstring, file, indempotenty_check=not args.unsafe
+            )
             # test(docstring, file)
             if new_doc:
                 if ('"""' in new_doc) or ("'''" in new_doc):
