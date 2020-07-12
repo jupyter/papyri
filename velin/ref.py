@@ -235,7 +235,11 @@ def compute_new_doc(docstr, fname, *, indempotenty_check):
     if not long_end:
         fmt = fmt.rstrip()
     if indempotenty_check:
-        d2 = numpydoc.docscrape.NumpyDocString(fmt)
+        ff = fmt
+        if not ff.startswith("\n    "):
+            ff = "\n    " + ff
+
+        d2 = numpydoc.docscrape.NumpyDocString(ff)
         if not d2._parsed_data == doc._parsed_data:
             raise ValueError(
                 "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with --unsafe",
@@ -243,6 +247,7 @@ def compute_new_doc(docstr, fname, *, indempotenty_check):
                 d2._parsed_data,
                 doc._parsed_data,
             )
+    assert fmt
     return fmt
 
 
@@ -299,7 +304,7 @@ def main():
                 print(f"skip {file}: {func.name}, can't do replacement yet")
 
             new_doc = compute_new_doc(
-                docstring, file, indempotenty_check=not args.unsafe
+                docstring, file, indempotenty_check=(not args.unsafe)
             )
             # test(docstring, file)
             if new_doc:
@@ -308,6 +313,8 @@ def main():
                         "SKIPPING", file, func.name, "triple quote not handled", new_doc
                     )
                 else:
+                    if docstring not in new:
+                        print("ESCAPE issue:", docstring)
                     new = new.replace(docstring, new_doc)
 
             # test(docstring, file)
