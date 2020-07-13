@@ -6,8 +6,13 @@ build-backend = "flit_core.buildapi"
 module = "velin"
 author = "Matthias Bussonnier"
 author-email = "bussonniermatthias@gmail.com"
-home-page = "https://github.com/Carreau/velin"
+home-page = "https://github.com/Carreau/minirst"
 classifiers = ["License :: OSI Approved :: MIT License"]
+description-file="Readme.md"
+requires=[
+    "numpydoc",
+    "pygments"
+]
 
 [tool.flit.scripts]
 velin = "velin:main"

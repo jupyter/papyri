@@ -1,5 +1,13 @@
 """
-stuff
+French for Vellum
+
+> Vellum is prepared animal skin or "membrane", typically used as a material for
+> writing on. Parchment is another term > for this material, and if vellum is
+> distinguished from this, it is by vellum being made from calfskin, as opposed to
+> that from other animals,[1] or otherwise being of higher quality
+
+Tools to automatically reformat docstrings based using numpydoc format.
+
 """
 
 import sys
@@ -8,7 +16,7 @@ import textwrap
 
 from numpydoc.docscrape import NumpyDocString
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 def parse(input):
