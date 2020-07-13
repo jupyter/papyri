@@ -16,7 +16,7 @@ import textwrap
 
 from numpydoc.docscrape import NumpyDocString
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 
 def parse(input):
@@ -576,7 +576,8 @@ class Doc:
             br_html = ""
 
         def _resolver(k):
-            if (ref := resolver(k)) is None:
+            ref = resolver(k)
+            if ref  is None:
                 # print("could not resolve", k, f"({self.name})")
                 return k
             else:
