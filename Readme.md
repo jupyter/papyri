@@ -74,9 +74,10 @@ IDE (Spyder/Jupyterlab), without having to iframe it.
 
 Still quite hackish for now:
 
+```bash
 $ mkdir html
 $ rm htmls/*.html
 $ python gen.py
-
+```
 
 
