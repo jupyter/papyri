@@ -26,6 +26,27 @@ velin [--write] path-to-file.py or path-to-dir
 
 Without `--write` vélin will print the suggested diff, with `--write` it will _attempt_  to update the files.
 
+## options
+
+```
+$ velin --help
+usage: velin [-h] [--context context] [--unsafe] [--check] [--no-diff] [--no-color] [--write] path [path ...]
+
+reformat the docstrigns of some file
+
+positional arguments:
+  files              Files or folder to reformat
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --context context  Number of context lines in the diff
+  --unsafe           Lift some safety feature (don't fail if updating the docstring is not indempotent
+  --check            Print the list of files/lines number and exit with a non-0 exit status, Use it for CI.
+  --no-diff          Do not print the diff
+  --no-color
+  --write            Try to write the updated docstring to the files
+```
+
 
 
 ## other things part of this repo that will need to be pulled out at some point

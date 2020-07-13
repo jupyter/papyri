@@ -5,7 +5,7 @@ from textwrap import indent
 
 import numpy as np
 
-import numpydoc.docscrape
+import numpydoc.docscrape as nds
 
 import ast
 
@@ -21,6 +21,63 @@ class NodeVisitor(ast.NodeVisitor):
 
         self.items.append(node)
         self.generic_visit(node)
+
+
+class NumpyDocString(nds.NumpyDocString):
+    """
+    subclass a littel bit more lenient on parsing
+    """
+
+    aliases = {
+        "Parameters": (
+            "options",
+            "parameter",
+            "parameters",
+            "paramters",
+            "parmeters",
+            "paramerters",
+        )
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.ordered_sections = []
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        if key in ["Extended Summary"]:
+            value = [d.rstrip() for d in value]
+        super().__setitem__(key, value)
+        assert key not in self.ordered_sections
+        self.ordered_sections.append(key)
+
+    def _guess_header(self, header):
+        if header in self.sections:
+            return header
+        # handle missing trailing `s`, and trailing `:`
+        for s in self.sections:
+            if s.lower().startswith(header.rstrip(":").lower()):
+                return s
+        for k, v in self.aliases.items():
+            if header.lower() in v:
+                return k
+        raise ValueError("Cound not find match for section:", header)
+
+    def _read_sections(self):
+        for name, data in super()._read_sections():
+            name = self._guess_header(name)
+            yield name, data
+
+    def _parse_param_list(self, *args, **kwargs):
+        """
+        Normalize parameters
+        """
+        parms = super()._parse_param_list(*args, **kwargs)
+        out = []
+        for name, type_, desc in parms:
+            out.append(
+                nds.Parameter(name.strip(), type_.strip(), [d.rstrip() for d in desc])
+            )
+        return out
 
 
 def w(orig):
@@ -292,7 +349,7 @@ def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact):
     if original_docstr.splitlines()[-2].strip():
         long_with_space = False
 
-    doc = numpydoc.docscrape.NumpyDocString(dedend_docstring(docstr))
+    doc = NumpyDocString(dedend_docstring(docstr))
 
     fmt = ""
     start = True
@@ -329,15 +386,21 @@ def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact):
         # if not ff.startswith(NINDENT):
         #    ff = NINDENT + ff
 
-        d2 = numpydoc.docscrape.NumpyDocString(dedend_docstring(ff))
+        d2 = NumpyDocString(dedend_docstring(ff))
         if not d2._parsed_data == doc._parsed_data:
+            secs1 = {
+                k: v for k, v in d2._parsed_data.items() if v != doc._parsed_data[k]
+            }
+            secs2 = {
+                k: v for k, v in doc._parsed_data.items() if v != d2._parsed_data[k]
+            }
             raise ValueError(
                 "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with --unsafe: "
                 + str(fname)
                 + "\n"
-                + str({k: v for k, v in d2._parsed_data.items() if v})
+                + str(secs1)
                 + "\n"
-                + str({k: v for k, v in doc._parsed_data.items() if v}),
+                + str(secs2),
             )
     assert fmt
     # we can't just do that as See Also and a few other would be sphinxified.
@@ -349,19 +412,50 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="reformat the docstrigns of some file")
-    parser.add_argument("files", metavar="files", type=str, nargs="+", help="TODO")
-    parser.add_argument("--context", metavar="context", type=int, default=3)
-    parser.add_argument("--unsafe", action="store_true")
-    parser.add_argument("--compact", action="store_true")
     parser.add_argument(
-        "--write", dest="write", action="store_true", help="print the diff"
+        "paths",
+        metavar="path",
+        type=str,
+        nargs="+",
+        help="Files or folder to reformat",
+    )
+    parser.add_argument(
+        "--context",
+        metavar="context",
+        type=int,
+        default=3,
+        help="Number of context lines in the diff",
+    )
+    parser.add_argument(
+        "--unsafe",
+        action="store_true",
+        help="Lift some safety feature (don't fail if updating the docstring is not indempotent",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print the list of files/lines number and exit with a non-0 exit status, Use it for CI.",
+    )
+    parser.add_argument(
+        "--no-diff",
+        action="store_false",
+        dest="print_diff",
+        help="Do not print the diff",
+    )
+    parser.add_argument("--no-color", action="store_false", dest="do_highlight")
+    parser.add_argument("--compact", action="store_true", help="Please ignore")
+    parser.add_argument(
+        "--write",
+        dest="write",
+        action="store_true",
+        help="Try to write the updated docstring to the files",
     )
 
     args = parser.parse_args()
     to_format = []
     from pathlib import Path
 
-    for f in args.files:
+    for f in args.paths:
         p = Path(f)
         if p.is_dir():
             for sf in p.glob("**/*.py"):
@@ -369,10 +463,15 @@ def main():
         else:
             to_format.append(p)
 
+    need_changes = []
     for file in to_format:
         # print(file)
-        with open(file, "r") as f:
-            data = f.read()
+        try:
+            with open(file, "r") as f:
+                data = f.read()
+        except Exception as e:
+            pass
+            # raise RuntimeError(f'Fail reading {file}') from e
 
         tree = ast.parse(data)
         new = data
@@ -409,7 +508,8 @@ def main():
                 compact=args.compact,
             )
             # test(docstring, file)
-            if new_doc:
+            if new_doc and new_doc != docstring:
+                need_changes.append(str(file) + f":{start}:{func.name}")
                 if ('"""' in new_doc) or ("'''" in new_doc):
                     print(
                         "SKIPPING", file, func.name, "triple quote not handled", new_doc
@@ -421,6 +521,7 @@ def main():
 
             # test(docstring, file)
         if new != data:
+
             dold = data.splitlines()
             dnew = new.splitlines()
             diffs = list(
@@ -428,15 +529,25 @@ def main():
                     dold, dnew, n=args.context, fromfile=str(file), tofile=str(file)
                 ),
             )
-            from pygments import highlight
-            from pygments.lexers import DiffLexer
-            from pygments.formatters import TerminalFormatter
 
-            if not args.write:
+            if args.print_diff and not args.write:
                 code = "\n".join(diffs)
-                hldiff = highlight(code, DiffLexer(), TerminalFormatter())
 
-                print(hldiff)
-            else:
+                if args.do_highlight:
+                    from pygments import highlight
+                    from pygments.lexers import DiffLexer
+                    from pygments.formatters import TerminalFormatter
+
+                    code = highlight(code, DiffLexer(), TerminalFormatter())
+
+                print(code)
+            if args.write:
                 with open(file, "w") as f:
                     f.write(new)
+    if args.check:
+        if need_changes:
+            sys.exit(
+                "Some files/functions need updates:\n - " + "\n - ".join(need_changes)
+            )
+        else:
+            sys.exit(0)
