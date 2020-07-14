@@ -43,8 +43,8 @@ class NumpyDocString(nds.NumpyDocString):
         try:
             lines = reformat_example_lines(lines)
         except Exception:
-            print('black failed')
-            print('\n'.join(lines))
+            print("black failed")
+            print("\n".join(lines))
             raise
         return lines
 
@@ -56,7 +56,7 @@ class NumpyDocString(nds.NumpyDocString):
         if key in ["Extended Summary", "Summary"]:
             value = [d.rstrip() for d in value]
 
-        if key in ('Examples'):
+        if key in ("Examples"):
             value = self.parse_examples(value)
         super().__setitem__(key, value)
         assert key not in self.ordered_sections
@@ -482,8 +482,8 @@ def main():
             with open(file, "r") as f:
                 data = f.read()
         except Exception as e:
-            #continue
-            raise RuntimeError(f'Fail reading {file}') from e
+            # continue
+            raise RuntimeError(f"Fail reading {file}") from e
 
         tree = ast.parse(data)
         new = data

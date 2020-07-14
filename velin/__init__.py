@@ -65,7 +65,6 @@ def compute_indents(lines):
     Indentation is only supported if spaces, tabs raise a NotImplementedError as we don't know how wide a tab is.
     We also treat complete blank lines as `None` indentation.
 
-
     """
     assert isinstance(lines, list)
     results = []
@@ -577,7 +576,7 @@ class Doc:
 
         def _resolver(k):
             ref = resolver(k)
-            if ref  is None:
+            if ref is None:
                 # print("could not resolve", k, f"({self.name})")
                 return k
             else:
@@ -746,7 +745,7 @@ def find_indent_blocks(lines):
     """
     Given a list of lines find _block_ by level of indentation
 
-    - A block is considered a sequence of one or more lines, separated 
+    - A block is considered a sequence of one or more lines, separated
     - once one level of indentation is encounter we don't split anymore, it will be up to the sub-parser.
     - A whitespace or empty line yield another block.
     """
