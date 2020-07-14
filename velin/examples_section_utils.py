@@ -1,9 +1,16 @@
 import black
 
 
-def reformat(lines):
+def reformat(lines, indent=4):
     text = "\n".join(lines)
-    return black.format_str(text, mode=black.FileMode()).splitlines()
+    if 'doctest:' in text:
+        return lines
+    try:
+        mode = black.FileMode()
+        mode.line_length -= (indent+4)
+        return black.format_str(text, mode=black.FileMode()).splitlines()
+    except Exception as e:
+        raise ValueError('could not reformat:'+ text) from e
 
 
 from itertools import cycle, chain
@@ -44,7 +51,7 @@ def splitcode(lines):
             in_, out = [], []
 
             in_.append(l[4:])
-        elif l.startswith("..."):
+        elif l.startswith("... "):
             in_.append(l[4:])
         else:
             out.append(l)
@@ -53,15 +60,14 @@ def splitcode(lines):
     return items
 
 
-def reformat_example_lines(ex):
+def reformat_example_lines(ex, indent=4):
     oo = []
     blocks = splitblank(ex)
     for block in blocks:
         codes = splitcode(block)
         for (in_, out) in codes:
-            # print(in_, out)
-            oo.extend(insert_promt(reformat(in_)))
+            oo.extend(insert_promt(reformat(in_, indent=4)))
             if out:
                 oo.extend(out)
-        oo.extend(" ")
-    return oo
+        oo.append("")
+    return oo[:-1]

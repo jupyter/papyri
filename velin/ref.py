@@ -22,6 +22,7 @@ class NodeVisitor(ast.NodeVisitor):
         self.items.append(node)
         self.generic_visit(node)
 
+BLACK_REFORMAT = True
 
 class NumpyDocString(nds.NumpyDocString):
     """
@@ -36,17 +37,26 @@ class NumpyDocString(nds.NumpyDocString):
             "paramters",
             "parmeters",
             "paramerters",
+            "arguments",
         )
     }
 
-    def parse_examples(self, lines):
-        try:
-            lines = reformat_example_lines(lines)
-        except Exception:
-            print("black failed")
-            print("\n".join(lines))
-            raise
+    def parse_examples(self, lines, indent=4):
+        # this is bad practice be we do want normalisation here for now 
+        # to  check that parse->format->parse is idempotent.
+        # this can be done if we had a separate "normalize" step.
+        global BLACK_REFORMAT
+        if BLACK_REFORMAT:
+            try:
+                
+                lines = reformat_example_lines(lines, indent=indent)
+            except Exception:
+                print("black failed")
+                print("\n".join(lines))
+                raise
+
         return lines
+
 
     def __init__(self, *args, **kwargs):
         self.ordered_sections = []
@@ -454,6 +464,12 @@ def main():
         dest="print_diff",
         help="Do not print the diff",
     )
+    parser.add_argument(
+        "--no-black",
+        action="store_false",
+        dest="run_black",
+        help="Do not run black on examples",
+    )
     parser.add_argument("--no-color", action="store_false", dest="do_highlight")
     parser.add_argument("--compact", action="store_true", help="Please ignore")
     parser.add_argument(
@@ -463,7 +479,14 @@ def main():
         help="Try to write the updated docstring to the files",
     )
 
+
+
     args = parser.parse_args()
+    global BLACK_REFORMAT
+    if args.run_black:
+        BLACK_REFORMAT = True
+    else:
+        BLACK_REFORMAT = False
     to_format = []
     from pathlib import Path
 
