@@ -3,9 +3,9 @@ import sys
 import difflib
 from textwrap import indent
 
-import numpy as np
-
 import numpydoc.docscrape as nds
+
+from .examples_section_utils import reformat_example_lines
 
 import ast
 
@@ -39,13 +39,25 @@ class NumpyDocString(nds.NumpyDocString):
         )
     }
 
+    def parse_examples(self, lines):
+        try:
+            lines = reformat_example_lines(lines)
+        except Exception:
+            print('black failed')
+            print('\n'.join(lines))
+            raise
+        return lines
+
     def __init__(self, *args, **kwargs):
         self.ordered_sections = []
         super().__init__(*args, **kwargs)
 
     def __setitem__(self, key, value):
-        if key in ["Extended Summary"]:
+        if key in ["Extended Summary", "Summary"]:
             value = [d.rstrip() for d in value]
+
+        if key in ('Examples'):
+            value = self.parse_examples(value)
         super().__setitem__(key, value)
         assert key not in self.ordered_sections
         self.ordered_sections.append(key)
@@ -395,9 +407,9 @@ def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact):
                 k: v for k, v in doc._parsed_data.items() if v != d2._parsed_data[k]
             }
             raise ValueError(
-                "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with --unsafe: "
+                "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with `velin --unsafe "
                 + str(fname)
-                + "\n"
+                + "`\n"
                 + str(secs1)
                 + "\n"
                 + str(secs2),
@@ -470,8 +482,8 @@ def main():
             with open(file, "r") as f:
                 data = f.read()
         except Exception as e:
-            pass
-            # raise RuntimeError(f'Fail reading {file}') from e
+            #continue
+            raise RuntimeError(f'Fail reading {file}') from e
 
         tree = ast.parse(data)
         new = data

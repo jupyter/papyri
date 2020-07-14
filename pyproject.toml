@@ -9,10 +9,11 @@ author-email = "bussonniermatthias@gmail.com"
 home-page = "https://github.com/Carreau/minirst"
 classifiers = ["License :: OSI Approved :: MIT License"]
 description-file="Readme.md"
-requires-python=">=3.7"
+requires-python=">=3.8"
 requires=[
     "numpydoc",
-    "pygments"
+    "pygments",
+    "black"
 ]
 
 [tool.flit.scripts]
