@@ -37,17 +37,26 @@ def splitblank(list):
         items.append(current)
     return items
 
+from collections import namedtuple
+InOut = namedtuple('InOut', ['in_', 'out'])
+Text = namedtuple('Text', ['in_', 'out'])
+
+def InOutText(a, b):
+    if not a:
+        return Text(a, b)
+    else:
+        return InOut(a, b)
 
 def splitcode(lines):
     items = []
     in_ = []
     out = []
     if not lines[0].startswith(">>>"):
-        return [([], lines)]
+        return [InOutText([], lines)]
     for i, l in enumerate(lines):
         if l.startswith(">>> "):
             if in_ or out:
-                items.append((in_, out))
+                items.append(InOutText(in_, out))
             in_, out = [], []
 
             in_.append(l[4:])
@@ -56,7 +65,7 @@ def splitcode(lines):
         else:
             out.append(l)
     if in_ or out:
-        items.append((in_, out))
+        items.append(InOutText(in_, out))
     return items
 
 

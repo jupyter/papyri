@@ -1,0 +1,80 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+    <style>.foo:hover{text-decoration:underline} .foo{font-weight:bold; color:black}</style>
+</head>
+<body>
+
+{% macro example(entries) -%}
+    {{'>>> ' -}}
+    {%- for index, type, text, t_ in entries %}
+       {%- if text == '\n' -%}
+           <br>...&nbsp;
+        {%- else -%}
+            {%- if t_ -%}
+           <a class="foo" title={{t_}}, href="{{t_}}.html">{{text}}</a>
+            {%- else -%}
+            {{text}}
+            {%- endif -%}
+       {%- endif -%}
+    {%- endfor-%}
+    {{-'\n'}}
+{%- endmacro %}
+
+
+{% for section in doc.sections if doc[section] %}
+
+   <h1>{{section}}</h1>
+   {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
+   <pre>
+       {%- for line in doc[section] %}{{ line }}\n{% endfor -%}
+   </pre>
+   {% elif section in ['See Also'] %}
+       {% for r in doc[sections] %}
+            {{r}}
+       {% endfor %}
+   {% elif section in ['Examples'] %}
+       {% for type,data in doc.edata %}
+           {% if type=='text' %}
+            <h4>{{data}}</h4>
+           {% else %}
+            <pre>{{example(data[0]) -}}
+            {{- data[1]}}</pre>
+           {% endif %}
+            
+       {% endfor %}
+       See:
+       {% for r in doc.refs %}
+            <a href='{{r}}.html'>{{r}}</a>,
+       {% endfor %}
+   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields'] %}
+
+       <dl>
+       {% for p in doc[section] %}
+           <dt>{{p.name}}:{{p.type}}</dt>
+            <dd><pre>{% for line in p.desc -%}
+               {{line}}
+            {% endfor %}
+            </pre></dd>
+       {% endfor %}
+
+   </pre>
+   {% else %}
+       {% if doc[section] %}
+        <pre>
+       {{doc[section]}}
+       </pre>
+       {% endif %}
+   {% endif %}
+{% endfor%}
+<h1>Back References</h1>
+{% for r in doc.backrefs %}
+    <a href='{{r}}.html'>{{r}}</a>
+{% endfor %}
+
+</body>
+</html>

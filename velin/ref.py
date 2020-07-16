@@ -376,7 +376,10 @@ def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact):
     fmt = ""
     start = True
     # ordered_section is a local patch to that records the docstring order.
-    df = SectionFormatter(conf={"F100": "A"})
+    if compact:
+        df = SectionFormatter(conf={"F100": "B"})
+    else:
+        df = SectionFormatter(conf={"F100": "A"})
     for s in getattr(doc, "ordered_sections", doc.sections):
         if doc[s]:
             f = getattr(df, "format_" + s.replace(" ", "_"))
@@ -534,16 +537,21 @@ def main():
             )
             # if not docstring in data:
             #    print(f"skip {file}: {func.name}, can't do replacement yet")
-
-            new_doc = compute_new_doc(
-                docstring,
-                file,
-                indempotenty_check=(not args.unsafe),
-                level=nindent,
-                compact=args.compact,
-            )
+            try:
+                new_doc = compute_new_doc(
+                    docstring,
+                    file,
+                    indempotenty_check=(not args.unsafe),
+                    level=nindent,
+                    compact=args.compact,
+                )
+            except Exception:
+                print(f'somethign went wrong with {file}')
+                continue
+            if not docstring.strip():
+                print('DOCSTRING IS EMPTY !!!', func.name)
             # test(docstring, file)
-            if new_doc and new_doc != docstring:
+            if new_doc.strip() and new_doc != docstring:
                 need_changes.append(str(file) + f":{start}:{func.name}")
                 if ('"""' in new_doc) or ("'''" in new_doc):
                     print(
