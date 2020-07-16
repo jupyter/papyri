@@ -3,14 +3,14 @@ import black
 
 def reformat(lines, indent=4):
     text = "\n".join(lines)
-    if 'doctest:' in text:
+    if "doctest:" in text:
         return lines
     try:
         mode = black.FileMode()
-        mode.line_length -= (indent+4)
+        mode.line_length -= indent + 4
         return black.format_str(text, mode=black.FileMode()).splitlines()
     except Exception as e:
-        raise ValueError('could not reformat:'+ text) from e
+        raise ValueError("could not reformat:" + text) from e
 
 
 from itertools import cycle, chain
@@ -37,15 +37,19 @@ def splitblank(list):
         items.append(current)
     return items
 
+
 from collections import namedtuple
-InOut = namedtuple('InOut', ['in_', 'out'])
-Text = namedtuple('Text', ['in_', 'out'])
+
+InOut = namedtuple("InOut", ["in_", "out"])
+Text = namedtuple("Text", ["in_", "out"])
+
 
 def InOutText(a, b):
     if not a:
         return Text(a, b)
     else:
         return InOut(a, b)
+
 
 def splitcode(lines):
     items = []

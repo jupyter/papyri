@@ -22,7 +22,9 @@ class NodeVisitor(ast.NodeVisitor):
         self.items.append(node)
         self.generic_visit(node)
 
+
 BLACK_REFORMAT = True
+
 
 class NumpyDocString(nds.NumpyDocString):
     """
@@ -42,13 +44,13 @@ class NumpyDocString(nds.NumpyDocString):
     }
 
     def parse_examples(self, lines, indent=4):
-        # this is bad practice be we do want normalisation here for now 
+        # this is bad practice be we do want normalisation here for now
         # to  check that parse->format->parse is idempotent.
         # this can be done if we had a separate "normalize" step.
         global BLACK_REFORMAT
         if BLACK_REFORMAT:
             try:
-                
+
                 lines = reformat_example_lines(lines, indent=indent)
             except Exception:
                 print("black failed")
@@ -56,7 +58,6 @@ class NumpyDocString(nds.NumpyDocString):
                 raise
 
         return lines
-
 
     def __init__(self, *args, **kwargs):
         self.ordered_sections = []
@@ -482,8 +483,6 @@ def main():
         help="Try to write the updated docstring to the files",
     )
 
-
-
     args = parser.parse_args()
     global BLACK_REFORMAT
     if args.run_black:
@@ -546,10 +545,10 @@ def main():
                     compact=args.compact,
                 )
             except Exception:
-                print(f'somethign went wrong with {file}')
+                print(f"somethign went wrong with {file}")
                 continue
             if not docstring.strip():
-                print('DOCSTRING IS EMPTY !!!', func.name)
+                print("DOCSTRING IS EMPTY !!!", func.name)
             # test(docstring, file)
             if new_doc.strip() and new_doc != docstring:
                 need_changes.append(str(file) + f":{start}:{func.name}")
