@@ -111,8 +111,8 @@ def do_one_mod(name):
                 continue
             if getattr(a, "__module__", None) is None:
                 continue
-            if hasattr(a, "__qualname__"):
-                qa = a.__module__ + "." + a.__qualname__
+            if isinstance(lqa := getattr(a, "__qualname__",None), str):
+                qa = a.__module__ + "." + lqa
             else:
                 qa = a.__module__ + "." + n
                 # print('skipping', type(a), getattr(a, '__qualname__', None), f'({n}?)')
@@ -120,7 +120,7 @@ def do_one_mod(name):
             if not qa.startswith(root):
                 # print('\nwrong mod for ', qa, repr(a)[:20]+'...', 'while visiting', name)
                 continue
-            if (ddd := getattr(a, "__doc__", None)) is None:
+            if not isinstance(ddd := getattr(a, "__doc__", None), str):
                 # print('no doc for', a)
                 continue
             # sig = None
@@ -133,7 +133,6 @@ def do_one_mod(name):
                 ndoc = NumpyDocString(dedent_but_first(ddd))
             except:
                 print("\nfailed", a)
-                raise
                 continue
             # if warnings:
             #    print(qa)

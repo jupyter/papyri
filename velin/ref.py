@@ -18,10 +18,28 @@ class NodeVisitor(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node):
         # we can collect function args, and _could_ check the Parameter section.
-        for nn in node.args.args:
-            nnn = nn.arg
+        #for nn in node.args.args:
+        #    nnn = nn.arg
+        #for k in [l for l in dir(node) if not l.startswith('_')]:
+        #    sub = getattr(node, k)
+        #    print(k, sub)
+        #    for u in [l for l in dir(sub) if not l.startswith('_')]:
+        #        ss = getattr(sub, u)
+        #        print('    ', u, ss)
+        
+        #node.args.kwarg # single object
+        #node.args.vararg # object
+        #node.args.ks_defaults #list 
+        #print(node.returns)
+        #node.args.defaults +
 
-        self.items.append(node)
+        meta = [arg.arg for arg in node.args.posonlyargs + node.args.args + node.args.kwonlyargs]
+        #    print(arg.arg)
+        #    for k in [l for l in dir(arg) if not l.startswith('_')]:
+        #        sub = getattr(arg, k)
+        #        print('    ', k, sub)
+
+        self.items.append((node, meta))
         self.generic_visit(node)
 
     def visit_ClassDef(self, node):
@@ -29,7 +47,7 @@ class NodeVisitor(ast.NodeVisitor):
         # for nn in node.args.args:
         #    nnn = nn.arg
 
-        self.items.append(node)
+        #self.items.append((node, None))
         self.generic_visit(node)
 
 
@@ -332,8 +350,10 @@ class SectionFormatter:
         for i, p in enumerate(ps):
             # if i:
             #    out += "\n"
-            if p.name:
+            if p.name and p.type:
                 out += f"""{p.name.strip()} : {p.type.strip()}\n"""
+            elif p.name:
+                out += f"""{p.name.strip()}\n"""
             else:
                 out += f"""{p.type.strip()}\n"""
             if p.desc:
@@ -373,7 +393,7 @@ def dedend_docstring(docstring):
     return "\n".join(docstring)
 
 
-def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact):
+def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact, meta):
     INDENT = level * " "
     NINDENT = "\n" + INDENT
     original_docstr = docstr
@@ -394,6 +414,36 @@ def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact):
         long_with_space = False
 
     doc = NumpyDocString(dedend_docstring(docstr))
+    if (params := doc['Parameters']) and meta:
+        
+        a = [o.strip() for p in params for o in p.name.split(',') ]
+        if meta[0] in ['self', 'cls']:
+            meta = meta[1:]
+        doc_missing = set(meta) - set(a)
+        doc_extra = set(a) - set(meta)
+        if len(doc_missing) == len(doc_extra) == 1:
+
+            print(fname)
+            for i,p in enumerate(doc['Parameters']):
+                if p.name in doc_extra:
+                    name = p.name
+                    new_name = list(doc_missing)[0]
+                    if ':' in name and not p.type:
+                        new_name, type_ = name.split(':')
+                        new_name, type_ = new_name.strip(), type_.strip()
+                        doc['Parameters'][i] = nds.Parameter(new_name, type_, *p[2:])
+                        print('renamed', name, 'to', new_name, 'and type to', type_)
+                    else:
+
+                        doc['Parameters'][i] = nds.Parameter(new_name, *p[1:])
+                        print('renamed', name, 'to', list(doc_missing)[0]) 
+                    break
+            else:
+                print('  missing:', doc_missing)
+                print('  extra:', doc_extra)
+
+
+
 
     fmt = ""
     start = True
@@ -529,6 +579,7 @@ def main():
                 data = f.read()
         except Exception as e:
             # continue
+            continue
             raise RuntimeError(f"Fail reading {file}") from e
 
         tree = ast.parse(data)
@@ -538,7 +589,7 @@ def main():
         funcs = NodeVisitor()
         funcs.visit(tree)
         funcs = funcs.items
-        for i, func in enumerate(funcs[:]):
+        for i, (func, meta) in enumerate(funcs[:]):
             # print(i, "==", func.name, "==")
             try:
                 e0 = func.body[0]
@@ -564,6 +615,7 @@ def main():
                     indempotenty_check=(not args.unsafe),
                     level=nindent,
                     compact=args.compact,
+                    meta=meta
                 )
             except Exception:
                 print(f"somethign went wrong with {file}")
