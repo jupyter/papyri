@@ -10,7 +10,7 @@ def reformat(lines, indent=4):
         mode.line_length -= indent + 4
         return black.format_str(text, mode=black.FileMode()).splitlines()
     except Exception as e:
-        raise ValueError("could not reformat:" + text) from e
+        raise ValueError("could not reformat:" + repr(text)) from e
 
 
 from itertools import cycle, chain
@@ -52,21 +52,34 @@ def InOutText(a, b):
 
 
 def splitcode(lines):
+    """
+    Split a block of lines without blank lines into categories.
+
+    Code lines start with >>> or ..., 
+    then outputs, start with none of the two above.
+
+
+    """
     items = []
     in_ = []
     out = []
     if not lines[0].startswith(">>>"):
         return [InOutText([], lines)]
+
+    state = "code"
     for i, l in enumerate(lines):
         if l.startswith(">>> "):
+            state = "code"
             if in_ or out:
                 items.append(InOutText(in_, out))
             in_, out = [], []
 
             in_.append(l[4:])
-        elif l.startswith("... "):
+        # ... can appear in pandas output.
+        elif l.startswith("... ") and state == "code":
             in_.append(l[4:])
         else:
+            state = "notcode"
             out.append(l)
     if in_ or out:
         items.append(InOutText(in_, out))
@@ -74,13 +87,23 @@ def splitcode(lines):
 
 
 def reformat_example_lines(ex, indent=4):
+    from there import print
+
     oo = []
-    blocks = splitblank(ex)
-    for block in blocks:
-        codes = splitcode(block)
-        for (in_, out) in codes:
-            oo.extend(insert_promt(reformat(in_, indent=4)))
-            if out:
-                oo.extend(out)
-        oo.append("")
-    return oo[:-1]
+    # print(ex)
+    try:
+        blocks = splitblank(ex)
+        for block in blocks:
+            # print(block)
+            codes = splitcode(block)
+            for (in_, out) in codes:
+                oo.extend(insert_promt(reformat(in_, indent=4)))
+                if out:
+                    oo.extend(out)
+            oo.append("")
+        return oo[:-1]
+    except Exception:
+        print(block)
+        import sys
+
+        raise

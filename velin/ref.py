@@ -1,7 +1,9 @@
 import ast
+import json
 import sys
 import difflib
 from textwrap import indent
+from there import print
 
 import numpydoc.docscrape as nds
 
@@ -18,6 +20,14 @@ class NodeVisitor(ast.NodeVisitor):
         # we can collect function args, and _could_ check the Parameter section.
         for nn in node.args.args:
             nnn = nn.arg
+
+        self.items.append(node)
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node):
+        # we can collect function args, and _could_ check the Parameter section.
+        # for nn in node.args.args:
+        #    nnn = nn.arg
 
         self.items.append(node)
         self.generic_visit(node)
@@ -40,7 +50,8 @@ class NumpyDocString(nds.NumpyDocString):
             "parmeters",
             "paramerters",
             "arguments",
-        )
+        ),
+        "Yields": ("signals",),
     }
 
     def parse_examples(self, lines, indent=4):
@@ -50,7 +61,6 @@ class NumpyDocString(nds.NumpyDocString):
         global BLACK_REFORMAT
         if BLACK_REFORMAT:
             try:
-
                 lines = reformat_example_lines(lines, indent=indent)
             except Exception:
                 print("black failed")
@@ -58,6 +68,14 @@ class NumpyDocString(nds.NumpyDocString):
                 raise
 
         return lines
+
+    def to_json(self):
+        return {
+            "_parsed_data": self._parsed_data,
+            "edata": self.edata,
+            "refs": self.refs,
+            "backref": self.backrefs,
+        }
 
     def __init__(self, *args, **kwargs):
         self.ordered_sections = []
@@ -197,6 +215,9 @@ class SectionFormatter:
 
     def format_Parameters(self, ps, compact):
         return self._format_ps("Parameters", ps, compact)
+
+    def format_Methods(self, ps, compact):
+        return self._format_ps("Methods", ps, compact)
 
     def format_Other_Parameters(self, ps, compact):
         return self._format_ps("Other Parameters", ps, compact)
@@ -546,6 +567,7 @@ def main():
                 )
             except Exception:
                 print(f"somethign went wrong with {file}")
+                raise
                 continue
             if not docstring.strip():
                 print("DOCSTRING IS EMPTY !!!", func.name)

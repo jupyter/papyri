@@ -5,9 +5,18 @@
     <title>Document</title>
     <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
-    <style>.foo:hover{text-decoration:underline} .foo{font-weight:bold; color:black}</style>
+    <style>
+          .foo:hover{text-decoration:underline}
+          .foo{font-weight:bold; color:black}
+          .exists{color:green;}
+          .missing{color:red;}
+    </style>
 </head>
 <body>
+
+    <header>
+        <nav>/ pydata / numpy / 1.13 / api / {{qa}} </nav>
+</header>
 
 {% macro example(entries) -%}
     {{'>>> ' -}}
@@ -28,13 +37,13 @@
 
 {% for section in doc.sections if doc[section] %}
 
-   <h1>{{section}}</h1>
+   <h3>{{section}}</h3>
    {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
-   <pre>
-       {%- for line in doc[section] %}{{ line }}\n{% endfor -%}
-   </pre>
+       {%- for line in doc[section] %}{{ line }}{{'\n'}}{% endfor -%}
+   {% elif section in ['Signature'] %}
+       {{doc[section]}}
    {% elif section in ['See Also'] %}
-       {% for r in doc[sections] %}
+       {% for r in doc[section] %}
             {{r}}
        {% endfor %}
    {% elif section in ['Examples'] %}
@@ -49,7 +58,7 @@
        {% endfor %}
        See:
        {% for r in doc.refs %}
-            <a href='{{r}}.html'>{{r}}</a>,
+            <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>,
        {% endfor %}
    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields'] %}
 
@@ -73,7 +82,7 @@
 {% endfor%}
 <h1>Back References</h1>
 {% for r in doc.backrefs %}
-    <a href='{{r}}.html'>{{r}}</a>
+    <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
 {% endfor %}
 
 </body>
