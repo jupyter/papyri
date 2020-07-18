@@ -508,6 +508,87 @@ def compute_new_doc(docstr, fname, *, level, compact, meta, func_name):
     return fmt, doc
 
 
+def reformat_file(data, filename, compact, unsafe):
+
+    tree = ast.parse(data)
+    new = data
+
+    # funcs = [t for t in tree.body if isinstance(t, ast.FunctionDef)]
+    funcs = NodeVisitor()
+    funcs.visit(tree)
+    funcs = funcs.items
+    for i, (func, meta) in enumerate(funcs[:]):
+        # print(i, "==", func.name, "==")
+        try:
+            e0 = func.body[0]
+            if not isinstance(e0, ast.Expr):
+                continue
+            # e0.value is _likely_ a Constant node.
+            docstring = e0.value.s
+            func_name = func.name
+        except AttributeError:
+            continue
+        if not isinstance(docstring, str):
+            continue
+        start, nindent, stop = (
+            func.body[0].lineno,
+            func.body[0].col_offset,
+            func.body[0].end_lineno,
+        )
+        # if not docstring in data:
+        #    print(f"skip {file}: {func.name}, can't do replacement yet")
+        try:
+            new_doc, d_ = compute_new_doc(
+                docstring,
+                filename,
+                level=nindent,
+                compact=compact,
+                meta=meta,
+                func_name=func_name,
+            )
+            if not unsafe:
+                ff = new_doc
+
+                d2 = NumpyDocString(dedend_docstring(new_doc))
+                if not d2._parsed_data == d_._parsed_data:
+                    secs1 = {
+                        k: v
+                        for k, v in d2._parsed_data.items()
+                        if v != d_._parsed_data[k]
+                    }
+                    secs2 = {
+                        k: v
+                        for k, v in d_._parsed_data.items()
+                        if v != d2._parsed_data[k]
+                    }
+                    raise ValueError(
+                        "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with `velin --unsafe "
+                        + str(fname)
+                        + "`\n"
+                        + str(secs1)
+                        + "\n"
+                        + str(secs2),
+                    )
+        except Exception as e:
+            print(f"somethign went wrong with {filename}:{docstring}")
+            raise
+            continue
+        if not docstring.strip():
+            print("DOCSTRING IS EMPTY !!!", func.name)
+        # test(docstring, file)
+        # if new_doc.strip() and new_doc != docstring:
+        #    need_changes.append(str(filename) + f":{start}:{func.name}")
+        #    if ('"""' in new_doc) or ("'''" in new_doc):
+        #        print(
+        #            "SKIPPING", filename, func.name, "triple quote not handled", new_doc
+        #        )
+        #    else:
+        #        # if docstring not in new:
+        #        #    print("ESCAPE issue:", docstring)
+        #        new = new.replace(docstring, new_doc)
+    return new
+
+
 def main():
     import argparse
 
@@ -574,7 +655,7 @@ def main():
         else:
             to_format.append(p)
 
-    need_changes = []
+    # need_changes = []
     for file in to_format:
         # print(file)
         try:
@@ -584,85 +665,8 @@ def main():
             # continue
             continue
             raise RuntimeError(f"Fail reading {file}") from e
-
-        tree = ast.parse(data)
-        new = data
-
-        # funcs = [t for t in tree.body if isinstance(t, ast.FunctionDef)]
-        funcs = NodeVisitor()
-        funcs.visit(tree)
-        funcs = funcs.items
-        for i, (func, meta) in enumerate(funcs[:]):
-            # print(i, "==", func.name, "==")
-            try:
-                e0 = func.body[0]
-                if not isinstance(e0, ast.Expr):
-                    continue
-                # e0.value is _likely_ a Constant node.
-                docstring = e0.value.s
-                func_name = func.name
-            except AttributeError:
-                continue
-            if not isinstance(docstring, str):
-                continue
-            start, nindent, stop = (
-                func.body[0].lineno,
-                func.body[0].col_offset,
-                func.body[0].end_lineno,
-            )
-            # if not docstring in data:
-            #    print(f"skip {file}: {func.name}, can't do replacement yet")
-            try:
-                new_doc, d_ = compute_new_doc(
-                    docstring,
-                    file,
-                    level=nindent,
-                    compact=args.compact,
-                    meta=meta,
-                    func_name=func_name,
-                )
-                if not args.unsafe:
-                    ff = new_doc
-
-                    d2 = NumpyDocString(dedend_docstring(new_doc))
-                    if not d2._parsed_data == d_._parsed_data:
-                        secs1 = {
-                            k: v
-                            for k, v in d2._parsed_data.items()
-                            if v != d_._parsed_data[k]
-                        }
-                        secs2 = {
-                            k: v
-                            for k, v in d_._parsed_data.items()
-                            if v != d2._parsed_data[k]
-                        }
-                        raise ValueError(
-                            "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with `velin --unsafe "
-                            + str(fname)
-                            + "`\n"
-                            + str(secs1)
-                            + "\n"
-                            + str(secs2),
-                        )
-            except Exception as e:
-                print(f"somethign went wrong with {file}:{docstring}")
-                raise
-                continue
-            if not docstring.strip():
-                print("DOCSTRING IS EMPTY !!!", func.name)
-            # test(docstring, file)
-            if new_doc.strip() and new_doc != docstring:
-                need_changes.append(str(file) + f":{start}:{func.name}")
-                if ('"""' in new_doc) or ("'''" in new_doc):
-                    print(
-                        "SKIPPING", file, func.name, "triple quote not handled", new_doc
-                    )
-                else:
-                    # if docstring not in new:
-                    #    print("ESCAPE issue:", docstring)
-                    new = new.replace(docstring, new_doc)
-
-            # test(docstring, file)
+        new = reformat_file(data, file, args.compact, args.unsafe)
+        # test(docstring, file)
         if new != data:
 
             dold = data.splitlines()
