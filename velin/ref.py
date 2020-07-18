@@ -18,22 +18,25 @@ class NodeVisitor(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node):
         # we can collect function args, and _could_ check the Parameter section.
-        #for nn in node.args.args:
+        # for nn in node.args.args:
         #    nnn = nn.arg
-        #for k in [l for l in dir(node) if not l.startswith('_')]:
+        # for k in [l for l in dir(node) if not l.startswith('_')]:
         #    sub = getattr(node, k)
         #    print(k, sub)
         #    for u in [l for l in dir(sub) if not l.startswith('_')]:
         #        ss = getattr(sub, u)
         #        print('    ', u, ss)
-        
-        #node.args.kwarg # single object
-        #node.args.vararg # object
-        #node.args.ks_defaults #list 
-        #print(node.returns)
-        #node.args.defaults +
 
-        meta = [arg.arg for arg in node.args.posonlyargs + node.args.args + node.args.kwonlyargs]
+        # node.args.kwarg # single object
+        # node.args.vararg # object
+        # node.args.ks_defaults #list
+        # print(node.returns)
+        # node.args.defaults +
+
+        meta = [
+            arg.arg
+            for arg in node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+        ]
         #    print(arg.arg)
         #    for k in [l for l in dir(arg) if not l.startswith('_')]:
         #        sub = getattr(arg, k)
@@ -47,7 +50,7 @@ class NodeVisitor(ast.NodeVisitor):
         # for nn in node.args.args:
         #    nnn = nn.arg
 
-        #self.items.append((node, None))
+        # self.items.append((node, None))
         self.generic_visit(node)
 
 
@@ -71,6 +74,18 @@ class NumpyDocString(nds.NumpyDocString):
         ),
         "Yields": ("signals",),
     }
+
+    def normalize(self):
+        """
+        Apply a bunch of heuristic that try to normalise the data.
+        """
+        if (params := self["Parameters"]) :
+            for i, p in enumerate(params):
+                if not p.type and ":" in p.name:
+                    if p.name.startswith(".."):
+                        continue
+                    name, type_ = [_.strip() for _ in p.name.split(":", maxsplit=1)]
+                    params[i] = nds.Parameter(name, type_, p[2])
 
     def parse_examples(self, lines, indent=4):
         # this is bad practice be we do want normalisation here for now
@@ -193,7 +208,7 @@ class SectionFormatter:
 
     @classmethod
     def format_Signature(self, s, compact):
-        return s
+        return s + "\n"
 
     @classmethod
     def format_Summary(self, s, compact):
@@ -393,7 +408,9 @@ def dedend_docstring(docstring):
     return "\n".join(docstring)
 
 
-def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact, meta):
+def compute_new_doc(
+    docstr, fname, *, indempotenty_check, level, compact, meta, func_name
+):
     INDENT = level * " "
     NINDENT = "\n" + INDENT
     original_docstr = docstr
@@ -414,36 +431,35 @@ def compute_new_doc(docstr, fname, *, indempotenty_check, level, compact, meta):
         long_with_space = False
 
     doc = NumpyDocString(dedend_docstring(docstr))
-    if (params := doc['Parameters']) and meta:
-        
-        a = [o.strip() for p in params for o in p.name.split(',') ]
-        if meta[0] in ['self', 'cls']:
+    doc.normalize()
+    if (params := doc["Parameters"]) and meta:
+
+        a = [o.strip() for p in params for o in p.name.split(",")]
+        if meta[0] in ["self", "cls"]:
             meta = meta[1:]
         doc_missing = set(meta) - set(a)
-        doc_extra = set(a) - set(meta)
+        doc_extra = {x for x in set(a) - set(meta) if not x.startswith("*")}
         if len(doc_missing) == len(doc_extra) == 1:
 
             print(fname)
-            for i,p in enumerate(doc['Parameters']):
+            for i, p in enumerate(doc["Parameters"]):
                 if p.name in doc_extra:
                     name = p.name
                     new_name = list(doc_missing)[0]
-                    if ':' in name and not p.type:
-                        new_name, type_ = name.split(':')
-                        new_name, type_ = new_name.strip(), type_.strip()
-                        doc['Parameters'][i] = nds.Parameter(new_name, type_, *p[2:])
-                        print('renamed', name, 'to', new_name, 'and type to', type_)
-                    else:
-
-                        doc['Parameters'][i] = nds.Parameter(new_name, *p[1:])
-                        print('renamed', name, 'to', list(doc_missing)[0]) 
+                    doc["Parameters"][i] = nds.Parameter(new_name, *p[1:])
+                    print("renamed", name, "to", list(doc_missing)[0])
                     break
             else:
-                print('  missing:', doc_missing)
-                print('  extra:', doc_extra)
-
-
-
+                print("  could not fix:", doc_missing, doc_extra)
+        else:
+            if doc_missing and doc_extra:
+                print(fname)
+                print("  missing:", doc_missing)
+                print("  extra:", doc_extra)
+            elif doc_missing or doc_extra:
+                print(fname, func_name)
+                print("  missing:", doc_missing)
+                print("  extra:", doc_extra)
 
     fmt = ""
     start = True
@@ -597,6 +613,7 @@ def main():
                     continue
                 # e0.value is _likely_ a Constant node.
                 docstring = e0.value.s
+                func_name = func.name
             except AttributeError:
                 continue
             if not isinstance(docstring, str):
@@ -615,10 +632,11 @@ def main():
                     indempotenty_check=(not args.unsafe),
                     level=nindent,
                     compact=args.compact,
-                    meta=meta
+                    meta=meta,
+                    func_name=func_name,
                 )
-            except Exception:
-                print(f"somethign went wrong with {file}")
+            except Exception as e:
+                print(f"somethign went wrong with {file}:{docstring}")
                 raise
                 continue
             if not docstring.strip():

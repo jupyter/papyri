@@ -111,7 +111,7 @@ def do_one_mod(name):
                 continue
             if getattr(a, "__module__", None) is None:
                 continue
-            if isinstance(lqa := getattr(a, "__qualname__",None), str):
+            if isinstance(lqa := getattr(a, "__qualname__", None), str):
                 qa = a.__module__ + "." + lqa
             else:
                 qa = a.__module__ + "." + n
