@@ -378,22 +378,6 @@ class SectionFormatter:
         return out
 
 
-def test(docstr, fname, *, indempotenty_check):
-    fmt = compute_new_doc(docstr, fname)
-    dold = docstr.splitlines()
-    dnew = fmt.splitlines()
-    diffs = list(difflib.unified_diff(dold, dnew, n=100, fromfile=fname, tofile=fname),)
-    if diffs:
-        from pygments import highlight
-        from pygments.lexers import DiffLexer
-        from pygments.formatters import TerminalFormatter
-
-        code = "\n".join(w(diffs))
-        hldiff = highlight(code, DiffLexer(), TerminalFormatter())
-
-        print(indent(hldiff, " |   ", predicate=lambda x: True))
-
-
 def dedend_docstring(docstring):
     import textwrap
 
@@ -408,18 +392,15 @@ def dedend_docstring(docstring):
     return "\n".join(docstring)
 
 
-def compute_new_doc(
-    docstr, fname, *, indempotenty_check, level, compact, meta, func_name
-):
+def compute_new_doc(docstr, fname, *, level, compact, meta, func_name):
     INDENT = level * " "
     NINDENT = "\n" + INDENT
     original_docstr = docstr
     if len(docstr.splitlines()) <= 1:
-        return ""
+        return "", NumpyDocString("")
     shortdoc = bool(docstr.splitlines()[0].strip())
     short_with_space = False
     if not docstr.startswith(NINDENT):
-        # docstr = NINDENT + docstr
         if original_docstr[0] == " ":
             short_with_space = True
 
@@ -494,31 +475,10 @@ def compute_new_doc(
         fmt = "\n" + fmt
     if not long_end:
         fmt = fmt.rstrip()
-    if indempotenty_check:
-        ff = fmt
-        # if not ff.startswith(NINDENT):
-        #    ff = NINDENT + ff
-
-        d2 = NumpyDocString(dedend_docstring(ff))
-        if not d2._parsed_data == doc._parsed_data:
-            secs1 = {
-                k: v for k, v in d2._parsed_data.items() if v != doc._parsed_data[k]
-            }
-            secs2 = {
-                k: v for k, v in doc._parsed_data.items() if v != d2._parsed_data[k]
-            }
-            raise ValueError(
-                "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with `velin --unsafe "
-                + str(fname)
-                + "`\n"
-                + str(secs1)
-                + "\n"
-                + str(secs2),
-            )
     assert fmt
     # we can't just do that as See Also and a few other would be sphinxified.
     # return indent(str(doc),'    ')+'\n    '
-    return fmt
+    return fmt, doc
 
 
 def main():
@@ -626,15 +586,37 @@ def main():
             # if not docstring in data:
             #    print(f"skip {file}: {func.name}, can't do replacement yet")
             try:
-                new_doc = compute_new_doc(
+                new_doc, d_ = compute_new_doc(
                     docstring,
                     file,
-                    indempotenty_check=(not args.unsafe),
                     level=nindent,
                     compact=args.compact,
                     meta=meta,
                     func_name=func_name,
                 )
+                if not args.unsafe:
+                    ff = new_doc
+
+                    d2 = NumpyDocString(dedend_docstring(new_doc))
+                    if not d2._parsed_data == d_._parsed_data:
+                        secs1 = {
+                            k: v
+                            for k, v in d2._parsed_data.items()
+                            if v != d_._parsed_data[k]
+                        }
+                        secs2 = {
+                            k: v
+                            for k, v in d_._parsed_data.items()
+                            if v != d2._parsed_data[k]
+                        }
+                        raise ValueError(
+                            "Numpydoc parsing seem to differ after reformatting, this may be a reformatting bug. Rerun with `velin --unsafe "
+                            + str(fname)
+                            + "`\n"
+                            + str(secs1)
+                            + "\n"
+                            + str(secs2),
+                        )
             except Exception as e:
                 print(f"somethign went wrong with {file}:{docstring}")
                 raise
