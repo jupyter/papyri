@@ -393,6 +393,33 @@ def dedend_docstring(docstring):
 
 
 def compute_new_doc(docstr, fname, *, level, compact, meta, func_name):
+    """
+    compute a new docstring that shoudl be numpydoc compliant.
+
+    Parameters
+    ----------
+    docstr : str
+        docstring to reformat
+    fname : str
+        filename of the file beign reformatted (for error messages)
+    level: int
+        indentation level
+    compact: bool
+        use compact formating in definition list.
+    meta: list
+        meta info about the function to verify docstrings, for example
+        list of parameters.
+    func_name: str
+        function name for debug.
+
+    Returns
+    -------
+    str
+        new docstring
+    Numpydoc
+        parsed numpydoc object
+
+    """
     INDENT = level * " "
     NINDENT = "\n" + INDENT
     original_docstr = docstr
