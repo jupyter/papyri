@@ -402,14 +402,14 @@ def compute_new_doc(docstr, fname, *, level, compact, meta, func_name):
         docstring to reformat
     fname : str
         filename of the file beign reformatted (for error messages)
-    level: int
+    level : int
         indentation level
-    compact: bool
+    compact : bool
         use compact formating in definition list.
-    meta: list
+    meta : list
         meta info about the function to verify docstrings, for example
         list of parameters.
-    func_name: str
+    func_name : str
         function name for debug.
 
     Returns

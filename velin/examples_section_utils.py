@@ -55,9 +55,8 @@ def splitcode(lines):
     """
     Split a block of lines without blank lines into categories.
 
-    Code lines start with >>> or ..., 
+    Code lines start with >>> or ...,
     then outputs, start with none of the two above.
-
 
     """
     items = []
