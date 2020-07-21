@@ -1,15 +1,13 @@
 import ast
+import difflib
 import json
 import sys
-import difflib
 from textwrap import indent
-from there import print
 
 import numpydoc.docscrape as nds
+from there import print
 
 from .examples_section_utils import reformat_example_lines
-
-import ast
 
 
 class NodeVisitor(ast.NodeVisitor):

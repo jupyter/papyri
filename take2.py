@@ -1,10 +1,11 @@
-import numpy 
+from textwrap import indent as _indent
+
 import matplotlib
+import numpy
 
 lines = numpy.__doc__.split('\n')
 
 lines = matplotlib.__doc__.split('\n')
-from textwrap import indent as _indent
 
 def indent(text, marker='   |'):
     lines = text.split('\n')

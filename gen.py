@@ -1,23 +1,22 @@
-import numpy as np
-import scipy
-import scipy.special
-import sklearn
-from velin import parsedoc, NumpyDocString
-
+import inspect
+from textwrap import dedent
 # from numpydoc.docscrape import NumpyDocString
 from types import ModuleType
 
+import jedi
 import matplotlib
 import matplotlib.pyplot
-import inspect
-
+import numpy as np
 import numpy.core.numeric
+import scipy
+import scipy.special
+import sklearn
+from pygments.lexers import PythonLexer
 from there import print
 
+from velin import NumpyDocString, parsedoc
+from velin.examples_section_utils import InOut, splitblank, splitcode
 from velin.ref import NumpyDocString
-
-from velin.examples_section_utils import splitblank, splitcode, InOut
-from textwrap import dedent
 
 
 def dedent_but_first(text):
@@ -25,8 +24,6 @@ def dedent_but_first(text):
     return dedent(a) + "\n" + dedent("\n".join(b))
 
 
-from pygments.lexers import PythonLexer
-import jedi
 
 
 def pos_to_nl(script, pos):

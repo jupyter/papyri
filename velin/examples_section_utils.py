@@ -1,3 +1,6 @@
+from collections import namedtuple
+from itertools import chain, cycle
+
 import black
 
 
@@ -13,7 +16,6 @@ def reformat(lines, indent=4):
         raise ValueError("could not reformat:" + repr(text)) from e
 
 
-from itertools import cycle, chain
 
 
 def insert_promt(lines):
@@ -38,7 +40,6 @@ def splitblank(list):
     return items
 
 
-from collections import namedtuple
 
 InOut = namedtuple("InOut", ["in_", "out"])
 Text = namedtuple("Text", ["in_", "out"])

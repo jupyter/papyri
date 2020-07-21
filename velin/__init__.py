@@ -11,10 +11,12 @@ Tools to automatically reformat docstrings based using numpydoc format.
 """
 
 import sys
-from pathlib import Path
 import textwrap
+from pathlib import Path
 
 from numpydoc.docscrape import NumpyDocString
+
+from .ref import main
 
 __version__ = "0.0.3"
 
@@ -824,7 +826,6 @@ def reformat(input):
 #            data = f.read()
 #            print(reformat)
 
-from .ref import main
 
 
 if __name__ == "__main__":
