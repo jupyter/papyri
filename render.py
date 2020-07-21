@@ -3,6 +3,8 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 from velin import NumpyDocString
 from numpydoc.docscrape import Parameter
 from types import ModuleType
+import os
+import json
 
 
 from functools import lru_cache
@@ -10,6 +12,9 @@ from functools import lru_cache
 
 @lru_cache()
 def keepref(ref):
+    """
+    Just a filter to remove a bunch of frequent refs and not cluter the ref list in examples.
+    """
     if ref.startswith(("builtins.", "__main__")):
         return False
     try:
@@ -22,6 +27,13 @@ def keepref(ref):
 
 @lru_cache()
 def normalise_ref(ref):
+    """
+    Consistently normalize references.
+
+    Refs are sometime import path, not fully qualified names, tough type inference in examples regularly give us fully
+    qualified names. when visiting a ref, this tries to import it and replace it by the normal fullqual form.
+
+    """
     if ref.startswith(("builtins.", "__main__")):
         return ref
     try:
@@ -49,8 +61,6 @@ def normalise_ref(ref):
 
 
 if __name__ == "__main__":
-    import os
-    import json
 
     nvisited_items = {}
     for fname in os.listdir("cache"):
