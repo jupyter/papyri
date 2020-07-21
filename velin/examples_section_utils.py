@@ -16,8 +16,6 @@ def reformat(lines, indent=4):
         raise ValueError("could not reformat:" + repr(text)) from e
 
 
-
-
 def insert_promt(lines):
     new = []
     for p, l in zip(chain([">>> "], cycle(["... "])), lines):
@@ -38,7 +36,6 @@ def splitblank(list):
     if current:
         items.append(current)
     return items
-
 
 
 InOut = namedtuple("InOut", ["in_", "out"])

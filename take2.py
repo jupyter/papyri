@@ -3,24 +3,25 @@ from textwrap import indent as _indent
 import matplotlib
 import numpy
 
-lines = numpy.__doc__.split('\n')
+lines = numpy.__doc__.split("\n")
 
-lines = matplotlib.__doc__.split('\n')
+lines = matplotlib.__doc__.split("\n")
 
-def indent(text, marker='   |'):
-    lines = text.split('\n')
-    return '\n'.join(marker+l for l in lines)
+
+def indent(text, marker="   |"):
+    lines = text.split("\n")
+    return "\n".join(marker + l for l in lines)
 
 
 def is_at_header(lines):
     if len(lines) < 2:
         return False
-    l0,l1,*rest = lines
+    l0, l1, *rest = lines
     if len(l0.strip()) != len(l1.strip()):
         return False
     if len(s := set(l1.strip())) != 1:
         return False
-    if next(iter(s)) in '-=':
+    if next(iter(s)) in "-=":
         return True
     return False
 
@@ -29,20 +30,20 @@ def header_lines(lines):
     """
     Find lines indices for header
     """
-    
+
     indices = []
 
-    for i,l in enumerate(lines):
+    for i, l in enumerate(lines):
         if is_at_header(lines[i:]):
             indices.append(i)
     return indices
 
+
 def separate(lines, indices):
     acc = []
-    for i,j in zip([0]+indices, indices+[-1]):
+    for i, j in zip([0] + indices, indices + [-1]):
         acc.append(lines[i:j])
     return acc
-
 
 
 def with_indentation(lines, start_indent=0):
@@ -52,8 +53,8 @@ def with_indentation(lines, start_indent=0):
 
     indent = start_indent
     for l in lines:
-        if (ls := l.lstrip()):
-            yield (indent := len(l) - len(ls)),l
+        if (ls := l.lstrip()) :
+            yield (indent := len(l) - len(ls)), l
         else:
             yield indent, l
 
@@ -66,43 +67,42 @@ def make_blocks(lines, start_indent=0):
     blk = []
     wh = []
     reason = None
-    for i,l in with_indentation(lines):
+    for i, l in with_indentation(lines):
         print(i, l)
-        if not l.strip() and indent==start_indent:
+        if not l.strip() and indent == start_indent:
             wh.append(l)
             continue
         else:
-            if wh and i==indent==start_indent:
-                acc.append(Block(blk, wh, [], reason='wh+re0'))
+            if wh and i == indent == start_indent:
+                acc.append(Block(blk, wh, [], reason="wh+re0"))
                 blk = [l]
                 wh = []
             else:
                 blk.extend(wh)
                 wh = []
                 blk.append(l)
-                
+
             indent = i
-    acc.append(Block(blk, wh, [], reason='end'))
+    acc.append(Block(blk, wh, [], reason="end"))
     return acc
 
 
 def eat_while(lines, condition):
     acc = []
-    for i,l in enumerate(lines):
+    for i, l in enumerate(lines):
         if condition(l):
             acc.append(l)
             continue
         break
     else:
-        return acc,[]
+        return acc, []
     return acc, lines[i:]
 
 
 def make_blocks_2(lines):
-    if not lines: 
-            return []
+    if not lines:
+        return []
     l0 = lines[0]
-
 
     ind0 = len(l0) - len(l0.lstrip())
 
@@ -110,13 +110,14 @@ def make_blocks_2(lines):
     acc = []
     while rest:
         print()
-        blk, rest = eat_while(rest, lambda l:len(l) - len(l.lstrip()) == ind0)
-        wht, rest = eat_while(rest, lambda l:not l.strip())
-        ind, rest = eat_while(rest, lambda l:((len(l) - len(l.lstrip())) > ind0 or not l.strip()))
+        blk, rest = eat_while(rest, lambda l: len(l) - len(l.lstrip()) == ind0)
+        wht, rest = eat_while(rest, lambda l: not l.strip())
+        ind, rest = eat_while(
+            rest, lambda l: ((len(l) - len(l.lstrip())) > ind0 or not l.strip())
+        )
         acc.append(Block(blk, wht, ind))
-        
-    return acc
 
+    return acc
 
 
 class Block:
@@ -136,10 +137,14 @@ class Block:
         self.wh = wh
         self.ind = make_blocks_2(ind)
         self.reason = reason
+
     def __repr__(self):
-        return f"<Block body-len='{len(self.lines)},{len(self.wh)},{self.reason}'> with\n"\
-                +indent('\n'.join(self.lines+self.wh), '    ')+'\n'\
-                +indent('\n'.join([repr(x) for x in self.ind]), '    ')
+        return (
+            f"<Block body-len='{len(self.lines)},{len(self.wh)},{self.reason}'> with\n"
+            + indent("\n".join(self.lines + self.wh), "    ")
+            + "\n"
+            + indent("\n".join([repr(x) for x in self.ind]), "    ")
+        )
 
 
 class Section:
@@ -167,18 +172,15 @@ class Section:
             return make_blocks_2(self.lines)
 
     def __repr__(self):
-        return f"<Section header='{self.header[0]}' body-len='{len(self.lines)}'> with\n"\
-                +indent('\n'.join([str(b) for b in self.body])+'...END\n\n', '    |')
-
-
-
+        return (
+            f"<Section header='{self.header[0]}' body-len='{len(self.lines)}'> with\n"
+            + indent("\n".join([str(b) for b in self.body]) + "...END\n\n", "    |")
+        )
 
 
 class Document:
-
     def __init__(self, lines):
-        self.lines =  lines
-        
+        self.lines = lines
 
     @property
     def sections(self):
@@ -186,16 +188,12 @@ class Document:
         return [Section(l) for l in separate(self.lines, indices)]
 
     def __repr__(self):
-        acc = '' 
-        for i,s in enumerate(self.sections[0:]):
-            acc+='\n'+repr(s)
-        return '<Document > with'+indent(acc)
-
-
-
-
+        acc = ""
+        for i, s in enumerate(self.sections[0:]):
+            acc += "\n" + repr(s)
+        return "<Document > with" + indent(acc)
 
 
 d = Document(lines[:])
-for i,l in with_indentation(repr(d).split('\n')):
-    print(i,l)
+for i, l in with_indentation(repr(d).split("\n")):
+    print(i, l)

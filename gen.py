@@ -1,5 +1,6 @@
 import inspect
 from textwrap import dedent
+
 # from numpydoc.docscrape import NumpyDocString
 from types import ModuleType
 
@@ -22,8 +23,6 @@ from velin.ref import NumpyDocString
 def dedent_but_first(text):
     a, *b = text.split("\n")
     return dedent(a) + "\n" + dedent("\n".join(b))
-
-
 
 
 def pos_to_nl(script, pos):
