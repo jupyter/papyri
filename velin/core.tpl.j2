@@ -10,12 +10,18 @@
           .foo{font-weight:bold; color:black}
           .exists{color:green;}
           .missing{color:red;}
+          dd::before {
+            content: '';
+          }
+          dd {
+               margin-left: 40px;
+          }
     </style>
 </head>
 <body>
 
     <header>
-        <nav>/ pydata / numpy / 1.13 / api / {{qa}} </nav>
+        <nav>/ pydata / {{module}} / {{version}} / api / {{qa}} </nav>
 </header>
 
 {% macro example(entries) -%}
@@ -36,12 +42,13 @@
 
 
 {% for section in doc.sections if doc[section] %}
-
-   <h3>{{section}}</h3>
+    {% if section not in ['Extended Summary','Signature'] %}
+        <h3>{{section}}</h3>
+    {% endif %}
    {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
        {%- for line in doc[section] %}{{ line }}{{'\n'}}{% endfor -%}
    {% elif section in ['Signature'] %}
-       {{doc[section]}}
+       <code>{{doc[section]}}</code>
    {% elif section in ['See Also'] %}
        {% for r in doc[section] %}
             {{r}}
@@ -49,7 +56,7 @@
    {% elif section in ['Examples'] %}
        {% for type,data in doc.edata %}
            {% if type=='text' %}
-            <h4>{{data}}</h4>
+            <p>{{data}}</p>
            {% else %}
             <pre>{{example(data[0]) -}}
             {{- data[1]}}</pre>
@@ -60,15 +67,15 @@
        {% for r in doc.refs %}
             <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>,
        {% endfor %}
-   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields'] %}
+   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
 
        <dl>
        {% for p in doc[section] %}
-           <dt>{{p.name}}:{{p.type}}</dt>
-            <dd><pre>{% for line in p.desc -%}
-               {{line}}
-            {% endfor %}
-            </pre></dd>
+           <dt><code>{{p[0]}}</code>:{{p[1]}}</dt>
+            <dd><p>{%- for line in p[2] -%}
+               {{- line -}}
+            {%- endfor -%}
+            </p></dd>
        {% endfor %}
 
    </pre>
@@ -80,10 +87,11 @@
        {% endif %}
    {% endif %}
 {% endfor%}
-<h1>Back References</h1>
-{% for r in doc.backrefs %}
-    <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
-{% endfor %}
-
+{% if doc.backrefs %}
+    <h1>Back References</h1>
+    {% for r in doc.backrefs %}
+        <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
+    {% endfor %}
+{% endif %}
 </body>
 </html>

@@ -14,9 +14,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-from numpydoc.docscrape import NumpyDocString
-
-from .ref import main
+from .ref import NumpyDocString, main
 
 __version__ = "0.0.3"
 
