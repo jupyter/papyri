@@ -98,13 +98,44 @@ if __name__ == "__main__":
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
     template = env.get_template("core.tpl.j2")
-    env.globals["resolve"] = resolve
     env.globals["exists"] = exists
 
     for qa, ndoc in nvisited_items.items():
         with open(f"html/{qa}.html", "w") as f:
+
+            def resolve(ref):
+                if ref in nvisited_items:
+                    return ref, "exists"
+                else:
+                    parts = qa.split(".")
+                    for i in range(len(parts)):
+                        attempt = ".".join(parts[:i]) + "." + ref
+                        if attempt in nvisited_items:
+                            return attempt, "exists"
+                return ref, "missing"
+
+            env.globals["resolve"] = resolve
+
+            br = ndoc.backrefs
+            if len(br):
+                print(len(br))
+            if len(br) > 30:
+                from collections import defaultdict
+
+                b2 = defaultdict(lambda: [])
+                for ref in br:
+                    mod, _ = ref.split(".", maxsplit=1)
+                    b2[mod].append(ref)
+                backrefs = (None, b2)
+            else:
+                backrefs = (br, None)
+
             f.write(
                 template.render(
-                    doc=ndoc, qa=qa, version="X.y.z", module=qa.split(".")[0]
+                    doc=ndoc,
+                    qa=qa,
+                    version="X.y.z",
+                    module=qa.split(".")[0],
+                    backrefs=backrefs,
                 )
             )

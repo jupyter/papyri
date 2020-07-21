@@ -8,8 +8,10 @@
     <style>
           .foo:hover{text-decoration:underline}
           .foo{font-weight:bold; color:black}
-          .exists{color:green;}
-          .missing{color:red;}
+          .exists{font-weight:bold; color:black;text-decoration:none;}
+          .exists:hover{text-decoration:underline;color:black}
+          .missing,.missing:hover{color:darkred;text-decoration:none;font-weight:normal}
+          header{padding-top:1rem; padding-bottom:1rem;}
           dd::before {
             content: '';
           }
@@ -51,7 +53,19 @@
        <code>{{doc[section]}}</code>
    {% elif section in ['See Also'] %}
        {% for r in doc[section] %}
-            {{r}}
+            <dl>
+                {% for name,type in r[0] %}
+                {% set ref, exists = resolve(name) %}
+                <dt><a href="{{ref}}.html" class={{exists}}><code>{{name}}</code></a>
+                {% if type is not none %}
+                    :{{type}}
+                {% endif %}
+                </dt>
+            {% endfor %}
+            {% for desc in r[1] %}
+                <dd>{{desc}}</dd>
+            {% endfor %}
+            </dl>
        {% endfor %}
    {% elif section in ['Examples'] %}
        {% for type,data in doc.edata %}
@@ -87,11 +101,21 @@
        {% endif %}
    {% endif %}
 {% endfor%}
-{% if doc.backrefs %}
+{% if backrefs %}
     <h1>Back References</h1>
-    {% for r in doc.backrefs %}
+    {% if backrefs[0] is not none %}
+    {% for r in backrefs[0] %}
         <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
     {% endfor %}
+    {% endif%}
+    {% if backrefs[1] is not none %}
+        {% for k,v in backrefs[1].items() %}
+        <h2>{{k}}</h2>
+        {% for r in v %}
+            <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
+        {% endfor %}
+    {% endfor %}
+    {% endif%}
 {% endif %}
 </body>
 </html>
