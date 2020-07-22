@@ -7,6 +7,223 @@ lines = numpy.__doc__.split("\n")
 
 lines = matplotlib.__doc__.split("\n")
 
+import re
+
+ex = """
+For the most part, direct use of the object-oriented library is encouraged when
+programming; pyplot is primarily for working interactively. The exceptions are
+the pyplot functions :dummy:`.pyplot.figure`, :domain:role:`.pyplot.subplot`, :also:dir:`.pyplot.subplots`,
+and `.pyplot.savefig`, which `` can greatly simplify scripting. An example of verbatim code would be ``1+1 = 2`` but it is
+not valid Python assign:: 
+"""
+
+
+WHAT        = lambda x: '\033[96m'+x+'\033[0m'
+HEADER      = lambda x: '\033[95m'+x+'\033[0m'
+BLUE        = lambda x: '\033[94m'+x+'\033[0m'
+GREEN       = lambda x: '\033[92m'+x+'\033[0m'
+ORANGE      = lambda x: '\033[93m'+x+'\033[0m'
+RED         = lambda x: '\033[91m'+x+'\033[0m'
+ENDC        = lambda x: '\033[0m' +x+'\033[0m'
+BOLD        = lambda x: '\033[1m' +x+'\033[0m'
+UNDERLINE   = lambda x: '\033[4m' +x+'\033[0m'
+
+class Node:
+
+    def __init__(self, value):
+        self.value = value
+
+    @classmethod
+    def parse(cls, tokens):
+        return cls(tokens[0]), tokens[1:]
+
+    def is_whitespace(self):
+        if not isinstance(self.value, str):
+            return False
+        return not bool(self.value.strip())
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.value}>"
+
+class Verbatim(Node):
+
+    def __init__(self, value):
+        self.value = value
+
+    @classmethod
+    def parse(cls, tokens):
+        acc = []
+        consume_start = None
+        if len(tokens) < 5:
+            return None
+        if (tokens[0],tokens[1]) == ('`','`') and tokens[2].strip():
+            for i,t in enumerate(tokens[2:-2]):
+                if t == '`' and tokens[i+2] == '`':
+                    return cls(acc), tokens[i+4:]
+                else:
+                    acc.append(t)
+        return None
+
+    def __len__(self):
+        return sum(len(x) for x in self.value)+4
+   
+
+    def __repr__(self):
+       return RED('``'+''.join(self.value)+'``')
+
+
+class Directive(Node):
+
+    def __init__(self, value, domain, role):
+        self.value = value
+        self.domain = domain
+        if domain:
+            assert role
+        self.role = role
+
+    @classmethod
+    def parse(cls, tokens):
+        acc = []
+        consume_start = None
+        domain, role = None, None
+        if tokens[0] == '`' and tokens[1] != '`' and tokens[1].strip():
+            consume_start = 1
+        elif (len(tokens) >= 4) and (tokens[0],tokens[2],tokens[3]) == (':',':','`'):
+            domain, role = None, tokens[1]
+            consume_start = 4
+            pass
+        elif len(tokens) >= 6 and (tokens[0],tokens[2],tokens[4],tokens[5]) == (':',':',':','`'):
+            domain, role = tokens[1], tokens[3]
+            consume_start = 6
+
+        if consume_start == None:
+            return None
+
+        for i,t in enumerate(tokens[consume_start:]):
+            if t == '`':
+                return cls(acc, domain, role), tokens[i+1+consume_start:]
+            else:
+                acc.append(t)
+
+    def __len__(self):
+        return sum(len(x) for x in self.value)+len(self.prefix)
+
+    @property
+    def prefix(self):
+        prefix = ''
+        if self.domain:
+            prefix += ':'+self.domain
+        if self.role:
+            prefix += ':'+self.role+':'
+        return prefix
+
+
+    def __repr__(self):
+        prefix = ''
+        if self.domain:
+            prefix += ':'+self.domain
+        if self.role:
+            prefix += ':'+self.role+':'
+        #prefix = ''
+        return GREEN(prefix)+HEADER('`'+''.join(self.value)+'`')
+
+class Word(Node):
+    def __repr__(self):
+        return UNDERLINE(self.value)
+
+    def __len__(self):
+        return len(self.value)
+
+
+def lex(lines):
+    acc = ''
+    for l in lines:
+        for c in l:
+            if c in ' `*_:':
+                if acc:
+                    yield acc
+                yield c
+                acc = ''
+            else:
+                acc += c
+        if acc:
+            yield acc
+            acc = ''
+        yield ' '
+
+
+
+class FirstCombinator:
+
+    def __init__(self, parsers):
+        self.parsers = parsers
+
+    def parse(self, tokens):
+        for parser in self.parsers:
+            res = parser.parse(tokens)
+            if res is not None:
+                return res
+
+        return None
+
+
+def rewrap(tokens, max_len):
+    acc = [[]]
+    clen = 0
+    for t in tokens:
+        if clen + (ll:= len(t)) > max_len:
+            # remove whitespace at EOL
+            while  acc and acc[-1][-1].is_whitespace():
+                acc[-1].pop()
+            acc.append([])
+            clen = 0
+
+        # do no append whitespace at SOL
+        if clen == 0 and t.is_whitespace():
+            continue
+        acc[-1].append(t)
+        clen += ll
+    #remove whitespace at EOF
+    try:
+        while acc and acc[-1][-1].is_whitespace():
+            acc[-1].pop()
+    except IndexError:
+        pass
+
+    return acc
+
+
+
+
+
+    
+class Paragraph:
+        
+    def __init__(self, children, width=80):
+        self.children = children
+        self.width = width
+
+    @classmethod
+    def parse_lines(cls, lines):
+        tokens = list(lex(lines))
+
+        rest = tokens
+        acc  = []
+        parser =  FirstCombinator([Directive,Verbatim,Word])
+        while rest:
+            parsed, rest = parser.parse(rest)
+            acc.append(parsed)
+
+        return cls(acc)
+
+    def __repr__(self):
+
+        rw = rewrap(self.children, self.width)
+
+        p = '\n'.join([''.join(repr(x) for x in line) for line in rw])
+        return f"""<Paragraph:\n{p}>"""
+
+
 
 def indent(text, marker="   |"):
     lines = text.split("\n")
@@ -194,6 +411,13 @@ class Document:
         return "<Document > with" + indent(acc)
 
 
-d = Document(lines[:])
-for i, l in with_indentation(repr(d).split("\n")):
-    print(i, l)
+#d = Document(lines[:])
+#for i, l in with_indentation(repr(d).split("\n")):
+#    print(i, l)
+print(ex)
+
+for w in [80]:
+    p =  Paragraph.parse_lines(ex.split('\n'))
+    p.width = w
+    print(p)
+    print()
