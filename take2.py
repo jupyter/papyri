@@ -63,6 +63,9 @@ class Verbatim(Node):
                 else:
                     acc.append(t)
         return None
+    @property
+    def text(self):
+        return "".join(self.value)
 
     def __len__(self):
         return sum(len(x) for x in self.value) + 4

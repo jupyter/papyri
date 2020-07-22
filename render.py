@@ -8,6 +8,16 @@ from numpydoc.docscrape import Parameter
 
 from velin import NumpyDocString
 
+from take2 import Paragraph
+
+
+def paragraph(lines):
+    p = Paragraph.parse_lines(lines)
+    acc = []
+    for c in p.children:
+        acc.append((type(c).__name__, c))
+    return acc
+
 
 @lru_cache()
 def keepref(ref):
@@ -118,10 +128,9 @@ if __name__ == "__main__":
         with open(f"html/{qa}.html", "w") as f:
 
             env.globals["resolve"] = resolve_(qa, nvisited_items)
+            env.globals["paragraph"] = paragraph
 
             br = ndoc.backrefs
-            if len(br):
-                print(len(br))
             if len(br) > 30:
                 from collections import defaultdict
 
