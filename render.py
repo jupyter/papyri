@@ -3,7 +3,8 @@ import os
 from functools import lru_cache
 from types import ModuleType
 
-from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
+from jinja2 import (Environment, FileSystemLoader, PackageLoader,
+                    select_autoescape)
 from numpydoc.docscrape import Parameter
 
 from velin import NumpyDocString

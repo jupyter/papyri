@@ -1,6 +1,5 @@
 import inspect
 from textwrap import dedent
-
 # from numpydoc.docscrape import NumpyDocString
 from types import ModuleType
 

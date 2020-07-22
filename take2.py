@@ -1,3 +1,4 @@
+import re
 from textwrap import indent as _indent
 
 import matplotlib
@@ -7,7 +8,6 @@ lines = numpy.__doc__.split("\n")
 
 lines = matplotlib.__doc__.split("\n")
 
-import re
 
 ex = """
 For the most part, direct use of the object-oriented library is encouraged when
@@ -18,18 +18,18 @@ not valid Python assign::
 """
 
 
-WHAT        = lambda x: '\033[96m'+x+'\033[0m'
-HEADER      = lambda x: '\033[95m'+x+'\033[0m'
-BLUE        = lambda x: '\033[94m'+x+'\033[0m'
-GREEN       = lambda x: '\033[92m'+x+'\033[0m'
-ORANGE      = lambda x: '\033[93m'+x+'\033[0m'
-RED         = lambda x: '\033[91m'+x+'\033[0m'
-ENDC        = lambda x: '\033[0m' +x+'\033[0m'
-BOLD        = lambda x: '\033[1m' +x+'\033[0m'
-UNDERLINE   = lambda x: '\033[4m' +x+'\033[0m'
+WHAT = lambda x: "\033[96m" + x + "\033[0m"
+HEADER = lambda x: "\033[95m" + x + "\033[0m"
+BLUE = lambda x: "\033[94m" + x + "\033[0m"
+GREEN = lambda x: "\033[92m" + x + "\033[0m"
+ORANGE = lambda x: "\033[93m" + x + "\033[0m"
+RED = lambda x: "\033[91m" + x + "\033[0m"
+ENDC = lambda x: "\033[0m" + x + "\033[0m"
+BOLD = lambda x: "\033[1m" + x + "\033[0m"
+UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
+
 
 class Node:
-
     def __init__(self, value):
         self.value = value
 
@@ -45,8 +45,8 @@ class Node:
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.value}>"
 
-class Verbatim(Node):
 
+class Verbatim(Node):
     def __init__(self, value):
         self.value = value
 
@@ -56,24 +56,22 @@ class Verbatim(Node):
         consume_start = None
         if len(tokens) < 5:
             return None
-        if (tokens[0],tokens[1]) == ('`','`') and tokens[2].strip():
-            for i,t in enumerate(tokens[2:-2]):
-                if t == '`' and tokens[i+2] == '`':
-                    return cls(acc), tokens[i+4:]
+        if (tokens[0], tokens[1]) == ("`", "`") and tokens[2].strip():
+            for i, t in enumerate(tokens[2:-2]):
+                if t == "`" and tokens[i + 2] == "`":
+                    return cls(acc), tokens[i + 4 :]
                 else:
                     acc.append(t)
         return None
 
     def __len__(self):
-        return sum(len(x) for x in self.value)+4
-   
+        return sum(len(x) for x in self.value) + 4
 
     def __repr__(self):
-       return RED('``'+''.join(self.value)+'``')
+        return RED("``" + "".join(self.value) + "``")
 
 
 class Directive(Node):
-
     def __init__(self, value, domain, role):
         self.value = value
         self.domain = domain
@@ -86,46 +84,55 @@ class Directive(Node):
         acc = []
         consume_start = None
         domain, role = None, None
-        if tokens[0] == '`' and tokens[1] != '`' and tokens[1].strip():
+        if tokens[0] == "`" and tokens[1] != "`" and tokens[1].strip():
             consume_start = 1
-        elif (len(tokens) >= 4) and (tokens[0],tokens[2],tokens[3]) == (':',':','`'):
+        elif (len(tokens) >= 4) and (tokens[0], tokens[2], tokens[3]) == (
+            ":",
+            ":",
+            "`",
+        ):
             domain, role = None, tokens[1]
             consume_start = 4
             pass
-        elif len(tokens) >= 6 and (tokens[0],tokens[2],tokens[4],tokens[5]) == (':',':',':','`'):
+        elif len(tokens) >= 6 and (tokens[0], tokens[2], tokens[4], tokens[5]) == (
+            ":",
+            ":",
+            ":",
+            "`",
+        ):
             domain, role = tokens[1], tokens[3]
             consume_start = 6
 
         if consume_start == None:
             return None
 
-        for i,t in enumerate(tokens[consume_start:]):
-            if t == '`':
-                return cls(acc, domain, role), tokens[i+1+consume_start:]
+        for i, t in enumerate(tokens[consume_start:]):
+            if t == "`":
+                return cls(acc, domain, role), tokens[i + 1 + consume_start :]
             else:
                 acc.append(t)
 
     def __len__(self):
-        return sum(len(x) for x in self.value)+len(self.prefix)
+        return sum(len(x) for x in self.value) + len(self.prefix)
 
     @property
     def prefix(self):
-        prefix = ''
+        prefix = ""
         if self.domain:
-            prefix += ':'+self.domain
+            prefix += ":" + self.domain
         if self.role:
-            prefix += ':'+self.role+':'
+            prefix += ":" + self.role + ":"
         return prefix
 
-
     def __repr__(self):
-        prefix = ''
+        prefix = ""
         if self.domain:
-            prefix += ':'+self.domain
+            prefix += ":" + self.domain
         if self.role:
-            prefix += ':'+self.role+':'
-        #prefix = ''
-        return GREEN(prefix)+HEADER('`'+''.join(self.value)+'`')
+            prefix += ":" + self.role + ":"
+        # prefix = ''
+        return GREEN(prefix) + HEADER("`" + "".join(self.value) + "`")
+
 
 class Word(Node):
     def __repr__(self):
@@ -136,25 +143,23 @@ class Word(Node):
 
 
 def lex(lines):
-    acc = ''
+    acc = ""
     for l in lines:
         for c in l:
-            if c in ' `*_:':
+            if c in " `*_:":
                 if acc:
                     yield acc
                 yield c
-                acc = ''
+                acc = ""
             else:
                 acc += c
         if acc:
             yield acc
-            acc = ''
-        yield ' '
-
+            acc = ""
+        yield " "
 
 
 class FirstCombinator:
-
     def __init__(self, parsers):
         self.parsers = parsers
 
@@ -171,9 +176,9 @@ def rewrap(tokens, max_len):
     acc = [[]]
     clen = 0
     for t in tokens:
-        if clen + (ll:= len(t)) > max_len:
+        if clen + (ll := len(t)) > max_len:
             # remove whitespace at EOL
-            while  acc and acc[-1][-1].is_whitespace():
+            while acc and acc[-1][-1].is_whitespace():
                 acc[-1].pop()
             acc.append([])
             clen = 0
@@ -183,7 +188,7 @@ def rewrap(tokens, max_len):
             continue
         acc[-1].append(t)
         clen += ll
-    #remove whitespace at EOF
+    # remove whitespace at EOF
     try:
         while acc and acc[-1][-1].is_whitespace():
             acc[-1].pop()
@@ -193,12 +198,7 @@ def rewrap(tokens, max_len):
     return acc
 
 
-
-
-
-    
 class Paragraph:
-        
     def __init__(self, children, width=80):
         self.children = children
         self.width = width
@@ -208,8 +208,8 @@ class Paragraph:
         tokens = list(lex(lines))
 
         rest = tokens
-        acc  = []
-        parser =  FirstCombinator([Directive,Verbatim,Word])
+        acc = []
+        parser = FirstCombinator([Directive, Verbatim, Word])
         while rest:
             parsed, rest = parser.parse(rest)
             acc.append(parsed)
@@ -220,9 +220,8 @@ class Paragraph:
 
         rw = rewrap(self.children, self.width)
 
-        p = '\n'.join([''.join(repr(x) for x in line) for line in rw])
+        p = "\n".join(["".join(repr(x) for x in line) for line in rw])
         return f"""<Paragraph:\n{p}>"""
-
 
 
 def indent(text, marker="   |"):
@@ -411,13 +410,13 @@ class Document:
         return "<Document > with" + indent(acc)
 
 
-#d = Document(lines[:])
-#for i, l in with_indentation(repr(d).split("\n")):
+# d = Document(lines[:])
+# for i, l in with_indentation(repr(d).split("\n")):
 #    print(i, l)
 print(ex)
 
 for w in [80]:
-    p =  Paragraph.parse_lines(ex.split('\n'))
+    p = Paragraph.parse_lines(ex.split("\n"))
     p.width = w
     print(p)
     print()
