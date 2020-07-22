@@ -1,5 +1,8 @@
 import inspect
+import json
+import sys
 from textwrap import dedent
+
 # from numpydoc.docscrape import NumpyDocString
 from types import ModuleType
 
@@ -76,8 +79,6 @@ def get_example_data(doc):
 
 
 def main():
-
-    import sys
 
     [do_one_mod(x) for x in sys.argv[1:]]
 
@@ -170,7 +171,6 @@ def do_one_mod(name):
             )
             ndoc.backrefs = []
             # print(' '+qa+' '*30)
-            import json
 
             with open(f"cache/{qa}.json", "w") as f:
                 f.write(json.dumps(ndoc.to_json()))

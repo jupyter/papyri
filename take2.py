@@ -79,6 +79,10 @@ class Directive(Node):
             assert role
         self.role = role
 
+    @property
+    def text(self):
+        return "".join(self.value)
+
     @classmethod
     def parse(cls, tokens):
         acc = []
@@ -215,6 +219,14 @@ class Paragraph:
             acc.append(parsed)
 
         return cls(acc)
+
+    @property
+    def references(self):
+        refs = []
+        for c in self.children:
+            if isinstance(c, Directive):
+                refs.append(c.text)
+        return refs
 
     def __repr__(self):
 
@@ -413,10 +425,11 @@ class Document:
 # d = Document(lines[:])
 # for i, l in with_indentation(repr(d).split("\n")):
 #    print(i, l)
-print(ex)
 
-for w in [80]:
-    p = Paragraph.parse_lines(ex.split("\n"))
-    p.width = w
-    print(p)
-    print()
+if __name__ == "__main__":
+    print(ex)
+    for w in [80]:
+        p = Paragraph.parse_lines(ex.split("\n"))
+        p.width = w
+        print(p)
+        print()

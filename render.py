@@ -3,8 +3,7 @@ import os
 from functools import lru_cache
 from types import ModuleType
 
-from jinja2 import (Environment, FileSystemLoader, PackageLoader,
-                    select_autoescape)
+from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
 from numpydoc.docscrape import Parameter
 
 from velin import NumpyDocString
@@ -61,6 +60,26 @@ def normalise_ref(ref):
     return ref
 
 
+def resolve_(qa, nvisited_items):
+    def resolve(ref):
+        if ref in nvisited_items:
+            return ref, "exists"
+        else:
+            parts = qa.split(".")
+            for i in range(len(parts)):
+                attempt = ".".join(parts[:i]) + "." + ref
+                if attempt in nvisited_items:
+                    return attempt, "exists"
+
+        q0 = qa.split(".")[0]
+        attempts = [q for q in nvisited_items.keys() if q.startswith(q0) and (ref in q)]
+        if len(attempts) == 1:
+            return attempts[0], "exists"
+        return ref, "missing"
+
+    return resolve
+
+
 if __name__ == "__main__":
 
     nvisited_items = {}
@@ -77,12 +96,6 @@ if __name__ == "__main__":
             blob.edata = data["edata"]
             blob.backrefs = data["backref"]
             nvisited_items[qa] = blob
-
-    # nothign for now, hardcoded to qualname + html, but shoudl be custom for
-    # various renderer, spyder for example want likely a custom actions in their
-    # inspector.
-    def resolve(ref):
-        return ref
 
     # TODO, make that a non-closure ?
     @lru_cache()
@@ -104,18 +117,7 @@ if __name__ == "__main__":
     for qa, ndoc in nvisited_items.items():
         with open(f"html/{qa}.html", "w") as f:
 
-            def resolve(ref):
-                if ref in nvisited_items:
-                    return ref, "exists"
-                else:
-                    parts = qa.split(".")
-                    for i in range(len(parts)):
-                        attempt = ".".join(parts[:i]) + "." + ref
-                        if attempt in nvisited_items:
-                            return attempt, "exists"
-                return ref, "missing"
-
-            env.globals["resolve"] = resolve
+            env.globals["resolve"] = resolve_(qa, nvisited_items)
 
             br = ndoc.backrefs
             if len(br):

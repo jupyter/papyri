@@ -79,7 +79,7 @@
        {% endfor %}
        See:
        {% for r in doc.refs %}
-            <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>,
+            <a class='{{exists(r)}}' href='{{resolve(r)[0]}}.html'>{{r}}</a>,
        {% endfor %}
    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
 
