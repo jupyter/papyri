@@ -1,11 +1,21 @@
-# Vélin
+# Papyri
 
-French for Vellum
+See the legendary [Villa of Papyri](https://en.wikipedia.org/wiki/Villa_of_the_Papyri), who get its name from it's
+collection of many papyrus scrolls.
 
-> Vellum is prepared animal skin or "membrane", typically used as a material for writing on. Parchment is another term
-> for this material, and if vellum is distinguished from this, it is by vellum being made from calfskin, as opposed to
-> that from other animals,[1] or otherwise being of higher quality
+## What 
 
+A set of tools to build better documentation for Python project. 
+  - Opinionated therefore can understand more about the structure of your project. 
+  - Allow automatic cross link (back and forth) between documentation across python packages. 
+  - Use a documentation IR, to separate building the docs from rendering the docs in many contexts. 
+
+This should hopefully allow a conda-forge-like model, where project upload their IR to a given repo, and a _single
+website_ that contain multiple project documentation (without sub domains) can be build with better cross link between
+project and _efficient_ page rebuild. 
+
+This should also allow to reader documentation on _non html_ backend (think terminal), or provide documentation if
+IDE (Spyder/Jupyterlab), without having to iframe it. 
 
 ## install 
 
@@ -18,57 +28,71 @@ pip install flit
 flit install --symlink
 ```
 
-## Autoreformat docstrings in minirst/ref.py
+## Instructions / Overview
 
-```
-velin [--write] path-to-file.py or path-to-dir
-```
+In the end there should be roughly 3 steps:
 
-Without `--write` vélin will print the suggested diff, with `--write` it will _attempt_  to update the files.
+#### generation (gen.py module_name),
 
-## options
+Which collect the documentation of a project into a doc-bundle; a number of
+doc-blobs (currently json file), with a defined semantic structure, and
+some metadata (version of the project this documentation refers to, and
+potentially some other blobs)
 
-```
-$ velin --help
-usage: velin [-h] [--context context] [--unsafe] [--check] [--no-diff] [--no-color] [--write] path [path ...]
+During the generation a number of normalisation and inference can and should
+happen, for example 
 
-reformat the docstrigns of some file
+  - using type inference into the `Examples` sections of docstrings and storing
+    those as pairs (token, reference), so that you can later decide that
+    clicking on `np.array` in an example brings you to numpy array
+    documentation; whether or not we are currently in the numpy doc. 
+  - Parsing "See Also" into a well defined structure
+  - running Example to generate images for docs with images (not implemented)
+  - resolve package local references for example building numpy doc
+    "`zeroes_like`" is non ambiguous and shoudl be Normalized to
+    "`numpy.zeroes_like`", `~.pyplot.histogram`, normalized to
+    `matplotlib.pyplot.histogram` as the **target** and `histogram` as the text
+    ...etc.
 
-positional arguments:
-  files              Files or folder to reformat
+The Generation step is likely project specific, as there might be import
+conventions that are per-project and should not need to be repeated (`import
+pandas as pd`, for example,)
 
-optional arguments:
-  -h, --help         show this help message and exit
-  --context context  Number of context lines in the diff
-  --unsafe           Lift some safety feature (don't fail if updating the docstring is not indempotent
-  --check            Print the list of files/lines number and exit with a non-0 exit status, Use it for CI.
-  --no-diff          Do not print the diff
-  --no-color
-  --write            Try to write the updated docstring to the files
-```
+#### Ingestion (crosslink.py)
+
+The ingestion step take doc-bundle and/or doc-blobs and add them into a graph of
+known items; the ingestion is critical to efficiently build the collection graph
+metadata and understand which items refers to which; this allow the following: 
+
+ - Update the list of backreferences to a docbundle
+ - Update forward references metadata to know whether links are valid. 
+
+Currently the ingestion loads all in memory and update all the bundle in place
+but this can likely be done more efficiently. 
+
+A lot more can likely be done at larger scale, like detecting if documentation
+have changed in previous version so infer for which versions of a library this
+documentation is valid. 
+
+There is also likely some curating that might need to be done at that point, as
+for example, numpy.array have an extremely large number of back-references.
+
+
+#### Rendering (render.py)
+
+Rendering can be done on on client side, which allows a lot of flexibility and
+customisation. 
+
+1) on a client IDE; the links can allow to navigate in the doc "Inspector" (for
+example spyder) and will/can link only to already existing libraries of current
+environment.
+
+
+2) online experience can allow (back-)links to private doc-bundles to users. 
 
 
 
-## other things part of this repo that will need to be pulled out at some point
 
-### Not Sphinx
-
-A project which is not sphinx (for current lack of a better name), it is _not meant_ to be a Sphinx replacement either
-but to explore a different approach; mainly:
-
-- Be more Python Specific; by knowing more about the language you can usually be smarter and simpler. 
-- Separate documentation gathering, and building from rendering. 
-  - Go from source to IR
-  - From IR to final HTML – without extension execution. 
-- Potentially offer a docstring reformatter (!not a linter), that can reformat docstrings automatically to follow
-  numpydoc conventions.
-
-This should hopefully allow a conda-forge-like model, where project upload their IR to a given repo, and a _single
-website_ that contain multiple project documentation (without sub domains) can be build with better cross link between
-project and _efficient_ page rebuild. 
-
-This should also allow to reder documentation on _non html_ backend (think terminal), or provide documentation if
-IDE (Spyder/Jupyterlab), without having to iframe it. 
 
 ### Usage
 
@@ -76,8 +100,11 @@ Still quite hackish for now:
 
 ```bash
 $ mkdir html
+$ mkdir cache
 $ rm htmls/*.html
-$ python gen.py
+$ python gen.py module_names
+$ python crosslink.py
+$ python render.py
 ```
 
 
