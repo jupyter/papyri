@@ -6,7 +6,7 @@ build-backend = "flit_core.buildapi"
 module = "velin"
 author = "Matthias Bussonnier"
 author-email = "bussonniermatthias@gmail.com"
-home-page = "https://github.com/Carreau/minirst"
+home-page = "https://github.com/Carreau/papyri"
 classifiers = ["License :: OSI Approved :: MIT License"]
 description-file="Readme.md"
 requires-python=">=3.8"
@@ -14,8 +14,10 @@ requires=[
     "numpydoc",
     "pygments",
     "black",
-    "there"
+    "there",
+    "rich",
+    "jedi"
 ]
 
 [tool.flit.scripts]
-velin = "velin:main"
+velin = "papyri:main"
