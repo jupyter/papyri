@@ -78,15 +78,17 @@ def parse_script(script, ns=None):
         yield index, type_, text, ref
 
 
-def get_example_data(doc):
+def get_example_data(doc, infer=True):
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     edata = []
     for b in blocks:
         for item in b:
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
-                entries = list(parse_script(script, ns={"np": np}))
-                # entries = []
+                if infer:
+                    entries = list(parse_script(script, ns={"np": np}))
+                else:
+                    entries = []
                 edata.append(["code", (entries, "\n".join(item.out))])
 
             else:
@@ -94,9 +96,9 @@ def get_example_data(doc):
     return edata
 
 
-def main(names=None):
+def main(names, infer):
     for name in names:
-        do_one_mod(name)
+        do_one_mod(name, infer)
 
 
 def timer(progress, task):
@@ -113,7 +115,7 @@ def timer(progress, task):
     return timeit
 
 
-def do_one_mod(name):
+def do_one_mod(name, infer):
     class TimeElapsedColumn(ProgressColumn):
         """Renders estimated time remaining."""
 
@@ -189,8 +191,9 @@ def do_one_mod(name):
     with p() as p2:
         taskp = p2.add_task(description="parsing", total=len(collected))
         t1 = timer(p2, taskp)
-        taski = p2.add_task(description="infering examples", total=len(collected))
-        t2 = timer(p2, taski)
+        if infer:
+            taski = p2.add_task(description="infering examples", total=len(collected))
+            t2 = timer(p2, taski)
         for qa, a in collected.items():
             sd = (qa[:19] + "..") if len(qa) > 21 else qa
             p2.update(taskp, description=sd.ljust(17))
@@ -202,9 +205,10 @@ def do_one_mod(name):
 
                     ndoc = NumpyDocString(dedent_but_first(ddd))
                 except:
-                    p2.console.print("failed", a)
+                    p2.console.print("Unexpected error parsing", a)
                     p2.advance(taskp)
-                    p2.advance(taski)
+                    if infer:
+                        p2.advance(taski)
                     continue
             p2.advance(taskp)
 
@@ -227,8 +231,12 @@ def do_one_mod(name):
 
             if getattr(nvisited_items, qa, None):
                 raise ValueError(f"{qa} already visited")
-            with t2():
-                ndoc.edata = get_example_data(ndoc)
+            if infer:
+                with t2():
+                    ndoc.edata = get_example_data(ndoc, infer)
+            else:
+                ndoc.edata = get_example_data(ndoc, infer)
+
             ndoc.refs = list(
                 {
                     u[3]
@@ -238,7 +246,10 @@ def do_one_mod(name):
                     if u[3]
                 }
             )
-            p2.advance(taski)
+            ndoc.refs.extend(refs)
+            ndoc.refs = list(sorted(set(ndoc.refs)))
+            if infer:
+                p2.advance(taski)
             ndoc.backrefs = []
 
             with (cache_dir / f"{qa}.json").open("w") as f:

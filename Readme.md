@@ -32,7 +32,18 @@ flit install --symlink
 
 In the end there should be roughly 3 steps:
 
-#### generation (gen.py module_name),
+#### try it
+
+It is _slow_ on full numpy/scipy...
+
+```
+$ papyri gen numpy scipy
+$ papyri crosslink
+$ papyri render
+$ papyri open numpy.array
+```
+
+#### generation (papyri gen module_name),
 
 Which collect the documentation of a project into a doc-bundle; a number of
 doc-blobs (currently json file), with a defined semantic structure, and
@@ -58,7 +69,7 @@ The Generation step is likely project specific, as there might be import
 conventions that are per-project and should not need to be repeated (`import
 pandas as pd`, for example,)
 
-#### Ingestion (crosslink.py)
+#### Ingestion (papyri crosslink)
 
 The ingestion step take doc-bundle and/or doc-blobs and add them into a graph of
 known items; the ingestion is critical to efficiently build the collection graph
@@ -78,7 +89,7 @@ There is also likely some curating that might need to be done at that point, as
 for example, numpy.array have an extremely large number of back-references.
 
 
-#### Rendering (render.py)
+#### Rendering (papyri render)
 
 Rendering can be done on on client side, which allows a lot of flexibility and
 customisation. 
@@ -89,22 +100,4 @@ environment.
 
 
 2) online experience can allow (back-)links to private doc-bundles to users. 
-
-
-
-
-
-### Usage
-
-Still quite hackish for now:
-
-```bash
-$ mkdir html
-$ mkdir cache
-$ rm htmls/*.html
-$ python gen.py module_names
-$ python crosslink.py
-$ python render.py
-```
-
 

@@ -19,8 +19,9 @@ def main():
 
 @click.command()
 @click.argument("names", nargs=-1)
-def gen(names):
-    generate.main(names)
+@click.option('--infer/--no-infer', default=True)
+def gen(names, infer):
+    generate.main(names, infer=infer)
 
 
 @click.command()
