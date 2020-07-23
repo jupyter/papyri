@@ -19,9 +19,22 @@ import scipy
 import scipy.special
 import sklearn
 from pygments.lexers import PythonLexer
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    ProgressColumn,
+    TaskID,
+    Text,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 from velin.ref import NumpyDocString
+
+from config import base_dir, cache_dir
 
 
 def dedent_but_first(text):
@@ -101,19 +114,6 @@ def timer(progress, task):
 
 
 def do_one_mod(name):
-    from rich.progress import Progress
-    from rich.progress import (
-        BarColumn,
-        DownloadColumn,
-        TextColumn,
-        TransferSpeedColumn,
-        TimeRemainingColumn,
-        Progress,
-        TaskID,
-        ProgressColumn,
-        Text,
-    )
-
     class TimeElapsedColumn(ProgressColumn):
         """Renders estimated time remaining."""
 
@@ -240,11 +240,8 @@ def do_one_mod(name):
             )
             p2.advance(taski)
             ndoc.backrefs = []
-            cache_dir = expanduser("~/.papyri/cache/")
-            p = Path(cache_dir)
-            p.mkdir(parents=True, exist_ok=True)
 
-            with open(f"{cache_dir}/{qa}.json", "w") as f:
+            with (cache_dir / f"{qa}.json").open("w") as f:
                 f.write(json.dumps(ndoc.to_json()))
             nvisited_items[qa] = ndoc
 
