@@ -64,7 +64,7 @@
     {% endif %}
     {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
         <p>
-        {{render_paragraph(lines)}}
+        {{render_paragraph(doc[section])}}
         </p>
     {% elif section in ['Signature'] %}
        <code>{{doc[section]}}</code>
