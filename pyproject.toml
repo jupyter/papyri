@@ -3,7 +3,7 @@ requires = ["flit_core >=2,<3"]
 build-backend = "flit_core.buildapi"
 
 [tool.flit.metadata]
-module = "velin"
+module = "papyri"
 author = "Matthias Bussonnier"
 author-email = "bussonniermatthias@gmail.com"
 home-page = "https://github.com/Carreau/papyri"
@@ -20,4 +20,4 @@ requires=[
 ]
 
 [tool.flit.scripts]
-velin = "papyri:main"
+papyri = "papyri:main"

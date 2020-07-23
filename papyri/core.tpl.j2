@@ -1,0 +1,143 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+    </script>
+    <script type="text/javascript" async
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+    <style>
+          .foo:hover{text-decoration:underline}
+          .foo{font-weight:bold; color:black}
+          .exists{font-weight:bold; color:black;text-decoration:none;}
+          .exists:hover{text-decoration:underline;color:black}
+          .missing,.missing:hover{color:darkred;text-decoration:none;font-weight:normal}
+          header{padding-top:1rem; padding-bottom:1rem;}
+          dd::before {
+            content: '';
+          }
+          dd {
+               margin-left: 40px;
+          }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>/ pydata / {{module}} / {{version}} / api / {{qa}} </nav>
+</header>
+
+{% macro example(entries) -%}
+    {{'>>> ' -}}
+    {%- for index, type, text, t_ in entries %}
+       {%- if text == '\n' -%}
+           <br>...&nbsp;
+        {%- else -%}
+            {%- if t_ -%}
+           <a class="foo" title={{t_}}, href="{{t_}}.html">{{text}}</a>
+            {%- else -%}
+            {{text}}
+            {%- endif -%}
+       {%- endif -%}
+    {%- endfor-%}
+    {{-'\n'}}
+    {%- endmacro %}
+
+{% macro render_paragraph(lines) -%}
+        {% for type,obj in paragraph(lines) %}
+            {% if type == 'Word' %}
+                {{obj.value}}
+            {% elif type == 'Directive' %}
+                {% set ref, exists = resolve(obj.text) %}
+                <code><a href="{{ref}}.html" class='{{exists}}'>{{obj.text}}</a></code>
+            {% elif type == 'Math' %}
+                ${{obj.text}}$
+            {% elif type == 'Verbatim' %}
+                <code>{{obj.text}}</code>
+            {% else %}
+                <code>Some {{type}}</code>
+            {% endif %}
+        {% endfor %}
+{%- endmacro %}
+
+
+{% for section in doc.sections if doc[section] %}
+    {% if section not in ['Extended Summary','Signature', 'Summary'] %}
+        <h3>{{section}}</h3>
+    {% endif %}
+    {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
+        <p>
+        {{render_paragraph(doc[section])}}
+        </p>
+    {% elif section in ['Signature'] %}
+       <code>{{doc[section]}}</code>
+    {% elif section in ['See Also'] %}
+        {% for r in doc[section] %}
+            <dl>
+                {% for name,type in r[0] %}
+                {% set ref, exists = resolve(name) %}
+                <dt><a href="{{ref}}.html" class={{exists}}><code>{{name}}</code></a>
+                {% if type is not none %}
+                    :{{type}}
+                {% endif %}
+                </dt>
+            {% endfor %}
+            <dd>{{render_paragraph(r[1])}}</dd>
+            </dl>
+        {% endfor %}
+    {% elif section in ['Examples'] %}
+        {% for type,data in doc.edata %}
+            {% if type=='text' %}
+             <p>{{render_paragraph([data])}}</p>
+            {% else %}
+             <pre>{{example(data[0]) -}}
+             {{- data[1]}}</pre>
+            {% endif %}
+            
+         {% endfor %}
+         See:
+         {% for r in doc.refs %}
+            <a class='{{exists(r)}}' href='{{resolve(r)[0]}}.html'>{{r}}</a>,
+         {% endfor %}
+   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
+
+       <dl>
+       {% for p in doc[section] %}
+           <dt><code>{{p[0]}}</code>:{{p[1]}}</dt>
+           <dd><p>
+           {{render_paragraph(p[2])}}
+            </p></dd>
+       {% endfor %}
+
+   </pre>
+   {% else %}
+       {% if doc[section] %}
+        <pre>
+       {{doc[section]}}
+       </pre>
+       {% endif %}
+   {% endif %}
+{% endfor%}
+{% if backrefs[0] or backrefs[1] %}
+    <h1>Back References</h1>
+    {% if backrefs[0] is not none %}
+    {% for r in backrefs[0] %}
+        <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
+    {% endfor %}
+    {% endif%}
+    {% if backrefs[1] is not none %}
+        {% for k,v in backrefs[1].items() %}
+        <h2>{{k}}</h2>
+        {% for r in v %}
+            <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
+        {% endfor %}
+    {% endfor %}
+    {% endif%}
+{% endif %}
+</body>
+</html>

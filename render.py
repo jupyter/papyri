@@ -10,12 +10,20 @@ from velin import NumpyDocString
 
 from take2 import Paragraph
 
+from rich.progress import track
+
 
 def paragraph(lines):
     p = Paragraph.parse_lines(lines)
     acc = []
     for c in p.children:
-        acc.append((type(c).__name__, c))
+        if type(c).__name__ == 'Directive':
+            if c.role == 'math':
+                acc.append(('Math', c))
+            else:
+                acc.append((type(c).__name__, c))
+        else:
+            acc.append((type(c).__name__, c))
     return acc
 
 
@@ -93,7 +101,8 @@ def resolve_(qa, nvisited_items):
 if __name__ == "__main__":
 
     nvisited_items = {}
-    for fname in os.listdir("cache"):
+    files = os.listdir("cache")
+    for fname in track(files, description='Importing...', total=len(files)):
         qa = fname[:-5]
         with open("cache/" + fname) as f:
             data = json.loads(f.read())
@@ -108,24 +117,24 @@ if __name__ == "__main__":
             nvisited_items[qa] = blob
 
     # TODO, make that a non-closure ?
-    @lru_cache()
-    def exists(ref):
-        if ref in nvisited_items:
-            return "exists"
-        else:
-            if not ref.startswith(("builtins.", "__main__")):
-                print(ref, "missing")
-            return "missing"
 
     env = Environment(
-        loader=FileSystemLoader("velin"),
+        loader=FileSystemLoader("papyri"),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
     template = env.get_template("core.tpl.j2")
-    env.globals["exists"] = exists
 
-    for qa, ndoc in nvisited_items.items():
+    for qa, ndoc in track(nvisited_items.items(), description='Rendering', total=len(nvisited_items)):
         with open(f"html/{qa}.html", "w") as f:
+            @lru_cache()
+            def exists(ref):
+                if ref in nvisited_items:
+                    return "exists"
+                else:
+                    if not ref.startswith(("builtins.", "__main__")):
+                        print(ref, "missing in", qa)
+                    return "missing"
+            env.globals["exists"] = exists
 
             env.globals["resolve"] = resolve_(qa, nvisited_items)
             env.globals["paragraph"] = paragraph
