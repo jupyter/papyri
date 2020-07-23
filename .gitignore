@@ -1,2 +1,4 @@
 .pytest_cache/
 *.ipynb
+cache
+html
