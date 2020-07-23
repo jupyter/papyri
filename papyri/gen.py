@@ -211,7 +211,8 @@ def do_one_mod(name):
                        sig = str(inspect.signature(a))
                     except (ValueError, TypeError):
                        pass
-                    ndoc['Signature'] = qa.split('.')[-1]+sig
+                    if sig:
+                        ndoc['Signature'] = qa.split('.')[-1]+sig
 
                 new_see_also = ndoc["See Also"]
                 refs = []
