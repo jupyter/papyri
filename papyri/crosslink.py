@@ -6,8 +6,10 @@ from types import ModuleType
 from numpydoc.docscrape import Parameter
 from velin import NumpyDocString
 
-from render import resolve_
-from take2 import Paragraph
+from .render import resolve_
+from .take2 import Paragraph
+
+from .config import cache_dir
 
 
 @lru_cache()
@@ -62,14 +64,15 @@ def normalise_ref(ref):
     return ref
 
 
-if __name__ == "__main__":
+def main():
 
     nvisited_items = {}
-    for fname in os.listdir("cache"):
+    for f in cache_dir.glob('*'):
+        fname = f.name
         qa = fname[:-5]
         qa = normalise_ref(qa)
         try:
-            with open(fname := "cache/" + fname) as f:
+            with f.open() as f:
                 data = json.loads(f.read())
                 blob = NumpyDocString("")
                 blob._parsed_data = data["_parsed_data"]
@@ -105,8 +108,8 @@ if __name__ == "__main__":
         ndoc.backrefs = list(sorted(set(ndoc.backrefs)))
         js = ndoc.to_json()
         try:
-            fname = f"cache/{qa}.json"
-            with open(fname, "w") as f:
+            path = cache_dir/f"{qa}.json"
+            with path.open("w") as f:
                 f.write(json.dumps(js))
         except Exception as e:
             raise RuntimeError(f"error writing to {fname}") from e

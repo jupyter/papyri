@@ -34,7 +34,7 @@ from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 from velin.ref import NumpyDocString
 
-from config import base_dir, cache_dir
+from .config import base_dir, cache_dir
 
 
 def dedent_but_first(text):

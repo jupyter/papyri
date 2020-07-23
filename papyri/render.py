@@ -8,7 +8,8 @@ from numpydoc.docscrape import Parameter
 from rich.progress import track
 from velin import NumpyDocString
 
-from take2 import Paragraph
+from .take2 import Paragraph
+from .config import base_dir, cache_dir
 
 
 def paragraph(lines):
@@ -96,13 +97,12 @@ def resolve_(qa, nvisited_items):
     return resolve
 
 
-if __name__ == "__main__":
-
+def main():
     nvisited_items = {}
-    files = os.listdir("cache")
+    files = os.listdir(cache_dir)
     for fname in track(files, description="Importing...", total=len(files)):
         qa = fname[:-5]
-        with open("cache/" + fname) as f:
+        with open(cache_dir / fname) as f:
             data = json.loads(f.read())
             blob = NumpyDocString("")
             blob._parsed_data = data["_parsed_data"]
@@ -125,7 +125,8 @@ if __name__ == "__main__":
     for qa, ndoc in track(
         nvisited_items.items(), description="Rendering", total=len(nvisited_items)
     ):
-        with open(f"html/{qa}.html", "w") as f:
+        (base_dir/"html").mkdir(exist_ok=True)
+        with (base_dir/"html"/f"{qa}.html").open("w") as f:
 
             @lru_cache()
             def exists(ref):
