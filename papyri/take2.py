@@ -63,6 +63,7 @@ class Verbatim(Node):
                 else:
                     acc.append(t)
         return None
+
     @property
     def text(self):
         return "".join(self.value)

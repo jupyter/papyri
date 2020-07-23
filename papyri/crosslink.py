@@ -4,10 +4,10 @@ from functools import lru_cache
 from types import ModuleType
 
 from numpydoc.docscrape import Parameter
+from velin import NumpyDocString
 
 from render import resolve_
 from take2 import Paragraph
-from velin import NumpyDocString
 
 
 @lru_cache()

@@ -1,6 +1,10 @@
 import inspect
 import json
 import sys
+import time
+from contextlib import contextmanager
+from os.path import expanduser
+from pathlib import Path
 from textwrap import dedent
 
 # from numpydoc.docscrape import NumpyDocString
@@ -16,7 +20,6 @@ import scipy.special
 import sklearn
 from pygments.lexers import PythonLexer
 from there import print
-
 from velin.examples_section_utils import InOut, splitblank, splitcode
 from velin.ref import NumpyDocString
 
@@ -70,7 +73,7 @@ def get_example_data(doc):
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
                 entries = list(parse_script(script, ns={"np": np}))
-                #entries = []
+                # entries = []
                 edata.append(["code", (entries, "\n".join(item.out))])
 
             else:
@@ -78,27 +81,23 @@ def get_example_data(doc):
     return edata
 
 
-def main():
+def main(names=None):
+    for name in names:
+        do_one_mod(name)
 
-    [do_one_mod(x) for x in sys.argv[1:]]
-
-
-import time
-from contextlib import contextmanager
 
 def timer(progress, task):
-    c = 0 
-    
+    c = 0
+
     @contextmanager
     def timeit():
         now = time.monotonic()
         yield
         nonlocal c
-        c+= (time.monotonic() - now)
+        c += time.monotonic() - now
         progress.update(task, ctime=c)
-        
-    return timeit
 
+    return timeit
 
 
 def do_one_mod(name):
@@ -124,14 +123,16 @@ def do_one_mod(name):
         def render(self, task: "Task") -> Text:
             """Show time remaining."""
             from datetime import timedelta
-            ctime = task.fields.get('ctime', None)
+
+            ctime = task.fields.get("ctime", None)
             if ctime is None:
                 return Text("-:--:--", style="progress.remaining")
             ctime_delta = timedelta(seconds=int(ctime))
-            return Text(str(ctime_delta), style="progress.remaining", overflow='ellipsis')
+            return Text(
+                str(ctime_delta), style="progress.remaining", overflow="ellipsis"
+            )
 
-
-    p = lambda : Progress(
+    p = lambda: Progress(
         TextColumn("[progress.description]{task.description}", justify="right"),
         BarColumn(bar_width=None),
         "[progress.percentage]{task.percentage:>3.1f}%",
@@ -139,7 +140,7 @@ def do_one_mod(name):
         TimeElapsedColumn(),
     )
 
-    x,*r = name.split('.')
+    x, *r = name.split(".")
     n0 = __import__(name)
     for sub in r:
         n0 = getattr(n0, sub)
@@ -152,14 +153,16 @@ def do_one_mod(name):
     with p() as progress:
         for mod in modules:
             if not mod.__name__.startswith(name):
-                #progress.console.print("skiping module not submodule of", mod, mod.__name__)
+                # progress.console.print("skiping module not submodule of", mod, mod.__name__)
                 continue
-                #pass
+                # pass
 
-            #progress.console.print(mod.__name__)
+            # progress.console.print(mod.__name__)
             if task is not None:
                 progress.remove_task(task)
-            task = progress.add_task(description='collecting... '+mod.__name__, total=len(dir(mod)))
+            task = progress.add_task(
+                description="collecting... " + mod.__name__, total=len(dir(mod))
+            )
             for n in dir(mod):
                 progress.advance(task)
                 try:
@@ -182,66 +185,68 @@ def do_one_mod(name):
                     continue
                 collected[qa] = a
 
-    #with progress:
+    # with progress:
     with p() as p2:
-        taskp = p2.add_task(description='parsing', total=len(collected))
+        taskp = p2.add_task(description="parsing", total=len(collected))
         t1 = timer(p2, taskp)
-        taski = p2.add_task(description='infering examples', total=len(collected))
+        taski = p2.add_task(description="infering examples", total=len(collected))
         t2 = timer(p2, taski)
-        for qa,a in collected.items():
-                sd = (qa[:19] + '..') if len(qa) > 21 else qa
-                p2.update(taskp, description=sd.ljust(17))
-                ddd = a.__doc__
+        for qa, a in collected.items():
+            sd = (qa[:19] + "..") if len(qa) > 21 else qa
+            p2.update(taskp, description=sd.ljust(17))
+            ddd = a.__doc__
 
-                #progress.console.print(qa)
-                with t1():
-                    try:
-                        
-                        ndoc = NumpyDocString(dedent_but_first(ddd))
-                    except:
-                        p2.console.print("failed", a)
-                        p2.advance(taskp)
-                        p2.advance(taski)
-                        continue
-                p2.advance(taskp)
+            # progress.console.print(qa)
+            with t1():
+                try:
 
-                if not ndoc['Signature']:
-                    sig = None
-                    try:
-                       sig = str(inspect.signature(a))
-                    except (ValueError, TypeError):
-                       pass
-                    if sig:
-                        ndoc['Signature'] = qa.split('.')[-1]+sig
+                    ndoc = NumpyDocString(dedent_but_first(ddd))
+                except:
+                    p2.console.print("failed", a)
+                    p2.advance(taskp)
+                    p2.advance(taski)
+                    continue
+            p2.advance(taskp)
 
-                new_see_also = ndoc["See Also"]
-                refs = []
-                if new_see_also:
-                    for line in new_see_also:
-                        rt, desc = line
-                        for ref, type_ in rt:
-                            refs.append(ref)
+            if not ndoc["Signature"]:
+                sig = None
+                try:
+                    sig = str(inspect.signature(a))
+                except (ValueError, TypeError):
+                    pass
+                if sig:
+                    ndoc["Signature"] = qa.split(".")[-1] + sig
 
-                if getattr(nvisited_items, qa, None):
-                    raise ValueError(f"{qa} already visited")
-                with t2():
-                    ndoc.edata = get_example_data(ndoc)
-                ndoc.refs = list(
-                    {
-                        u[3]
-                        for t_, sect in ndoc.edata
-                        if t_ == "code"
-                        for u in sect[0]
-                        if u[3]
-                    }
-                )
-                p2.advance(taski)
-                ndoc.backrefs = []
+            new_see_also = ndoc["See Also"]
+            refs = []
+            if new_see_also:
+                for line in new_see_also:
+                    rt, desc = line
+                    for ref, type_ in rt:
+                        refs.append(ref)
 
-                with open(f"cache/{qa}.json", "w") as f:
-                    f.write(json.dumps(ndoc.to_json()))
-                nvisited_items[qa] = ndoc
+            if getattr(nvisited_items, qa, None):
+                raise ValueError(f"{qa} already visited")
+            with t2():
+                ndoc.edata = get_example_data(ndoc)
+            ndoc.refs = list(
+                {
+                    u[3]
+                    for t_, sect in ndoc.edata
+                    if t_ == "code"
+                    for u in sect[0]
+                    if u[3]
+                }
+            )
+            p2.advance(taski)
+            ndoc.backrefs = []
+            cache_dir = expanduser("~/.papyri/cache/")
+            p = Path(cache_dir)
+            p.mkdir(parents=True, exist_ok=True)
 
+            with open(f"{cache_dir}/{qa}.json", "w") as f:
+                f.write(json.dumps(ndoc.to_json()))
+            nvisited_items[qa] = ndoc
 
 
 if __name__ == "__main__":

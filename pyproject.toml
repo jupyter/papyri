@@ -16,7 +16,8 @@ requires=[
     "black",
     "there",
     "rich",
-    "jedi"
+    "jedi",
+    "click"
 ]
 
 [tool.flit.scripts]
