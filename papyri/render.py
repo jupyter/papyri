@@ -1,15 +1,52 @@
 import json
 import os
+from collections import defaultdict
 from functools import lru_cache
 from types import ModuleType
 
-from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
-from numpydoc.docscrape import Parameter
-from rich.progress import track
+from flask import Flask
+from jinja2 import (Environment, FileSystemLoader, PackageLoader,
+                    select_autoescape)
 from velin import NumpyDocString
 
-from .take2 import Paragraph
+from numpydoc.docscrape import Parameter
+
 from .config import base_dir, cache_dir
+from .take2 import Paragraph
+from .utils import progress
+
+app = Flask(__name__)
+
+
+@app.route("/<ref>")
+def route(ref):
+    if ref.endswith(".html"):
+        ref = ref[:-5]
+    if ref == "favicon.ico":
+        return ""
+    files = os.listdir(cache_dir)
+
+    env = Environment(
+        loader=FileSystemLoader("papyri"),
+        autoescape=select_autoescape(["html", "tpl.j2"]),
+    )
+    env.globals["exists"] = exists
+    env.globals["paragraph"] = paragraph
+    template = env.get_template("core.tpl.j2")
+
+    known_ref = [x.name[:-5] for x in (base_dir / "cache").glob("*")]
+    (base_dir / "html").mkdir(exist_ok=True)
+    with open(cache_dir / f"{ref}.json") as f:
+        bytes_ = f.read()
+    ndoc = load_one(bytes_)
+
+    env.globals["resolve"] = resolve_(ref, known_ref)
+
+    return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
+
+
+def serve():
+    app.run()
 
 
 def paragraph(lines):
@@ -26,70 +63,19 @@ def paragraph(lines):
     return acc
 
 
-@lru_cache()
-def keepref(ref):
-    """
-    Just a filter to remove a bunch of frequent refs and not clutter the ref list in examples.
-    """
-    if ref.startswith(("builtins.", "__main__")):
-        return False
-    try:
-        __import__(ref)
-        return False
-    except Exception:
-        pass
-    return True
-
-
-@lru_cache()
-def normalise_ref(ref):
-    """
-    Consistently normalize references.
-
-    Refs are sometime import path, not fully qualified names, tough type
-    inference in examples regularly give us fully qualified names. When visiting
-    a ref, this tries to import it and replace it by the normal full-qualified form.
-
-    """
-    if ref.startswith(("builtins.", "__main__")):
-        return ref
-    try:
-        mod_name, name = ref.rsplit(".", maxsplit=1)
-        mod = __import__(mod_name)
-        for sub in mod_name.split(".")[1:]:
-            mod = getattr(mod, sub)
-        obj = getattr(mod, name)
-        if isinstance(obj, ModuleType):
-            # print('module type.. skipping', ref)
-            return ref
-
-        if (
-            getattr(obj, "__name__", None) is None
-        ):  # and obj.__doc__ == type(obj).__doc__:
-            print("object is instance and should not be documented ?", repr(obj))
-            return ref
-
-        nref = obj.__module__ + "." + obj.__name__
-        return nref
-    except Exception:
-        print("could not normalize", ref)
-        pass
-    return ref
-
-
-def resolve_(qa, nvisited_items):
+def resolve_(qa, known_refs):
     def resolve(ref):
-        if ref in nvisited_items:
+        if ref in known_refs:
             return ref, "exists"
         else:
             parts = qa.split(".")
             for i in range(len(parts)):
                 attempt = ".".join(parts[:i]) + "." + ref
-                if attempt in nvisited_items:
+                if attempt in known_refs:
                     return attempt, "exists"
 
         q0 = qa.split(".")[0]
-        attempts = [q for q in nvisited_items.keys() if q.startswith(q0) and (ref in q)]
+        attempts = [q for q in known_refs if q.startswith(q0) and (ref in q)]
         if len(attempts) == 1:
             return attempts[0], "exists"
         return ref, "missing"
@@ -97,69 +83,76 @@ def resolve_(qa, nvisited_items):
     return resolve
 
 
-def main():
-    nvisited_items = {}
-    files = os.listdir(cache_dir)
-    for fname in track(files, description="Importing...", total=len(files)):
-        qa = fname[:-5]
-        with open(cache_dir / fname) as f:
-            data = json.loads(f.read())
-            blob = NumpyDocString("")
-            blob._parsed_data = data["_parsed_data"]
-            blob._parsed_data["Parameters"] = [
-                Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
-            ]
-            blob.refs = data["refs"]
-            blob.edata = data["edata"]
-            blob.backrefs = data["backref"]
-            nvisited_items[qa] = blob
+def render_one(template, ndoc, qa, ext):
+    br = ndoc.backrefs
+    if len(br) > 30:
 
-    # TODO, make that a non-closure ?
+        b2 = defaultdict(lambda: [])
+        for ref in br:
+            mod, _ = ref.split(".", maxsplit=1)
+            b2[mod].append(ref)
+        backrefs = (None, b2)
+    else:
+        backrefs = (br, None)
+    return template.render(
+        doc=ndoc,
+        qa=qa,
+        version="X.y.z",
+        module=qa.split(".")[0],
+        backrefs=backrefs,
+        ext=ext,
+    )
+
+
+def load_one(bytes_):
+    data = json.loads(bytes_)
+    blob = NumpyDocString("")
+    blob._parsed_data = data["_parsed_data"]
+    blob._parsed_data["Parameters"] = [
+        Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
+    ]
+    blob.refs = data["refs"]
+    blob.edata = data["edata"]
+    blob.backrefs = data["backref"]
+    return blob
+
+
+@lru_cache()
+def exists(ref):
+
+    if (base_dir / "cache" / f"{ref}.json").exists():
+        return "exists"
+    else:
+        # if not ref.startswith(("builtins.", "__main__")):
+        #    print(ref, "missing in", qa)
+        return "missing"
+
+
+def main():
+    # nvisited_items = {}
+    files = os.listdir(cache_dir)
 
     env = Environment(
         loader=FileSystemLoader("papyri"),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
+    env.globals["exists"] = exists
+    env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
-    for qa, ndoc in track(
-        nvisited_items.items(), description="Rendering", total=len(nvisited_items)
-    ):
-        (base_dir/"html").mkdir(exist_ok=True)
-        with (base_dir/"html"/f"{qa}.html").open("w") as f:
+    known_ref = [x.name[:-5] for x in (base_dir / "cache").glob("*")]
 
-            @lru_cache()
-            def exists(ref):
-                if ref in nvisited_items:
-                    return "exists"
-                else:
-                    if not ref.startswith(("builtins.", "__main__")):
-                        print(ref, "missing in", qa)
-                    return "missing"
+    (base_dir / "html").mkdir(exist_ok=True)
+    for p, fname in progress(files, description="Rendering..."):
+        qa = fname[:-5]
+        with open(cache_dir / fname) as f:
+            bytes_ = f.read()
+            ndoc = load_one(bytes_)
+            # nvisited_items[qa] = ndoc
 
-            env.globals["exists"] = exists
+        # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
+        with (base_dir / "html" / f"{qa}.html").open("w") as f:
 
-            env.globals["resolve"] = resolve_(qa, nvisited_items)
-            env.globals["paragraph"] = paragraph
+            env.globals["resolve"] = resolve_(qa, known_ref)
 
-            br = ndoc.backrefs
-            if len(br) > 30:
-                from collections import defaultdict
-
-                b2 = defaultdict(lambda: [])
-                for ref in br:
-                    mod, _ = ref.split(".", maxsplit=1)
-                    b2[mod].append(ref)
-                backrefs = (None, b2)
-            else:
-                backrefs = (br, None)
-
-            f.write(
-                template.render(
-                    doc=ndoc,
-                    qa=qa,
-                    version="X.y.z",
-                    module=qa.split(".")[0],
-                    backrefs=backrefs,
-                )
-            )
+            f.write(render_one(template=template, ndoc=ndoc, qa=qa, ext=".html"))

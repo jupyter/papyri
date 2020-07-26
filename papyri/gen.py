@@ -6,7 +6,6 @@ from contextlib import contextmanager
 from os.path import expanduser
 from pathlib import Path
 from textwrap import dedent
-
 # from numpydoc.docscrape import NumpyDocString
 from types import ModuleType
 
@@ -19,21 +18,14 @@ import scipy
 import scipy.special
 import sklearn
 from pygments.lexers import PythonLexer
-from rich.progress import (
-    BarColumn,
-    DownloadColumn,
-    Progress,
-    ProgressColumn,
-    TaskID,
-    Text,
-    TextColumn,
-    TimeRemainingColumn,
-    TransferSpeedColumn,
-)
+from rich.progress import (BarColumn, DownloadColumn, Progress, ProgressColumn,
+                           TaskID, Text, TextColumn, TimeRemainingColumn,
+                           TransferSpeedColumn)
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 from velin.ref import NumpyDocString
 
+from . import utils
 from .config import base_dir, cache_dir
 
 
@@ -56,7 +48,7 @@ def pos_to_nl(script, pos):
 P = PythonLexer()
 
 
-def parse_script(script, ns=None):
+def parse_script(script, ns=None, infer=None):
 
     jeds = []
     if ns:
@@ -69,7 +61,10 @@ def parse_script(script, ns=None):
             ref = None
             for jed in jeds:
                 try:
-                    ref = jed.infer(a + 1, b)[0].full_name
+                    if infer:
+                        ref = jed.infer(a + 1, b)[0].full_name
+                    else:
+                        ref = ""
                 except (AttributeError, TypeError, Exception):
                     pass
                 break
@@ -85,10 +80,7 @@ def get_example_data(doc, infer=True):
         for item in b:
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
-                if infer:
-                    entries = list(parse_script(script, ns={"np": np}))
-                else:
-                    entries = []
+                entries = list(parse_script(script, ns={"np": np}, infer=infer))
                 edata.append(["code", (entries, "\n".join(item.out))])
 
             else:

@@ -3,13 +3,14 @@ import os
 from functools import lru_cache
 from types import ModuleType
 
-from numpydoc.docscrape import Parameter
 from velin import NumpyDocString
 
-from .render import resolve_
-from .take2 import Paragraph
+from numpydoc.docscrape import Parameter
 
 from .config import cache_dir
+from .render import resolve_
+from .take2 import Paragraph
+from .utils import progress
 
 
 @lru_cache()
@@ -67,7 +68,7 @@ def normalise_ref(ref):
 def main():
 
     nvisited_items = {}
-    for f in cache_dir.glob('*'):
+    for p, f in progress(cache_dir.glob("*"), description="Loading..."):
         fname = f.name
         qa = fname[:-5]
         qa = normalise_ref(qa)
@@ -86,8 +87,8 @@ def main():
                 try:
                     notes = blob["Notes"]
                     blob.refs.extend(refs := Paragraph.parse_lines(notes).references)
-                    if refs:
-                        print(qa, refs)
+                    # if refs:
+                    # print(qa, refs)
                 except KeyError:
                     pass
                 blob.refs = list(sorted(set(blob.refs)))
@@ -98,17 +99,19 @@ def main():
     # update teh backref ar render time. technically this shoudl be at
     # generation time, or even a separate step that can be optimized later, by
     # doing careful graph update of only referenced nodes.
-    for qa, ndoc in nvisited_items.items():
+    for p, (qa, ndoc) in progress(
+        nvisited_items.items(), description="Cross referencing"
+    ):
         for ref in ndoc.refs:
             resolved = resolve_(qa, nvisited_items)(ref)[0]
             if resolved in nvisited_items and ref != qa:
                 nvisited_items[resolved].backrefs.append(qa)
 
-    for qa, ndoc in nvisited_items.items():
+    for p, (qa, ndoc) in progress(nvisited_items.items(), description="Writing..."):
         ndoc.backrefs = list(sorted(set(ndoc.backrefs)))
         js = ndoc.to_json()
         try:
-            path = cache_dir/f"{qa}.json"
+            path = cache_dir / f"{qa}.json"
             with path.open("w") as f:
                 f.write(json.dumps(js))
         except Exception as e:

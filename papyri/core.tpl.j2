@@ -37,9 +37,9 @@
     {%- for index, type, text, t_ in entries %}
        {%- if text == '\n' -%}
            <br>...&nbsp;
-        {%- else -%}
+       {%- else -%}
             {%- if t_ -%}
-           <a class="foo" title={{t_}}, href="{{t_}}.html">{{text}}</a>
+            <a class="foo" title={{t_}}, href="{{t_}}{{ext}}">{{text}}</a>
             {%- else -%}
             {{text}}
             {%- endif -%}
@@ -54,7 +54,7 @@
                 {{obj.value}}
             {% elif type == 'Directive' %}
                 {% set ref, exists = resolve(obj.text) %}
-                <code><a href="{{ref}}.html" class='{{exists}}'>{{obj.text}}</a></code>
+                <code><a href="{{ref}}{{ext}}" class='{{exists}}'>{{obj.text}}</a></code>
             {% elif type == 'Math' %}
                 ${{obj.text}}$
             {% elif type == 'Verbatim' %}
@@ -81,7 +81,7 @@
             <dl>
                 {% for name,type in r[0] %}
                 {% set ref, exists = resolve(name) %}
-                <dt><a href="{{ref}}.html" class={{exists}}><code>{{name}}</code></a>
+                <dt><a href="{{ref}}{{ext}}" class={{exists}}><code>{{name}}</code></a>
                 {% if type is not none %}
                     :{{type}}
                 {% endif %}
@@ -103,7 +103,7 @@
          See:
          {% for r in doc.refs %}
             {% set ref, exists = resolve(r) %}
-            <a class='{{exists}}' href='{{ref}}.html'>{{r}}</a>,
+            <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
          {% endfor %}
    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
 
@@ -128,14 +128,14 @@
     <h1>Back References</h1>
     {% if backrefs[0] is not none %}
     {% for r in backrefs[0] %}
-        <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
+        <a class='{{exists(r)}}' href='{{r}}{{ext}}'>{{r}}</a>
     {% endfor %}
     {% endif%}
     {% if backrefs[1] is not none %}
         {% for k,v in backrefs[1].items() %}
         <h2>{{k}}</h2>
         {% for r in v %}
-            <a class='{{exists(r)}}' href='{{r}}.html'>{{r}}</a>
+            <a class='{{exists(r)}}' href='{{r}}{{ext}}'>{{r}}</a>
         {% endfor %}
     {% endfor %}
     {% endif%}
