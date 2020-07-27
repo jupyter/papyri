@@ -11,7 +11,8 @@ from velin import NumpyDocString
 
 from numpydoc.docscrape import Parameter
 
-from .config import base_dir, cache_dir
+from .config import base_dir, cache_dir, html_dir, ingest_dir
+from .crosslink import SeeAlsoItem, resolve_
 from .take2 import Paragraph
 from .utils import progress
 
@@ -34,8 +35,8 @@ def route(ref):
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
-    known_ref = [x.name[:-5] for x in (base_dir / "cache").glob("*")]
-    (base_dir / "html").mkdir(exist_ok=True)
+    known_ref = [x.name[:-5] for x in cache_dir.glob("*")]
+    html_dir.mkdir(exist_ok=True)
     with open(cache_dir / f"{ref}.json") as f:
         bytes_ = f.read()
     ndoc = load_one(bytes_)
@@ -61,26 +62,6 @@ def paragraph(lines):
         else:
             acc.append((type(c).__name__, c))
     return acc
-
-
-def resolve_(qa, known_refs):
-    def resolve(ref):
-        if ref in known_refs:
-            return ref, "exists"
-        else:
-            parts = qa.split(".")
-            for i in range(len(parts)):
-                attempt = ".".join(parts[:i]) + "." + ref
-                if attempt in known_refs:
-                    return attempt, "exists"
-
-        q0 = qa.split(".")[0]
-        attempts = [q for q in known_refs if q.startswith(q0) and (ref in q)]
-        if len(attempts) == 1:
-            return attempts[0], "exists"
-        return ref, "missing"
-
-    return resolve
 
 
 def render_one(template, ndoc, qa, ext):
@@ -114,13 +95,14 @@ def load_one(bytes_):
     blob.refs = data["refs"]
     blob.edata = data["edata"]
     blob.backrefs = data["backref"]
+    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.get("see_also", [])]
     return blob
 
 
 @lru_cache()
 def exists(ref):
 
-    if (base_dir / "cache" / f"{ref}.json").exists():
+    if (cache_dir / f"{ref}.json").exists():
         return "exists"
     else:
         # if not ref.startswith(("builtins.", "__main__")):
@@ -142,16 +124,19 @@ def main():
 
     known_ref = [x.name[:-5] for x in (base_dir / "cache").glob("*")]
 
-    (base_dir / "html").mkdir(exist_ok=True)
+    html_dir.mkdir(exist_ok=True)
     for p, fname in progress(files, description="Rendering..."):
         qa = fname[:-5]
-        with open(cache_dir / fname) as f:
-            bytes_ = f.read()
-            ndoc = load_one(bytes_)
-            # nvisited_items[qa] = ndoc
+        try:
+            with open(cache_dir / fname) as f:
+                bytes_ = f.read()
+                ndoc = load_one(bytes_)
+                # nvisited_items[qa] = ndoc
+        except Exception as e:
+            raise RuntimeError(f"error with {f}") from e
 
         # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
-        with (base_dir / "html" / f"{qa}.html").open("w") as f:
+        with (html_dir / f"{qa}.html").open("w") as f:
 
             env.globals["resolve"] = resolve_(qa, known_ref)
 

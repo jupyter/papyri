@@ -66,6 +66,15 @@
 {%- endmacro %}
 
 
+{% macro ref(r) -%}
+    {% if r.exists %}
+                <code><a href="{{r.ref}}{{ext}}" class='exists'>{{r.name}}</a></code>
+    {% else %}
+                <code class='missing'>{{r.name}}</code>
+    {% endif %}
+{%- endmacro %}
+
+
 {% for section in doc.sections if doc[section] %}
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
         <h3>{{section}}</h3>
@@ -77,19 +86,14 @@
     {% elif section in ['Signature'] %}
        <code>{{doc[section]}}</code>
     {% elif section in ['See Also'] %}
-        {% for r in doc[section] %}
+        {% for sa in doc.see_also %}
             <dl>
-                {% for name,type in r[0] %}
-                {% set ref, exists = resolve(name) %}
-                <dt><a href="{{ref}}{{ext}}" class={{exists}}><code>{{name}}</code></a>
-                {% if type is not none %}
-                    :{{type}}
-                {% endif %}
+                <dt>{{ref(sa.name)}}</a>
                 </dt>
-            {% endfor %}
-            <dd>{{render_paragraph(r[1])}}</dd>
+            <dd>{{render_paragraph(sa.descriptions)}}</dd>
             </dl>
         {% endfor %}
+
     {% elif section in ['Examples'] %}
         {% for type,data in doc.edata %}
             {% if type=='text' %}
@@ -108,8 +112,12 @@
    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
 
        <dl>
-       {% for p in doc[section] %}
-           <dt><code>{{p[0]}}</code>:{{p[1]}}</dt>
+           {% for p in doc[section] %}
+            {% if p[0] %}
+                <dt><code>{{p[0]}}</code>:{{p[1]}}</dt>
+            {% else %}
+                <dt><code>{{p[1]}}</code></dt>
+            {% endif %}
            <dd><p>
            {{render_paragraph(p[2])}}
             </p></dd>
@@ -135,7 +143,7 @@
         {% for k,v in backrefs[1].items() %}
         <h2>{{k}}</h2>
         {% for r in v %}
-            <a class='{{exists(r)}}' href='{{r}}{{ext}}'>{{r}}</a>
+            <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>
         {% endfor %}
     {% endfor %}
     {% endif%}

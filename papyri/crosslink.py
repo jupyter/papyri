@@ -1,5 +1,7 @@
+import dataclasses
 import json
 import os
+from dataclasses import dataclass
 from functools import lru_cache
 from types import ModuleType
 
@@ -8,9 +10,29 @@ from velin import NumpyDocString
 from numpydoc.docscrape import Parameter
 
 from .config import cache_dir
-from .render import resolve_
+# from .render import resolve_
 from .take2 import Paragraph
 from .utils import progress
+
+
+def resolve_(qa, known_refs):
+    def resolve(ref):
+        if ref in known_refs:
+            return ref, "exists"
+        else:
+            parts = qa.split(".")
+            for i in range(len(parts)):
+                attempt = ".".join(parts[:i]) + "." + ref
+                if attempt in known_refs:
+                    return attempt, "exists"
+
+        q0 = qa.split(".")[0]
+        attempts = [q for q in known_refs if q.startswith(q0) and (ref in q)]
+        if len(attempts) == 1:
+            return attempts[0], "exists"
+        return ref, "missing"
+
+    return resolve
 
 
 @lru_cache()
@@ -65,6 +87,36 @@ def normalise_ref(ref):
     return ref
 
 
+
+
+@dataclass
+class Ref:
+    name: str
+    ref: str
+    exists: bool
+
+
+@dataclass
+class SeeAlsoItem:
+    name: Ref
+    descriptions: str
+    # there are a few case when the lhs is `:func:something`... in scipy.
+    type: str
+
+    @classmethod
+    def from_json(cls, name, descriptions, type):
+        return cls(Ref(**name), descriptions, type)
+
+
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
+
+
 def main():
 
     nvisited_items = {}
@@ -83,6 +135,19 @@ def main():
                 blob.refs = [normalise_ref(ref) for ref in data["refs"] if keepref(ref)]
                 blob.edata = data["edata"]
                 blob.backrefs = data["backref"]
+                blob.see_also = []
+                try:
+                    if see_also := blob["See Also"]:
+                        for nts, d in see_also:
+                            for (n, t) in nts:
+                                if t and not d:
+                                    d, t = t, None
+                                blob.see_also.append(
+                                    SeeAlsoItem(Ref(n, None, None), d, t)
+                                )
+                except Exception as e:
+                    raise ValueError(f"Error {qa}: {see_also} | {nts}") from e
+
                 nvisited_items[qa] = blob
                 try:
                     notes = blob["Notes"]
@@ -94,7 +159,7 @@ def main():
                 blob.refs = list(sorted(set(blob.refs)))
 
         except Exception as e:
-            raise RuntimeError(f"error writing to {fname}") from e
+            raise RuntimeError(f"error Reading to {f}") from e
 
     # update teh backref ar render time. technically this shoudl be at
     # generation time, or even a separate step that can be optimized later, by
@@ -107,12 +172,18 @@ def main():
             if resolved in nvisited_items and ref != qa:
                 nvisited_items[resolved].backrefs.append(qa)
 
+        for sa in ndoc.see_also:
+            resolved, exists = resolve_(qa, nvisited_items)(sa.name.name)
+            if exists == "exists":
+                sa.name.exists = True
+                sa.name.ref = resolved
+
     for p, (qa, ndoc) in progress(nvisited_items.items(), description="Writing..."):
         ndoc.backrefs = list(sorted(set(ndoc.backrefs)))
         js = ndoc.to_json()
         try:
             path = cache_dir / f"{qa}.json"
             with path.open("w") as f:
-                f.write(json.dumps(js))
+                f.write(json.dumps(js, cls=EnhancedJSONEncoder))
         except Exception as e:
             raise RuntimeError(f"error writing to {fname}") from e
