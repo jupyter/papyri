@@ -3,9 +3,11 @@ import json
 import sys
 import time
 from contextlib import contextmanager
+from functools import lru_cache
 from os.path import expanduser
 from pathlib import Path
 from textwrap import dedent
+
 # from numpydoc.docscrape import NumpyDocString
 from types import ModuleType
 
@@ -18,9 +20,17 @@ import scipy
 import scipy.special
 import sklearn
 from pygments.lexers import PythonLexer
-from rich.progress import (BarColumn, DownloadColumn, Progress, ProgressColumn,
-                           TaskID, Text, TextColumn, TimeRemainingColumn,
-                           TransferSpeedColumn)
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    ProgressColumn,
+    TaskID,
+    Text,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 from velin.ref import NumpyDocString
@@ -86,6 +96,43 @@ def get_example_data(doc, infer=True):
             else:
                 edata.append(["text", "\n".join(item.out)])
     return edata
+
+
+@lru_cache()
+def normalise_ref(ref):
+    """
+    Consistently normalize references.
+
+    Refs are sometime import path, not fully qualified names, tough type
+    inference in examples regularly give us fully qualified names. When visiting
+    a ref, this tries to import it and replace it by the normal full-qualified form.
+
+    """
+    if ref.startswith(("builtins.", "__main__")):
+        return ref
+    try:
+        mod_name, name = ref.rsplit(".", maxsplit=1)
+        mod = __import__(mod_name)
+        for sub in mod_name.split(".")[1:]:
+            mod = getattr(mod, sub)
+        obj = getattr(mod, name)
+        if isinstance(obj, ModuleType):
+            # print('module type.. skipping', ref)
+            return ref
+
+        if (
+            getattr(obj, "__name__", None) is None
+        ):  # and obj.__doc__ == type(obj).__doc__:
+            # print("object is instance and should not be documented ?", repr(obj))
+            return ref
+
+        nref = obj.__module__ + "." + obj.__name__
+
+        return nref
+    except Exception:
+        # print("could not normalize", ref)
+        pass
+    return ref
 
 
 def main(names, infer):
@@ -177,6 +224,7 @@ def do_one_mod(name, infer):
                     continue
                 if not isinstance(ddd := getattr(a, "__doc__", None), str):
                     continue
+                qa = normalise_ref(qa)
                 collected[qa] = a
 
     # with progress:
@@ -239,7 +287,7 @@ def do_one_mod(name, infer):
                 }
             )
             ndoc.refs.extend(refs)
-            ndoc.refs = list(sorted(set(ndoc.refs)))
+            ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
             if infer:
                 p2.advance(taski)
             ndoc.backrefs = []

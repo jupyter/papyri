@@ -15,6 +15,7 @@
           .foo:hover{text-decoration:underline}
           .foo{font-weight:bold; color:black}
           .exists{font-weight:bold; color:black;text-decoration:none;}
+          .local{font-weight:bold; color:blue;text-decoration:none;}
           .exists:hover{text-decoration:underline;color:black}
           .missing,.missing:hover{color:darkred;text-decoration:none;font-weight:normal}
           header{padding-top:1rem; padding-bottom:1rem;}
@@ -54,7 +55,11 @@
                 {{obj.value}}
             {% elif type == 'Directive' %}
                 {% set ref, exists = resolve(obj.text) %}
-                <code><a href="{{ref}}{{ext}}" class='{{exists}}'>{{obj.text}}</a></code>
+                {% if exists=='local' %}
+                    <code><a href="#{{ref}}" class='{{exists}}'>{{obj.text}}</a></code>
+                {% else %}
+                    <code><a href="{{ref}}{{ext}}" class='{{exists}}'>{{obj.text}}</a></code>
+                {% endif %}
             {% elif type == 'Math' %}
                 ${{obj.text}}$
             {% elif type == 'Verbatim' %}
@@ -114,7 +119,7 @@
        <dl>
            {% for p in doc[section] %}
             {% if p[0] %}
-                <dt><code>{{p[0]}}</code>:{{p[1]}}</dt>
+                <dt><code id={{p[0]}}>{{p[0]}}</code>:{{p[1]}}</dt>
             {% else %}
                 <dt><code>{{p[1]}}</code></dt>
             {% endif %}

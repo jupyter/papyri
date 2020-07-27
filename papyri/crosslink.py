@@ -9,14 +9,16 @@ from velin import NumpyDocString
 
 from numpydoc.docscrape import Parameter
 
-from .config import cache_dir
-# from .render import resolve_
+from .config import base_dir, cache_dir, ingest_dir
+from .gen import normalise_ref
 from .take2 import Paragraph
 from .utils import progress
 
 
-def resolve_(qa, known_refs):
+def resolve_(qa, known_refs, local_ref):
     def resolve(ref):
+        if ref in local_ref:
+            return ref, "local"
         if ref in known_refs:
             return ref, "exists"
         else:
@@ -50,45 +52,6 @@ def keepref(ref):
     return True
 
 
-@lru_cache()
-def normalise_ref(ref):
-    """
-    Consistently normalize references.
-
-    Refs are sometime import path, not fully qualified names, tough type
-    inference in examples regularly give us fully qualified names. When visiting
-    a ref, this tries to import it and replace it by the normal full-qualified form.
-
-    """
-    if ref.startswith(("builtins.", "__main__")):
-        return ref
-    try:
-        mod_name, name = ref.rsplit(".", maxsplit=1)
-        mod = __import__(mod_name)
-        for sub in mod_name.split(".")[1:]:
-            mod = getattr(mod, sub)
-        obj = getattr(mod, name)
-        if isinstance(obj, ModuleType):
-            # print('module type.. skipping', ref)
-            return ref
-
-        if (
-            getattr(obj, "__name__", None) is None
-        ):  # and obj.__doc__ == type(obj).__doc__:
-            # print("object is instance and should not be documented ?", repr(obj))
-            return ref
-
-        nref = obj.__module__ + "." + obj.__name__
-
-        return nref
-    except Exception:
-        # print("could not normalize", ref)
-        pass
-    return ref
-
-
-
-
 @dataclass
 class Ref:
     name: str
@@ -108,13 +71,17 @@ class SeeAlsoItem:
         return cls(Ref(**name), descriptions, type)
 
 
-
-
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
+
+
+def assert_normalized(ref):
+    # nref = normalise_ref(ref)
+    # assert nref == ref, f"{nref} != {ref}"
+    return ref
 
 
 def main():
@@ -123,7 +90,8 @@ def main():
     for p, f in progress(cache_dir.glob("*"), description="Loading..."):
         fname = f.name
         qa = fname[:-5]
-        qa = normalise_ref(qa)
+        rqa = normalise_ref(qa)
+        # assert rqa == qa , f"{rqa} !+ {qa}"
         try:
             with f.open() as f:
                 data = json.loads(f.read())
@@ -132,7 +100,9 @@ def main():
                 blob._parsed_data["Parameters"] = [
                     Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
                 ]
-                blob.refs = [normalise_ref(ref) for ref in data["refs"] if keepref(ref)]
+                blob.refs = [
+                    assert_normalized(ref) for ref in data["refs"] if keepref(ref)
+                ]
                 blob.edata = data["edata"]
                 blob.backrefs = data["backref"]
                 blob.see_also = []
@@ -167,13 +137,14 @@ def main():
     for p, (qa, ndoc) in progress(
         nvisited_items.items(), description="Cross referencing"
     ):
+        local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
         for ref in ndoc.refs:
-            resolved = resolve_(qa, nvisited_items)(ref)[0]
+            resolved = resolve_(qa, nvisited_items, local_ref)(ref)[0]
             if resolved in nvisited_items and ref != qa:
                 nvisited_items[resolved].backrefs.append(qa)
 
         for sa in ndoc.see_also:
-            resolved, exists = resolve_(qa, nvisited_items)(sa.name.name)
+            resolved, exists = resolve_(qa, nvisited_items, [])(sa.name.name)
             if exists == "exists":
                 sa.name.exists = True
                 sa.name.ref = resolved
@@ -182,7 +153,7 @@ def main():
         ndoc.backrefs = list(sorted(set(ndoc.backrefs)))
         js = ndoc.to_json()
         try:
-            path = cache_dir / f"{qa}.json"
+            path = ingest_dir / f"{qa}.json"
             with path.open("w") as f:
                 f.write(json.dumps(js, cls=EnhancedJSONEncoder))
         except Exception as e:

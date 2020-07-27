@@ -25,7 +25,7 @@ def gen(names, infer):
 
 
 @click.command()
-def crosslink():
+def ingest():
     cr.main()
 
 
@@ -54,7 +54,7 @@ def open(qualname):
 
 
 main.add_command(gen)
-main.add_command(crosslink)
+main.add_command(ingest)
 main.add_command(render)
 main.add_command(open)
 main.add_command(serve)

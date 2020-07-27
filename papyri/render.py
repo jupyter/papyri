@@ -5,13 +5,12 @@ from functools import lru_cache
 from types import ModuleType
 
 from flask import Flask
-from jinja2 import (Environment, FileSystemLoader, PackageLoader,
-                    select_autoescape)
+from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
 from velin import NumpyDocString
 
 from numpydoc.docscrape import Parameter
 
-from .config import base_dir, cache_dir, html_dir, ingest_dir
+from .config import base_dir, html_dir, ingest_dir
 from .crosslink import SeeAlsoItem, resolve_
 from .take2 import Paragraph
 from .utils import progress
@@ -25,23 +24,24 @@ def route(ref):
         ref = ref[:-5]
     if ref == "favicon.ico":
         return ""
-    files = os.listdir(cache_dir)
+    files = os.listdir(ingest_dir)
 
     env = Environment(
-        loader=FileSystemLoader("papyri"),
+        loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
     env.globals["exists"] = exists
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
-    known_ref = [x.name[:-5] for x in cache_dir.glob("*")]
+    known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
     html_dir.mkdir(exist_ok=True)
-    with open(cache_dir / f"{ref}.json") as f:
+    with open(ingest_dir / f"{ref}.json") as f:
         bytes_ = f.read()
     ndoc = load_one(bytes_)
+    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
 
-    env.globals["resolve"] = resolve_(ref, known_ref)
+    env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
 
     return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
 
@@ -102,7 +102,7 @@ def load_one(bytes_):
 @lru_cache()
 def exists(ref):
 
-    if (cache_dir / f"{ref}.json").exists():
+    if (ingest_dir / f"{ref}.json").exists():
         return "exists"
     else:
         # if not ref.startswith(("builtins.", "__main__")):
@@ -112,25 +112,26 @@ def exists(ref):
 
 def main():
     # nvisited_items = {}
-    files = os.listdir(cache_dir)
+    files = os.listdir(ingest_dir)
 
     env = Environment(
-        loader=FileSystemLoader("papyri"),
+        loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
     env.globals["exists"] = exists
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
-    known_ref = [x.name[:-5] for x in (base_dir / "cache").glob("*")]
+    known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
 
     html_dir.mkdir(exist_ok=True)
     for p, fname in progress(files, description="Rendering..."):
         qa = fname[:-5]
         try:
-            with open(cache_dir / fname) as f:
+            with open(ingest_dir / fname) as f:
                 bytes_ = f.read()
                 ndoc = load_one(bytes_)
+                local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
                 # nvisited_items[qa] = ndoc
         except Exception as e:
             raise RuntimeError(f"error with {f}") from e
@@ -138,6 +139,6 @@ def main():
         # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
         with (html_dir / f"{qa}.html").open("w") as f:
 
-            env.globals["resolve"] = resolve_(qa, known_ref)
+            env.globals["resolve"] = resolve_(qa, known_ref, local_ref)
 
             f.write(render_one(template=template, ndoc=ndoc, qa=qa, ext=".html"))

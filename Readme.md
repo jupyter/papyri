@@ -34,14 +34,22 @@ In the end there should be roughly 3 steps:
 
 #### try it
 
-It is _slow_ on full numpy/scipy...
+It is _slow_ on full numpy/scipy, use `--no-infer` see below for a subpar but
+faster experience.
 
 ```
 $ papyri gen numpy scipy
-$ papyri crosslink
+$ papyri ingest
 $ papyri render
 $ papyri open numpy.array
 ```
+
+
+Hacking on rendering use `papyri serve` to start a flask server.
+
+Hacking on scrapping libraries `papyri gen --no-infer [...]` will skip type
+inference of examples.
+
 
 #### generation (papyri gen module_name),
 
@@ -69,7 +77,7 @@ The Generation step is likely project specific, as there might be import
 conventions that are per-project and should not need to be repeated (`import
 pandas as pd`, for example,)
 
-#### Ingestion (papyri crosslink)
+#### Ingestion (papyri ingest)
 
 The ingestion step take doc-bundle and/or doc-blobs and add them into a graph of
 known items; the ingestion is critical to efficiently build the collection graph
