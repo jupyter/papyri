@@ -89,7 +89,7 @@ def parse_script(script, ns=None, infer=None):
 
     Parameters
     ----------
-    script :  str
+    script : str
         the script to tokenize and infer types on
     ns : dict
         extra namesapce to use with jedi's Interpreter.
@@ -98,11 +98,11 @@ def parse_script(script, ns=None, infer=None):
 
     Yields
     ------
-    index :
+    index
         index in the tokenstream
-    type :
+    type
         pygments token type
-    text :
+    text
         text of the token
     reference : str
         fully qualified name of the type of current token
@@ -136,7 +136,7 @@ def get_example_data(doc, infer=True):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
-    if paragraph, interleaved with examples starting with >>> and ..., 
+    if paragraph, interleaved with examples starting with >>> and ...,
 
     This attempt to parse this into structured data, with text, input and output
     as well as to infer the types of each token in the input examples.
@@ -144,9 +144,8 @@ def get_example_data(doc, infer=True):
     This is currently relatively limited as the inference does not work across
     code blocks.
 
-    Paramters
-    ---------
-
+    Parameters
+    ----------
     doc
         a docstring parsed into a NnumpyDoc document.
     infer : bool
