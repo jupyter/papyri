@@ -39,6 +39,20 @@ from . import utils
 from .config import base_dir, cache_dir
 
 
+@lru_cache()
+def keepref(ref):
+    """
+    Just a filter to remove a bunch of frequent refs and not clutter the ref list in examples.
+    """
+    if ref.startswith(("builtins.", "__main__")):
+        return False
+    try:
+        __import__(ref)
+        return False
+    except Exception:
+        pass
+    return True
+
 def dedent_but_first(text):
     a, *b = text.split("\n")
     return dedent(a) + "\n" + dedent("\n".join(b))

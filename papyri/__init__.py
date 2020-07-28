@@ -25,8 +25,9 @@ def gen(names, infer):
 
 
 @click.command()
-def ingest():
-    cr.main()
+@click.option("--check/--no-check", default=True)
+def ingest(check):
+    cr.main(check)
 
 
 @click.command()

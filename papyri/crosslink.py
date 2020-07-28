@@ -10,7 +10,7 @@ from velin import NumpyDocString
 from numpydoc.docscrape import Parameter
 
 from .config import base_dir, cache_dir, ingest_dir
-from .gen import normalise_ref
+from .gen import normalise_ref, keepref
 from .take2 import Paragraph
 from .utils import progress
 
@@ -37,19 +37,6 @@ def resolve_(qa, known_refs, local_ref):
     return resolve
 
 
-@lru_cache()
-def keepref(ref):
-    """
-    Just a filter to remove a bunch of frequent refs and not clutter the ref list in examples.
-    """
-    if ref.startswith(("builtins.", "__main__")):
-        return False
-    try:
-        __import__(ref)
-        return False
-    except Exception:
-        pass
-    return True
 
 
 @dataclass
@@ -84,14 +71,15 @@ def assert_normalized(ref):
     return ref
 
 
-def main():
+def main(check):
 
     nvisited_items = {}
     for p, f in progress(cache_dir.glob("*"), description="Loading..."):
         fname = f.name
         qa = fname[:-5]
-        rqa = normalise_ref(qa)
-        # assert rqa == qa , f"{rqa} !+ {qa}"
+        if check:
+            rqa = normalise_ref(qa)
+            assert rqa == qa , f"{rqa} !+ {qa}"
         try:
             with f.open() as f:
                 data = json.loads(f.read())
@@ -100,8 +88,14 @@ def main():
                 blob._parsed_data["Parameters"] = [
                     Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
                 ]
+                if check:
+                    test = assert_normalized
+                    keep = keepref
+                else:
+                    test = lambda x:x
+                    keep = lambda x:True
                 blob.refs = [
-                    assert_normalized(ref) for ref in data["refs"] if keepref(ref)
+                    test(ref) for ref in data["refs"] if keep(ref)
                 ]
                 blob.edata = data["edata"]
                 blob.backrefs = data["backref"]
