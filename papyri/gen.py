@@ -39,10 +39,13 @@ from . import utils
 from .config import base_dir, cache_dir
 
 
+
 @lru_cache()
 def keepref(ref):
     """
-    Just a filter to remove a bunch of frequent refs and not clutter the ref list in examples.
+    Filter to rim out common reference that we usually do not want to keep
+    around in examples; typically most of the builtins, and things we can't
+    import.
     """
     if ref.startswith(("builtins.", "__main__")):
         return False
@@ -53,12 +56,19 @@ def keepref(ref):
         pass
     return True
 
+
 def dedent_but_first(text):
+    """
+    simple version of `inspect.cleandoc` that does not trim empty lines
+    """
     a, *b = text.split("\n")
     return dedent(a) + "\n" + dedent("\n".join(b))
 
 
-def pos_to_nl(script, pos):
+def pos_to_nl(script: str, pos: int) -> (int, int):
+    """
+    Convert pigments position to Jedi col/line
+    """
     rest = pos
     ln = 0
     for line in script.splitlines():
@@ -73,6 +83,31 @@ P = PythonLexer()
 
 
 def parse_script(script, ns=None, infer=None):
+    """
+    Parse a script into tokens and use Jedi to infer the fully qualified names
+    of each token.
+
+    Parameters
+    ----------
+    script :  str
+        the script to tokenize and infer types on
+    ns : dict
+        extra namesapce to use with jedi's Interpreter.
+    infer : bool
+        whether to run jedi type inference that can be quite time consuming.
+
+    Yields
+    ------
+    index :
+        index in the tokenstream
+    type :
+        pygments token type
+    text :
+        text of the token
+    reference : str
+        fully qualified name of the type of current token
+
+    """
 
     jeds = []
     if ns:
@@ -98,6 +133,26 @@ def parse_script(script, ns=None, infer=None):
 
 
 def get_example_data(doc, infer=True):
+    """Extract example section data from a NumpyDocstring
+
+    One of the section in numpydoc is "examples" that usually consist of number
+    if paragraph, interleaved with examples starting with >>> and ..., 
+
+    This attempt to parse this into structured data, with text, input and output
+    as well as to infer the types of each token in the input examples.
+
+    This is currently relatively limited as the inference does not work across
+    code blocks.
+
+    Paramters
+    ---------
+
+    doc
+        a docstring parsed into a NnumpyDoc document.
+    infer : bool
+        whether to run type inference; which can be time consuming.
+
+    """
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     edata = []
     for b in blocks:
@@ -121,6 +176,13 @@ def normalise_ref(ref):
     inference in examples regularly give us fully qualified names. When visiting
     a ref, this tries to import it and replace it by the normal full-qualified form.
 
+    This is expensive, ad we likely want to move the logic of finding the
+    correct ref earlier in the process and us this as an assertion the refs are
+    normalized.
+
+    It is critical to normalize in order to have the correct information when
+    using interactive ?/??, or similar inspector of live objects;
+
     """
     if ref.startswith(("builtins.", "__main__")):
         return ref
@@ -131,20 +193,12 @@ def normalise_ref(ref):
             mod = getattr(mod, sub)
         obj = getattr(mod, name)
         if isinstance(obj, ModuleType):
-            # print('module type.. skipping', ref)
             return ref
-
-        if (
-            getattr(obj, "__name__", None) is None
-        ):  # and obj.__doc__ == type(obj).__doc__:
-            # print("object is instance and should not be documented ?", repr(obj))
+        if getattr(obj, "__name__", None) is None:
             return ref
-
-        nref = obj.__module__ + "." + obj.__name__
-
-        return nref
+        
+        return obj.__module__ + "." + obj.__name__
     except Exception:
-        # print("could not normalize", ref)
         pass
     return ref
 

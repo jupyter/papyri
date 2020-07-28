@@ -37,8 +37,6 @@ def resolve_(qa, known_refs, local_ref):
     return resolve
 
 
-
-
 @dataclass
 class Ref:
     name: str
@@ -79,7 +77,7 @@ def main(check):
         qa = fname[:-5]
         if check:
             rqa = normalise_ref(qa)
-            assert rqa == qa , f"{rqa} !+ {qa}"
+            assert rqa == qa, f"{rqa} !+ {qa}"
         try:
             with f.open() as f:
                 data = json.loads(f.read())
@@ -92,11 +90,9 @@ def main(check):
                     test = assert_normalized
                     keep = keepref
                 else:
-                    test = lambda x:x
-                    keep = lambda x:True
-                blob.refs = [
-                    test(ref) for ref in data["refs"] if keep(ref)
-                ]
+                    test = lambda x: x
+                    keep = lambda x: True
+                blob.refs = [test(ref) for ref in data["refs"] if keep(ref)]
                 blob.edata = data["edata"]
                 blob.backrefs = data["backref"]
                 blob.see_also = []
