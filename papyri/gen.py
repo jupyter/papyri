@@ -9,7 +9,7 @@ from pathlib import Path
 from textwrap import dedent
 
 # from numpydoc.docscrape import NumpyDocString
-from types import ModuleType
+from types import FunctionType, ModuleType
 
 import jedi
 import matplotlib
@@ -19,6 +19,7 @@ import numpy.core.numeric
 import scipy
 import scipy.special
 import sklearn
+from numpy import array2string
 from pygments.lexers import PythonLexer
 from rich.progress import (
     BarColumn,
@@ -37,7 +38,7 @@ from velin.ref import NumpyDocString
 
 from . import utils
 from .config import base_dir, cache_dir
-
+from .utils import progress
 
 
 @lru_cache()
@@ -195,7 +196,7 @@ def normalise_ref(ref):
             return ref
         if getattr(obj, "__name__", None) is None:
             return ref
-        
+
         return obj.__module__ + "." + obj.__name__
     except Exception:
         pass
@@ -221,24 +222,95 @@ def timer(progress, task):
     return timeit
 
 
+class TimeElapsedColumn(ProgressColumn):
+    """Renders estimated time remaining."""
+
+    # Only refresh twice a second to prevent jitter
+    max_refresh = 0.5
+
+    def render(self, task: "Task") -> Text:
+        """Show time remaining."""
+        from datetime import timedelta
+
+        ctime = task.fields.get("ctime", None)
+        if ctime is None:
+            return Text("-:--:--", style="progress.remaining")
+        ctime_delta = timedelta(seconds=int(ctime))
+        return Text(str(ctime_delta), style="progress.remaining", overflow="ellipsis")
+
+
+def full_qual(obj):
+    if isinstance(obj, ModuleType):
+        return obj.__name__
+    else:
+        try:
+            if hasattr(obj, "__qualname__") and (
+                getattr(obj, "__module__", None) is not None
+            ):
+                return obj.__module__ + "." + obj.__qualname__
+            elif hasattr(obj, "__name__") and (
+                getattr(obj, "__module__", None) is not None
+            ):
+                return obj.__module__ + "." + obj.__name__
+        except Exception:
+            pass
+        return None
+    return None
+
+
+class Collector:
+    def __init__(self, root):
+        assert isinstance(root, ModuleType)
+        self.root = root
+        self.obj = dict()
+        self.stack = [self.root.__name__]
+
+    def visit_ModuleType(self, mod):
+        for k in dir(mod):
+            self.stack.append(k)
+            self.visit(getattr(mod, k))
+            self.stack.pop()
+
+    def visit_ClassType(self, klass):
+        for k, v in klass.__dict__.items():
+            self.stack.append(k)
+            self.visit(v)
+            self.stack.pop()
+
+    def visit_FunctionType(self, fun):
+        pass
+
+    def visit(self, obj):
+        try:
+            qa = full_qual(obj)
+        except Exception as e:
+            raise RuntimeError(f"error visiting {'.'.join(self.stack)}")
+        if not qa:
+            return
+        if not qa.startswith(self.root.__name__):
+            return
+        if obj in self.obj.values():
+            return
+        if (qa in self.obj) and self.obj[qa] != obj:
+            pass
+        self.obj[qa] = obj
+
+        if isinstance(obj, ModuleType):
+            return self.visit_ModuleType(obj)
+        elif isinstance(obj, FunctionType):
+            return self.visit_FunctionType(obj)
+        elif isinstance(obj, type):
+            return self.visit_ClassType(obj)
+        else:
+            pass
+            # print('Dont know haw to visit {type(obj)=}, {obj =}')
+
+    def items(self):
+        self.visit(self.root)
+        return self.obj
+
+
 def do_one_mod(name, infer):
-    class TimeElapsedColumn(ProgressColumn):
-        """Renders estimated time remaining."""
-
-        # Only refresh twice a second to prevent jitter
-        max_refresh = 0.5
-
-        def render(self, task: "Task") -> Text:
-            """Show time remaining."""
-            from datetime import timedelta
-
-            ctime = task.fields.get("ctime", None)
-            if ctime is None:
-                return Text("-:--:--", style="progress.remaining")
-            ctime_delta = timedelta(seconds=int(ctime))
-            return Text(
-                str(ctime_delta), style="progress.remaining", overflow="ellipsis"
-            )
 
     p = lambda: Progress(
         TextColumn("[progress.description]{task.description}", justify="right"),
@@ -255,46 +327,28 @@ def do_one_mod(name, infer):
     modules = [n0]
 
     root = name.split(".")[0]
-    collected = {}
     nvisited_items = {}
     task = None
-    with p() as progress:
-        for mod in modules:
-            if not mod.__name__.startswith(name):
-                # progress.console.print("skiping module not submodule of", mod, mod.__name__)
-                continue
-                # pass
 
-            # progress.console.print(mod.__name__)
-            if task is not None:
-                progress.remove_task(task)
-            task = progress.add_task(
-                description="collecting... " + mod.__name__, total=len(dir(mod))
-            )
-            for n in dir(mod):
-                progress.advance(task)
-                try:
-                    a = getattr(mod, n)
-                except Exception:
-                    continue
-                if isinstance(a, ModuleType):
-                    if a not in modules:
-                        modules.append(a)
-                    continue
-                if getattr(a, "__module__", None) is None:
-                    continue
-                if isinstance(lqa := getattr(a, "__qualname__", None), str):
-                    qa = a.__module__ + "." + lqa
-                else:
-                    qa = a.__module__ + "." + n
-                if not qa.startswith(root):
-                    continue
-                if not isinstance(ddd := getattr(a, "__doc__", None), str):
-                    continue
-                qa = normalise_ref(qa)
-                collected[qa] = a
+    bundle = cache_dir / name
+    bundle.mkdir(parents=True, exist_ok=True)
 
-    # with progress:
+    for _, path in progress(
+        bundle.glob("*.json"), description="cleaning previous bundle"
+    ):
+        path.unlink()
+
+    collected = Collector(n0).items()
+
+    for qa, item in collected.items():
+        if (nqa := full_qual(item)) != qa:
+            print("after import qa differs : {qa} -> {nqa}")
+            if (other := collected[nqa]) == item:
+                print("present twice")
+                del collected[nqa]
+            else:
+                print("differs: {item} != {other}")
+
     with p() as p2:
         taskp = p2.add_task(description="parsing", total=len(collected))
         t1 = timer(p2, taskp)
@@ -305,11 +359,15 @@ def do_one_mod(name, infer):
             sd = (qa[:19] + "..") if len(qa) > 21 else qa
             p2.update(taskp, description=sd.ljust(17))
             ddd = a.__doc__
+            if ddd is None:
+                p2.advance(taskp)
+                if infer:
+                    p2.advance(taski)
+                continue
 
             # progress.console.print(qa)
             with t1():
                 try:
-
                     ndoc = NumpyDocString(dedent_but_first(ddd))
                 except:
                     p2.console.print("Unexpected error parsing", a)
@@ -359,7 +417,7 @@ def do_one_mod(name, infer):
                 p2.advance(taski)
             ndoc.backrefs = []
 
-            with (cache_dir / f"{qa}.json").open("w") as f:
+            with (bundle / f"{qa}.json").open("w") as f:
                 f.write(json.dumps(ndoc.to_json()))
             nvisited_items[qa] = ndoc
 

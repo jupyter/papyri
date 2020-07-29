@@ -10,7 +10,7 @@ from velin import NumpyDocString
 from numpydoc.docscrape import Parameter
 
 from .config import base_dir, cache_dir, ingest_dir
-from .gen import normalise_ref, keepref
+from .gen import keepref, normalise_ref
 from .take2 import Paragraph
 from .utils import progress
 
@@ -72,7 +72,9 @@ def assert_normalized(ref):
 def main(check):
 
     nvisited_items = {}
-    for p, f in progress(cache_dir.glob("*"), description="Loading..."):
+    for p, f in progress(cache_dir.glob("**/*.json"), description="Loading..."):
+        if f.is_dir():
+            continue
         fname = f.name
         qa = fname[:-5]
         if check:
@@ -138,7 +140,10 @@ def main(check):
             if exists == "exists":
                 sa.name.exists = True
                 sa.name.ref = resolved
-
+    for console, path in progress(
+        ingest_dir.glob("**/*.json"), description="cleanig old files...."
+    ):
+        path.unlink()
     for p, (qa, ndoc) in progress(nvisited_items.items(), description="Writing..."):
         ndoc.backrefs = list(sorted(set(ndoc.backrefs)))
         js = ndoc.to_json()
