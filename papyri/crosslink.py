@@ -72,19 +72,30 @@ def assert_normalized(ref):
 def main(check):
 
     nvisited_items = {}
+    versions = {}
+    for console, path in progress(cache_dir.glob("**/__papyri__.json"), description="Loading..."):
+        with path.open() as f:
+            version = json.loads(f.read())['version']
+        versions[path.parent.name] = version
     for p, f in progress(cache_dir.glob("**/*.json"), description="Loading..."):
         if f.is_dir():
             continue
         fname = f.name
+        if fname == '__papyri__.json':
+            continue
         qa = fname[:-5]
         if check:
             rqa = normalise_ref(qa)
+            if rqa != qa:
+                # numpy weird thing
+                print(f'skip {qa}')
+                continue
             assert rqa == qa, f"{rqa} !+ {qa}"
         try:
             with f.open() as f:
                 data = json.loads(f.read())
                 blob = NumpyDocString("")
-                blob._parsed_data = data["_parsed_data"]
+                blob._parsed_data = data.pop("_parsed_data")
                 blob._parsed_data["Parameters"] = [
                     Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
                 ]
@@ -94,10 +105,15 @@ def main(check):
                 else:
                     test = lambda x: x
                     keep = lambda x: True
-                blob.refs = [test(ref) for ref in data["refs"] if keep(ref)]
-                blob.edata = data["edata"]
-                blob.backrefs = data["backref"]
-                blob.see_also = []
+                refs = data.pop("refs")
+                blob.refs = [test(ref) for ref in refs if keep(ref)]
+                blob.edata = data.pop("edata")
+                blob.backrefs = data.pop("backrefs", [])
+                blob.see_also = data.pop("see_also", [])
+                data.pop('ordered_sections', None)
+                if data.keys():
+                    print(data.keys(), qa)
+                blob.__dict__.update(data)
                 try:
                     if see_also := blob["See Also"]:
                         for nts, d in see_also:
@@ -146,6 +162,8 @@ def main(check):
         path.unlink()
     for p, (qa, ndoc) in progress(nvisited_items.items(), description="Writing..."):
         ndoc.backrefs = list(sorted(set(ndoc.backrefs)))
+        root = qa.split('.')[0]
+        ndoc.version = versions.get(root, '?')
         js = ndoc.to_json()
         try:
             path = ingest_dir / f"{qa}.json"

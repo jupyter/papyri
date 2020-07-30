@@ -78,7 +78,7 @@ def render_one(template, ndoc, qa, ext):
     return template.render(
         doc=ndoc,
         qa=qa,
-        version="X.y.z",
+        version=ndoc.version,
         module=qa.split(".")[0],
         backrefs=backrefs,
         ext=ext,
@@ -88,14 +88,15 @@ def render_one(template, ndoc, qa, ext):
 def load_one(bytes_):
     data = json.loads(bytes_)
     blob = NumpyDocString("")
-    blob._parsed_data = data["_parsed_data"]
+    blob._parsed_data = data.pop("_parsed_data")
     blob._parsed_data["Parameters"] = [
         Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
     ]
-    blob.refs = data["refs"]
-    blob.edata = data["edata"]
-    blob.backrefs = data["backref"]
-    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.get("see_also", [])]
+    blob.refs = data.pop("refs")
+    blob.edata = data.pop("edata")
+    blob.backrefs = data.pop("backrefs",[])
+    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
+    blob.__dict__.update(data)
     return blob
 
 

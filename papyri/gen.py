@@ -326,6 +326,8 @@ def do_one_mod(name, infer):
         n0 = getattr(n0, sub)
     modules = [n0]
 
+    version =  getattr(n0, '__version__', '???')
+
     root = name.split(".")[0]
     nvisited_items = {}
     task = None
@@ -420,7 +422,8 @@ def do_one_mod(name, infer):
             with (bundle / f"{qa}.json").open("w") as f:
                 f.write(json.dumps(ndoc.to_json()))
             nvisited_items[qa] = ndoc
-
+        with (bundle/"__papyri__.json").open("w") as f:
+            f.write(json.dumps({"version":version}))
 
 if __name__ == "__main__":
     main()
