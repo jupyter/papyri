@@ -69,15 +69,59 @@ def assert_normalized(ref):
     return ref
 
 
-def main(check):
+def load_one(bytes_, qa=None):
+    # blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
+
+
+    data = json.loads(bytes_)
+    blob = NumpyDocString("")
+    blob._parsed_data = data.pop("_parsed_data")
+    blob._parsed_data["Parameters"] = [
+        Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
+    ]
+    blob.refs = data.pop("refs")
+    blob.edata = data.pop("edata")
+    blob.backrefs = data.pop("backrefs", [])
+    blob.see_also = data.pop("see_also", [])
+    blob.version = data.pop("version", '')
+    data.pop('ordered_sections', None)
+    if data.keys():
+        print(data.keys(), qa)
+    blob.__dict__.update(data)
+    try:
+        if see_also := blob["See Also"]:
+            for nts, d in see_also:
+                for (n, t) in nts:
+                    if t and not d:
+                        d, t = t, None
+                    blob.see_also.append(
+                        SeeAlsoItem(Ref(n, None, None), d, t)
+                    )
+    except Exception as e:
+        raise ValueError(f"Error {qa}: {see_also} | {nts}") from e
+    try:
+        notes = blob["Notes"]
+        blob.refs.extend(refs := Paragraph.parse_lines(notes).references)
+        # if refs:
+        # print(qa, refs)
+    except KeyError:
+        pass
+    blob.refs = list(sorted(set(blob.refs)))
+    return blob
+
+
+def main(name, check):
+
+    if name == 'all':
+        name = '**'
 
     nvisited_items = {}
     versions = {}
-    for console, path in progress(cache_dir.glob("**/__papyri__.json"), description="Loading..."):
+    for console, path in progress(cache_dir.glob(f"{name}/__papyri__.json"), description="Loading..."):
         with path.open() as f:
             version = json.loads(f.read())['version']
         versions[path.parent.name] = version
-    for p, f in progress(cache_dir.glob("**/*.json"), description="Loading..."):
+    for p, f in progress(cache_dir.glob(f"{name}/*.json"), description="Loading..."):
         if f.is_dir():
             continue
         fname = f.name
@@ -93,48 +137,10 @@ def main(check):
             assert rqa == qa, f"{rqa} !+ {qa}"
         try:
             with f.open() as f:
-                data = json.loads(f.read())
-                blob = NumpyDocString("")
-                blob._parsed_data = data.pop("_parsed_data")
-                blob._parsed_data["Parameters"] = [
-                    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
-                ]
+                blob = load_one(f.read(), qa=qa)
                 if check:
-                    test = assert_normalized
-                    keep = keepref
-                else:
-                    test = lambda x: x
-                    keep = lambda x: True
-                refs = data.pop("refs")
-                blob.refs = [test(ref) for ref in refs if keep(ref)]
-                blob.edata = data.pop("edata")
-                blob.backrefs = data.pop("backrefs", [])
-                blob.see_also = data.pop("see_also", [])
-                data.pop('ordered_sections', None)
-                if data.keys():
-                    print(data.keys(), qa)
-                blob.__dict__.update(data)
-                try:
-                    if see_also := blob["See Also"]:
-                        for nts, d in see_also:
-                            for (n, t) in nts:
-                                if t and not d:
-                                    d, t = t, None
-                                blob.see_also.append(
-                                    SeeAlsoItem(Ref(n, None, None), d, t)
-                                )
-                except Exception as e:
-                    raise ValueError(f"Error {qa}: {see_also} | {nts}") from e
-
+                    blob.refs = [assert_normalized(ref) for ref in blob.refs if keepref(ref)]
                 nvisited_items[qa] = blob
-                try:
-                    notes = blob["Notes"]
-                    blob.refs.extend(refs := Paragraph.parse_lines(notes).references)
-                    # if refs:
-                    # print(qa, refs)
-                except KeyError:
-                    pass
-                blob.refs = list(sorted(set(blob.refs)))
 
         except Exception as e:
             raise RuntimeError(f"error Reading to {f}") from e
@@ -148,8 +154,21 @@ def main(check):
         local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
         for ref in ndoc.refs:
             resolved = resolve_(qa, nvisited_items, local_ref)(ref)[0]
+            # here need to check and load the new files touched.
             if resolved in nvisited_items and ref != qa:
+                #print(qa, 'incommon')
                 nvisited_items[resolved].backrefs.append(qa)
+            elif ref != qa:
+                r = resolved.split('.')[0]
+                ex = ingest_dir / (resolved + '.json')
+                #print('looking for ', ex, 'from', qa)
+                if ex.exists():
+                    print('found', ex)
+                    with ex.open() as f:
+                        blob = load_one(f.read())
+                        nvisited_items[resolved] = blob
+                        nvisited_items[resolved].backrefs.append(qa)
+
 
         for sa in ndoc.see_also:
             resolved, exists = resolve_(qa, nvisited_items, [])(sa.name.name)
@@ -157,7 +176,7 @@ def main(check):
                 sa.name.exists = True
                 sa.name.ref = resolved
     for console, path in progress(
-        ingest_dir.glob("**/*.json"), description="cleanig old files...."
+        ingest_dir.glob("{name}*.json"), description="cleanig old files...."
     ):
         path.unlink()
     for p, (qa, ndoc) in progress(nvisited_items.items(), description="Writing..."):

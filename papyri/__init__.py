@@ -19,26 +19,27 @@ def main():
     print(logo)
     print(__version__)
 
-
 @click.command()
-@click.argument("names", nargs=-1)
-@click.option("--infer/--no-infer", default=True)
-def gen(names, infer):
-    from . import gen as generate
-    generate.main(names, infer=infer)
-
-
-@click.command()
+@click.argument('name')
 @click.option("--check/--no-check", default=True)
-def ingest(check):
+def ingest(name, check):
     from . import crosslink as cr
-    cr.main(check)
+    cr.main(name, check)
+
+
+@click.command()
+@click.argument('name')
+@click.option("--jedi/--no-jedi", default=True)
+def gen(name, jedi):
+    from . import gen as generate
+    generate.main(name, infer=jedi)
+
 
 
 @click.command()
 def render():
-    from .render import main
-    main()
+    from .render import main as m2
+    m2()
 
 
 @click.command()
@@ -52,7 +53,7 @@ def serve():
 def open(qualname):
     import webbrowser
     from .config import html_dir
-    path = html_dir / "html" / (qualname + ".html")
+    path = html_dir / (qualname + ".html")
     if not path.exists():
         import sys
 
@@ -61,8 +62,8 @@ def open(qualname):
     webbrowser.get().open("file://" + str(path), new=1)
 
 
-main.add_command(gen)
 main.add_command(ingest)
+main.add_command(gen)
 main.add_command(render)
 main.add_command(open)
 main.add_command(serve)

@@ -11,7 +11,7 @@ from velin import NumpyDocString
 from numpydoc.docscrape import Parameter
 
 from .config import base_dir, html_dir, ingest_dir
-from .crosslink import SeeAlsoItem, resolve_
+from .crosslink import SeeAlsoItem, resolve_, load_one
 from .take2 import Paragraph
 from .utils import progress
 
@@ -85,19 +85,19 @@ def render_one(template, ndoc, qa, ext):
     )
 
 
-def load_one(bytes_):
-    data = json.loads(bytes_)
-    blob = NumpyDocString("")
-    blob._parsed_data = data.pop("_parsed_data")
-    blob._parsed_data["Parameters"] = [
-        Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
-    ]
-    blob.refs = data.pop("refs")
-    blob.edata = data.pop("edata")
-    blob.backrefs = data.pop("backrefs",[])
-    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
-    blob.__dict__.update(data)
-    return blob
+#def load_one(bytes_):
+#    data = json.loads(bytes_)
+#    blob = NumpyDocString("")
+#    blob._parsed_data = data.pop("_parsed_data")
+#    blob._parsed_data["Parameters"] = [
+#        Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
+#    ]
+#    blob.refs = data.pop("refs")
+#    blob.edata = data.pop("edata")
+#    blob.backrefs = data.pop("backrefs",[])
+#    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
+#    blob.__dict__.update(data)
+#    return blob
 
 
 @lru_cache()
