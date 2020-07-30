@@ -15,6 +15,7 @@ import jedi
 import matplotlib
 import matplotlib.pyplot
 import numpy as np
+import matplotlib.pyplot as plt
 import numpy.core.numeric
 import scipy
 import scipy.special
@@ -111,6 +112,8 @@ def parse_script(script, ns=None, infer=None):
     """
 
     jeds = []
+    import warnings
+    warnings.simplefilter("ignore", UserWarning)
     if ns:
         jeds.append(jedi.Interpreter(script, namespaces=[ns]))
     jeds.append(jedi.Script(script))
@@ -131,6 +134,7 @@ def parse_script(script, ns=None, infer=None):
         except IndexError:
             ref = ""
         yield index, type_, text, ref
+    warnings.simplefilter("default", UserWarning)
 
 
 def get_example_data(doc, infer=True):
@@ -159,7 +163,7 @@ def get_example_data(doc, infer=True):
         for item in b:
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
-                entries = list(parse_script(script, ns={"np": np}, infer=infer))
+                entries = list(parse_script(script, ns={"np": np, "plt": plt}, infer=infer))
                 edata.append(["code", (entries, "\n".join(item.out))])
 
             else:
@@ -203,9 +207,8 @@ def normalise_ref(ref):
     return ref
 
 
-def main(names, infer):
-    for name in names:
-        do_one_mod(name, infer)
+def gen_main(names, infer):
+    do_one_mod(names, infer)
 
 
 def timer(progress, task):
@@ -310,7 +313,7 @@ class Collector:
         return self.obj
 
 
-def do_one_mod(name, infer):
+def do_one_mod(names, infer):
 
     p = lambda: Progress(
         TextColumn("[progress.description]{task.description}", justify="right"),
@@ -320,19 +323,21 @@ def do_one_mod(name, infer):
         TimeElapsedColumn(),
     )
 
-    x, *r = name.split(".")
-    n0 = __import__(name)
-    for sub in r:
-        n0 = getattr(n0, sub)
-    modules = [n0]
+    modules = []
+    for name in names:
+        x, *r = name.split(".")
+        n0 = __import__(name)
+        for sub in r:
+            n0 = getattr(n0, sub)
+        modules.append(n0)
 
-    version =  getattr(n0, '__version__', '???')
+    version =  getattr(modules[0], '__version__', '???')
 
-    root = name.split(".")[0]
+    root = names[0].split(".")[0]
     nvisited_items = {}
     task = None
 
-    bundle = cache_dir / name
+    bundle = cache_dir / root
     bundle.mkdir(parents=True, exist_ok=True)
 
     for _, path in progress(
@@ -355,7 +360,7 @@ def do_one_mod(name, infer):
         taskp = p2.add_task(description="parsing", total=len(collected))
         t1 = timer(p2, taskp)
         if infer:
-            taski = p2.add_task(description="infering examples", total=len(collected))
+            taski = p2.add_task(description="Running type inference in examples", total=len(collected))
             t2 = timer(p2, taski)
         for qa, a in collected.items():
             sd = (qa[:19] + "..") if len(qa) > 21 else qa

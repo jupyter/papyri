@@ -28,11 +28,11 @@ def ingest(name, check):
 
 
 @click.command()
-@click.argument('name')
-@click.option("--jedi/--no-jedi", default=True)
-def gen(name, jedi):
-    from . import gen as generate
-    generate.main(name, infer=jedi)
+@click.argument('names', nargs=-1)
+@click.option("--infer/--no-infer", default=True)
+def gen(names, infer):
+    from papyri.gen import gen_main
+    gen_main(names, infer=infer)
 
 
 
@@ -45,7 +45,7 @@ def render():
 @click.command()
 def serve():
     from .render import serve
-    rd.serve()
+    serve()
 
 
 @click.command()

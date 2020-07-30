@@ -228,7 +228,7 @@ class Paragraph:
     def references(self):
         refs = []
         for c in self.children:
-            if isinstance(c, Directive):
+            if isinstance(c, Directive) and c.role != 'math':
                 refs.append(c.text)
         return refs
 
