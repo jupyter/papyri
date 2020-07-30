@@ -5,38 +5,45 @@ __version__ = "0.0.1"
 
 import click
 
-from . import crosslink as cr
-from . import gen as generate
-from . import render as rd
-from .config import base_dir, logo
+logo = """\
+  ___                    _ 
+ | _ \__ _ _ __ _  _ _ _(_)
+ |  _/ _` | '_ \ || | '_| |
+ |_| \__,_| .__/\_, |_| |_|
+          |_|   |__/       
+"""
 
 
 @click.group()
 def main():
     print(logo)
-    pass
+    print(__version__)
 
 
 @click.command()
 @click.argument("names", nargs=-1)
 @click.option("--infer/--no-infer", default=True)
 def gen(names, infer):
+    from . import gen as generate
     generate.main(names, infer=infer)
 
 
 @click.command()
 @click.option("--check/--no-check", default=True)
 def ingest(check):
+    from . import crosslink as cr
     cr.main(check)
 
 
 @click.command()
 def render():
-    rd.main()
+    from .render import main
+    main()
 
 
 @click.command()
 def serve():
+    from .render import serve
     rd.serve()
 
 
@@ -44,8 +51,8 @@ def serve():
 @click.argument("qualname", required=True)
 def open(qualname):
     import webbrowser
-
-    path = base_dir / "html" / (qualname + ".html")
+    from .config import html_dir
+    path = html_dir / "html" / (qualname + ".html")
     if not path.exists():
         import sys
 
