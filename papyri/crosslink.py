@@ -44,6 +44,8 @@ class Ref:
     ref: str
     exists: bool
 
+    def __hash__(self):
+        return hash((self.name, self.ref, self.exists))
 
 @dataclass
 class SeeAlsoItem:
@@ -55,6 +57,9 @@ class SeeAlsoItem:
     @classmethod
     def from_json(cls, name, descriptions, type):
         return cls(Ref(**name), descriptions, type)
+
+    def __hash__(self):
+        return hash((self.name, tuple(self.descriptions)))
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -83,14 +88,15 @@ def load_one(bytes_, qa=None):
     blob.refs = data.pop("refs")
     blob.edata = data.pop("edata")
     blob.backrefs = data.pop("backrefs", [])
-    blob.see_also = data.pop("see_also", [])
+    #blob.see_also = data.pop("see_also", [])
+    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
     blob.version = data.pop("version", '')
     data.pop('ordered_sections', None)
     if data.keys():
         print(data.keys(), qa)
     blob.__dict__.update(data)
     try:
-        if see_also := blob["See Also"]:
+        if (see_also := blob["See Also"]) and not blob.see_also:
             for nts, d in see_also:
                 for (n, t) in nts:
                     if t and not d:
@@ -100,6 +106,10 @@ def load_one(bytes_, qa=None):
                     )
     except Exception as e:
         raise ValueError(f"Error {qa}: {see_also} | {nts}") from e
+    assert isinstance(blob.see_also, list), f"{blob.see_also=}"
+    for l in blob.see_also:
+        assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
+    blob.see_also = list(set(blob.see_also))
     try:
         notes = blob["Notes"]
         blob.refs.extend(refs := Paragraph.parse_lines(notes).references)

@@ -24,7 +24,6 @@ def route(ref):
         ref = ref[:-5]
     if ref == "favicon.ico":
         return ""
-    files = os.listdir(ingest_dir)
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -35,7 +34,6 @@ def route(ref):
     template = env.get_template("core.tpl.j2")
 
     known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
-    html_dir.mkdir(exist_ok=True)
     with open(ingest_dir / f"{ref}.json") as f:
         bytes_ = f.read()
     ndoc = load_one(bytes_)
@@ -109,7 +107,28 @@ def exists(ref):
         # if not ref.startswith(("builtins.", "__main__")):
         #    print(ref, "missing in", qa)
         return "missing"
+    
+def ascii_render(name):
+    ref = name
 
+    env = Environment(
+        loader=FileSystemLoader(os.path.dirname(__file__)),
+        lstrip_blocks=True,
+        trim_blocks=True,
+    )
+    env.globals["exists"] = exists
+    env.globals["paragraph"] = paragraph
+    template = env.get_template("ascii.tpl.j2")
+
+    known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
+    with open(ingest_dir / f"{ref}.json") as f:
+        bytes_ = f.read()
+    ndoc = load_one(bytes_)
+    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
+
+    env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
+
+    print(render_one(template=template, ndoc=ndoc, qa=ref, ext=""))
 
 def main():
     # nvisited_items = {}

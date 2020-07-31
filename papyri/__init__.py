@@ -42,6 +42,14 @@ def render():
     m2()
 
 
+
+@click.command()
+@click.argument('name', nargs=1)
+def ascii(name):
+    from .render import ascii_render
+    ascii_render(name)
+
+
 @click.command()
 def serve():
     from .render import serve
@@ -66,6 +74,7 @@ main.add_command(ingest)
 main.add_command(gen)
 main.add_command(render)
 main.add_command(open)
+main.add_command(ascii)
 main.add_command(serve)
 
 if __name__ == "__main__":
