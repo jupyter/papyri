@@ -18,6 +18,31 @@ from .utils import progress
 app = Flask(__name__)
 
 
+class CleanLoader(FileSystemLoader):
+
+
+    def get_source(self, *args, **kwargs):
+        (source, filename, uptodate) = super().get_source(*args, **kwargs)
+        return until_ruler(source), filename, uptodate
+
+
+def until_ruler(doc):
+    """
+    Utilities to clean jinja template; 
+    
+    Remove all ``|`` and `` `` until the last leading ``|``
+    
+    """
+    lines = doc.split('\n')
+    new = []
+    for l in lines:
+        
+        while len(l.lstrip()) >= 1 and l.lstrip()[0] == '|':
+            l = l.lstrip()[1:]
+        new.append(l)
+    return '\n'.join(new)
+
+
 @app.route("/<ref>")
 def route(ref):
     if ref.endswith(".html"):
@@ -112,7 +137,7 @@ def ascii_render(name):
     ref = name
 
     env = Environment(
-        loader=FileSystemLoader(os.path.dirname(__file__)),
+        loader=CleanLoader(os.path.dirname(__file__)),
         lstrip_blocks=True,
         trim_blocks=True,
     )

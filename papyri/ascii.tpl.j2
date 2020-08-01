@@ -58,58 +58,54 @@
 {{-green("green")}} refer to items within the same document, {{blue("blue")}} external {{underline("known")}} entities, {{red("red")}} entities we were not able to find and {{yellow("yellow")}} for code, and other "raw" items, typically between double backticks.
 
 {% for section in doc.sections if doc[section] %}
-    {% if section not in ['Extended Summary','Signature', 'Summary'] %}
-    
-{{bold(section)}}
-
-    {% endif %}
-    {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
-
-        {{-"    "}}{{render_paragraph(doc[section])}}
-
-    {% elif section in ['Signature'] %}
-        {{- bold(underline(doc[section]))}}
-
-    {% elif section in ['See Also'] %}
-    {% for sa in doc.see_also %}
-    {{bold(ref(sa.name))}}
-        {{render_paragraph(sa.descriptions)}}
-    {% endfor %}
-    {% elif section in ['Examples'] %}
-        {% for type,data in doc.edata %}
-            {% if type=='text' %}
-            
-    {{render_paragraph([data])}}
-
-            {% else %}
-    {{ example(data[0]) }}
-    {{ data[1]}}
-            {% endif -%}
-         {%- endfor %}
-    {{underline("See:")}}
-         {{-"\n        "-}}
-         {%- for r in doc.refs -%}
-            {% set ref, exists = resolve(r) %}
-            {%- if exists=="exists" -%}
-               {{- blue(r) -}}{{", "-}} 
-            {% else %}
-               {{- red(r) -}}{{", "-}} 
-            {% endif %}
-            {% endfor %}
-    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
-        {% for p in doc[section] %}
-            {% if p[0] %}
-            {{- ""}}    {{bold(green(p[0]))}} : {{p[1]}}
-            {% else %}
-            {{- ""}}    {{green(p[1])}}
-            {% endif %}
-            {{- ""}}        {{render_paragraph(p[2])}}
-        {% endfor %}
-    {% else %}
-        {% if doc[section] %}
-            {{doc[section]}}
-        {% endif %}
-    {% endif %}
+   |{% if section not in ['Extended Summary','Signature', 'Summary'] %}
+   | 
+   |{{bold(section)}}
+   | 
+   |{% endif %}
+   |{% if section in ['Summary', 'Extended Summary', 'Notes'] %}
+   |
+   |     {{render_paragraph(doc[section])}}
+   |
+   |{% elif section in ['Signature'] %}
+   |   |{{ bold(underline(doc[section]))}}
+   |
+   |{% elif section in ['See Also'] %}
+   |   |{% for sa in doc.see_also %}
+   |   |     {{bold(ref(sa.name))}}
+   |   |         {{render_paragraph(sa.descriptions)}}
+   |   |{% endfor %}
+   |{% elif section in ['Examples'] %}
+   |   |{% for type,data in doc.edata %}
+   |   |   |{% if type=='text' %}
+   |   |   |
+   |   |   |    {{render_paragraph([data])}}
+   |   |   |
+   |   |   |{% else %}
+   |   |   |    {{ example(data[0]) }}
+   |   |   |    {{ data[1]}}
+   |   |   |{% endif -%}
+   |   |{%- endfor %}
+   |   |    {{underline("See:")}}
+   |   |{{"        "}}
+   |   |{%- for r in doc.refs -%}
+   |   |   |{% set ref, exists = resolve(r) -%}
+   |   |   |{% if exists=="exists" %}{{ blue(r) }},{% else %}{{ red(r) }},{% endif %}
+   |   |{% endfor %}
+   |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
+   |   |{% for p in doc[section] %}
+   |   |   |{% if p[0] %}
+   |   |   |    {{bold(green(p[0]))}} : {{p[1]}}
+   |   |   |{% else %}
+   |   |   |    {{green(p[1])}}
+   |   |   |{% endif %}
+   |   |   |        {{render_paragraph(p[2])}}
+   |   |{% endfor %}
+   |{% else %}
+   |    {% if doc[section] %}
+   |        {{doc[section]}}
+   |    {% endif %}
+   |{% endif %}
 {% endfor%}
 {% if backrefs[0] or backrefs[1] %}
 {{"\n"}}
