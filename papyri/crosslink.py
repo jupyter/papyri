@@ -162,7 +162,7 @@ def main(name, check):
     for p, (qa, ndoc) in progress(
         nvisited_items.items(), description="Cross referencing"
     ):
-        local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
+        local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]+[x[0] for x in ndoc["Returns"] if x[0]]
         for ref in ndoc.refs:
             resolved, exists = resolve_(qa, nvisited_items, local_ref)(ref)
             # here need to check and load the new files touched.

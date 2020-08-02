@@ -62,7 +62,7 @@ def route(ref):
     with open(ingest_dir / f"{ref}.json") as f:
         bytes_ = f.read()
     ndoc = load_one(bytes_)
-    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
+    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]+[x[0] for x in ndoc["Returns"] if x[0]]
 
     env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
 
@@ -149,7 +149,7 @@ def ascii_render(name):
     with open(ingest_dir / f"{ref}.json") as f:
         bytes_ = f.read()
     ndoc = load_one(bytes_)
-    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
+    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]+[x[0] for x in ndoc["Returns"] if x[0]]
 
     env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
 
