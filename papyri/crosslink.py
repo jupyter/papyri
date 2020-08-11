@@ -106,7 +106,7 @@ def load_one(bytes_, bytes2_,  qa=None):
         print(data.keys(), qa)
     blob.__dict__.update(data)
     try:
-        if (see_also := blob["See Also"]) and not blob.see_also:
+        if (see_also := blob.get("See Also", None)) and not blob.see_also:
             for nts, d in see_also:
                 for (n, t) in nts:
                     if t and not d:
