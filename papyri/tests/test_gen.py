@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 from ..crosslink import Ingester
 from ..gen import Gen
-from ..render import _route
+from ..render import _ascii_render, _route
 
 
 def test_gen_numpy():
@@ -29,3 +29,7 @@ def test_gen_numpy():
 
         res = _route("papyri.gen.gen_main", ing.ingest_dir)
         assert "main entry point" in res
+
+        assert "main entry point" in _ascii_render(
+            "papyri.gen.gen_main", ing.ingest_dir
+        )

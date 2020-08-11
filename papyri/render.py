@@ -142,7 +142,7 @@ def exists(ref):
         return "missing"
 
 
-def ascii_render(name):
+def _ascii_render(name, ingest_dir=ingest_dir):
     ref = name
 
     env = Environment(
@@ -169,8 +169,16 @@ def ascii_render(name):
     ]
 
     env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
+    print("-------")
+    print(repr(ndoc))
+    print(list(ndoc.sections))
+    print("-------")
 
-    print(render_one(template=template, ndoc=ndoc, qa=ref, ext=""))
+    return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
+
+
+def ascii_render(*args, **kwargs):
+    print(_ascii_render(*args, **kwargs))
 
 
 def main():
