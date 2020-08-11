@@ -11,15 +11,10 @@ from textwrap import dedent
 # from numpydoc.docscrape import NumpyDocString
 from types import FunctionType, ModuleType
 
-import jedi
-import matplotlib
-import matplotlib.pyplot
-import numpy as np
 import matplotlib.pyplot as plt
-import numpy.core.numeric
-import scipy
-import scipy.special
-import sklearn
+import numpy as np
+
+import jedi
 from numpy import array2string
 from pygments.lexers import PythonLexer
 from rich.progress import (
@@ -40,7 +35,6 @@ from velin.ref import NumpyDocString
 from . import utils
 from .config import base_dir, cache_dir
 from .utils import progress
-
 
 @lru_cache()
 def keepref(ref):
@@ -81,8 +75,6 @@ def pos_to_nl(script: str, pos: int) -> (int, int):
             return ln, rest
 
 
-P = PythonLexer()
-
 
 def parse_script(script, ns=None, infer=None):
     """
@@ -117,6 +109,8 @@ def parse_script(script, ns=None, infer=None):
     if ns:
         jeds.append(jedi.Interpreter(script, namespaces=[ns]))
     jeds.append(jedi.Script(script))
+    P = PythonLexer()
+
 
     for index, type_, text in P.get_tokens_unprocessed(script):
         a, b = pos_to_nl(script, index)
@@ -208,7 +202,7 @@ def normalise_ref(ref):
 
 
 def gen_main(names, infer):
-    do_one_mod(names, infer)
+    Gen().do_one_mod(names, infer)
 
 
 def timer(progress, task):
@@ -312,122 +306,130 @@ class Collector:
         self.visit(self.root)
         return self.obj
 
+class Gen:
 
-def do_one_mod(names, infer):
 
-    p = lambda: Progress(
-        TextColumn("[progress.description]{task.description}", justify="right"),
-        BarColumn(bar_width=None),
-        "[progress.percentage]{task.percentage:>3.1f}%",
-        "[progress.completed]{task.completed} / {task.total}",
-        TimeElapsedColumn(),
-    )
+    def __init__(self):
+        self.cache_dir = cache_dir
 
-    modules = []
-    for name in names:
-        x, *r = name.split(".")
-        n0 = __import__(name)
-        for sub in r:
-            n0 = getattr(n0, sub)
-        modules.append(n0)
 
-    version =  getattr(modules[0], '__version__', '???')
+    def clean(self, root):
+        bundle = self.cache_dir / root
+        for _, path in progress(
+            bundle.glob("*.json"), description="cleaning previous bundle"
+        ):
+            path.unlink()
 
-    root = names[0].split(".")[0]
-    nvisited_items = {}
-    task = None
+    def put(self, root,  path, data):
+        with (self.cache_dir / root / f"{path}.json").open("w") as f:
+           f.write(data)
 
-    bundle = cache_dir / root
-    bundle.mkdir(parents=True, exist_ok=True)
 
-    for _, path in progress(
-        bundle.glob("*.json"), description="cleaning previous bundle"
-    ):
-        path.unlink()
+    def do_one_mod(self, names, infer):
 
-    collected = Collector(n0).items()
+        p = lambda: Progress(
+            TextColumn("[progress.description]{task.description}", justify="right"),
+            BarColumn(bar_width=None),
+            "[progress.percentage]{task.percentage:>3.1f}%",
+            "[progress.completed]{task.completed} / {task.total}",
+            TimeElapsedColumn(),
+        )
 
-    for qa, item in collected.items():
-        if (nqa := full_qual(item)) != qa:
-            print("after import qa differs : {qa} -> {nqa}")
-            if (other := collected[nqa]) == item:
-                print("present twice")
-                del collected[nqa]
-            else:
-                print("differs: {item} != {other}")
+        modules = []
+        for name in names:
+            x, *r = name.split(".")
+            n0 = __import__(name)
+            for sub in r:
+                n0 = getattr(n0, sub)
+            modules.append(n0)
 
-    with p() as p2:
-        taskp = p2.add_task(description="parsing", total=len(collected))
-        t1 = timer(p2, taskp)
-        if infer:
-            taski = p2.add_task(description="Running type inference in examples", total=len(collected))
-            t2 = timer(p2, taski)
-        for qa, a in collected.items():
-            sd = (qa[:19] + "..") if len(qa) > 21 else qa
-            p2.update(taskp, description=sd.ljust(17))
-            ddd = a.__doc__
-            if ddd is None:
-                p2.advance(taskp)
-                if infer:
-                    p2.advance(taski)
-                continue
+        version =  getattr(modules[0], '__version__', '???')
 
-            # progress.console.print(qa)
-            with t1():
-                try:
-                    ndoc = NumpyDocString(dedent_but_first(ddd))
-                except:
-                    p2.console.print("Unexpected error parsing", a)
+        root = names[0].split(".")[0]
+        nvisited_items = {}
+        task = None
+
+        self.clean(root)
+
+
+        collected = Collector(n0).items()
+
+        for qa, item in collected.items():
+            if (nqa := full_qual(item)) != qa:
+                print("after import qa differs : {qa} -> {nqa}")
+                if (other := collected[nqa]) == item:
+                    print("present twice")
+                    del collected[nqa]
+                else:
+                    print("differs: {item} != {other}")
+
+        with p() as p2:
+            bundle = self.cache_dir / root
+            taskp = p2.add_task(description="parsing", total=len(collected))
+            t1 = timer(p2, taskp)
+            if infer:
+                taski = p2.add_task(description="Running type inference in examples", total=len(collected))
+                t2 = timer(p2, taski)
+            for qa, a in collected.items():
+                sd = (qa[:19] + "..") if len(qa) > 21 else qa
+                p2.update(taskp, description=sd.ljust(17))
+                ddd = a.__doc__
+                if ddd is None:
                     p2.advance(taskp)
                     if infer:
                         p2.advance(taski)
                     continue
-            p2.advance(taskp)
 
-            if not ndoc["Signature"]:
-                sig = None
-                try:
-                    sig = str(inspect.signature(a))
-                except (ValueError, TypeError):
-                    pass
-                if sig:
-                    ndoc["Signature"] = qa.split(".")[-1] + sig
+                # progress.console.print(qa)
+                with t1():
+                    try:
+                        ndoc = NumpyDocString(dedent_but_first(ddd))
+                    except:
+                        p2.console.print("Unexpected error parsing", a)
+                        p2.advance(taskp)
+                        if infer:
+                            p2.advance(taski)
+                        continue
+                p2.advance(taskp)
 
-            new_see_also = ndoc["See Also"]
-            refs = []
-            if new_see_also:
-                for line in new_see_also:
-                    rt, desc = line
-                    for ref, type_ in rt:
-                        refs.append(ref)
+                if not ndoc["Signature"]:
+                    sig = None
+                    try:
+                        sig = str(inspect.signature(a))
+                    except (ValueError, TypeError):
+                        pass
+                    if sig:
+                        ndoc["Signature"] = qa.split(".")[-1] + sig
 
-            if getattr(nvisited_items, qa, None):
-                raise ValueError(f"{qa} already visited")
-            if infer:
-                with t2():
+                new_see_also = ndoc["See Also"]
+                refs = []
+                if new_see_also:
+                    for line in new_see_also:
+                        rt, desc = line
+                        for ref, type_ in rt:
+                            refs.append(ref)
+
+                if getattr(nvisited_items, qa, None):
+                    raise ValueError(f"{qa} already visited")
+                if infer:
+                    with t2():
+                        ndoc.edata = get_example_data(ndoc, infer)
+                else:
                     ndoc.edata = get_example_data(ndoc, infer)
-            else:
-                ndoc.edata = get_example_data(ndoc, infer)
 
-            ndoc.refs = list(
-                {
-                    u[1]
-                    for t_, sect in ndoc.edata
-                    if t_ == "code"
-                    for u in sect[0]
-                    if u[1]
-                }
-            )
-            ndoc.refs.extend(refs)
-            ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
-            if infer:
-                p2.advance(taski)
-
-            with (bundle / f"{qa}.json").open("w") as f:
-                f.write(json.dumps(ndoc.to_json(), indent=2))
-            nvisited_items[qa] = ndoc
-        with (bundle/"__papyri__.json").open("w") as f:
-            f.write(json.dumps({"version":version}))
-
-if __name__ == "__main__":
-    main()
+                ndoc.refs = list(
+                    {
+                        u[1]
+                        for t_, sect in ndoc.edata
+                        if t_ == "code"
+                        for u in sect[0]
+                        if u[1]
+                    }
+                )
+                ndoc.refs.extend(refs)
+                ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
+                if infer:
+                    p2.advance(taski)
+                self.put(root, qa, json.dumps(ndoc.to_json(), indent=2))
+                nvisited_items[qa] = ndoc
+            self.put(root, "__papyri__", json.dumps({"version":version}))
