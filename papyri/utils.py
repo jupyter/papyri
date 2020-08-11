@@ -1,7 +1,8 @@
 import time
 from datetime import timedelta
 
-from rich.progress import BarColumn, Progress, ProgressColumn, TextColumn, track
+from rich.progress import (BarColumn, Progress, ProgressColumn, TextColumn,
+                           track)
 from rich.text import Text
 
 

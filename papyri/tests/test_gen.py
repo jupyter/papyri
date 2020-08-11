@@ -1,8 +1,8 @@
-from ..gen import Gen
-from tempfile import TemporaryDirectory
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from ..crosslink import Ingester
+from ..gen import Gen
 from ..render import _route
 
 
@@ -10,23 +10,22 @@ def test_gen_numpy():
     with TemporaryDirectory() as t:
         t = Path(t)
         g = Gen()
-        g.cache_dir = t / 'cache'
+        g.cache_dir = t / "cache"
         g.cache_dir.mkdir()
-        g.do_one_mod(['papyri'], infer=False)
+        g.do_one_mod(["papyri"], infer=False)
         import time
-        num = [x.name[:-5] for x in (t/'cache').glob('papyri/*.json')]
-        assert  len(num) == 21
-        assert 'papyri.gen.gen_main' in num
+
+        num = [x.name[:-5] for x in (t / "cache").glob("papyri/*.json")]
+        assert len(num) == 21
+        assert "papyri.gen.gen_main" in num
 
         ing = Ingester()
-        ing.cache_dir = t / 'cache'
-        ing.ingest_dir = t / 'ingest'
+        ing.cache_dir = t / "cache"
+        ing.ingest_dir = t / "ingest"
         ing.ingest_dir.mkdir()
-        ing.ingest('papyri', check=True)
-        ing_r = [x.name[:-5] for x in (ing.ingest_dir).glob('*.json')]
+        ing.ingest("papyri", check=True)
+        ing_r = [x.name[:-5] for x in (ing.ingest_dir).glob("*.json")]
         assert len(ing_r) == 20, f"{set(ing_r) - set(num)} | {set(num) - set(ing_r)}"
 
-        res = _route('papyri.gen.gen_main', ing.ingest_dir)
-        assert 'main entry point' in res
-
-
+        res = _route("papyri.gen.gen_main", ing.ingest_dir)
+        assert "main entry point" in res

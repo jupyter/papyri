@@ -1,18 +1,18 @@
 import json
 import os
 from collections import defaultdict
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
 from types import ModuleType
 
 from flask import Flask
-from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
+from jinja2 import (Environment, FileSystemLoader, PackageLoader,
+                    select_autoescape)
+from numpydoc.docscrape import Parameter
 from velin import NumpyDocString
 
-from numpydoc.docscrape import Parameter
-
 from .config import base_dir, html_dir, ingest_dir
-from .crosslink import SeeAlsoItem, resolve_, load_one
+from .crosslink import SeeAlsoItem, load_one, resolve_
 from .take2 import Paragraph
 from .utils import progress
 
@@ -40,8 +40,6 @@ def until_ruler(doc):
             l = l.lstrip()[1:]
         new.append(l)
     return "\n".join(new)
-
-
 
 
 def _route(ref, ingest_dir):
@@ -90,7 +88,9 @@ def _route(ref, ingest_dir):
         print("br:", br, type(br))
         return error.render(subs=known_refs, backrefs=list(set(br)))
 
-app.route("/<ref>")(lambda x:_route(x, ingest_dir))
+
+app.route("/<ref>")(lambda x: _route(x, ingest_dir))
+
 
 def serve():
     app.run()
@@ -129,6 +129,7 @@ def render_one(template, ndoc, qa, ext):
         backrefs=backrefs,
         ext=ext,
     )
+
 
 @lru_cache()
 def exists(ref):

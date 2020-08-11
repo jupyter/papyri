@@ -1,21 +1,19 @@
 import dataclasses
 import json
 import os
+import warnings
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from types import ModuleType
-from collections import defaultdict
-
-from velin import NumpyDocString
 
 from numpydoc.docscrape import Parameter
+from velin import NumpyDocString
 
 from .config import base_dir, cache_dir, ingest_dir
 from .gen import keepref, normalise_ref
 from .take2 import Paragraph
 from .utils import progress
-
-import warnings
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -129,8 +127,8 @@ def load_one(bytes_, bytes2_, qa=None):
     blob.refs = list(sorted(set(blob.refs)))
     return blob
 
-class Ingester:
 
+class Ingester:
     def __init__(self):
         self.cache_dir = cache_dir
         self.ingest_dir = ingest_dir
@@ -145,7 +143,8 @@ class Ingester:
         nvisited_items = {}
         versions = {}
         for console, path in progress(
-            self.cache_dir.glob(f"**/__papyri__.json"), description="Loading package versions..."
+            self.cache_dir.glob(f"**/__papyri__.json"),
+            description="Loading package versions...",
         ):
             with path.open() as f:
                 version = json.loads(f.read())["version"]
@@ -281,6 +280,7 @@ class Ingester:
                     f.write(json.dumps(list(sorted(set(br + bb)))))
             except Exception as e:
                 raise RuntimeError(f"error writing to {fname}") from e
+
 
 def main(*args, **kwargs):
     Ingester().ingest(*args, **kwargs)

@@ -7,27 +7,17 @@ from functools import lru_cache
 from os.path import expanduser
 from pathlib import Path
 from textwrap import dedent
-
 # from numpydoc.docscrape import NumpyDocString
 from types import FunctionType, ModuleType
 
+import jedi
 import matplotlib.pyplot as plt
 import numpy as np
-
-import jedi
 from numpy import array2string
 from pygments.lexers import PythonLexer
-from rich.progress import (
-    BarColumn,
-    DownloadColumn,
-    Progress,
-    ProgressColumn,
-    TaskID,
-    Text,
-    TextColumn,
-    TimeRemainingColumn,
-    TransferSpeedColumn,
-)
+from rich.progress import (BarColumn, DownloadColumn, Progress, ProgressColumn,
+                           TaskID, Text, TextColumn, TimeRemainingColumn,
+                           TransferSpeedColumn)
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 from velin.ref import NumpyDocString

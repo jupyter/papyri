@@ -64,6 +64,7 @@ def serve():
 @click.argument("qualname", required=True)
 def open(qualname):
     import webbrowser
+
     from .config import html_dir
 
     path = html_dir / (qualname + ".html")
