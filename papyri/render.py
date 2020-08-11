@@ -42,8 +42,9 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-@app.route("/<ref>")
-def route(ref):
+
+
+def _route(ref, ingest_dir):
     if ref.endswith(".html"):
         ref = ref[:-5]
     if ref == "favicon.ico":
@@ -89,6 +90,7 @@ def route(ref):
         print("br:", br, type(br))
         return error.render(subs=known_refs, backrefs=list(set(br)))
 
+app.route("/<ref>")(lambda x:_route(x, ingest_dir))
 
 def serve():
     app.run()
@@ -127,22 +129,6 @@ def render_one(template, ndoc, qa, ext):
         backrefs=backrefs,
         ext=ext,
     )
-
-
-# def load_one(bytes_):
-#    data = json.loads(bytes_)
-#    blob = NumpyDocString("")
-#    blob._parsed_data = data.pop("_parsed_data")
-#    blob._parsed_data["Parameters"] = [
-#        Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
-#    ]
-#    blob.refs = data.pop("refs")
-#    blob.edata = data.pop("edata")
-#    blob.backrefs = data.pop("backrefs",[])
-#    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
-#    blob.__dict__.update(data)
-#    return blob
-
 
 @lru_cache()
 def exists(ref):

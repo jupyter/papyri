@@ -3,6 +3,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 
 from ..crosslink import Ingester
+from ..render import _route
 
 
 def test_gen_numpy():
@@ -14,7 +15,7 @@ def test_gen_numpy():
         g.do_one_mod(['papyri'], infer=False)
         import time
         num = [x.name[:-5] for x in (t/'cache').glob('papyri/*.json')]
-        assert  len(num) == 20
+        assert  len(num) == 21
         assert 'papyri.gen.gen_main' in num
 
         ing = Ingester()
@@ -22,5 +23,10 @@ def test_gen_numpy():
         ing.ingest_dir = t / 'ingest'
         ing.ingest_dir.mkdir()
         ing.ingest('papyri', check=True)
+        ing_r = [x.name[:-5] for x in (ing.ingest_dir).glob('*.json')]
+        assert len(ing_r) == 20, f"{set(ing_r) - set(num)} | {set(num) - set(ing_r)}"
+
+        res = _route('papyri.gen.gen_main', ing.ingest_dir)
+        assert 'main entry point' in res
 
 

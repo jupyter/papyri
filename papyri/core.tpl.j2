@@ -51,10 +51,10 @@
     {%- endmacro %}
 
 {% macro render_paragraph(lines) -%}
-        {% for type,obj in paragraph(lines) %}
-            {% if type == 'Word' %}
-                {{obj.value}}
-            {% elif type == 'Directive' %}
+        {% for type,obj in paragraph(lines) -%}
+            {%- if type == 'Word' -%}
+                {{-obj.value-}}
+            {%- elif type == 'Directive' -%}
                 {% set ref, exists = resolve(obj.text) %}
                 {% if exists=='local' %}
                     <code><a href="#{{ref}}" class='{{exists}}'>{{obj.text}}</a></code>
@@ -67,8 +67,8 @@
                 <code>{{obj.text}}</code>
             {% else %}
                 <code>Some {{type}}</code>
-            {% endif %}
-        {% endfor %}
+            {%- endif -%}
+        {%- endfor %}
 {%- endmacro %}
 
 
