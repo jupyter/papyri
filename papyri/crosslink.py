@@ -129,150 +129,158 @@ def load_one(bytes_, bytes2_, qa=None):
     blob.refs = list(sorted(set(blob.refs)))
     return blob
 
+class Ingester:
 
-def main(name, check):
+    def __init__(self):
+        self.cache_dir = cache_dir
+        self.ingest_dir = ingest_dir
 
-    if name == "all":
-        name_glob = "**"
-    else:
-        name_glob = name
+    def ingest(self, name, check):
 
-    nvisited_items = {}
-    versions = {}
-    for console, path in progress(
-        cache_dir.glob(f"**/__papyri__.json"), description="Loading package versions..."
-    ):
-        with path.open() as f:
-            version = json.loads(f.read())["version"]
-        versions[path.parent.name] = version
-    for p, f in progress(
-        cache_dir.glob(f"{name_glob}/*.json"),
-        description=f"Reading {name} doc bundle files ...",
-    ):
-        if f.is_dir():
-            continue
-        fname = f.name
-        if fname == "__papyri__.json":
-            continue
-        qa = fname[:-5]
-        if check:
-            rqa = normalise_ref(qa)
-            if rqa != qa:
-                # numpy weird thing
-                print(f"skip {qa}")
-                continue
-            assert rqa == qa, f"{rqa} !+ {qa}"
-        try:
-            with f.open() as fff:
-                from pathlib import Path
-
-                brpath = Path(str(f)[:-5] + "br")
-                if brpath.exists():
-                    br = brpath.read_text()
-                else:
-                    br = None
-                blob = load_one(fff.read(), br, qa=qa)
-                if check:
-                    blob.refs = [
-                        assert_normalized(ref) for ref in blob.refs if keepref(ref)
-                    ]
-                nvisited_items[qa] = blob
-
-        except Exception as e:
-            raise RuntimeError(f"error Reading to {f}") from e
-
-    for p, (qa, ndoc) in progress(
-        nvisited_items.items(), description="Cross referencing"
-    ):
-        local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
-            x[0] for x in ndoc["Returns"] if x[0]
-        ]
-        for ref in ndoc.refs:
-            resolved, exists = resolve_(qa, nvisited_items, local_ref)(ref)
-            # here need to check and load the new files touched.
-            if resolved in nvisited_items and ref != qa:
-                # print(qa, 'incommon')
-                nvisited_items[resolved].backrefs.append(qa)
-            elif ref != qa and exists == "missing":
-                r = resolved.split(".")[0]
-                ex = ingest_dir / (resolved + ".json")
-                if ex.exists():
-                    with ex.open() as f:
-                        brpath = Path(str(ex)[:-5] + "br")
-                        if brpath.exists():
-                            br = brpath.read_text()
-                        else:
-                            br = None
-                        blob = load_one(f.read(), br)
-                        nvisited_items[resolved] = blob
-                        if not hasattr(nvisited_items[resolved], "backrefs"):
-                            nvisited_items[resolved].backrefs = []
-                        nvisited_items[resolved].backrefs.append(qa)
-                elif "/" not in resolved:
-                    phantom_dir = ingest_dir / "__phantom__"
-                    phantom_dir.mkdir(exist_ok=True)
-                    ph = phantom_dir / (resolved + ".json")
-                    if ph.exists():
-                        with ph.open() as f:
-                            ph_data = json.loads(f.read())
-
-                    else:
-                        ph_data = []
-                    ph_data.append(qa)
-                    with ph.open("w") as f:
-                        # print('updating phantom data', ph)
-                        f.write(json.dumps(ph_data))
-                else:
-                    print(resolved, "not valid reference, skipping.")
-
-        for sa in ndoc.see_also:
-            resolved, exists = resolve_(qa, nvisited_items, [])(sa.name.name)
-            if exists == "exists":
-                sa.name.exists = True
-                sa.name.ref = resolved
-    for p, (qa, ndoc) in progress(
-        nvisited_items.items(), description="Cleaning double references"
-    ):
-        # TODO: load backrref from either:
-        # 1) previsous version fo the file
-        # 2) phantom file if first import (and remove the phantom file?)
-        phantom_dir = ingest_dir / "__phantom__"
-        ph = phantom_dir / (qa + ".json")
-        # print('ph?', ph)
-        if ph.exists():
-            with ph.open() as f:
-                ph_data = json.loads(f.read())
-            print("loading data from phantom file !", ph_data)
+        if name == "all":
+            name_glob = "**"
         else:
-            ph_data = []
+            name_glob = name
 
-        ndoc.backrefs = list(sorted(set(ndoc.backrefs + ph_data)))
-    if name_glob != "**":
-        gg = f"{name}*.json"
-    else:
-        gg = "*.json"
-    for console, path in progress(
-        ingest_dir.glob(gg), description=f"cleanig previsous files ...."
-    ):
-        path.unlink()
+        nvisited_items = {}
+        versions = {}
+        for console, path in progress(
+            self.cache_dir.glob(f"**/__papyri__.json"), description="Loading package versions..."
+        ):
+            with path.open() as f:
+                version = json.loads(f.read())["version"]
+            versions[path.parent.name] = version
+        for p, f in progress(
+            self.cache_dir.glob(f"{name_glob}/*.json"),
+            description=f"Reading {name} doc bundle files ...",
+        ):
+            if f.is_dir():
+                continue
+            fname = f.name
+            if fname == "__papyri__.json":
+                continue
+            qa = fname[:-5]
+            if check:
+                rqa = normalise_ref(qa)
+                if rqa != qa:
+                    # numpy weird thing
+                    print(f"skip {qa}")
+                    continue
+                assert rqa == qa, f"{rqa} !+ {qa}"
+            try:
+                with f.open() as fff:
+                    from pathlib import Path
 
-    for p, (qa, ndoc) in progress(nvisited_items.items(), description="Writing..."):
-        root = qa.split(".")[0]
-        ndoc.version = versions.get(root, "?")
-        js = ndoc.to_json()
-        br = js.pop("backrefs", [])
-        try:
-            path = ingest_dir / f"{qa}.json"
-            path_br = ingest_dir / f"{qa}.br"
+                    brpath = Path(str(f)[:-5] + "br")
+                    if brpath.exists():
+                        br = brpath.read_text()
+                    else:
+                        br = None
+                    blob = load_one(fff.read(), br, qa=qa)
+                    if check:
+                        blob.refs = [
+                            assert_normalized(ref) for ref in blob.refs if keepref(ref)
+                        ]
+                    nvisited_items[qa] = blob
 
-            with path.open("w") as f:
-                f.write(json.dumps(js, cls=EnhancedJSONEncoder))
-            if path_br.exists():
-                with path_br.open("r") as f:
-                    bb = json.loads(f.read())
+            except Exception as e:
+                raise RuntimeError(f"error Reading to {f}") from e
+
+        for p, (qa, ndoc) in progress(
+            nvisited_items.items(), description="Cross referencing"
+        ):
+            local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
+                x[0] for x in ndoc["Returns"] if x[0]
+            ]
+            for ref in ndoc.refs:
+                resolved, exists = resolve_(qa, nvisited_items, local_ref)(ref)
+                # here need to check and load the new files touched.
+                if resolved in nvisited_items and ref != qa:
+                    # print(qa, 'incommon')
+                    nvisited_items[resolved].backrefs.append(qa)
+                elif ref != qa and exists == "missing":
+                    r = resolved.split(".")[0]
+                    ex = self.ingest_dir / (resolved + ".json")
+                    if ex.exists():
+                        with ex.open() as f:
+                            brpath = Path(str(ex)[:-5] + "br")
+                            if brpath.exists():
+                                br = brpath.read_text()
+                            else:
+                                br = None
+                            blob = load_one(f.read(), br)
+                            nvisited_items[resolved] = blob
+                            if not hasattr(nvisited_items[resolved], "backrefs"):
+                                nvisited_items[resolved].backrefs = []
+                            nvisited_items[resolved].backrefs.append(qa)
+                    elif "/" not in resolved:
+                        phantom_dir = self.ingest_dir / "__phantom__"
+                        phantom_dir.mkdir(exist_ok=True)
+                        ph = phantom_dir / (resolved + ".json")
+                        if ph.exists():
+                            with ph.open() as f:
+                                ph_data = json.loads(f.read())
+
+                        else:
+                            ph_data = []
+                        ph_data.append(qa)
+                        with ph.open("w") as f:
+                            # print('updating phantom data', ph)
+                            f.write(json.dumps(ph_data))
+                    else:
+                        print(resolved, "not valid reference, skipping.")
+
+            for sa in ndoc.see_also:
+                resolved, exists = resolve_(qa, nvisited_items, [])(sa.name.name)
+                if exists == "exists":
+                    sa.name.exists = True
+                    sa.name.ref = resolved
+        for p, (qa, ndoc) in progress(
+            nvisited_items.items(), description="Cleaning double references"
+        ):
+            # TODO: load backrref from either:
+            # 1) previsous version fo the file
+            # 2) phantom file if first import (and remove the phantom file?)
+            phantom_dir = self.ingest_dir / "__phantom__"
+            ph = phantom_dir / (qa + ".json")
+            # print('ph?', ph)
+            if ph.exists():
+                with ph.open() as f:
+                    ph_data = json.loads(f.read())
+                print("loading data from phantom file !", ph_data)
             else:
-                bb = []
-            with path_br.open("w") as f:
-                f.write(json.dumps(list(sorted(set(br + bb)))))
-        except Exception as e:
-            raise RuntimeError(f"error writing to {fname}") from e
+                ph_data = []
+
+            ndoc.backrefs = list(sorted(set(ndoc.backrefs + ph_data)))
+        if name_glob != "**":
+            gg = f"{name}*.json"
+        else:
+            gg = "*.json"
+        for console, path in progress(
+            self.ingest_dir.glob(gg), description=f"cleanig previsous files ...."
+        ):
+            path.unlink()
+
+        for p, (qa, ndoc) in progress(nvisited_items.items(), description="Writing..."):
+            root = qa.split(".")[0]
+            ndoc.version = versions.get(root, "?")
+            js = ndoc.to_json()
+            br = js.pop("backrefs", [])
+            try:
+                path = self.ingest_dir / f"{qa}.json"
+                path_br = self.ingest_dir / f"{qa}.br"
+
+                with path.open("w") as f:
+                    f.write(json.dumps(js, cls=EnhancedJSONEncoder))
+                if path_br.exists():
+                    with path_br.open("r") as f:
+                        bb = json.loads(f.read())
+                else:
+                    bb = []
+                with path_br.open("w") as f:
+                    f.write(json.dumps(list(sorted(set(br + bb)))))
+            except Exception as e:
+                raise RuntimeError(f"error writing to {fname}") from e
+
+def main(*args, **kwargs):
+    Ingester().ingest(*args, **kwargs)
