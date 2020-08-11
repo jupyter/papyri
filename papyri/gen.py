@@ -204,6 +204,9 @@ def normalise_ref(ref):
 
 
 def gen_main(names, infer):
+    """
+    main entry point
+    """
     Gen().do_one_mod(names, infer)
 
 
@@ -319,6 +322,7 @@ class Gen:
             bundle.glob("*.json"), description="cleaning previous bundle"
         ):
             path.unlink()
+        bundle.mkdir(exist_ok=True)
 
     def put(self, root, path, data):
         with (self.cache_dir / root / f"{path}.json").open("w") as f:
