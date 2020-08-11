@@ -51,7 +51,9 @@
     {%- endmacro %}
 
 {% macro render_paragraph(lines) -%}
-        {% for type,obj in paragraph(lines) -%}
+{% for prg in paragraphs(lines) %}
+        <p>
+        {% for type,obj in prg -%}
             {%- if type == 'Word' -%}
                 {{-obj.value-}}
             {%- elif type == 'Directive' -%}
@@ -69,6 +71,8 @@
                 <code>Some {{type}}</code>
             {%- endif -%}
         {%- endfor %}
+        </p>
+    {%- endfor %}
 {%- endmacro %}
 
 
@@ -86,9 +90,7 @@
         <h3>{{section}}</h3>
     {% endif %}
     {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
-        <p>
         {{render_paragraph(doc[section])}}
-        </p>
     {% elif section in ['Signature'] %}
        <code>{{doc[section]}}</code>
     {% elif section in ['See Also'] %}
@@ -103,7 +105,7 @@
     {% elif section in ['Examples'] %}
         {% for type,data in doc.edata %}
             {% if type=='text' %}
-             <p>{{render_paragraph([data])}}</p>
+             {{render_paragraph([data])}}
             {% else %}
              <pre>{{example(data[0]) -}}
 
@@ -125,9 +127,9 @@
             {% else %}
                 <dt><code>{{p[1]}}</code></dt>
             {% endif %}
-           <dd><p>
+           <dd>
            {{render_paragraph(p[2])}}
-            </p></dd>
+            </dd>
        {% endfor %}
 
    </pre>

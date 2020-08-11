@@ -13,7 +13,7 @@ from velin import NumpyDocString
 
 from .config import base_dir, html_dir, ingest_dir
 from .crosslink import SeeAlsoItem, load_one, resolve_
-from .take2 import Paragraph
+from .take2 import Paragraph, lines, make_block_3, Lines
 from .utils import progress
 
 app = Flask(__name__)
@@ -55,6 +55,7 @@ def _route(ref, ingest_dir):
     env.globals["exists"] = exists
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
+    env.globals["paragraphs"] = paragraphs
     template = env.get_template("core.tpl.j2")
 
     error = env.get_template("404.tpl.j2")
@@ -89,7 +90,7 @@ def _route(ref, ingest_dir):
         return error.render(subs=known_refs, backrefs=list(set(br)))
 
 
-app.route("/<ref>")(lambda x: _route(x, ingest_dir))
+app.route("/<ref>")(lambda ref: _route(ref, ingest_dir))
 
 
 def serve():
@@ -97,6 +98,9 @@ def serve():
 
 
 def paragraph(lines):
+    """
+    return container of (type, obj)
+    """
     p = Paragraph.parse_lines(lines)
     acc = []
     for c in p.children:
@@ -107,6 +111,21 @@ def paragraph(lines):
                 acc.append((type(c).__name__, c))
         else:
             acc.append((type(c).__name__, c))
+    return acc
+
+def paragraphs(lines):
+    blocks = make_block_3(Lines(lines))
+    acc = []
+    for b0,b1,b2 in blocks:
+        print('----')
+        print(b0)
+        print(b1)
+        print(b2)
+        if b0:
+            acc.append(paragraph([x._line for x in b0]))
+        ## definitively wrong but will do for now, should likely be verbatim, or recurse ? 
+        if b2:
+            acc.append(paragraph([x._line for x in b2]))
     return acc
 
 
@@ -153,6 +172,7 @@ def _ascii_render(name, ingest_dir=ingest_dir):
     env.globals["exists"] = exists
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
+    env.globals["paragraphs"] = paragraphs
     template = env.get_template("ascii.tpl.j2")
 
     known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
@@ -169,10 +189,6 @@ def _ascii_render(name, ingest_dir=ingest_dir):
     ]
 
     env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
-    print("-------")
-    print(repr(ndoc))
-    print(list(ndoc.sections))
-    print("-------")
 
     return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
 
