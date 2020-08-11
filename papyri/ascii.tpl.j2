@@ -1,6 +1,6 @@
 {% macro example(entries) -%}
     {{-'>>> ' -}}
-    {%- for index, type, text, t_ in entries %}
+    {%- for text, t_ in entries %}
        {%- if text == '\n' -%}
        {{"\n    ... "}}
        {%- else -%}
