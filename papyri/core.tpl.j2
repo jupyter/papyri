@@ -25,6 +25,7 @@
           dd {
                margin-left: 40px;
           }
+          summary > h2 { display: inline }
     </style>
 </head>
 <body>
@@ -35,7 +36,7 @@
 
 {% macro example(entries) -%}
     {{'>>> ' -}}
-    {%- for index, type, text, t_ in entries %}
+    {%- for text, t_ in entries %}
        {%- if text == '\n' -%}
            <br>...&nbsp;
        {%- else -%}
@@ -105,6 +106,7 @@
              <p>{{render_paragraph([data])}}</p>
             {% else %}
              <pre>{{example(data[0]) -}}
+
              {{- data[1]}}</pre>
             {% endif %}
             
@@ -146,10 +148,19 @@
     {% endif%}
     {% if backrefs[1] is not none %}
         {% for k,v in backrefs[1].items() %}
-        <h2>{{k}}</h2>
+         <h2>{{k}}</h2>
+         {% if len(v) < 30 %}
+         {% for r in v %}
+            <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>
+         {% endfor %}
+         {% else %}
+        <details>
+        <summary>{{v | length}} Elements</summary>
         {% for r in v %}
             <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>
         {% endfor %}
+        </details>
+        {% endif %}
     {% endfor %}
     {% endif%}
 {% endif %}

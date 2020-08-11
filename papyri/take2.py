@@ -241,6 +241,9 @@ class Paragraph:
 
 
 def indent(text, marker="   |"):
+    """
+    Return the given text indented with 3 space plus a pipe for display.
+    """
     lines = text.split("\n")
     return "\n".join(marker + l for l in lines)
 
@@ -332,6 +335,20 @@ def eat_while(lines, condition):
 
 
 def make_blocks_2(lines):
+    """
+    WRONG:
+
+    xxxxx
+
+    yyyyyy
+
+       zzzzz
+
+    ttttttttt
+
+    x and y should be 2blocks
+
+    """
     if not lines:
         return []
     l0 = lines[0]
@@ -341,7 +358,6 @@ def make_blocks_2(lines):
     rest = lines
     acc = []
     while rest:
-        print()
         blk, rest = eat_while(rest, lambda l: len(l) - len(l.lstrip()) == ind0)
         wht, rest = eat_while(rest, lambda l: not l.strip())
         ind, rest = eat_while(
@@ -352,16 +368,90 @@ def make_blocks_2(lines):
     return acc
 
 
+def make_block_3(lines: 'Lines'):
+    """
+    I think the correct alternative is that each block may get an indented children, and that a block is thus: 
+
+    - a) The sequence of consecutive non blank lines with 0 indentation
+    - b) The (potentially absent) blank lines leading to the indent block
+    - c) The Raw indent block (we can decide to recurse, or not later)
+    - d?) The trailing blank line at the end of the block leading to the next one. I think the blank line will be in the
+      raw indent block
+
+    """
+
+    (a,b,c) = [], [],[]
+    blocks = []
+    state = 'a' 
+
+    for l in lines:
+        if l.indent == 0:
+            if state == 'a':
+                a.append(l)
+            elif state in ('b', 'c') :
+                blocks.append((a,b,c))
+                a,b,c= [l], [], []
+                state = 'a'
+            else:
+                raise ValueError
+        elif l.indent == None:
+            if state == 'a':
+                state = 'b'
+                b.append(l)
+            elif state == 'b':
+                b.append(l)
+            elif state == 'c':
+                c.append(l)
+            else:
+                raise ValueError
+        elif l.indent > 0:
+            if state in ('a', 'b'):
+                state = 'c'
+                c.append(l)
+            elif state == 'c':
+                c.append(l)
+            else:
+                raise ValueError
+
+
+    blocks.append((a,b,c))
+    return blocks
+
+
+
+
+
+
+
+
+    
+
+
 class Block:
     """
+    The following is wrong for some case, in particular if there are many paragraph in a row with 0 indent. 
+    we can't ignore blank lines.
+
+    --- 
+
     A chunk of lines that breaks when the indentation reaches 
-    - the last of a list of whitelines if indentation is consistant
+    - the last of a list of blank lines if indentation is consistant
     - the last non-0  indented lines
 
 
     Note we likely want the _body_ lines and then the _indented_ lines if any, which would mean we
-    cut after the first whitespace lines and expect indents, otherwise there is not indent.
-    and likely if there is a whiteline as  a property.
+    cut after the first blank lines and expect indents, otherwise there is not indent.
+    and likely if there is a blank lnes as  a property.
+
+    ---- 
+
+    I think the correct alternative is that each block may get an indented children, and that a block is thus: 
+
+    - 1) The sequence of consecutive non blank lines with 0 indentation
+    - 2) The (potentially absent) blank lines leading to the indent block
+    - 3) The Raw indent block (we can decide to recurse, or not later)
+    - 4) The trailing blank line at the end of the block leading to the next one.
+
     """
 
     def __init__(self, lines, wh, ind, *, reason=None):
@@ -410,6 +500,59 @@ class Section:
         )
 
 
+# wrapper around handling lines
+
+
+
+class Line:
+
+    def __init__(self, line, number, offset=0):
+        self._line = line
+        self._number = number
+        self._offset = offset
+
+    @property
+    def text(self):
+        return self._line.rstrip()
+
+    @property
+    def blank(self):
+        return self._line.strip() == ''
+
+    def __getattr__(self, missing):
+        return getattr(self._line, missing)
+
+    def __repr__(self):
+        return f"<Line {self._number: 3d} {str(self.indent):>4}| {self._line[self._offset:]}>"
+
+    @property
+    def indent(self):
+        if self.blank:
+            return None
+        return len(self._line) - len(self._line.lstrip()) - self._offset
+
+class Lines:
+
+    def __init__(self, lines):
+        self._lines = [l if isinstance(l, Line) else Line(l,n) for n,l in enumerate(lines) ]
+
+    def __getitem__(self, sl):
+        if isinstance(sl, int):
+            return self._lines[sl]
+        else:
+            return Lines(self._lines[sl])
+
+    def __repr__(self):
+        rep = f'<Lines {len(self._lines)} lines:'
+        for l in self._lines:
+            rep+= f'\n    {l}'
+        rep+='>'
+        return rep
+
+    def dedented(self):
+        pass
+
+
 class Document:
     def __init__(self, lines):
         self.lines = lines
@@ -431,9 +574,18 @@ class Document:
 #    print(i, l)
 
 if __name__ == "__main__":
-    print(ex)
-    for w in [80]:
-        p = Paragraph.parse_lines(ex.split("\n"))
-        p.width = w
-        print(p)
-        print()
+    ex = matplotlib.__doc__
+    import numpy as np
+    ex = np.__doc__
+    for b in make_block_3(Lines(ex.split('\n'))[:]):
+        for m,u in zip('| >', b):
+            for x in u:
+                print(m,x._line)
+    #for b in with_indentation(ex.split('\n')):
+    #    print(b)
+    #print(ex)
+    #for w in [80, 120]:
+    #    p = Paragraph.parse_lines(ex.split("\n"))
+    #    p.width = w
+    #    print(p)
+    #    print()

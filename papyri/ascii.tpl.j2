@@ -2,7 +2,7 @@
     {{-'>>> ' -}}
     {%- for index, type, text, t_ in entries %}
        {%- if text == '\n' -%}
-           ...&nbsp;
+       {{"\n    ... "}}
        {%- else -%}
             {{text}}
        {%- endif -%}

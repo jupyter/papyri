@@ -15,6 +15,9 @@ from .gen import keepref, normalise_ref
 from .take2 import Paragraph
 from .utils import progress
 
+import warnings
+warnings.simplefilter('ignore', UserWarning)
+
 
 def resolve_(qa, known_refs, local_ref):
     def resolve(ref):
@@ -75,23 +78,30 @@ def assert_normalized(ref):
     return ref
 
 
-def load_one(bytes_, qa=None):
+def load_one(bytes_, bytes2_,  qa=None):
     # blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
 
 
     data = json.loads(bytes_)
-    blob = NumpyDocString("")
-    blob._parsed_data = data.pop("_parsed_data")
-    blob._parsed_data["Parameters"] = [
-        Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
-    ]
-    blob.refs = data.pop("refs")
-    blob.edata = data.pop("edata")
-    blob.backrefs = data.pop("backrefs", [])
+    blob = NumpyDocString.from_json(data)
+    #blob._parsed_data = data.pop("_parsed_data")
+    data.pop("_parsed_data")
+    data.pop("edata", None)
+    #blob._parsed_data["Parameters"] = [
+    #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
+    #]
+    blob.refs = data.pop("refs", [])
+    #blob.edata = data.pop("edata")
+    if bytes2_ is not None:
+        backrefs = json.loads(bytes2_)
+    else:
+        backrefs = []
+    blob.backrefs = backrefs
     #blob.see_also = data.pop("see_also", [])
     blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
     blob.version = data.pop("version", '')
     data.pop('ordered_sections', None)
+    data.pop('backrefs', None)
     if data.keys():
         print(data.keys(), qa)
     blob.__dict__.update(data)
@@ -134,7 +144,6 @@ def main(name, check):
         with path.open() as f:
             version = json.loads(f.read())['version']
         versions[path.parent.name] = version
-        print(path.parent.name, version)
     for p, f in progress(cache_dir.glob(f"{name_glob}/*.json"), description=f"Reading {name} doc bundle files ..."):
         if f.is_dir():
             continue
@@ -150,8 +159,14 @@ def main(name, check):
                 continue
             assert rqa == qa, f"{rqa} !+ {qa}"
         try:
-            with f.open() as f:
-                blob = load_one(f.read(), qa=qa)
+            with f.open() as fff:
+                from pathlib import Path
+                brpath = Path(str(f)[:-5]+'br')
+                if brpath.exists():
+                    br = brpath.read_text()
+                else:
+                    br = None
+                blob = load_one(fff.read(), br, qa=qa)
                 if check:
                     blob.refs = [assert_normalized(ref) for ref in blob.refs if keepref(ref)]
                 nvisited_items[qa] = blob
@@ -174,8 +189,15 @@ def main(name, check):
                 ex = ingest_dir / (resolved + '.json')
                 if ex.exists():
                     with ex.open() as f:
-                        blob = load_one(f.read())
+                        brpath = Path(str(ex)[:-5]+'br')
+                        if brpath.exists():
+                            br = brpath.read_text()
+                        else:
+                            br = None
+                        blob = load_one(f.read(), br)
                         nvisited_items[resolved] = blob
+                        if not hasattr(nvisited_items[resolved], 'backrefs'):
+                            nvisited_items[resolved].backrefs = []
                         nvisited_items[resolved].backrefs.append(qa)
                 elif '/' not in resolved:
                     phantom_dir = (ingest_dir / '__phantom__')
@@ -229,9 +251,19 @@ def main(name, check):
         root = qa.split('.')[0]
         ndoc.version = versions.get(root, '?')
         js = ndoc.to_json()
+        br = js.pop('backrefs', [])
         try:
             path = ingest_dir / f"{qa}.json"
+            path_br = ingest_dir / f"{qa}.br"
+
             with path.open("w") as f:
                 f.write(json.dumps(js, cls=EnhancedJSONEncoder))
+            if path_br.exists():
+                with path_br.open("r") as f:
+                    bb = json.loads(f.read())
+            else:
+                bb= []
+            with path_br.open("w") as f:
+                f.write(json.dumps(list(sorted(set(br+bb)))))
         except Exception as e:
             raise RuntimeError(f"error writing to {fname}") from e

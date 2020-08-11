@@ -1,6 +1,7 @@
 import json
 import os
 from collections import defaultdict
+from pathlib import Path
 from functools import lru_cache
 from types import ModuleType
 
@@ -28,10 +29,10 @@ class CleanLoader(FileSystemLoader):
 
 def until_ruler(doc):
     """
-    Utilities to clean jinja template; 
-    
+    Utilities to clean jinja template;
+
     Remove all ``|`` and `` `` until the last leading ``|``
-    
+
     """
     lines = doc.split('\n')
     new = []
@@ -55,18 +56,40 @@ def route(ref):
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
     env.globals["exists"] = exists
+    env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
+    error = env.get_template("404.tpl.j2")
+
     known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
-    with open(ingest_dir / f"{ref}.json") as f:
-        bytes_ = f.read()
-    ndoc = load_one(bytes_)
-    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]+[x[0] for x in ndoc["Returns"] if x[0]]
 
-    env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
+    file_ = ingest_dir / f"{ref}.json"
+    if file_.exists():
+        with open(ingest_dir / f"{ref}.json") as f:
+            bytes_ = f.read()
+        brpath = Path(ingest_dir / f"{ref}.br")
+        if brpath.exists():
+            br = brpath.read_text()
+        else:
+            br = None
+        ndoc = load_one(bytes_, br)
+        local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]+[x[0] for x in ndoc["Returns"] if x[0]]
 
-    return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
+        env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
+
+        return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
+    else:
+        known_refs = [str(s.name)[:-5] for s in ingest_dir.glob(f'{ref}*.json')]
+        brpath = Path(ingest_dir / '__phantom__'/f"{ref}.json")
+        if brpath.exists():
+            br = json.loads(brpath.read_text())
+        else:
+            br = []
+        print('br:', br, type(br))
+        return error.render(subs=known_refs, backrefs=list(set(br)))
+
+
 
 
 def serve():
@@ -142,13 +165,19 @@ def ascii_render(name):
         trim_blocks=True,
     )
     env.globals["exists"] = exists
+    env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     template = env.get_template("ascii.tpl.j2")
 
     known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
     with open(ingest_dir / f"{ref}.json") as f:
         bytes_ = f.read()
-    ndoc = load_one(bytes_)
+    brpath = Path(ingest_dir / f"{ref}.br")
+    if brpath.exists():
+        br = brpath.read_text()
+    else:
+        br = None
+    ndoc = load_one(bytes_, br)
     local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]+[x[0] for x in ndoc["Returns"] if x[0]]
 
     env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
@@ -164,6 +193,7 @@ def main():
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
     env.globals["exists"] = exists
+    env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
@@ -171,15 +201,23 @@ def main():
 
     html_dir.mkdir(exist_ok=True)
     for p, fname in progress(files, description="Rendering..."):
+        if fname.startswith('__') or fname.endswith('.br'):
+            continue
         qa = fname[:-5]
         try:
             with open(ingest_dir / fname) as f:
                 bytes_ = f.read()
-                ndoc = load_one(bytes_)
+                brpath = Path(ingest_dir / f"{qa}.br")
+                if brpath.exists():
+                    br = brpath.read_text()
+                else:
+                    br = None
+                ndoc = load_one(bytes_, br)
+
                 local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
                 # nvisited_items[qa] = ndoc
         except Exception as e:
-            raise RuntimeError(f"error with {f}") from e
+            raise RuntimeError(f"error with {fname}") from e
 
         # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
         with (html_dir / f"{qa}.html").open("w") as f:

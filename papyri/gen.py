@@ -133,7 +133,7 @@ def parse_script(script, ns=None, infer=None):
                 break
         except IndexError:
             ref = ""
-        yield index, type_, text, ref
+        yield text, ref
     warnings.simplefilter("default", UserWarning)
 
 
@@ -411,21 +411,20 @@ def do_one_mod(names, infer):
 
             ndoc.refs = list(
                 {
-                    u[3]
+                    u[1]
                     for t_, sect in ndoc.edata
                     if t_ == "code"
                     for u in sect[0]
-                    if u[3]
+                    if u[1]
                 }
             )
             ndoc.refs.extend(refs)
             ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
             if infer:
                 p2.advance(taski)
-            ndoc.backrefs = []
 
             with (bundle / f"{qa}.json").open("w") as f:
-                f.write(json.dumps(ndoc.to_json()))
+                f.write(json.dumps(ndoc.to_json(), indent=2))
             nvisited_items[qa] = ndoc
         with (bundle/"__papyri__.json").open("w") as f:
             f.write(json.dumps({"version":version}))
