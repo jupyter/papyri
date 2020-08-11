@@ -36,6 +36,7 @@ from . import utils
 from .config import base_dir, cache_dir
 from .utils import progress
 
+
 @lru_cache()
 def keepref(ref):
     """
@@ -75,7 +76,6 @@ def pos_to_nl(script: str, pos: int) -> (int, int):
             return ln, rest
 
 
-
 def parse_script(script, ns=None, infer=None):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
@@ -105,12 +105,12 @@ def parse_script(script, ns=None, infer=None):
 
     jeds = []
     import warnings
+
     warnings.simplefilter("ignore", UserWarning)
     if ns:
         jeds.append(jedi.Interpreter(script, namespaces=[ns]))
     jeds.append(jedi.Script(script))
     P = PythonLexer()
-
 
     for index, type_, text in P.get_tokens_unprocessed(script):
         a, b = pos_to_nl(script, index)
@@ -157,7 +157,9 @@ def get_example_data(doc, infer=True):
         for item in b:
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
-                entries = list(parse_script(script, ns={"np": np, "plt": plt}, infer=infer))
+                entries = list(
+                    parse_script(script, ns={"np": np, "plt": plt}, infer=infer)
+                )
                 edata.append(["code", (entries, "\n".join(item.out))])
 
             else:
@@ -306,12 +308,10 @@ class Collector:
         self.visit(self.root)
         return self.obj
 
+
 class Gen:
-
-
     def __init__(self):
         self.cache_dir = cache_dir
-
 
     def clean(self, root):
         bundle = self.cache_dir / root
@@ -320,10 +320,9 @@ class Gen:
         ):
             path.unlink()
 
-    def put(self, root,  path, data):
+    def put(self, root, path, data):
         with (self.cache_dir / root / f"{path}.json").open("w") as f:
-           f.write(data)
-
+            f.write(data)
 
     def do_one_mod(self, names, infer):
 
@@ -343,14 +342,13 @@ class Gen:
                 n0 = getattr(n0, sub)
             modules.append(n0)
 
-        version =  getattr(modules[0], '__version__', '???')
+        version = getattr(modules[0], "__version__", "???")
 
         root = names[0].split(".")[0]
         nvisited_items = {}
         task = None
 
         self.clean(root)
-
 
         collected = Collector(n0).items()
 
@@ -368,7 +366,10 @@ class Gen:
             taskp = p2.add_task(description="parsing", total=len(collected))
             t1 = timer(p2, taskp)
             if infer:
-                taski = p2.add_task(description="Running type inference in examples", total=len(collected))
+                taski = p2.add_task(
+                    description="Running type inference in examples",
+                    total=len(collected),
+                )
                 t2 = timer(p2, taski)
             for qa, a in collected.items():
                 sd = (qa[:19] + "..") if len(qa) > 21 else qa
@@ -432,4 +433,4 @@ class Gen:
                     p2.advance(taski)
                 self.put(root, qa, json.dumps(ndoc.to_json(), indent=2))
                 nvisited_items[qa] = ndoc
-            self.put(root, "__papyri__", json.dumps({"version":version}))
+            self.put(root, "__papyri__", json.dumps({"version": version}))

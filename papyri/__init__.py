@@ -19,40 +19,44 @@ def main():
     print(logo)
     print(__version__)
 
+
 @click.command()
-@click.argument('name')
+@click.argument("name")
 @click.option("--check/--no-check", default=True)
 def ingest(name, check):
     from . import crosslink as cr
+
     cr.main(name, check)
 
 
 @click.command()
-@click.argument('names', nargs=-1)
+@click.argument("names", nargs=-1)
 @click.option("--infer/--no-infer", default=True)
 def gen(names, infer):
     from papyri.gen import gen_main
-    gen_main(names, infer=infer)
 
+    gen_main(names, infer=infer)
 
 
 @click.command()
 def render():
     from .render import main as m2
+
     m2()
 
 
-
 @click.command()
-@click.argument('name', nargs=1)
+@click.argument("name", nargs=1)
 def ascii(name):
     from .render import ascii_render
+
     ascii_render(name)
 
 
 @click.command()
 def serve():
     from .render import serve
+
     serve()
 
 
@@ -61,6 +65,7 @@ def serve():
 def open(qualname):
     import webbrowser
     from .config import html_dir
+
     path = html_dir / (qualname + ".html")
     if not path.exists():
         import sys

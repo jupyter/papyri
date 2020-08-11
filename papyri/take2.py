@@ -228,7 +228,7 @@ class Paragraph:
     def references(self):
         refs = []
         for c in self.children:
-            if isinstance(c, Directive) and c.role != 'math':
+            if isinstance(c, Directive) and c.role != "math":
                 refs.append(c.text)
         return refs
 
@@ -368,7 +368,7 @@ def make_blocks_2(lines):
     return acc
 
 
-def make_block_3(lines: 'Lines'):
+def make_block_3(lines: "Lines"):
     """
     I think the correct alternative is that each block may get an indented children, and that a block is thus: 
 
@@ -380,51 +380,41 @@ def make_block_3(lines: 'Lines'):
 
     """
 
-    (a,b,c) = [], [],[]
+    (a, b, c) = [], [], []
     blocks = []
-    state = 'a' 
+    state = "a"
 
     for l in lines:
         if l.indent == 0:
-            if state == 'a':
+            if state == "a":
                 a.append(l)
-            elif state in ('b', 'c') :
-                blocks.append((a,b,c))
-                a,b,c= [l], [], []
-                state = 'a'
+            elif state in ("b", "c"):
+                blocks.append((a, b, c))
+                a, b, c = [l], [], []
+                state = "a"
             else:
                 raise ValueError
         elif l.indent == None:
-            if state == 'a':
-                state = 'b'
+            if state == "a":
+                state = "b"
                 b.append(l)
-            elif state == 'b':
+            elif state == "b":
                 b.append(l)
-            elif state == 'c':
+            elif state == "c":
                 c.append(l)
             else:
                 raise ValueError
         elif l.indent > 0:
-            if state in ('a', 'b'):
-                state = 'c'
+            if state in ("a", "b"):
+                state = "c"
                 c.append(l)
-            elif state == 'c':
+            elif state == "c":
                 c.append(l)
             else:
                 raise ValueError
 
-
-    blocks.append((a,b,c))
+    blocks.append((a, b, c))
     return blocks
-
-
-
-
-
-
-
-
-    
 
 
 class Block:
@@ -503,9 +493,7 @@ class Section:
 # wrapper around handling lines
 
 
-
 class Line:
-
     def __init__(self, line, number, offset=0):
         self._line = line
         self._number = number
@@ -517,7 +505,7 @@ class Line:
 
     @property
     def blank(self):
-        return self._line.strip() == ''
+        return self._line.strip() == ""
 
     def __getattr__(self, missing):
         return getattr(self._line, missing)
@@ -531,10 +519,12 @@ class Line:
             return None
         return len(self._line) - len(self._line.lstrip()) - self._offset
 
-class Lines:
 
+class Lines:
     def __init__(self, lines):
-        self._lines = [l if isinstance(l, Line) else Line(l,n) for n,l in enumerate(lines) ]
+        self._lines = [
+            l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(lines)
+        ]
 
     def __getitem__(self, sl):
         if isinstance(sl, int):
@@ -543,10 +533,10 @@ class Lines:
             return Lines(self._lines[sl])
 
     def __repr__(self):
-        rep = f'<Lines {len(self._lines)} lines:'
+        rep = f"<Lines {len(self._lines)} lines:"
         for l in self._lines:
-            rep+= f'\n    {l}'
-        rep+='>'
+            rep += f"\n    {l}"
+        rep += ">"
         return rep
 
     def dedented(self):
@@ -576,15 +566,16 @@ class Document:
 if __name__ == "__main__":
     ex = matplotlib.__doc__
     import numpy as np
+
     ex = np.__doc__
-    for b in make_block_3(Lines(ex.split('\n'))[:]):
-        for m,u in zip('| >', b):
+    for b in make_block_3(Lines(ex.split("\n"))[:]):
+        for m, u in zip("| >", b):
             for x in u:
-                print(m,x._line)
-    #for b in with_indentation(ex.split('\n')):
+                print(m, x._line)
+    # for b in with_indentation(ex.split('\n')):
     #    print(b)
-    #print(ex)
-    #for w in [80, 120]:
+    # print(ex)
+    # for w in [80, 120]:
     #    p = Paragraph.parse_lines(ex.split("\n"))
     #    p.width = w
     #    print(p)

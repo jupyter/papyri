@@ -20,8 +20,6 @@ app = Flask(__name__)
 
 
 class CleanLoader(FileSystemLoader):
-
-
     def get_source(self, *args, **kwargs):
         (source, filename, uptodate) = super().get_source(*args, **kwargs)
         return until_ruler(source), filename, uptodate
@@ -34,14 +32,14 @@ def until_ruler(doc):
     Remove all ``|`` and `` `` until the last leading ``|``
 
     """
-    lines = doc.split('\n')
+    lines = doc.split("\n")
     new = []
     for l in lines:
-        
-        while len(l.lstrip()) >= 1 and l.lstrip()[0] == '|':
+
+        while len(l.lstrip()) >= 1 and l.lstrip()[0] == "|":
             l = l.lstrip()[1:]
         new.append(l)
-    return '\n'.join(new)
+    return "\n".join(new)
 
 
 @app.route("/<ref>")
@@ -74,22 +72,22 @@ def route(ref):
         else:
             br = None
         ndoc = load_one(bytes_, br)
-        local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]+[x[0] for x in ndoc["Returns"] if x[0]]
+        local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
+            x[0] for x in ndoc["Returns"] if x[0]
+        ]
 
         env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
 
         return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
     else:
-        known_refs = [str(s.name)[:-5] for s in ingest_dir.glob(f'{ref}*.json')]
-        brpath = Path(ingest_dir / '__phantom__'/f"{ref}.json")
+        known_refs = [str(s.name)[:-5] for s in ingest_dir.glob(f"{ref}*.json")]
+        brpath = Path(ingest_dir / "__phantom__" / f"{ref}.json")
         if brpath.exists():
             br = json.loads(brpath.read_text())
         else:
             br = []
-        print('br:', br, type(br))
+        print("br:", br, type(br))
         return error.render(subs=known_refs, backrefs=list(set(br)))
-
-
 
 
 def serve():
@@ -131,7 +129,7 @@ def render_one(template, ndoc, qa, ext):
     )
 
 
-#def load_one(bytes_):
+# def load_one(bytes_):
 #    data = json.loads(bytes_)
 #    blob = NumpyDocString("")
 #    blob._parsed_data = data.pop("_parsed_data")
@@ -155,7 +153,8 @@ def exists(ref):
         # if not ref.startswith(("builtins.", "__main__")):
         #    print(ref, "missing in", qa)
         return "missing"
-    
+
+
 def ascii_render(name):
     ref = name
 
@@ -178,11 +177,14 @@ def ascii_render(name):
     else:
         br = None
     ndoc = load_one(bytes_, br)
-    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]+[x[0] for x in ndoc["Returns"] if x[0]]
+    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
+        x[0] for x in ndoc["Returns"] if x[0]
+    ]
 
     env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
 
     print(render_one(template=template, ndoc=ndoc, qa=ref, ext=""))
+
 
 def main():
     # nvisited_items = {}
@@ -201,7 +203,7 @@ def main():
 
     html_dir.mkdir(exist_ok=True)
     for p, fname in progress(files, description="Rendering..."):
-        if fname.startswith('__') or fname.endswith('.br'):
+        if fname.startswith("__") or fname.endswith(".br"):
             continue
         qa = fname[:-5]
         try:
