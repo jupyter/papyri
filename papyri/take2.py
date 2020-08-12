@@ -1,4 +1,5 @@
 import re
+import sys
 from textwrap import indent as _indent
 
 import matplotlib
@@ -328,7 +329,7 @@ def make_blocks_2(lines):
 
 def make_block_3(lines: "Lines"):
     """
-    I think the correct alternative is that each block may get an indented children, and that a block is thus: 
+    I think the correct alternative is that each block may get an indented children, and that a block is thus:
 
     - a) The sequence of consecutive non blank lines with 0 indentation
     - b) The (potentially absent) blank lines leading to the indent block
@@ -571,25 +572,26 @@ class Header:
     def __init__(self, lines):
         assert len(lines) >= 2, f"{lines=}"
         self._lines = lines
+        self.level = None
 
     def __repr__(self):
         return (
-            f"<Header> with\n"
-            + indent(str(self._lines[0]), "    ")
+            f"<Header {self.level}> with\n"
+            + RED(indent(str(self._lines[0]), "    "))
             + "\n"
-            + indent(str(self._lines[1]), "    ")
+            + RED(indent(str(self._lines[1]), "    "))
             + "\n"
-            + indent("\n".join(str(x) for x in self._lines[2:]), "    ")
+            + RED(indent("\n".join(str(x) for x in self._lines[2:]), "    "))
         )
 
 
 def header_pass(block) -> ["blocks"]:
     """
-    Check each block for potential header, if found, split (or extract) the given block into a header. 
+    Check each block for potential header, if found, split (or extract) the given block into a header.
 
     Parameters
     ----------
-    block: Block
+    block : Block
         A block to split or extract
 
     Returns
@@ -610,11 +612,60 @@ def header_pass(block) -> ["blocks"]:
     return (block,)
 
 
-if __name__ == "__main__":
-    ex = matplotlib.__doc__
-    import numpy as np
+def header_level_pass(blocks):
+    """
+    Iter over all top level nodes, updating the header level.
 
-    ex = np.__doc__
+    For each encountered header, collect the type of marker use to underline,
+    and increase the counter on newly encountered marker.
+
+    Update the level attribute of the header with the corresponding value.
+
+    Parameters
+    ----------
+    blocks : Block
+        A block to split or extract
+
+    """
+    seen = {}
+    for b in blocks:
+        if not isinstance(b, Header):
+            continue
+        marker_set = set(b._lines[1].strip())
+        assert len(marker_set) == 1, b
+        marker = next(iter(marker_set))
+        if marker not in seen:
+            seen[marker] = len(seen)
+        b.level = seen[marker]
+
+    return blocks
+
+
+def get_object(qual):
+    parts = qual.split(".")
+
+    for i in range(len(parts), 1, -1):
+        mod_p, pts = parts[:i], parts[i:]
+        mod_n = ".".join(mod_p)
+        try:
+            __import__(mod_n)
+            break
+        except:
+            continue
+
+    obj = __import__(parts[0])
+    for p in parts[1:]:
+        obj = getattr(obj, p)
+    return obj
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        what = sys.argv[1]
+    else:
+        what = "numpy"
+
+    ex = get_object(what).__doc__
     # for b in make_block_3(Lines(ex.split("\n"))[:]):
     #    for m, u in zip("| >", b):
     #        for x in u:
@@ -622,6 +673,7 @@ if __name__ == "__main__":
 
     doc = [Block(*b) for b in make_block_3(Lines(ex.split("\n"))[:])]
     doc = [x for pairs in doc for x in header_pass(pairs)]
+    doc = header_level_pass(doc)
     # TODO: third pass to set the header level for each header.
     # TODO: forth pass to make sections.
 
