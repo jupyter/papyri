@@ -180,32 +180,6 @@ class FirstCombinator:
         return None
 
 
-def rewrap(tokens, max_len):
-    acc = [[]]
-    clen = 0
-    for t in tokens:
-        if clen + (ll := len(t)) > max_len:
-            # remove whitespace at EOL
-            while acc and acc[-1][-1].is_whitespace():
-                acc[-1].pop()
-            acc.append([])
-            clen = 0
-
-        # do no append whitespace at SOL
-        if clen == 0 and t.is_whitespace():
-            continue
-        acc[-1].append(t)
-        clen += ll
-    # remove whitespace at EOF
-    try:
-        while acc and acc[-1][-1].is_whitespace():
-            acc[-1].pop()
-    except IndexError:
-        pass
-
-    return acc
-
-
 class Paragraph:
     def __init__(self, children, width=80):
         self.children = children
@@ -239,6 +213,31 @@ class Paragraph:
         p = "\n".join(["".join(repr(x) for x in line) for line in rw])
         return f"""<Paragraph:\n{p}>"""
 
+    @classmethod
+    def rewrap(cls, tokens, max_len):
+        acc = [[]]
+        clen = 0
+        for t in tokens:
+            if clen + (ll := len(t)) > max_len:
+                # remove whitespace at EOL
+                while acc and acc[-1][-1].is_whitespace():
+                    acc[-1].pop()
+                acc.append([])
+                clen = 0
+
+            # do no append whitespace at SOL
+            if clen == 0 and t.is_whitespace():
+                continue
+            acc[-1].append(t)
+            clen += ll
+        # remove whitespace at EOF
+        try:
+            while acc and acc[-1][-1].is_whitespace():
+                acc[-1].pop()
+        except IndexError:
+            pass
+        return acc
+
 
 def indent(text, marker="   |"):
     """
@@ -246,19 +245,6 @@ def indent(text, marker="   |"):
     """
     lines = text.split("\n")
     return "\n".join(marker + l for l in lines)
-
-
-def is_at_header(lines):
-    if len(lines) < 2:
-        return False
-    l0, l1, *rest = lines
-    if len(l0.strip()) != len(l1.strip()):
-        return False
-    if len(s := set(l1.strip())) != 1:
-        return False
-    if next(iter(s)) in "-=":
-        return True
-    return False
 
 
 def header_lines(lines):
@@ -292,34 +278,6 @@ def with_indentation(lines, start_indent=0):
             yield (indent := len(l) - len(ls)), l
         else:
             yield indent, l
-
-
-def make_blocks(lines, start_indent=0):
-    l0 = lines[0]
-    start_indent = len(l0) - len(l0.lstrip())
-    indent = start_indent
-    acc = []
-    blk = []
-    wh = []
-    reason = None
-    for i, l in with_indentation(lines):
-        print(i, l)
-        if not l.strip() and indent == start_indent:
-            wh.append(l)
-            continue
-        else:
-            if wh and i == indent == start_indent:
-                acc.append(Block(blk, wh, [], reason="wh+re0"))
-                blk = [l]
-                wh = []
-            else:
-                blk.extend(wh)
-                wh = []
-                blk.append(l)
-
-            indent = i
-    acc.append(Block(blk, wh, [], reason="end"))
-    return acc
 
 
 def eat_while(lines, condition):
@@ -445,15 +403,17 @@ class Block:
     """
 
     def __init__(self, lines, wh, ind, *, reason=None):
-        self.lines = lines
-        self.wh = wh
-        self.ind = make_blocks_2(ind)
+        self.lines = Lines(lines)
+        self.wh = Lines(wh)
+        self.ind = Lines(ind)
         self.reason = reason
 
     def __repr__(self):
         return (
-            f"<Block body-len='{len(self.lines)},{len(self.wh)},{self.reason}'> with\n"
-            + indent("\n".join(self.lines + self.wh), "    ")
+            f"<Block '{len(self.lines)},{len(self.wh)},{len(self.ind)}'> with\n"
+            + indent("\n".join([str(l) for l in self.lines]), "    ")
+            + "\n"
+            + indent("\n".join([str(w) for w in self.wh]), "    ")
             + "\n"
             + indent("\n".join([repr(x) for x in self.ind]), "    ")
         )
@@ -495,6 +455,7 @@ class Section:
 
 class Line:
     def __init__(self, line, number, offset=0):
+        assert isinstance(line, str)
         self._line = line
         self._number = number
         self._offset = offset
@@ -522,6 +483,8 @@ class Line:
 
 class Lines:
     def __init__(self, lines):
+        for l in lines:
+            assert isinstance(l, (str, Line))
         self._lines = [
             l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(lines)
         ]
@@ -541,6 +504,14 @@ class Lines:
 
     def dedented(self):
         pass
+
+    def __len__(self):
+        return len(self._lines)
+
+    def __add__(self, other):
+        if not isinstance(other, Lines):
+            return NotImplemented
+        return Lines(self._lines + other._lines)
 
 
 class Document:
@@ -563,15 +534,99 @@ class Document:
 # for i, l in with_indentation(repr(d).split("\n")):
 #    print(i, l)
 
+
+def is_at_header(lines) -> bool:
+    """
+    Given a list of lines (str), return wether or not we are (likely) at a header
+
+    A header is (generally) of the form:
+        - One line with text
+        - one line some lenght with one of -_=*~ (and space on each side).
+
+    In practice user do not use the same length, and some things may trigger false positive (
+    tracebacks in docstrings print with a long line of dashes (-).
+
+    We could also peek at the line n-1, and make sure it is a blankline.
+
+    We might also be able to find that headers are actually blocs as well, and blockify a full document, though we have
+    to be careful, some thing so not have spaces after headers. (numpy.__doc__)
+    """
+    if len(lines) < 2:
+        return False
+    l0, l1, *rest = lines
+    if len(l0.strip()) != len(l1.strip()):
+        return False
+    if len(s := set(l1.strip())) != 1:
+        return False
+    if next(iter(s)) in "-=":
+        return True
+    return False
+
+
+class Header:
+    """
+    a header node
+    """
+
+    def __init__(self, lines):
+        assert len(lines) >= 2, f"{lines=}"
+        self._lines = lines
+
+    def __repr__(self):
+        return (
+            f"<Header> with\n"
+            + indent(str(self._lines[0]), "    ")
+            + "\n"
+            + indent(str(self._lines[1]), "    ")
+            + "\n"
+            + indent("\n".join(str(x) for x in self._lines[2:]), "    ")
+        )
+
+
+def header_pass(block) -> ["blocks"]:
+    """
+    Check each block for potential header, if found, split (or extract) the given block into a header. 
+
+    Parameters
+    ----------
+    block: Block
+        A block to split or extract
+
+    Returns
+    -------
+    list
+        A list of blocks and/or header
+
+    """
+    # TODO: Add logic to handle doctests raising exceptions.
+
+    if len(block.lines) == 2 and is_at_header(block.lines):
+        assert not block.ind
+        return [Header(block.lines + block.wh)]
+    elif len(block.lines) >= 2 and is_at_header(block.lines):
+        h = Header(block.lines[:2])
+        block.lines = block.lines[2:]
+        return (h, block)
+    return (block,)
+
+
 if __name__ == "__main__":
     ex = matplotlib.__doc__
     import numpy as np
 
     ex = np.__doc__
-    for b in make_block_3(Lines(ex.split("\n"))[:]):
-        for m, u in zip("| >", b):
-            for x in u:
-                print(m, x._line)
+    # for b in make_block_3(Lines(ex.split("\n"))[:]):
+    #    for m, u in zip("| >", b):
+    #        for x in u:
+    #            print(m, x._line)
+
+    doc = [Block(*b) for b in make_block_3(Lines(ex.split("\n"))[:])]
+    doc = [x for pairs in doc for x in header_pass(pairs)]
+    # TODO: third pass to set the header level for each header.
+    # TODO: forth pass to make sections.
+
+    for b in doc:
+        print(b)
     # for b in with_indentation(ex.split('\n')):
     #    print(b)
     # print(ex)

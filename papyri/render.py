@@ -6,14 +6,13 @@ from pathlib import Path
 from types import ModuleType
 
 from flask import Flask
-from jinja2 import (Environment, FileSystemLoader, PackageLoader,
-                    select_autoescape)
+from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
 from numpydoc.docscrape import Parameter
 from velin import NumpyDocString
 
 from .config import base_dir, html_dir, ingest_dir
 from .crosslink import SeeAlsoItem, load_one, resolve_
-from .take2 import Paragraph, lines, make_block_3, Lines
+from .take2 import Lines, Paragraph, lines, make_block_3
 from .utils import progress
 
 app = Flask(__name__)
@@ -113,17 +112,18 @@ def paragraph(lines):
             acc.append((type(c).__name__, c))
     return acc
 
+
 def paragraphs(lines):
     blocks = make_block_3(Lines(lines))
     acc = []
-    for b0,b1,b2 in blocks:
-        print('----')
+    for b0, b1, b2 in blocks:
+        print("----")
         print(b0)
         print(b1)
         print(b2)
         if b0:
             acc.append(paragraph([x._line for x in b0]))
-        ## definitively wrong but will do for now, should likely be verbatim, or recurse ? 
+        ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
         if b2:
             acc.append(paragraph([x._line for x in b2]))
     return acc
