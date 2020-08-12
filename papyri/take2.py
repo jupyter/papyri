@@ -663,17 +663,9 @@ def get_object(qual):
     return obj
 
 
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        what = sys.argv[1]
-    else:
-        what = "numpy"
+def main(what):
 
     ex = get_object(what).__doc__
-    # for b in make_block_3(Lines(ex.split("\n"))[:]):
-    #    for m, u in zip("| >", b):
-    #        for x in u:
-    #            print(m, x._line)
 
     doc = [Block(*b) for b in make_block_3(Lines(ex.split("\n"))[:])]
     doc = [x for pairs in doc for x in header_pass(pairs)]
@@ -691,3 +683,11 @@ if __name__ == "__main__":
     #    p.width = w
     #    print(p)
     #    print()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        what = sys.argv[1]
+    else:
+        what = "numpy"
+    sys.exit(main(what))
