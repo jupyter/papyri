@@ -23,3 +23,7 @@ requires=[
 
 [tool.flit.scripts]
 papyri = "papyri:main"
+
+[tool.pytest.ini_options]
+addopts = "--durations=10"
+filterwarnings = "ignore:The module numpy.dual.*:DeprecationWarning"

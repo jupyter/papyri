@@ -673,9 +673,6 @@ def main(what):
     # TODO: third pass to set the header level for each header.
     # TODO: forth pass to make sections.
 
-    for b in doc:
-        print(b)
-    # for b in with_indentation(ex.split('\n')):
     #    print(b)
     # print(ex)
     # for w in [80, 120]:
@@ -683,6 +680,7 @@ def main(what):
     #    p.width = w
     #    print(p)
     #    print()
+    return doc
 
 
 if __name__ == "__main__":
@@ -690,4 +688,6 @@ if __name__ == "__main__":
         what = sys.argv[1]
     else:
         what = "numpy"
-    sys.exit(main(what))
+    doc = main(what)
+    for b in doc:
+        print(b)

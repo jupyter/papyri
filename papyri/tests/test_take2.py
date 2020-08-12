@@ -1,6 +1,6 @@
 import pytest
 
-from ..take2 import Lines, make_block_3
+from ..take2 import Header, Lines, main, make_block_3
 
 examples = [
     (
@@ -43,3 +43,18 @@ and a last
 def test_make_block(example, nblocks):
     blocks = make_block_3(Lines(example.split("\n")))
     assert len(blocks) == nblocks
+
+
+@pytest.mark.parametrize(
+    "target, expected",
+    [
+        ("numpy", (0, 1, 1, 1, 1, 1)),
+        pytest.param("scipy", (0, 1, 2, 2, 2), marks=[pytest.mark.xfail]),
+        ("matplotlib", ()),
+        ("matplotlib.pyplot.hist", (0, 0, 0, 0, 0)),
+    ],
+)
+def test_parse_headers(target, expected):
+    doc = main(target)
+    levels = tuple([h.level for h in doc if isinstance(h, Header)])
+    assert levels == expected
