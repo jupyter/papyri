@@ -32,7 +32,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest flit black scipy numpy matplotlib
+        pip install pytest flit black scipy numpy matplotlib velin
         flit install --symlink
     - name: Lint with black
       run: |
