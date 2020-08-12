@@ -544,13 +544,17 @@ def is_at_header(lines) -> bool:
         - One line with text
         - one line some lenght with one of -_=*~ (and space on each side).
 
-    In practice user do not use the same length, and some things may trigger false positive (
-    tracebacks in docstrings print with a long line of dashes (-).
+    In practice user do not use the same length, and some things may trigger
+    false positive ( tracebacks in docstrings print with a long line of dashes
+    (-).
 
-    We could also peek at the line n-1, and make sure it is a blankline.
+    We could also peek at the line n-1, and make sure it is a blankline, also
+    some libraries (scipy), use 0 level header with both over and underline
+    (this is not implemented)
 
-    We might also be able to find that headers are actually blocs as well, and blockify a full document, though we have
-    to be careful, some thing so not have spaces after headers. (numpy.__doc__)
+    We might also be able to find that headers are actually blocs as well, and
+    blockify a full document, though we have to be careful, some thing so not
+    have spaces after headers. (numpy.__doc__)
     """
     if len(lines) < 2:
         return False
