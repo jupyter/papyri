@@ -8,6 +8,12 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch: 
+    inputs:
+      name:
+        description: 'Reason'
+        required: false
+        default: 'Just Cause'
 
 jobs:
   build:
