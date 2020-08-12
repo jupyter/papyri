@@ -18,7 +18,9 @@ requires=[
     "rich",
     "jedi",
     "click",
-    "velin"
+    "velin", 
+    "flask"
+
 ]
 
 [tool.flit.scripts]
