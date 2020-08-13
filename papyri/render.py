@@ -117,10 +117,6 @@ def paragraphs(lines):
     blocks = make_block_3(Lines(lines))
     acc = []
     for b0, b1, b2 in blocks:
-        print("----")
-        print(b0)
-        print(b1)
-        print(b2)
         if b0:
             acc.append(paragraph([x._line for x in b0]))
         ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
