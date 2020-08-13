@@ -404,7 +404,7 @@ class Block:
 
     """
 
-    COLOR = lambda x:x
+    COLOR = lambda x: x
 
     def __init__(self, lines, wh, ind, *, reason=None):
         self.lines = Lines(lines)
@@ -595,16 +595,15 @@ class Header:
 class BlockDirective(Block):
     COLOR = ORANGE
 
-        
 
 class DefListItem(Block):
-    COLOR=BLUE
+    COLOR = BLUE
 
 
 class Example(Block):
     COLOR = GREEN
 
-        
+
 def header_pass(block) -> ["blocks"]:
     """
     Check each block for potential header, if found, split (or extract) the given block into a header.
@@ -660,10 +659,11 @@ def header_level_pass(blocks):
 
     return blocks
 
+
 def example_pass(block):
     if not type(block) == Block:
         return [block]
-    if block.lines and block.lines[0].startswith('>>>'):
+    if block.lines and block.lines[0].startswith(">>>"):
         return [Example(block.lines, block.wh, block.ind)]
     return [block]
 
@@ -671,18 +671,17 @@ def example_pass(block):
 def deflist_item_pass(block):
     if not type(block) == Block:
         return [block]
-    if (len(block.lines) == 1 and (not block.wh) and block.ind):
+    if len(block.lines) == 1 and (not block.wh) and block.ind:
         return [DefListItem(block.lines, block.wh, block.ind)]
     return [block]
+
 
 def block_directive_pass(block):
     if not type(block) == Block:
         return [block]
-    if (len(block.lines) >= 1 and (block.lines[0].startswith('..'))):
+    if len(block.lines) >= 1 and (block.lines[0].startswith("..")):
         return [BlockDirective(block.lines, block.wh, block.ind)]
     return [block]
-
-
 
 
 def get_object(qual):
@@ -706,7 +705,6 @@ def get_object(qual):
 def main(what):
 
     ex = get_object(what).__doc__
-
 
     ex = dedent_but_first(ex)
 

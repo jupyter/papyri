@@ -1,6 +1,16 @@
 import pytest
 
-from ..take2 import Header, Lines, main, make_block_3
+from ..take2 import (
+    Header,
+    Lines,
+    main,
+    make_block_3,
+    Header,
+    BlockDirective,
+    Example,
+    Block,
+    DefListItem,
+)
 
 examples = [
     (
@@ -58,3 +68,21 @@ def test_parse_headers(target, expected):
     doc = main(target)
     levels = tuple([h.level for h in doc if isinstance(h, Header)])
     assert levels == expected
+
+
+@pytest.mark.parametrize(
+    "target, type_, number",
+    [
+        ("numpy", BlockDirective, 0),
+        ("numpy.linspace", BlockDirective, 1),
+        ("scipy.optimize._lsq.least_squares", Example, 14),
+        ("scipy.optimize._lsq.least_squares", Header, 6),
+        ("scipy.optimize._lsq.least_squares", BlockDirective, 9),
+        ("scipy.optimize._lsq.least_squares", Block, 25),
+        ("scipy.optimize._lsq.least_squares", DefListItem, 30),
+    ],
+)
+def test_parse_blocks(target, type_, number):
+    blocks = main(target)
+    filtered = [b for b in blocks if type(b) == type_]
+    assert len(filtered) == number
