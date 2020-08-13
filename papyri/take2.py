@@ -3,6 +3,7 @@ import sys
 from textwrap import indent as _indent
 
 import matplotlib
+from papyri.gen import dedent_but_first
 import numpy
 
 lines = numpy.__doc__.split("\n")
@@ -18,13 +19,13 @@ and `.pyplot.savefig`, which `` can greatly simplify scripting. An example of ve
 not valid Python assign:: 
 """
 
-
-WHAT = lambda x: "\033[96m" + x + "\033[0m"
-HEADER = lambda x: "\033[95m" + x + "\033[0m"
-BLUE = lambda x: "\033[94m" + x + "\033[0m"
-GREEN = lambda x: "\033[92m" + x + "\033[0m"
-ORANGE = lambda x: "\033[93m" + x + "\033[0m"
-RED = lambda x: "\033[91m" + x + "\033[0m"
+# 3x -> 9x for bright
+WHAT = lambda x: "\033[36m" + x + "\033[0m"
+HEADER = lambda x: "\033[35m" + x + "\033[0m"
+BLUE = lambda x: "\033[34m" + x + "\033[0m"
+GREEN = lambda x: "\033[32m" + x + "\033[0m"
+ORANGE = lambda x: "\033[33m" + x + "\033[0m"
+RED = lambda x: "\033[31m" + x + "\033[0m"
 ENDC = lambda x: "\033[0m" + x + "\033[0m"
 BOLD = lambda x: "\033[1m" + x + "\033[0m"
 UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
@@ -403,6 +404,8 @@ class Block:
 
     """
 
+    COLOR = lambda x:x
+
     def __init__(self, lines, wh, ind, *, reason=None):
         self.lines = Lines(lines)
         self.wh = Lines(wh)
@@ -410,8 +413,8 @@ class Block:
         self.reason = reason
 
     def __repr__(self):
-        return (
-            f"<Block '{len(self.lines)},{len(self.wh)},{len(self.ind)}'> with\n"
+        return type(self).COLOR(
+            f"<{self.__class__.__name__} '{len(self.lines)},{len(self.wh)},{len(self.ind)}'> with\n"
             + indent("\n".join([str(l) for l in self.lines]), "    ")
             + "\n"
             + indent("\n".join([str(w) for w in self.wh]), "    ")
@@ -589,6 +592,19 @@ class Header:
         )
 
 
+class BlockDirective(Block):
+    COLOR = ORANGE
+
+        
+
+class DefListItem(Block):
+    COLOR=BLUE
+
+
+class Example(Block):
+    COLOR = GREEN
+
+        
 def header_pass(block) -> ["blocks"]:
     """
     Check each block for potential header, if found, split (or extract) the given block into a header.
@@ -644,6 +660,30 @@ def header_level_pass(blocks):
 
     return blocks
 
+def example_pass(block):
+    if not type(block) == Block:
+        return [block]
+    if block.lines and block.lines[0].startswith('>>>'):
+        return [Example(block.lines, block.wh, block.ind)]
+    return [block]
+
+
+def deflist_item_pass(block):
+    if not type(block) == Block:
+        return [block]
+    if (len(block.lines) == 1 and (not block.wh) and block.ind):
+        return [DefListItem(block.lines, block.wh, block.ind)]
+    return [block]
+
+def block_directive_pass(block):
+    if not type(block) == Block:
+        return [block]
+    if (len(block.lines) >= 1 and (block.lines[0].startswith('..'))):
+        return [BlockDirective(block.lines, block.wh, block.ind)]
+    return [block]
+
+
+
 
 def get_object(qual):
     parts = qual.split(".")
@@ -667,9 +707,15 @@ def main(what):
 
     ex = get_object(what).__doc__
 
+
+    ex = dedent_but_first(ex)
+
     doc = [Block(*b) for b in make_block_3(Lines(ex.split("\n"))[:])]
     doc = [x for pairs in doc for x in header_pass(pairs)]
     doc = header_level_pass(doc)
+    doc = [x for pairs in doc for x in example_pass(pairs)]
+    doc = [x for pairs in doc for x in block_directive_pass(pairs)]
+    doc = [x for pairs in doc for x in deflist_item_pass(pairs)]
     # TODO: third pass to set the header level for each header.
     # TODO: forth pass to make sections.
 
