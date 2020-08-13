@@ -1,3 +1,60 @@
+"""
+Attempt at a multi-pass CST (concrete syntax tree) RST-ish parser.
+
+This does not (and likely will not) support all of RST syntax, and may support
+syntax that is not in the rst spec, mostly to support Python docstrings.
+
+Goals
+-----
+
+The goal in here is to parse RST while keeping most of the original information
+available in order to be able to _fix_ some of them with minimal of no changes
+to the rest of the original input. This include but not limited to having
+consistent header markers, and whether examples are (or not) indented with
+respect to preceding paragraph.
+
+The second goal is flexibility of parsing rules on a per-section basis;
+Typically numpy doc strings have a different syntax depending on the section you
+are in (Examples, vs Returns, vs Parameters), in what looks like; but is not;
+definition list.
+
+This also should be able to parse and give you a ast/cst without knowing ahead
+of time the type of directive that are registered.
+
+This will likely be used in the project in two forms, a lenient form that try to
+guess as much as possible and suggest update to your style.
+
+A strict form that avoid guessing and give you more, structured data.
+
+
+Implementation
+--------------
+
+The implementation is not meant to be efficient but works in many multiple pass
+that refine the structure of the document in order to potentially swapped out
+for customisation.
+
+Most of the high level split in sections and block is line-based via the
+Line/lines objects that wrap a ``str``, but keep track of the original line
+number and indent/dedent operations.
+
+
+Junk Code
+---------
+
+There is possibly a lot of junk code in there due to multiple experiments.
+
+Correctness
+-----------
+
+Yep, many things are probably wrong; or parsed incorrectly;
+
+When possible if there is an alternative way in the source rst to change the
+format, it's likely the way to go.
+
+Unless your use case is widely adopted it is likely not worse the complexity
+"""
+
 import re
 import sys
 from textwrap import indent as _indent
