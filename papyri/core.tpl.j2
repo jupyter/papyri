@@ -19,6 +19,7 @@ body{
     color: #606c76;
     font-weight: 350;
     line-height: 1.6;
+    max-width: 1000px;
 
 }
           .foo:hover{text-decoration:underline}
@@ -30,13 +31,15 @@ body{
           .signature {font-size:100%; margin-bottom: 2rem; display: block; border:none; background-color: #FFFFFF;
               font-weight:600;}
           h1, h2, h3 {color: #4e4e4e; font-weight:400;
-          margin-bottom: 1rem;}
+              margin-bottom: 1rem;border-bottom: 1px solid var(--nc-bg-3);
+          }
           pre{border-radius:0;
               padding:0.6rem;
           border-left: 3px solid #0070f3}
           dt {font-weight: 400;}
 
-          header{padding-top:0rem; padding-bottom:0rem;}
+          header{padding-top:0rem; padding-bottom:0rem;
+          padding-left: 0;}
           dd::before {
             content: '';
           }
@@ -47,6 +50,7 @@ body{
               padding-top: 0.5rem;
               padding-bottom: 0.5rem;
               display: inline-block; 
+              width: 167px;
 
           }
           brand > i {
@@ -63,6 +67,43 @@ body{
               padding-left: 1rem;
           }
           summary > h2 { display: inline }
+
+          .sidenav {
+  height: 100%; /* Full-height: remove this if you want "auto" height */
+  width: 200px; /* Set the width of the sidebar */
+  position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+  z-index: -1; /* Stay on top */
+  top: 0; /* Stay at the top */
+  left: 0;
+  background-color: var(--nc-bg-2);; /* Black */
+  border-right: thin solid #ccc;
+  overflow-x: hidden; /* Disable horizontal scroll */
+  padding-top: 4rem;
+          }
+
+          .sidenav a {
+            padding: 6px 8px 6px 16px;
+            text-decoration: none;
+            color: #818181;
+            display: block;
+          }
+          .sidenav i{
+              font-size: 100;
+              padding-left: 3.5rem;
+              padding-right: 3.5rem;
+              padding-bottom: .5rem;
+              border-bottom: solid thin #DDD; 
+          }
+          .container {
+              padding-left: 210px;
+
+          }
+
+          ::selection {
+	/* Set background color for selected text */
+                background: #59b4fd;
+                color: var(--nc-ac-tx);
+            }
     </style>
 </head>
 <body>
@@ -72,7 +113,21 @@ body{
         
         <brand><i class="fab fa-python"></i>PaPyRi</brand>
         <nav> / pydata / {{module}} / {{version}} / api / {{qa}} </nav>
-</header>
+    </header>
+<div class='container'>
+    <div class="sidenav">
+    <i class="fab fa-python"></i>
+    <a href="#">Project Logo ^</a>
+    <a href="#">{{module}}</a>
+    <a href="#">{{version}}</a>
+    <a href="#">Authors:</a>
+    <a href="#">Source</a>
+    <a href="#">Homepage</a>
+    <a href="#">Fundings</a>
+    <a href="#">Stars</a>
+    <a href="#">Forks</a>
+    <a href="#">Related</a>
+</div>
 
 {% macro example(entries) -%}
     {{'>>> ' -}}
@@ -206,5 +261,6 @@ body{
     {% endfor %}
     {% endif%}
 {% endif %}
+</div>
 </body>
 </html>
