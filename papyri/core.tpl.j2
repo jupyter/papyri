@@ -4,6 +4,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
     <script type="text/x-mathjax-config">
         MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
@@ -11,19 +13,54 @@
     <script type="text/javascript" async
         src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
     </script>
-    <style>
+<style>
+body{
+    font-family: 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    color: #606c76;
+    font-weight: 350;
+    line-height: 1.6;
+
+}
           .foo:hover{text-decoration:underline}
-          .foo{font-weight:bold; color:black}
-          .exists{font-weight:bold; color:black;text-decoration:none;}
-          .local{font-weight:bold; color:blue;text-decoration:none;}
+          .foo{font-weight:bold; color:#4e4e4e}
+          .exists{font-weight:bold; color:#4e4e4e;text-decoration:none;}
+          .local{font-weight:bold; color:#1e6f04;text-decoration:none;}
           .exists:hover{text-decoration:underline;color:black}
           .missing,.missing:hover{color:darkred;text-decoration:none;font-weight:normal}
-          header{padding-top:1rem; padding-bottom:1rem;}
+          .signature {font-size:100%; margin-bottom: 2rem; display: block; border:none; background-color: #FFFFFF;
+              font-weight:600;}
+          h1, h2, h3 {color: #4e4e4e; font-weight:400;
+          margin-bottom: 1rem;}
+          pre{border-radius:0;
+              padding:0.6rem;
+          border-left: 3px solid #0070f3}
+          dt {font-weight: 400;}
+
+          header{padding-top:0rem; padding-bottom:0rem;}
           dd::before {
             content: '';
           }
+          header > brand, header>:first-child {
+              border-right: 1px solid #ccc;
+              border-left: 1px solid #ccc;
+              padding: 1rem;
+              padding-top: 0.5rem;
+              padding-bottom: 0.5rem;
+              display: inline-block; 
+
+          }
+          brand > i {
+              padding-right: 0.5rem;
+
+        }
+          nav{display:inline;
+          padding-left: 1rem;
+          }
+
           dd {
-               margin-left: 40px;
+              margin-left: 1rem;
+              border-left:  solid #ddd;
+              padding-left: 1rem;
           }
           summary > h2 { display: inline }
     </style>
@@ -31,7 +68,10 @@
 <body>
 
     <header>
-        <nav>/ pydata / {{module}} / {{version}} / api / {{qa}} </nav>
+        
+        
+        <brand><i class="fab fa-python"></i>PaPyRi</brand>
+        <nav> / pydata / {{module}} / {{version}} / api / {{qa}} </nav>
 </header>
 
 {% macro example(entries) -%}
@@ -78,9 +118,9 @@
 
 {% macro ref(r) -%}
     {% if r.exists %}
-                <code><a href="{{r.ref}}{{ext}}" class='exists'>{{r.name}}</a></code>
+                <a href="{{r.ref}}{{ext}}" class='exists'>{{r.name}}</a>
     {% else %}
-                <code class='missing'>{{r.name}}</code>
+                <b class='missing'>{{r.name}}</b>
     {% endif %}
 {%- endmacro %}
 
@@ -92,7 +132,7 @@
     {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
         {{render_paragraph(doc[section])}}
     {% elif section in ['Signature'] %}
-       <code>{{doc[section]}}</code>
+       <code class='signature'>{{doc[section]}}</code>
     {% elif section in ['See Also'] %}
         {% for sa in doc.see_also %}
             <dl>
@@ -113,7 +153,7 @@
             {% endif %}
             
          {% endfor %}
-         See:
+         See :
          {% for r in doc.refs %}
             {% set ref, exists = resolve(r) %}
             <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
@@ -123,9 +163,9 @@
        <dl>
            {% for p in doc[section] %}
             {% if p[0] %}
-                <dt><code id={{p[0]}}>{{p[0]}}</code>:{{p[1]}}</dt>
+                <dt><a id={{p[0]}}>{{p[0]}}</a> : {{p[1]}}</dt>
             {% else %}
-                <dt><code>{{p[1]}}</code></dt>
+                <dt>{{p[1]}}</dt>
             {% endif %}
            <dd>
            {{render_paragraph(p[2])}}
