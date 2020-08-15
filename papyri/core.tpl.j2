@@ -53,6 +53,7 @@ body{
               width: 167px;
 
           }
+          brand > a {color:#606c76}
           brand > i {
               padding-right: 0.5rem;
 
@@ -111,8 +112,8 @@ body{
     <header>
         
         
-        <brand><i class="fab fa-python"></i>PaPyRi</brand>
-        <nav> / pydata / {{module}} / {{version}} / api / {{qa}} </nav>
+        <brand><i class="fab fa-python"></i><a href='https://github.com/carreau/papyri'>PaPyRi</a></brand>
+        <nav> / p / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a> / <a>{{qa}}</a> </nav>
     </header>
 <div class='container'>
     <div class="sidenav">
@@ -127,6 +128,16 @@ body{
     <a href="#">Stars</a>
     <a href="#">Forks</a>
     <a href="#">Related</a>
+    <hr/>
+    {% for section in doc.sections if doc[section] %}
+    {% if section not in ['Extended Summary','Signature', 'Summary'] %}
+        <a href="#section-{{section}}">{{section}}</a>
+    {% endif %}
+    {% endfor %}
+    {% if backrefs[0] or backrefs[1] %}
+        <a href="#section-backrefs">BackRef</a>
+    {% endif %}
+
 </div>
 
 {% macro example(entries) -%}
@@ -182,7 +193,7 @@ body{
 
 {% for section in doc.sections if doc[section] %}
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
-        <h3>{{section}}</h3>
+        <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
     {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
         {{render_paragraph(doc[section])}}
@@ -237,7 +248,7 @@ body{
    {% endif %}
 {% endfor%}
 {% if backrefs[0] or backrefs[1] %}
-    <h1>Back References</h1>
+    <h1 id='section-backrefs'>Back References</h1>
     {% if backrefs[0] is not none %}
     {% for r in backrefs[0] %}
         <a class='{{exists(r)}}' href='{{r}}{{ext}}'>{{r}}</a>
