@@ -15,7 +15,6 @@ from .crosslink import SeeAlsoItem, load_one, resolve_
 from .take2 import Lines, Paragraph, lines, make_block_3
 from .utils import progress
 
-app = Flask(__name__)
 
 
 class CleanLoader(FileSystemLoader):
@@ -62,6 +61,19 @@ def _route(ref, ingest_dir):
     known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
 
     file_ = ingest_dir / f"{ref}.json"
+
+    family = sorted(list(ingest_dir.glob('*.json')))
+    family = [str(f.name)[:-5] for f in family]
+    parts = ref.split('.')+['...']
+    siblings = {}
+    cpath = ''
+    # TODO: move this at ingestion time for all the non-top-level.
+    for i,part in enumerate(parts):
+        sib = list(sorted(set(['.'.join(s.split('.')[:i+1]) for s in family if s.startswith(cpath)])))
+        cpath += part+'.'
+        
+        siblings[part] = [(s, s.split('.')[-1]) for s in sib]
+
     if file_.exists():
         with open(ingest_dir / f"{ref}.json") as f:
             bytes_ = f.read()
@@ -77,7 +89,7 @@ def _route(ref, ingest_dir):
 
         env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
 
-        return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
+        return render_one(template=template, ndoc=ndoc, qa=ref, ext="", parts=siblings)
     else:
         known_refs = [str(s.name)[:-5] for s in ingest_dir.glob(f"{ref}*.json")]
         brpath = Path(ingest_dir / "__phantom__" / f"{ref}.json")
@@ -89,11 +101,12 @@ def _route(ref, ingest_dir):
         return error.render(subs=known_refs, backrefs=list(set(br)))
 
 
-app.route("/<ref>")(lambda ref: _route(ref, ingest_dir))
 
 
 def serve():
-    app.run()
+    app = Flask(__name__)
+    app.route("/<ref>")(lambda ref: _route(ref, ingest_dir))
+    app.run(debug=True)
 
 
 def paragraph(lines):
@@ -125,7 +138,7 @@ def paragraphs(lines):
     return acc
 
 
-def render_one(template, ndoc, qa, ext):
+def render_one(template, ndoc, qa, ext, parts={}):
     br = ndoc.backrefs
     if len(br) > 30:
 
@@ -143,6 +156,7 @@ def render_one(template, ndoc, qa, ext):
         module=qa.split(".")[0],
         backrefs=backrefs,
         ext=ext,
+        parts = parts
     )
 
 

@@ -310,6 +310,14 @@ class Collector:
         self.visit(self.root)
         return self.obj
 
+class DocBlob:
+    """
+    An object containing information about the documentation of an arbitrary object.
+
+    Instead of docblob begin a NumpyDocString, I'm thinking of them having a numpydocstring. 
+    This helps with arbitraty documents (module, examples files) that cannot be parsed by Numpydoc, 
+    as well as link to external references, like images generated.
+    """
 
 class Gen:
     def __init__(self):
@@ -375,8 +383,8 @@ class Gen:
                 )
                 t2 = timer(p2, taski)
             for qa, a in collected.items():
-                sd = (qa[:19] + "..") if len(qa) > 21 else qa
-                p2.update(taskp, description=sd.ljust(17))
+                short_description = (qa[:19] + "..") if len(qa) > 21 else qa
+                p2.update(taskp, description=short_description.ljust(17))
                 ddd = a.__doc__
                 if ddd is None:
                     p2.advance(taskp)
