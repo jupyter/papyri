@@ -129,6 +129,8 @@ body{
     <a href="#">Forks</a>
     <a href="#">Related</a>
     <hr/>
+    <a>Narrative Docs (TBD)</a>
+    <hr/>
     {% for section in doc.sections if doc[section] %}
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
         <a href="#section-{{section}}">{{section}}</a>
