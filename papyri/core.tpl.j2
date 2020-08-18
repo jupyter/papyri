@@ -106,6 +106,8 @@ body{
                 color: var(--nc-ac-tx);
           }
 
+          img {max-width: 60%;}
+
         /* Dropdown Button */
 /* The container <div> - needed to position the dropdown content */
 .dropdown {
@@ -263,7 +265,9 @@ body{
     {% elif section in ['Examples'] %}
         {% for type,data in doc.edata %}
             {% if type=='text' %}
-             {{render_paragraph([data])}}
+                {{render_paragraph([data])}}
+            {% elif type == 'fig' %}
+                <img src="img/{{data}}"/>
             {% else %}
              <pre>{{example(data[0]) -}}
 

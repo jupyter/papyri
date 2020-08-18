@@ -101,11 +101,17 @@ def _route(ref, ingest_dir):
         return error.render(subs=known_refs, backrefs=list(set(br)))
 
 
+def img(subpath):
+    assert subpath.endswith('png')
+    with open('/'+subpath, 'rb') as f:
+        return f.read()
+
 
 
 def serve():
     app = Flask(__name__)
     app.route("/<ref>")(lambda ref: _route(ref, ingest_dir))
+    app.route("/img/<path:subpath>")(img)
     app.run(debug=True)
 
 

@@ -140,6 +140,7 @@ def parse_script(script, ns=None, infer=None, prev=''):
         yield text, ref
     warnings.simplefilter("default", UserWarning)
 
+counter = 0
 
 def get_example_data(doc, infer=True, obj=None):
     """Extract example section data from a NumpyDocstring
@@ -164,17 +165,39 @@ def get_example_data(doc, infer=True, obj=None):
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     edata = []
     import matplotlib.pyplot as plt
+    from matplotlib.backend_bases import FigureManagerBase
+    from matplotlib import cbook, _pylab_helpers
     acc= ''
+    ns={"np": np, "plt": plt, obj.__name__:obj}
     for b in blocks:
         for item in b:
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
+                fig = None
+                try:
+                    with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
+                        exec(script, ns)
+                    fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                    if fig_managers:
+                        print('figs !', fig_managers)
+                        global counter
+                        counter += 1
+                        figman = next(iter(fig_managers))
+                        from pathlib import Path
+                        p = Path('.') / f'fig-{obj.__name__}-{counter}.png'
+                        figman.canvas.figure.savefig(p, dpi=300, bbox_inches='tight')
+                        plt.close('all')
+                        fig = str(p.absolute())
+
+                except:
+                    pass
                 entries = list(
-                    parse_script(script, ns={"np": np, "plt": plt, obj.__name__:obj}, infer=infer, prev=acc)
+                    parse_script(script, ns =ns, infer=infer, prev=acc)
                 )
                 acc += '\n'+script
                 edata.append(["code", (entries, "\n".join(item.out))])
-
+                if fig:
+                    edata.append(["fig", fig])
             else:
                 edata.append(["text", "\n".join(item.out)])
     return edata
@@ -275,7 +298,7 @@ def full_qual(obj):
 
 class Collector:
     def __init__(self, root):
-        assert isinstance(root, ModuleType)
+        assert isinstance(root, ModuleType), root
         self.root = root
         self.obj = dict()
         self.stack = [self.root.__name__]

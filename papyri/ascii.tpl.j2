@@ -81,6 +81,8 @@
    |   |   |
    |   |   |    {{render_paragraph([data])}}
    |   |   |
+   |   |   |{% elif type=='fig' %}
+   |   |   |   &lt;Image&gt;
    |   |   |{% else %}
    |   |   |    {{ example(data[0]) }}
    |   |   |    {{ data[1]}}
