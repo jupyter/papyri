@@ -184,7 +184,8 @@ def get_example_data(doc, infer=True, obj=None):
                         counter += 1
                         figman = next(iter(fig_managers))
                         from pathlib import Path
-                        p = Path('.') / f'fig-{obj.__name__}-{counter}.png'
+                        import os.path
+                        p = Path(os.path.expanduser('~/.papyri')) / f'fig-{obj.__name__}-{counter}.png'
                         figman.canvas.figure.savefig(p, dpi=300, bbox_inches='tight')
                         plt.close('all')
                         fig = str(p.absolute())
