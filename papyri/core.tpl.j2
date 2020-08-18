@@ -20,6 +20,7 @@ body{
     font-weight: 350;
     line-height: 1.6;
     max-width: 1000px;
+    margin-left:0;
 
 }
           .foo:hover{text-decoration:underline}
@@ -39,7 +40,13 @@ body{
           dt {font-weight: 400;}
 
           header{padding-top:0rem; padding-bottom:0rem;
-          padding-left: 0;}
+              padding-left: 0;
+position: fixed;
+top: 30px;
+left:0; 
+    width: 100%;
+
+          }
           dd::before {
             content: '';
           }
@@ -50,7 +57,7 @@ body{
               padding-top: 0.5rem;
               padding-bottom: 0.5rem;
               display: inline-block; 
-              width: 167px;
+              width: 174px;
 
           }
           brand > a {color:#606c76}
@@ -97,6 +104,7 @@ body{
           }
           .container {
               padding-left: 210px;
+              padding-top: 30px;
 
           }
 
@@ -181,7 +189,7 @@ body{
     <a href="#">Forks</a>
     <a href="#">Related</a>
     <hr/>
-    <a>Narrative Docs (TBD)</a>
+    <a>Narrative Docs</a>
     <hr/>
     {% for section in doc.sections if doc[section] %}
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}

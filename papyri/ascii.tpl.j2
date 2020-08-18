@@ -65,7 +65,7 @@
    |{% endif %}
    |{% if section in ['Summary', 'Extended Summary', 'Notes'] %}
    |
-   |     {{render_paragraph(doc[section])}}
+   |     |{{render_paragraph(doc[section]) | wordwrap | indent(width=8)}}
    |
    |{% elif section in ['Signature'] %}
    |   |{{ bold(underline(doc[section]))}}
@@ -73,7 +73,7 @@
    |{% elif section in ['See Also'] %}
    |   |{% for sa in doc.see_also %}
    |   |     {{bold(ref(sa.name))}}
-   |   |         {{render_paragraph(sa.descriptions)}}
+   |   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
    |   |{% endfor %}
    |{% elif section in ['Examples'] %}
    |   |{% for type,data in doc.edata %}
@@ -101,7 +101,7 @@
    |   |   |{% else %}
    |   |   |    {{green(p[1])}}
    |   |   |{% endif %}
-   |   |   |        {{render_paragraph(p[2])}}
+   |   |   |       {{render_paragraph(p[2]) | wordwrap | indent(width=8) }}
    |   |{% endfor %}
    |{% else %}
    |    {% if doc[section] %}

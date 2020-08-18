@@ -41,6 +41,12 @@ def until_ruler(doc):
 
 
 def _route(ref, ingest_dir):
+    if ref == 'favicon.ico':
+        here = Path(os.path.dirname(__file__))
+        with open( here / ref, 'rb') as f:
+            return f.read()
+
+
     if ref.endswith(".html"):
         ref = ref[:-5]
     if ref == "favicon.ico":
