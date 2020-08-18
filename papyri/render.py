@@ -16,7 +16,6 @@ from .take2 import Lines, Paragraph, lines, make_block_3
 from .utils import progress
 
 
-
 class CleanLoader(FileSystemLoader):
     def get_source(self, *args, **kwargs):
         (source, filename, uptodate) = super().get_source(*args, **kwargs)
@@ -41,11 +40,10 @@ def until_ruler(doc):
 
 
 def _route(ref, ingest_dir):
-    if ref == 'favicon.ico':
+    if ref == "favicon.ico":
         here = Path(os.path.dirname(__file__))
-        with open( here / ref, 'rb') as f:
+        with open(here / ref, "rb") as f:
             return f.read()
-
 
     if ref.endswith(".html"):
         ref = ref[:-5]
@@ -68,17 +66,27 @@ def _route(ref, ingest_dir):
 
     file_ = ingest_dir / f"{ref}.json"
 
-    family = sorted(list(ingest_dir.glob('*.json')))
+    family = sorted(list(ingest_dir.glob("*.json")))
     family = [str(f.name)[:-5] for f in family]
-    parts = ref.split('.')+['...']
+    parts = ref.split(".") + ["..."]
     siblings = {}
-    cpath = ''
+    cpath = ""
     # TODO: move this at ingestion time for all the non-top-level.
-    for i,part in enumerate(parts):
-        sib = list(sorted(set(['.'.join(s.split('.')[:i+1]) for s in family if s.startswith(cpath)])))
-        cpath += part+'.'
-        
-        siblings[part] = [(s, s.split('.')[-1]) for s in sib]
+    for i, part in enumerate(parts):
+        sib = list(
+            sorted(
+                set(
+                    [
+                        ".".join(s.split(".")[: i + 1])
+                        for s in family
+                        if s.startswith(cpath)
+                    ]
+                )
+            )
+        )
+        cpath += part + "."
+
+        siblings[part] = [(s, s.split(".")[-1]) for s in sib]
 
     if file_.exists():
         with open(ingest_dir / f"{ref}.json") as f:
@@ -108,10 +116,9 @@ def _route(ref, ingest_dir):
 
 
 def img(subpath):
-    assert subpath.endswith('png')
-    with open('/'+subpath, 'rb') as f:
+    assert subpath.endswith("png")
+    with open("/" + subpath, "rb") as f:
         return f.read()
-
 
 
 def serve():
@@ -168,7 +175,7 @@ def render_one(template, ndoc, qa, ext, parts={}):
         module=qa.split(".")[0],
         backrefs=backrefs,
         ext=ext,
-        parts = parts
+        parts=parts,
     )
 
 

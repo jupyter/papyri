@@ -74,7 +74,7 @@ def pos_to_nl(script: str, pos: int) -> (int, int):
             return ln, rest
 
 
-def parse_script(script, ns=None, infer=None, prev=''):
+def parse_script(script, ns=None, infer=None, prev=""):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -108,11 +108,11 @@ def parse_script(script, ns=None, infer=None, prev=''):
 
     warnings.simplefilter("ignore", UserWarning)
 
-    l_delta = len(prev.split('\n'))
-    contextscript = prev+'\n'+script
+    l_delta = len(prev.split("\n"))
+    contextscript = prev + "\n" + script
     if ns:
         jeds.append(jedi.Interpreter(contextscript, namespaces=[ns]))
-    jeds.append(jedi.Script(prev+'\n'+script))
+    jeds.append(jedi.Script(prev + "\n" + script))
     P = PythonLexer()
 
     for index, type_, text in P.get_tokens_unprocessed(script):
@@ -122,11 +122,11 @@ def parse_script(script, ns=None, infer=None, prev=''):
             ref = None
             for jed in jeds:
                 try:
-                    if infer and (text not in (' .=()[],')) and text.isidentifier():
+                    if infer and (text not in (" .=()[],")) and text.isidentifier():
                         inf = jed.infer(line_n + 1, col_n)
                         if inf:
                             ref = inf[0].full_name
-                            #if ref.startswith('builtins'):
+                            # if ref.startswith('builtins'):
                             #    ref = ''
                     else:
                         ref = ""
@@ -140,7 +140,9 @@ def parse_script(script, ns=None, infer=None, prev=''):
         yield text, ref
     warnings.simplefilter("default", UserWarning)
 
+
 counter = 0
+
 
 def get_example_data(doc, infer=True, obj=None):
     """Extract example section data from a NumpyDocstring
@@ -167,8 +169,9 @@ def get_example_data(doc, infer=True, obj=None):
     import matplotlib.pyplot as plt
     from matplotlib.backend_bases import FigureManagerBase
     from matplotlib import cbook, _pylab_helpers
-    acc= ''
-    ns={"np": np, "plt": plt, obj.__name__:obj}
+
+    acc = ""
+    ns = {"np": np, "plt": plt, obj.__name__: obj}
     for b in blocks:
         for item in b:
             if isinstance(item, InOut):
@@ -179,23 +182,25 @@ def get_example_data(doc, infer=True, obj=None):
                         exec(script, ns)
                     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                     if fig_managers:
-                        print('figs !', fig_managers)
+                        print("figs !", fig_managers)
                         global counter
                         counter += 1
                         figman = next(iter(fig_managers))
                         from pathlib import Path
                         import os.path
-                        p = Path(os.path.expanduser('~/.papyri')) / f'fig-{obj.__name__}-{counter}.png'
-                        figman.canvas.figure.savefig(p, dpi=300, bbox_inches='tight')
-                        plt.close('all')
+
+                        p = (
+                            Path(os.path.expanduser("~/.papyri"))
+                            / f"fig-{obj.__name__}-{counter}.png"
+                        )
+                        figman.canvas.figure.savefig(p, dpi=300, bbox_inches="tight")
+                        plt.close("all")
                         fig = str(p.absolute())
 
                 except:
                     pass
-                entries = list(
-                    parse_script(script, ns =ns, infer=infer, prev=acc)
-                )
-                acc += '\n'+script
+                entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
+                acc += "\n" + script
                 edata.append(["code", (entries, "\n".join(item.out))])
                 if fig:
                     edata.append(["fig", fig])
@@ -348,6 +353,7 @@ class Collector:
         self.visit(self.root)
         return self.obj
 
+
 class DocBlob:
     """
     An object containing information about the documentation of an arbitrary object.
@@ -356,6 +362,7 @@ class DocBlob:
     This helps with arbitraty documents (module, examples files) that cannot be parsed by Numpydoc, 
     as well as link to external references, like images generated.
     """
+
 
 class Gen:
     def __init__(self):
