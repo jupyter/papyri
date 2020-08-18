@@ -8,7 +8,7 @@ from ..render import _ascii_render, _route
 
 def test_gen_numpy():
     with TemporaryDirectory() as t:
-        NFUNC = 25
+        NFUNC = 26
         t = Path(t)
         g = Gen()
         g.cache_dir = t / "cache"
