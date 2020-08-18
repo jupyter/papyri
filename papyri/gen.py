@@ -12,7 +12,6 @@ from textwrap import dedent
 from types import FunctionType, ModuleType
 
 import jedi
-import matplotlib.pyplot as plt
 import numpy as np
 from numpy import array2string
 from pygments.lexers import PythonLexer
@@ -75,7 +74,7 @@ def pos_to_nl(script: str, pos: int) -> (int, int):
             return ln, rest
 
 
-def parse_script(script, ns=None, infer=None):
+def parse_script(script, ns=None, infer=None, prev=''):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -88,6 +87,8 @@ def parse_script(script, ns=None, infer=None):
         extra namesapce to use with jedi's Interpreter.
     infer : bool
         whether to run jedi type inference that can be quite time consuming.
+    prev : str
+        previsou lines that lead to this.
 
     Yields
     ------
@@ -106,31 +107,41 @@ def parse_script(script, ns=None, infer=None):
     import warnings
 
     warnings.simplefilter("ignore", UserWarning)
+
+    l_delta = len(prev.split('\n'))
+    contextscript = prev+'\n'+script
     if ns:
-        jeds.append(jedi.Interpreter(script, namespaces=[ns]))
-    jeds.append(jedi.Script(script))
+        jeds.append(jedi.Interpreter(contextscript, namespaces=[ns]))
+    jeds.append(jedi.Script(prev+'\n'+script))
     P = PythonLexer()
 
     for index, type_, text in P.get_tokens_unprocessed(script):
-        a, b = pos_to_nl(script, index)
+        line_n, col_n = pos_to_nl(script, index)
+        line_n += l_delta
         try:
             ref = None
             for jed in jeds:
                 try:
-                    if infer:
-                        ref = jed.infer(a + 1, b)[0].full_name
+                    if infer and (text not in (' .=()[],')) and text.isidentifier():
+                        inf = jed.infer(line_n + 1, col_n)
+                        if inf:
+                            ref = inf[0].full_name
+                            #if ref.startswith('builtins'):
+                            #    ref = ''
                     else:
                         ref = ""
                 except (AttributeError, TypeError, Exception):
+                    raise
                     pass
                 break
         except IndexError:
+            raise
             ref = ""
         yield text, ref
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, infer=True):
+def get_example_data(doc, infer=True, obj=None):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -152,13 +163,16 @@ def get_example_data(doc, infer=True):
     """
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     edata = []
+    import matplotlib.pyplot as plt
+    acc= ''
     for b in blocks:
         for item in b:
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
                 entries = list(
-                    parse_script(script, ns={"np": np, "plt": plt}, infer=infer)
+                    parse_script(script, ns={"np": np, "plt": plt, obj.__name__:obj}, infer=infer, prev=acc)
                 )
+                acc += '\n'+script
                 edata.append(["code", (entries, "\n".join(item.out))])
 
             else:
@@ -425,9 +439,9 @@ class Gen:
                     raise ValueError(f"{qa} already visited")
                 if infer:
                     with t2():
-                        ndoc.edata = get_example_data(ndoc, infer)
+                        ndoc.edata = get_example_data(ndoc, infer, obj=a)
                 else:
-                    ndoc.edata = get_example_data(ndoc, infer)
+                    ndoc.edata = get_example_data(ndoc, infer, obj=a)
 
                 ndoc.refs = list(
                     {
