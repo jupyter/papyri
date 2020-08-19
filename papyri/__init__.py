@@ -35,6 +35,7 @@ def ingest(name, check):
 @click.option("--exec/--no-exec", default=False)
 def gen(names, infer, exec):
     from papyri.gen import gen_main
+
     gen_main(names, infer=infer, exec_=exec)
 
 

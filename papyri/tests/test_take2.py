@@ -1,15 +1,14 @@
 import pytest
 
 from ..take2 import (
+    Block,
+    BlockDirective,
+    DefListItem,
+    Example,
     Header,
     Lines,
     main,
     make_block_3,
-    Header,
-    BlockDirective,
-    Example,
-    Block,
-    DefListItem,
 )
 
 examples = [

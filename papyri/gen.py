@@ -179,7 +179,9 @@ def get_example_data(doc, infer=True, obj=None, exec_=True):
                 fig = None
                 if exec_:
                     try:
-                        with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
+                        with cbook._setattr_cm(
+                            FigureManagerBase, show=lambda self: None
+                        ):
                             exec(script, ns)
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         if fig_managers:
@@ -194,7 +196,9 @@ def get_example_data(doc, infer=True, obj=None, exec_=True):
                                 Path(os.path.expanduser("~/.papyri"))
                                 / f"fig-{obj.__name__}-{counter}.png"
                             )
-                            figman.canvas.figure.savefig(p, dpi=300, bbox_inches="tight")
+                            figman.canvas.figure.savefig(
+                                p, dpi=300, bbox_inches="tight"
+                            )
                             plt.close("all")
                             fig = str(p.absolute())
 
@@ -472,12 +476,14 @@ class Gen:
                 try:
                     if infer:
                         with t2():
-                            ndoc.edata = get_example_data(ndoc, infer, obj=a, exec_=exec_)
+                            ndoc.edata = get_example_data(
+                                ndoc, infer, obj=a, exec_=exec_
+                            )
                     else:
                         ndoc.edata = get_example_data(ndoc, infer, obj=a, exec_=exec_)
                 except Exception:
                     ndoc.edata = []
-                    print('Error getting example date in ', qa)
+                    print("Error getting example date in ", qa)
 
                 ndoc.refs = list(
                     {

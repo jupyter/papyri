@@ -60,8 +60,9 @@ import sys
 from textwrap import indent as _indent
 
 import matplotlib
-from papyri.gen import dedent_but_first
 import numpy
+
+from papyri.gen import dedent_but_first
 
 lines = numpy.__doc__.split("\n")
 

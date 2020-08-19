@@ -7,8 +7,9 @@ from types import ModuleType
 
 from flask import Flask
 from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
-from numpydoc.docscrape import Parameter
 from velin import NumpyDocString
+
+from numpydoc.docscrape import Parameter
 
 from .config import base_dir, html_dir, ingest_dir
 from .crosslink import SeeAlsoItem, load_one, resolve_

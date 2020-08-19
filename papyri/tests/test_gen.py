@@ -13,7 +13,7 @@ def test_gen_numpy():
         g = Gen()
         g.cache_dir = t / "cache"
         g.cache_dir.mkdir()
-        g.do_one_mod(["papyri"], infer=False)
+        g.do_one_mod(["papyri"], infer=False, exec_=False)
         import time
 
         num = [x.name[:-5] for x in (t / "cache").glob("papyri/*.json")]
