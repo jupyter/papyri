@@ -144,7 +144,7 @@ def parse_script(script, ns=None, infer=None, prev=""):
 counter = 0
 
 
-def get_example_data(doc, infer=True, obj=None):
+def get_example_data(doc, infer=True, obj=None, exec_=True):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -177,28 +177,29 @@ def get_example_data(doc, infer=True, obj=None):
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
                 fig = None
-                try:
-                    with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
-                        exec(script, ns)
-                    fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                    if fig_managers:
-                        print("figs !", fig_managers)
-                        global counter
-                        counter += 1
-                        figman = next(iter(fig_managers))
-                        from pathlib import Path
-                        import os.path
+                if exec_:
+                    try:
+                        with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
+                            exec(script, ns)
+                        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                        if fig_managers:
+                            print("figs !", fig_managers)
+                            global counter
+                            counter += 1
+                            figman = next(iter(fig_managers))
+                            from pathlib import Path
+                            import os.path
 
-                        p = (
-                            Path(os.path.expanduser("~/.papyri"))
-                            / f"fig-{obj.__name__}-{counter}.png"
-                        )
-                        figman.canvas.figure.savefig(p, dpi=300, bbox_inches="tight")
-                        plt.close("all")
-                        fig = str(p.absolute())
+                            p = (
+                                Path(os.path.expanduser("~/.papyri"))
+                                / f"fig-{obj.__name__}-{counter}.png"
+                            )
+                            figman.canvas.figure.savefig(p, dpi=300, bbox_inches="tight")
+                            plt.close("all")
+                            fig = str(p.absolute())
 
-                except:
-                    pass
+                    except:
+                        pass
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
                 edata.append(["code", (entries, "\n".join(item.out))])
@@ -245,11 +246,11 @@ def normalise_ref(ref):
     return ref
 
 
-def gen_main(names, infer):
+def gen_main(names, infer, exec_):
     """
     main entry point
     """
-    Gen().do_one_mod(names, infer)
+    Gen().do_one_mod(names, infer, exec_)
 
 
 def timer(progress, task):
@@ -380,7 +381,7 @@ class Gen:
         with (self.cache_dir / root / f"{path}.json").open("w") as f:
             f.write(data)
 
-    def do_one_mod(self, names, infer):
+    def do_one_mod(self, names, infer, exec_):
 
         p = lambda: Progress(
             TextColumn("[progress.description]{task.description}", justify="right"),
@@ -468,11 +469,15 @@ class Gen:
 
                 if getattr(nvisited_items, qa, None):
                     raise ValueError(f"{qa} already visited")
-                if infer:
-                    with t2():
-                        ndoc.edata = get_example_data(ndoc, infer, obj=a)
-                else:
-                    ndoc.edata = get_example_data(ndoc, infer, obj=a)
+                try:
+                    if infer:
+                        with t2():
+                            ndoc.edata = get_example_data(ndoc, infer, obj=a, exec_=exec_)
+                    else:
+                        ndoc.edata = get_example_data(ndoc, infer, obj=a, exec_=exec_)
+                except Exception:
+                    ndoc.edata = []
+                    print('Error getting example date in ', qa)
 
                 ndoc.refs = list(
                     {

@@ -32,10 +32,10 @@ def ingest(name, check):
 @click.command()
 @click.argument("names", nargs=-1)
 @click.option("--infer/--no-infer", default=True)
-def gen(names, infer):
+@click.option("--exec/--no-exec", default=False)
+def gen(names, infer, exec):
     from papyri.gen import gen_main
-
-    gen_main(names, infer=infer)
+    gen_main(names, infer=infer, exec_=exec)
 
 
 @click.command()

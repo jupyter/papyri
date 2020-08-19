@@ -288,7 +288,7 @@ left:0;
             {% set ref, exists = resolve(r) %}
             <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
          {% endfor %}
-   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
+   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters'] %}
 
        <dl>
            {% for p in doc[section] %}
