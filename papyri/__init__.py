@@ -42,8 +42,9 @@ def gen(names, infer, exec):
 @click.command()
 def render():
     from .render import main as m2
+    import trio
 
-    m2()
+    trio.run(m2)
 
 
 @click.command()

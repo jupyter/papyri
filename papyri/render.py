@@ -23,23 +23,39 @@ from .utils import progress
 class BaseStore:
 
     def __init__(self, path):
+        if not isinstance(path, Path):
+            path = Path(path)
+        assert isinstance(path, Path)
         self.path = path
 
     def __truediv__(self, other):
-        return Store(self.path + '/' + other)
+        return type(self)(self.path / other)
 
     def __str__(self):
-        return self.path
+        return str(self.path)
 
     def exists(self):
-        return Path(self.path).exists()
+        return self.path.exists()
 
-    def read_text(self):
-        return Path(self.path).read_text()
+    async def read_text(self):
+        return self.path.read_text()
 
 
     def glob(self, arg):
-        return Path(self.path).glob(arg)
+        return [type(self)(x) for x in self.path.glob(arg)]
+
+    @property
+    def name(self):
+        return self.path.name
+
+    def __lt__(self, other):
+        return self.path < other.path
+
+    def __le__(self, other):
+        return self.path <= other.path
+
+    def __eq__(self, other):
+        return self.path == other.path
 
 
 class Store(BaseStore):pass
@@ -116,10 +132,10 @@ async def _route(ref, store):
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
 
     if file_.exists():
-        bytes_ = (store / f"{ref}.json").read_text()
+        bytes_ = await ((store / f"{ref}.json").read_text())
         brpath = (store / f"{ref}.br")
         if brpath.exists():
-            br = brpath.read_text()
+            br = await brpath.read_text()
         else:
             br = None
         ndoc = load_one(bytes_, br)
@@ -134,7 +150,7 @@ async def _route(ref, store):
         known_refs = [str(s.name)[:-5] for s in store.glob(f"{ref}*.json")]
         brpath =(store / "__phantom__" / f"{ref}.json")
         if brpath.exists():
-            br = json.loads(brpath.read_text())
+            br = json.loads(await brpath.read_text())
         else:
             br = []
         print("br:", br, type(br))
@@ -221,10 +237,10 @@ async def _ascii_render(name, store=ingest_dir):
     template = env.get_template("ascii.tpl.j2")
 
     known_ref = [x.name[:-5] for x in store.glob("*")]
-    bytes_ = (store / f"{ref}.json").read_text()
+    bytes_ = await (store / f"{ref}.json").read_text()
     brpath = (store / f"{ref}.br")
     if brpath.exists():
-        br = brpath.read_text()
+        br = await brpath.read_text()
     else:
         br = None
     ndoc = load_one(bytes_, br)
@@ -241,7 +257,7 @@ async def ascii_render(*args, **kwargs):
     print(await _ascii_render(*args, **kwargs))
 
 
-def main():
+async def main():
     # nvisited_items = {}
     files = os.listdir(ingest_dir)
 
@@ -261,10 +277,10 @@ def main():
             continue
         qa = fname[:-5]
         try:
-            bytes_ = (ingest_dir / fname).read_text()
+            bytes_ = await (ingest_dir / fname).read_text()
             brpath = (ingest_dir / f"{qa}.br")
             if brpath.exists():
-                br = brpath.read_text()
+                br = await brpath.read_text()
             else:
                 br = None
             ndoc = load_one(bytes_, br)

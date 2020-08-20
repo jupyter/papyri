@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 from ..crosslink import Ingester
 from ..gen import Gen
-from ..render import _ascii_render, _route
+from ..render import _ascii_render, _route, Store
 
 
 async def test_gen_numpy():
@@ -28,9 +28,9 @@ async def test_gen_numpy():
         ing_r = [x.name[:-5] for x in (ing.ingest_dir).glob("*.json")]
         assert len(ing_r) == NFUNC, f"{set(ing_r) - set(num)} | {set(num) - set(ing_r)}"
 
-        res = await _route("papyri.gen.gen_main", ing.ingest_dir)
+        res = await _route("papyri.gen.gen_main", Store(ing.ingest_dir))
         assert "main entry point" in res
 
         assert "main entry point" in await _ascii_render(
-            "papyri.gen.gen_main", ing.ingest_dir
+            "papyri.gen.gen_main", Store(ing.ingest_dir)
         )
