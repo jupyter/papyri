@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
 
-from flask import Flask
+from quart_trio import QuartTrio
 from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
 from velin import NumpyDocString
 
@@ -123,7 +123,7 @@ def img(subpath):
 
 
 def serve():
-    app = Flask(__name__)
+    app = QuartTrio(__name__)
     app.route("/<ref>")(lambda ref: _route(ref, ingest_dir))
     app.route("/img/<path:subpath>")(img)
     app.run(debug=True)
