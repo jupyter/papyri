@@ -17,10 +17,38 @@ from .take2 import Lines, Paragraph, lines, make_block_3
 from .utils import progress
 
 
+#maybe from cachetools import TTLCache
+
+
+class BaseStore:
+
+    def __init__(self, path):
+        self.path = path
+
+    def __truediv__(self, other):
+        return Store(self.path + '/' + other)
+
+    def __str__(self):
+        return self.path
+
+    def exists(self):
+        return Path(self.path).exists()
+
+    def read_text(self):
+        return Path(self.path).read_text()
+
+
+    def glob(self, arg):
+        return Path(self.path).glob(arg)
+
+
+class Store(BaseStore):pass
+
 class CleanLoader(FileSystemLoader):
     def get_source(self, *args, **kwargs):
         (source, filename, uptodate) = super().get_source(*args, **kwargs)
         return until_ruler(source), filename, uptodate
+
 
 
 def until_ruler(doc):
@@ -40,11 +68,10 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-def _route(ref, ingest_dir):
+def _route(ref, store):
     if ref == "favicon.ico":
         here = Path(os.path.dirname(__file__))
-        with open(here / ref, "rb") as f:
-            return f.read()
+        return (here / ref).read_bytes()
 
     if ref.endswith(".html"):
         ref = ref[:-5]
@@ -55,7 +82,7 @@ def _route(ref, ingest_dir):
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
-    env.globals["exists"] = exists
+    env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
@@ -63,11 +90,11 @@ def _route(ref, ingest_dir):
 
     error = env.get_template("404.tpl.j2")
 
-    known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
+    known_ref = [x.name[:-5] for x in store.glob("*")]
 
-    file_ = ingest_dir / f"{ref}.json"
+    file_ = store / f"{ref}.json"
 
-    family = sorted(list(ingest_dir.glob("*.json")))
+    family = sorted(list(store.glob("*.json")))
     family = [str(f.name)[:-5] for f in family]
     parts = ref.split(".") + ["..."]
     siblings = {}
@@ -90,9 +117,8 @@ def _route(ref, ingest_dir):
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
 
     if file_.exists():
-        with open(ingest_dir / f"{ref}.json") as f:
-            bytes_ = f.read()
-        brpath = Path(ingest_dir / f"{ref}.br")
+        bytes_ = (store / f"{ref}.json").read_text()
+        brpath = (store / f"{ref}.br")
         if brpath.exists():
             br = brpath.read_text()
         else:
@@ -106,8 +132,8 @@ def _route(ref, ingest_dir):
 
         return render_one(template=template, ndoc=ndoc, qa=ref, ext="", parts=siblings)
     else:
-        known_refs = [str(s.name)[:-5] for s in ingest_dir.glob(f"{ref}*.json")]
-        brpath = Path(ingest_dir / "__phantom__" / f"{ref}.json")
+        known_refs = [str(s.name)[:-5] for s in store.glob(f"{ref}*.json")]
+        brpath =(store / "__phantom__" / f"{ref}.json")
         if brpath.exists():
             br = json.loads(brpath.read_text())
         else:
@@ -124,7 +150,9 @@ def img(subpath):
 
 def serve():
     app = QuartTrio(__name__)
-    app.route("/<ref>")(lambda ref: _route(ref, ingest_dir))
+    async def r(ref):
+        return _route(ref, Store(str(ingest_dir)))
+    app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
     app.run(debug=True)
 
@@ -181,9 +209,9 @@ def render_one(template, ndoc, qa, ext, parts={}):
 
 
 @lru_cache()
-def exists(ref):
+def exists(store, ref):
 
-    if (ingest_dir / f"{ref}.json").exists():
+    if (store / f"{ref}.json").exists():
         return "exists"
     else:
         # if not ref.startswith(("builtins.", "__main__")):
@@ -191,7 +219,7 @@ def exists(ref):
         return "missing"
 
 
-def _ascii_render(name, ingest_dir=ingest_dir):
+def _ascii_render(name, store=ingest_dir):
     ref = name
 
     env = Environment(
@@ -199,16 +227,15 @@ def _ascii_render(name, ingest_dir=ingest_dir):
         lstrip_blocks=True,
         trim_blocks=True,
     )
-    env.globals["exists"] = exists
+    env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
     template = env.get_template("ascii.tpl.j2")
 
-    known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
-    with open(ingest_dir / f"{ref}.json") as f:
-        bytes_ = f.read()
-    brpath = Path(ingest_dir / f"{ref}.br")
+    known_ref = [x.name[:-5] for x in store.glob("*")]
+    bytes_ = (store / f"{ref}.json").read_text()
+    brpath = (store / f"{ref}.br")
     if brpath.exists():
         br = brpath.read_text()
     else:
@@ -248,23 +275,20 @@ def main():
             continue
         qa = fname[:-5]
         try:
-            with open(ingest_dir / fname) as f:
-                bytes_ = f.read()
-                brpath = Path(ingest_dir / f"{qa}.br")
-                if brpath.exists():
-                    br = brpath.read_text()
-                else:
-                    br = None
-                ndoc = load_one(bytes_, br)
+            bytes_ = (ingest_dir / fname).read_text()
+            brpath = (ingest_dir / f"{qa}.br")
+            if brpath.exists():
+                br = brpath.read_text()
+            else:
+                br = None
+            ndoc = load_one(bytes_, br)
 
-                local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
+            local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
                 # nvisited_items[qa] = ndoc
         except Exception as e:
             raise RuntimeError(f"error with {fname}") from e
 
         # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
+        env.globals["resolve"] = resolve_(qa, known_ref, local_ref)
         with (html_dir / f"{qa}.html").open("w") as f:
-
-            env.globals["resolve"] = resolve_(qa, known_ref, local_ref)
-
             f.write(render_one(template=template, ndoc=ndoc, qa=qa, ext=".html"))
