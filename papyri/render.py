@@ -68,7 +68,7 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-def _route(ref, store):
+async def _route(ref, store):
     if ref == "favicon.ico":
         here = Path(os.path.dirname(__file__))
         return (here / ref).read_bytes()
@@ -151,7 +151,7 @@ def img(subpath):
 def serve():
     app = QuartTrio(__name__)
     async def r(ref):
-        return _route(ref, Store(str(ingest_dir)))
+        return await _route(ref, Store(str(ingest_dir)))
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
     app.run(debug=True)
