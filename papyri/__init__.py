@@ -53,7 +53,7 @@ def ascii(name):
     from .render import ascii_render
     import trio
 
-    trio.run(ascii_render,name)
+    trio.run(ascii_render, name)
 
 
 @click.command()

@@ -17,11 +17,10 @@ from .take2 import Lines, Paragraph, lines, make_block_3
 from .utils import progress
 
 
-#maybe from cachetools import TTLCache
+# maybe from cachetools import TTLCache
 
 
 class BaseStore:
-
     def __init__(self, path):
         if not isinstance(path, Path):
             path = Path(path)
@@ -40,7 +39,6 @@ class BaseStore:
     async def read_text(self):
         return self.path.read_text()
 
-
     def glob(self, arg):
         return [type(self)(x) for x in self.path.glob(arg)]
 
@@ -58,13 +56,14 @@ class BaseStore:
         return self.path == other.path
 
 
-class Store(BaseStore):pass
+class Store(BaseStore):
+    pass
+
 
 class CleanLoader(FileSystemLoader):
     def get_source(self, *args, **kwargs):
         (source, filename, uptodate) = super().get_source(*args, **kwargs)
         return until_ruler(source), filename, uptodate
-
 
 
 def until_ruler(doc):
@@ -133,7 +132,7 @@ async def _route(ref, store):
 
     if file_.exists():
         bytes_ = await ((store / f"{ref}.json").read_text())
-        brpath = (store / f"{ref}.br")
+        brpath = store / f"{ref}.br"
         if brpath.exists():
             br = await brpath.read_text()
         else:
@@ -148,7 +147,7 @@ async def _route(ref, store):
         return render_one(template=template, ndoc=ndoc, qa=ref, ext="", parts=siblings)
     else:
         known_refs = [str(s.name)[:-5] for s in store.glob(f"{ref}*.json")]
-        brpath =(store / "__phantom__" / f"{ref}.json")
+        brpath = store / "__phantom__" / f"{ref}.json"
         if brpath.exists():
             br = json.loads(await brpath.read_text())
         else:
@@ -165,8 +164,10 @@ def img(subpath):
 
 def serve():
     app = QuartTrio(__name__)
+
     async def r(ref):
         return await _route(ref, Store(str(ingest_dir)))
+
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
     app.run(debug=True)
@@ -238,7 +239,7 @@ async def _ascii_render(name, store=ingest_dir):
 
     known_ref = [x.name[:-5] for x in store.glob("*")]
     bytes_ = await (store / f"{ref}.json").read_text()
-    brpath = (store / f"{ref}.br")
+    brpath = store / f"{ref}.br"
     if brpath.exists():
         br = await brpath.read_text()
     else:
@@ -278,7 +279,7 @@ async def main():
         qa = fname[:-5]
         try:
             bytes_ = await (ingest_dir / fname).read_text()
-            brpath = (ingest_dir / f"{qa}.br")
+            brpath = ingest_dir / f"{qa}.br"
             if brpath.exists():
                 br = await brpath.read_text()
             else:
@@ -286,7 +287,7 @@ async def main():
             ndoc = load_one(bytes_, br)
 
             local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
-                # nvisited_items[qa] = ndoc
+            # nvisited_items[qa] = ndoc
         except Exception as e:
             raise RuntimeError(f"error with {fname}") from e
 
