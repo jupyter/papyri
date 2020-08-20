@@ -82,7 +82,6 @@ async def _route(ref, store):
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
-    env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
@@ -208,18 +207,7 @@ def render_one(template, ndoc, qa, ext, parts={}):
     )
 
 
-@lru_cache()
-def exists(store, ref):
-
-    if (store / f"{ref}.json").exists():
-        return "exists"
-    else:
-        # if not ref.startswith(("builtins.", "__main__")):
-        #    print(ref, "missing in", qa)
-        return "missing"
-
-
-def _ascii_render(name, store=ingest_dir):
+async def _ascii_render(name, store=ingest_dir):
     ref = name
 
     env = Environment(
@@ -227,7 +215,6 @@ def _ascii_render(name, store=ingest_dir):
         lstrip_blocks=True,
         trim_blocks=True,
     )
-    env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
@@ -250,8 +237,8 @@ def _ascii_render(name, store=ingest_dir):
     return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
 
 
-def ascii_render(*args, **kwargs):
-    print(_ascii_render(*args, **kwargs))
+async def ascii_render(*args, **kwargs):
+    print(await _ascii_render(*args, **kwargs))
 
 
 def main():
@@ -262,7 +249,6 @@ def main():
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
-    env.globals["exists"] = exists
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")

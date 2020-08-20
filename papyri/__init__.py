@@ -50,8 +50,9 @@ def render():
 @click.argument("name", nargs=1)
 def ascii(name):
     from .render import ascii_render
+    import trio
 
-    ascii_render(name)
+    trio.run(ascii_render,name)
 
 
 @click.command()

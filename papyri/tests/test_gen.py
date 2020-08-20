@@ -31,6 +31,6 @@ async def test_gen_numpy():
         res = await _route("papyri.gen.gen_main", ing.ingest_dir)
         assert "main entry point" in res
 
-        assert "main entry point" in _ascii_render(
+        assert "main entry point" in await _ascii_render(
             "papyri.gen.gen_main", ing.ingest_dir
         )
