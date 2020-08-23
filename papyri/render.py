@@ -65,10 +65,27 @@ class BaseStore:
         return self.path == other.path
 
 import re
+
 def gre(pat):
     return re.compile(pat.replace('.', '\.').replace('*', '.+'))
 
 header=f"token {PAT}"
+
+class RCache:
+
+    def __init__(self):
+        from cachetools import TTLCache
+        self.c = TTLCache(1024, 60)
+
+    async def get(self, url, headers=None):
+        self.c.expire()
+        if not (res := self.c.get(url)):
+            res = requests.get(url, headers=headers)
+            self.c[url] = res
+        return res
+
+RC = RCache()
+
 
 class GHStore(BaseStore):
 
@@ -89,8 +106,8 @@ class GHStore(BaseStore):
 
     async def read_text(self):
         print('GHREAD', self.path)
-        data = requests.get(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header}).json()
-        raw = requests.get(data['download_url'])
+        data = (await RC.get(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header})).json()
+        raw = await RC.get(data['download_url'])
         return raw.text
 
     
@@ -213,7 +230,6 @@ def img(subpath):
 def serve():
     import os
     app = QuartTrio(__name__)
-
     async def r(ref):
         #return await _route(ref, Store(str(ingest_dir)))
         return await _route(ref, GHStore(Path('.')))
