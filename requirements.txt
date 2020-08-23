@@ -8,3 +8,6 @@ click
 velin
 quart-trio
 flit
+requests
+aoihttp
+cachetools
