@@ -16,19 +16,28 @@ from .crosslink import SeeAlsoItem, load_one, resolve_
 from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
 
+import requests
+
+import os
+PAT = os.environ.get('PAT', None)
+
 
 # maybe from cachetools import TTLCache
 
 
 class BaseStore:
+
     def __init__(self, path):
         if not isinstance(path, Path):
             path = Path(path)
         assert isinstance(path, Path)
         self.path = path
 
+    def _other(self):
+        return type(self)
+
     def __truediv__(self, other):
-        return type(self)(self.path / other)
+        return self._other()(self.path / other)
 
     def __str__(self):
         return str(self.path)
@@ -40,7 +49,7 @@ class BaseStore:
         return self.path.read_text()
 
     def glob(self, arg):
-        return [type(self)(x) for x in self.path.glob(arg)]
+        return [self._other()(x) for x in self.path.glob(arg)]
 
     @property
     def name(self):
@@ -54,6 +63,44 @@ class BaseStore:
 
     def __eq__(self, other):
         return self.path == other.path
+
+import re
+def gre(pat):
+    return re.compile(pat.replace('.', '\.').replace('*', '.+'))
+
+header=f"token {PAT}"
+
+class GHStore(BaseStore):
+
+    def _other(self):
+        return lambda p: type(self)(p, self.acc)
+
+    def __init__(self, path, acc=None):
+        if not isinstance(path, Path):
+            path = Path(path)
+        self.path = path
+        self.acc = acc
+
+    def glob(self, arg):
+        print('GHGLOB', self.path, arg)
+        data = requests.get('https://api.github.com/repos/Carreau/papyri-data/contents/ingest/', headers={'Authorization': header}).json()
+        r= gre(arg)
+        return [self._other()(Path(k)) for x in data if r.match(k:=x['name'])]
+
+    async def read_text(self):
+        print('GHREAD', self.path)
+        data = requests.get(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header}).json()
+        raw = requests.get(data['download_url'])
+        return raw.text
+
+    
+    def exists(self):
+        data = requests.get(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header}).json()
+        res = 'download_url' in data
+        print('GHEXT', self.path, res)
+        return  res
+
+
 
 
 class Store(BaseStore):
@@ -97,6 +144,7 @@ async def _route(ref, store):
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
+    env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
@@ -167,13 +215,19 @@ def serve():
     app = QuartTrio(__name__)
 
     async def r(ref):
-        return await _route(ref, Store(str(ingest_dir)))
+        #return await _route(ref, Store(str(ingest_dir)))
+        return await _route(ref, GHStore(Path('.')))
 
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
-    port = os.environ.get('PORT')
+    port = os.environ.get('PORT', 5000)
     print('Seen config port ', port)
-    app.run(port=port, host='0.0.0.0')
+    prod = os.environ.get('PROD', None)
+    if prod:
+        app.run(port=port, host='0.0.0.0')
+    else:
+        app.run(port=port)
+
 
 
 def paragraph(lines):
@@ -226,6 +280,14 @@ def render_one(template, ndoc, qa, ext, parts={}):
         parts=parts,
     )
 
+def exists(store, ref):
+
+    if (store / f"{ref}.json").exists():
+        return "exists"
+    else:
+        # if not ref.startswith(("builtins.", "__main__")):
+        #    print(ref, "missing in", qa)
+        return "missing"
 
 async def _ascii_render(name, store=ingest_dir):
     ref = name
@@ -235,6 +297,7 @@ async def _ascii_render(name, store=ingest_dir):
         lstrip_blocks=True,
         trim_blocks=True,
     )
+    env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
@@ -269,6 +332,7 @@ async def main():
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
+    #env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
