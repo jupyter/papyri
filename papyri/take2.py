@@ -59,14 +59,10 @@ import re
 import sys
 from textwrap import indent as _indent
 
-import matplotlib
-import numpy
 
 from papyri.gen import dedent_but_first
 
-lines = numpy.__doc__.split("\n")
 
-lines = matplotlib.__doc__.split("\n")
 
 
 ex = """
