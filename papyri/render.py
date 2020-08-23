@@ -77,7 +77,17 @@ class RCache:
         from cachetools import TTLCache
         self.c = TTLCache(1024, 60)
 
-    async def get(self, url, headers=None):
+    async def aget(self, url, headers=None):
+        self.c.expire()
+        if not (res := self.c.get(url)):
+            print('Not cached:', url)
+            res = requests.get(url, headers=headers)
+            self.c[url] = res
+        else:
+            print('CACHED:', url)
+        return res
+
+    def get(self, url, headers=None):
         self.c.expire()
         if not (res := self.c.get(url)):
             print('Not cached:', url)
@@ -103,19 +113,19 @@ class GHStore(BaseStore):
 
     def glob(self, arg):
         print('GHGLOB', self.path, arg)
-        data = requests.get('https://api.github.com/repos/Carreau/papyri-data/contents/ingest/', headers={'Authorization': header}).json()
+        data = RC.get('https://api.github.com/repos/Carreau/papyri-data/contents/ingest/', headers={'Authorization': header}).json()
         r= gre(arg)
         return [self._other()(Path(k)) for x in data if r.match(k:=x['name'])]
 
     async def read_text(self):
         print('GHREAD', self.path)
-        data = (await RC.get(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header})).json()
-        raw = await RC.get(data['download_url'])
+        data = (await RC.aget(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header})).json()
+        raw = await RC.aget(data['download_url'])
         return raw.text
 
     
     def exists(self):
-        data = requests.get(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header}).json()
+        data = RC.get(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header}).json()
         res = 'download_url' in data
         print('GHEXT', self.path, res)
         return  res
