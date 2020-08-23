@@ -1,0 +1,9 @@
+numpydoc
+pygments
+black
+there
+rich
+jedi
+click
+velin
+quart-trio
