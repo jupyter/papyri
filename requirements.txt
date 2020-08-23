@@ -9,5 +9,5 @@ velin
 quart-trio
 flit
 requests
-aoihttp
+asks
 cachetools
