@@ -80,21 +80,15 @@ class RCache:
     async def aget(self, url, headers=None):
         self.c.expire()
         if not (res := self.c.get(url)):
-            print('Not cached:', url)
             res = requests.get(url, headers=headers)
             self.c[url] = res
-        else:
-            print('CACHED:', url)
         return res
 
     def get(self, url, headers=None):
         self.c.expire()
         if not (res := self.c.get(url)):
-            print('Not cached:', url)
             res = requests.get(url, headers=headers)
             self.c[url] = res
-        else:
-            print('CACHED:', url)
         return res
 
 RC = RCache()
@@ -112,22 +106,25 @@ class GHStore(BaseStore):
         self.acc = acc
 
     def glob(self, arg):
-        print('GHGLOB', self.path, arg)
-        data = RC.get('https://api.github.com/repos/Carreau/papyri-data/contents/ingest/', headers={'Authorization': header}).json()
+        data = RC.get('https://api.github.com/repos/Carreau/papyri-data/git/trees/master', headers={'Authorization': header}).json()
         r= gre(arg)
-        return [self._other()(Path(k)) for x in data if r.match(k:=x['name'])]
+        res = []
+        for item in data['tree']:
+            data = RC.get(item['url'], headers={'Authorization': header}).json()
+            res += [self._other()(Path(k)) for x in data['tree'] if r.match(k:=x['path'])]
+
+        return res
 
     async def read_text(self):
-        print('GHREAD', self.path)
         data = (await RC.aget(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header})).json()
         raw = await RC.aget(data['download_url'])
         return raw.text
 
     
-    def exists(self):
-        data = RC.get(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header}).json()
+    async def exists(self):
+        data = (await RC.aget(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}',
+                headers={'Authorization': header})).json()
         res = 'download_url' in data
-        print('GHEXT', self.path, res)
         return  res
 
 
@@ -161,6 +158,7 @@ def until_ruler(doc):
 
 
 async def _route(ref, store):
+    assert isinstance(store, BaseStore)
     if ref == "favicon.ico":
         here = Path(os.path.dirname(__file__))
         return (here / ref).read_bytes()
@@ -180,8 +178,7 @@ async def _route(ref, store):
     template = env.get_template("core.tpl.j2")
 
     error = env.get_template("404.tpl.j2")
-
-    known_ref = [x.name[:-5] for x in store.glob("*")]
+    known_refs = [str(x.name)[:-5] for x in store.glob("*.json")]
 
     file_ = store / f"{ref}.json"
 
@@ -218,8 +215,7 @@ async def _route(ref, store):
         local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
             x[0] for x in ndoc["Returns"] if x[0]
         ]
-
-        env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
+        env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
 
         return render_one(template=template, ndoc=ndoc, qa=ref, ext="", parts=siblings)
     else:
@@ -229,7 +225,6 @@ async def _route(ref, store):
             br = json.loads(await brpath.read_text())
         else:
             br = []
-        print("br:", br, type(br))
         return error.render(subs=known_refs, backrefs=list(set(br)))
 
 

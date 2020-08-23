@@ -19,7 +19,7 @@ from .utils import progress
 warnings.simplefilter("ignore", UserWarning)
 
 
-def resolve_(qa, known_refs, local_ref):
+def resolve_(qa: str, known_refs, local_ref):
     def resolve(ref):
         if ref in local_ref:
             return ref, "local"
