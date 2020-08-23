@@ -163,7 +163,7 @@ def img(subpath):
 
 
 def serve():
-    import os.environ
+    import os
     app = QuartTrio(__name__)
 
     async def r(ref):
