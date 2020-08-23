@@ -173,7 +173,7 @@ def serve():
     app.route("/img/<path:subpath>")(img)
     port = os.environ.get('PORT')
     print('Seen config port ', port)
-    app.run(debug=True, port=port)
+    app.run(port=port, host='0.0.0.0')
 
 
 def paragraph(lines):
