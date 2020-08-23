@@ -42,7 +42,7 @@ class BaseStore:
     def __str__(self):
         return str(self.path)
 
-    def exists(self):
+    async def exists(self):
         return self.path.exists()
 
     async def read_text(self):
@@ -174,7 +174,6 @@ async def _route(ref, store):
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
-    env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
@@ -208,10 +207,10 @@ async def _route(ref, store):
 
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
 
-    if file_.exists():
+    if await file_.exists():
         bytes_ = await ((store / f"{ref}.json").read_text())
         brpath = store / f"{ref}.br"
-        if brpath.exists():
+        if await brpath.exists():
             br = await brpath.read_text()
         else:
             br = None
@@ -226,7 +225,7 @@ async def _route(ref, store):
     else:
         known_refs = [str(s.name)[:-5] for s in store.glob(f"{ref}*.json")]
         brpath = store / "__phantom__" / f"{ref}.json"
-        if brpath.exists():
+        if await brpath.exists():
             br = json.loads(await brpath.read_text())
         else:
             br = []
@@ -309,16 +308,7 @@ def render_one(template, ndoc, qa, ext, parts={}):
         parts=parts,
     )
 
-def exists(store, ref):
-
-    if (store / f"{ref}.json").exists():
-        return "exists"
-    else:
-        # if not ref.startswith(("builtins.", "__main__")):
-        #    print(ref, "missing in", qa)
-        return "missing"
-
-async def _ascii_render(name, store=ingest_dir):
+async def _ascii_render(name, store=Store(ingest_dir)):
     ref = name
 
     env = Environment(
@@ -326,7 +316,6 @@ async def _ascii_render(name, store=ingest_dir):
         lstrip_blocks=True,
         trim_blocks=True,
     )
-    env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
@@ -335,7 +324,7 @@ async def _ascii_render(name, store=ingest_dir):
     known_ref = [x.name[:-5] for x in store.glob("*")]
     bytes_ = await (store / f"{ref}.json").read_text()
     brpath = store / f"{ref}.br"
-    if brpath.exists():
+    if await brpath.exists():
         br = await brpath.read_text()
     else:
         br = None
@@ -355,18 +344,18 @@ async def ascii_render(*args, **kwargs):
 
 async def main():
     # nvisited_items = {}
-    files = os.listdir(ingest_dir)
+    store = Store(ingest_dir)
+    files = store.glob('*')
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
     )
-    #env.globals["exists"] = lambda ref: exists(store, ref)
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
-    known_ref = [x.name[:-5] for x in ingest_dir.glob("*")]
+    known_ref = [x.name[:-5] for x in store.glob("*")]
 
     html_dir.mkdir(exist_ok=True)
     for p, fname in progress(files, description="Rendering..."):
@@ -374,9 +363,9 @@ async def main():
             continue
         qa = fname[:-5]
         try:
-            bytes_ = await (ingest_dir / fname).read_text()
-            brpath = ingest_dir / f"{qa}.br"
-            if brpath.exists():
+            bytes_ = await (store / fname).read_text()
+            brpath = store / f"{qa}.br"
+            if await brpath.exists():
                 br = await brpath.read_text()
             else:
                 br = None
