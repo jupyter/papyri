@@ -80,8 +80,11 @@ class RCache:
     async def get(self, url, headers=None):
         self.c.expire()
         if not (res := self.c.get(url)):
+            print('Not cached:', url)
             res = requests.get(url, headers=headers)
             self.c[url] = res
+        else:
+            print('CACHED:', url)
         return res
 
 RC = RCache()
