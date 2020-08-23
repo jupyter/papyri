@@ -13,7 +13,7 @@ from numpydoc.docscrape import Parameter
 
 from .config import base_dir, html_dir, ingest_dir
 from .crosslink import SeeAlsoItem, load_one, resolve_
-from .take2 import Lines, Paragraph, lines, make_block_3
+from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
 
 
@@ -163,6 +163,7 @@ def img(subpath):
 
 
 def serve():
+    import os.environ
     app = QuartTrio(__name__)
 
     async def r(ref):
@@ -170,7 +171,9 @@ def serve():
 
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
-    app.run(debug=True)
+    port = os.environ.get('PORT')
+    print('Seen config port ', port)
+    app.run(debug=True, port=port)
 
 
 def paragraph(lines):
