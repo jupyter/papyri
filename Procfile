@@ -1,1 +1,1 @@
-web: papyri serve
+web: python -m papyri serve

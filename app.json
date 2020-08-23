@@ -10,4 +10,7 @@
       "generator": "secret"
     }
   }
+  "scripts": {
+    "postdeploy": "flit install",
+  }
 }
