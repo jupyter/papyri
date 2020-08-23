@@ -12,8 +12,6 @@ from textwrap import dedent
 from types import FunctionType, ModuleType
 
 import jedi
-import numpy as np
-from numpy import array2string
 from pygments.lexers import PythonLexer
 from rich.progress import (
     BarColumn,
@@ -171,6 +169,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True):
     from matplotlib import cbook, _pylab_helpers
 
     acc = ""
+    import numpy as np
     ns = {"np": np, "plt": plt, obj.__name__: obj}
     for b in blocks:
         for item in b:
