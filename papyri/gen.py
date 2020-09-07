@@ -1,8 +1,10 @@
 import inspect
+import io
 import json
 import sys
 import time
-from contextlib import contextmanager
+
+from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 from os.path import expanduser
 from pathlib import Path
@@ -142,7 +144,7 @@ def parse_script(script, ns=None, infer=None, prev=""):
 counter = 0
 
 
-def get_example_data(doc, infer=True, obj=None, exec_=True):
+def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -171,6 +173,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True):
     acc = ""
     import numpy as np
     ns = {"np": np, "plt": plt, obj.__name__: obj}
+    figs = []
     for b in blocks:
         for item in b:
             if isinstance(item, InOut):
@@ -191,26 +194,29 @@ def get_example_data(doc, infer=True, obj=None, exec_=True):
                             from pathlib import Path
                             import os.path
 
-                            p = (
-                                Path(os.path.expanduser("~/.papyri"))
-                                / f"fig-{obj.__name__}-{counter}.png"
-                            )
+                            buf = io.BytesIO()
+                            if not qa:
+                                qa = obj.__name__
+                            figname = f"fig-{qa}-{counter}.png"
+                            print("...", figname)
                             figman.canvas.figure.savefig(
-                                p, dpi=300, bbox_inches="tight"
+                                buf, dpi=300, bbox_inches="tight"
                             )
                             plt.close("all")
-                            fig = str(p.absolute())
+                            buf.seek(0)
+                            figs.append((figname, buf.read()))
 
                     except:
+                        raise
                         pass
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
                 edata.append(["code", (entries, "\n".join(item.out))])
                 if fig:
-                    edata.append(["fig", fig])
+                    edata.append(["fig", figname])
             else:
                 edata.append(["text", "\n".join(item.out)])
-    return edata
+    return edata, figs
 
 
 @lru_cache()
@@ -384,6 +390,10 @@ class Gen:
         with (self.cache_dir / root / f"{path}.json").open("w") as f:
             f.write(data)
 
+    def put_raw(self, root, path, data):
+        with (self.cache_dir / root / path).open("wb") as f:
+            f.write(data)
+
     def do_one_mod(self, names, infer, exec_):
 
         p = lambda: Progress(
@@ -431,6 +441,8 @@ class Gen:
                     total=len(collected),
                 )
                 t2 = timer(p2, taski)
+            else:
+                t2 = nullcontext()
             for qa, a in collected.items():
                 short_description = (qa[:19] + "..") if len(qa) > 21 else qa
                 p2.update(taskp, description=short_description.ljust(17))
@@ -473,16 +485,15 @@ class Gen:
                 if getattr(nvisited_items, qa, None):
                     raise ValueError(f"{qa} already visited")
                 try:
-                    if infer:
-                        with t2():
-                            ndoc.edata = get_example_data(
-                                ndoc, infer, obj=a, exec_=exec_
-                            )
-                    else:
-                        ndoc.edata = get_example_data(ndoc, infer, obj=a, exec_=exec_)
+                    with t2():
+                        ndoc.edata, figs = get_example_data(
+                            ndoc, infer, obj=a, exec_=exec_, qa=qa
+                        )
+                        ndoc.figs = figs
                 except Exception:
                     ndoc.edata = []
                     print("Error getting example date in ", qa)
+                    raise
 
                 ndoc.refs = list(
                     {
@@ -497,6 +508,11 @@ class Gen:
                 ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
                 if infer:
                     p2.advance(taski)
+                figs = ndoc.figs
+                del ndoc.figs
                 self.put(root, qa, json.dumps(ndoc.to_json(), indent=2))
+                for name, data in figs:
+                    self.put_raw(root, name, data)
+
                 nvisited_items[qa] = ndoc
             self.put(root, "__papyri__", json.dumps({"version": version}))

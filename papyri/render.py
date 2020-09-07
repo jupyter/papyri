@@ -238,8 +238,8 @@ def serve():
     import os
     app = QuartTrio(__name__)
     async def r(ref):
-        #return await _route(ref, Store(str(ingest_dir)))
-        return await _route(ref, GHStore(Path('.')))
+            return await _route(ref, Store(str(ingest_dir)))
+        #return await _route(ref, GHStore(Path('.')))
 
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
