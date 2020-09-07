@@ -19,14 +19,14 @@ from .utils import progress
 import requests
 
 import os
-PAT = os.environ.get('PAT', None)
+
+PAT = os.environ.get("PAT", None)
 
 
 # maybe from cachetools import TTLCache
 
 
 class BaseStore:
-
     def __init__(self, path):
         if not isinstance(path, Path):
             path = Path(path)
@@ -64,17 +64,21 @@ class BaseStore:
     def __eq__(self, other):
         return self.path == other.path
 
+
 import re
 
-def gre(pat):
-    return re.compile(pat.replace('.', '\.').replace('*', '.+'))
 
-header=f"token {PAT}"
+def gre(pat):
+    return re.compile(pat.replace(".", "\.").replace("*", ".+"))
+
+
+header = f"token {PAT}"
+
 
 class RCache:
-
     def __init__(self):
         from cachetools import TTLCache
+
         self.c = TTLCache(1024, 60)
 
     async def aget(self, url, headers=None):
@@ -91,11 +95,11 @@ class RCache:
             self.c[url] = res
         return res
 
+
 RC = RCache()
 
 
 class GHStore(BaseStore):
-
     def _other(self):
         return lambda p: type(self)(p, self.acc)
 
@@ -106,28 +110,39 @@ class GHStore(BaseStore):
         self.acc = acc
 
     def glob(self, arg):
-        data = RC.get('https://api.github.com/repos/Carreau/papyri-data/git/trees/master', headers={'Authorization': header}).json()
-        r= gre(arg)
+        data = RC.get(
+            "https://api.github.com/repos/Carreau/papyri-data/git/trees/master",
+            headers={"Authorization": header},
+        ).json()
+        r = gre(arg)
         res = []
-        for item in data['tree']:
-            data = RC.get(item['url'], headers={'Authorization': header}).json()
-            res += [self._other()(Path(k)) for x in data['tree'] if r.match(k:=x['path'])]
+        for item in data["tree"]:
+            data = RC.get(item["url"], headers={"Authorization": header}).json()
+            res += [
+                self._other()(Path(k)) for x in data["tree"] if r.match(k := x["path"])
+            ]
 
         return res
 
     async def read_text(self):
-        data = (await RC.aget(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}', headers={'Authorization': header})).json()
-        raw = await RC.aget(data['download_url'])
+        data = (
+            await RC.aget(
+                f"https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}",
+                headers={"Authorization": header},
+            )
+        ).json()
+        raw = await RC.aget(data["download_url"])
         return raw.text
 
-    
     async def exists(self):
-        data = (await RC.aget(f'https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}',
-                headers={'Authorization': header})).json()
-        res = 'download_url' in data
-        return  res
-
-
+        data = (
+            await RC.aget(
+                f"https://api.github.com/repos/Carreau/papyri-data/contents/ingest/{str(self.path)}",
+                headers={"Authorization": header},
+            )
+        ).json()
+        res = "download_url" in data
+        return res
 
 
 class Store(BaseStore):
@@ -236,21 +251,23 @@ def img(subpath):
 
 def serve():
     import os
+
     app = QuartTrio(__name__)
+
     async def r(ref):
-            return await _route(ref, Store(str(ingest_dir)))
-        #return await _route(ref, GHStore(Path('.')))
+        return await _route(ref, Store(str(ingest_dir)))
+
+    # return await _route(ref, GHStore(Path('.')))
 
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
-    port = os.environ.get('PORT', 5000)
-    print('Seen config port ', port)
-    prod = os.environ.get('PROD', None)
+    port = os.environ.get("PORT", 5000)
+    print("Seen config port ", port)
+    prod = os.environ.get("PROD", None)
     if prod:
-        app.run(port=port, host='0.0.0.0')
+        app.run(port=port, host="0.0.0.0")
     else:
         app.run(port=port)
-
 
 
 def paragraph(lines):
@@ -303,6 +320,7 @@ def render_one(template, ndoc, qa, ext, parts={}):
         parts=parts,
     )
 
+
 async def _ascii_render(name, store=Store(ingest_dir)):
     ref = name
 
@@ -340,7 +358,7 @@ async def ascii_render(*args, **kwargs):
 async def main():
     # nvisited_items = {}
     store = Store(ingest_dir)
-    files = store.glob('*')
+    files = store.glob("*")
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),

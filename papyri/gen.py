@@ -172,6 +172,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
 
     acc = ""
     import numpy as np
+
     ns = {"np": np, "plt": plt, obj.__name__: obj}
     figs = []
     for b in blocks:

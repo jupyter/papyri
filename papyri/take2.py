@@ -63,8 +63,6 @@ from textwrap import indent as _indent
 from papyri.gen import dedent_but_first
 
 
-
-
 ex = """
 For the most part, direct use of the object-oriented library is encouraged when
 programming; pyplot is primarily for working interactively. The exceptions are
