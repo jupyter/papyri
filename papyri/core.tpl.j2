@@ -193,7 +193,7 @@ body{
     <hr/>
     <a>Narrative Docs</a>
     <hr/>
-    {% for section in doc.sections if doc[section] %}
+    {% for section in doc.sections if doc.content[section] %}
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
         <a href="#section-{{section}}">{{section}}</a>
     {% endif %}
@@ -255,14 +255,14 @@ body{
 {%- endmacro %}
 
 
-{% for section in doc.sections if doc[section] %}
+{% for section in doc.sections if doc.content[section] %}
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
         <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
     {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
-        {{render_paragraph(doc[section])}}
+        {{render_paragraph(doc.content[section])}}
     {% elif section in ['Signature'] %}
-       <code class='signature'>{{doc[section]}}</code>
+       <code class='signature'>{{doc.content[section]}}</code>
     {% elif section in ['See Also'] %}
         {% for sa in doc.see_also %}
             <dl>
@@ -293,7 +293,7 @@ body{
    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters'] %}
 
        <dl>
-           {% for p in doc[section] %}
+           {% for p in doc.content[section] %}
             {% if p[0] %}
                 <dt><a id={{p[0]}}>{{p[0]}}</a> : {{p[1]}}</dt>
             {% else %}
@@ -306,9 +306,9 @@ body{
 
    </pre>
    {% else %}
-       {% if doc[section] %}
+       {% if doc.content[section] %}
         <pre>
-       {{doc[section]}}
+       {{doc.content[section]}}
        </pre>
        {% endif %}
    {% endif %}

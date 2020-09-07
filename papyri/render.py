@@ -7,9 +7,6 @@ from types import ModuleType
 
 from quart_trio import QuartTrio
 from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
-from velin import NumpyDocString
-
-from numpydoc.docscrape import Parameter
 
 from .config import base_dir, html_dir, ingest_dir
 from .crosslink import SeeAlsoItem, load_one, resolve_
@@ -150,6 +147,9 @@ class Store(BaseStore):
 
 
 class CleanLoader(FileSystemLoader):
+    """
+    A loader for ascii/ansi that remove all leading spaces and pipes  until the last pipe.
+    """
     def get_source(self, *args, **kwargs):
         (source, filename, uptodate) = super().get_source(*args, **kwargs)
         return until_ruler(source), filename, uptodate
@@ -231,8 +231,15 @@ async def _route(ref, store):
             x[0] for x in ndoc["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
-
-        return render_one(template=template, ndoc=ndoc, qa=ref, ext="", parts=siblings)
+        doc = DocData(ndoc)
+        return render_one(
+            template=template,
+            doc=doc,
+            qa=ref,
+            ext="",
+            parts=siblings,
+            backrefs=ndoc.backrefs,
+        )
     else:
         known_refs = [str(s.name)[:-5] for s in store.glob(f"{ref}*.json")]
         brpath = store / "__phantom__" / f"{ref}.json"
@@ -299,21 +306,82 @@ def paragraphs(lines):
     return acc
 
 
-def render_one(template, ndoc, qa, ext, parts={}):
-    br = ndoc.backrefs
-    if len(br) > 30:
+class DocData:
+
+    sections = [
+        "Signature",
+        "Summary",
+        "Extended Summary",
+        "Parameters",
+        "Returns",
+        "Yields",
+        "Receives",
+        "Raises",
+        "Warns",
+        "Other Parameters",
+        "Attributes",
+        "Methods",
+        "See Also",
+        "Notes",
+        "Warnings",
+        "References",
+        "Examples",
+        "index",
+    ]  # List of sections in order
+    see_also = None  # see also data
+    edata = None  # example data
+    refs = None  # references
+    # keys and values of all the sections.
+    content = None
+    version = None  # version of current package
+
+    def __init__(self, ndoc):
+        self.see_also = ndoc.see_also
+        self.edata = ndoc.edata
+        self.refs = ndoc.refs
+        self.content = {}
+        self.version = ndoc.version
+        for k, v in ndoc.items():
+            self.content[k] = v
+
+
+def render_one(template, doc, qa, ext, *, backrefs, parts={}):
+    """
+    Return the rendering of one document 
+
+    Parameters
+    ----------
+    template: 
+        a Jinja@ template object used to render. 
+    doc: DocData 
+        a DocData object with the informations for current object. 
+    qa: str
+        fully qualified name for current object
+    ext: str
+        file extension for url  – should likely be removed and be set on the template 
+        I think that might be passed down to resolve maybe ? 
+    backrefs: list of str
+        backreferences of document pointing to this. 
+    parts: Dict[str, list[(str, str)]
+        used for navigation and for parts of the breakcrumbs to have navigation to siblings.
+        This is not directly related to current object. 
+
+    """
+    # TODO : move this to ingest likely.
+    # Here if we have too many references we group them on where they come from.
+    if len(backrefs) > 30:
 
         b2 = defaultdict(lambda: [])
-        for ref in br:
+        for ref in backrefs:
             mod, _ = ref.split(".", maxsplit=1)
             b2[mod].append(ref)
         backrefs = (None, b2)
     else:
-        backrefs = (br, None)
+        backrefs = (backrefs, None)
     return template.render(
-        doc=ndoc,
+        doc=doc,
         qa=qa,
-        version=ndoc.version,
+        version=doc.version,
         module=qa.split(".")[0],
         backrefs=backrefs,
         ext=ext,
@@ -342,13 +410,19 @@ async def _ascii_render(name, store=Store(ingest_dir)):
     else:
         br = None
     ndoc = load_one(bytes_, br)
+
+    # TODO : move this to ingest.
     local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
         x[0] for x in ndoc["Returns"] if x[0]
     ]
 
+    # TODO : move this to ingest.
     env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
+    doc = DocData(ndoc)
 
-    return render_one(template=template, ndoc=ndoc, qa=ref, ext="")
+    return render_one(
+        template=template, ndoc=doc, qa=ref, ext="", backrefs=ndoc.backrefs
+    )
 
 
 async def ascii_render(*args, **kwargs):
@@ -391,5 +465,14 @@ async def main():
 
         # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
         env.globals["resolve"] = resolve_(qa, known_ref, local_ref)
+        doc = DocData(ndoc)
         with (html_dir / f"{qa}.html").open("w") as f:
-            f.write(render_one(template=template, ndoc=ndoc, qa=qa, ext=".html"))
+            f.write(
+                render_one(
+                    template=template,
+                    ndoc=doc,
+                    qa=qa,
+                    ext=".html",
+                    backrefs=ndoc.backrefs,
+                )
+            )
