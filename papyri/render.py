@@ -5,17 +5,14 @@ from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
 
-from quart_trio import QuartTrio
+import requests
 from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
+from quart_trio import QuartTrio
 
 from .config import base_dir, html_dir, ingest_dir
 from .crosslink import SeeAlsoItem, load_one, resolve_
 from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
-
-import requests
-
-import os
 
 PAT = os.environ.get("PAT", None)
 
@@ -150,6 +147,7 @@ class CleanLoader(FileSystemLoader):
     """
     A loader for ascii/ansi that remove all leading spaces and pipes  until the last pipe.
     """
+
     def get_source(self, *args, **kwargs):
         (source, filename, uptodate) = super().get_source(*args, **kwargs)
         return until_ruler(source), filename, uptodate
@@ -257,7 +255,6 @@ def img(subpath):
 
 
 def serve():
-    import os
 
     app = QuartTrio(__name__)
 

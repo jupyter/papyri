@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 from ..crosslink import Ingester
 from ..gen import Gen
-from ..render import _ascii_render, _route, Store
+from ..render import Store, _ascii_render, _route
 
 
 async def test_gen_numpy():

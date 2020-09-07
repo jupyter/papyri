@@ -3,7 +3,6 @@ import io
 import json
 import sys
 import time
-
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 from os.path import expanduser
@@ -166,11 +165,10 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
     """
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     edata = []
-    import matplotlib.pyplot as plt
-    from matplotlib.backend_bases import FigureManagerBase
-    from matplotlib import cbook, _pylab_helpers
-
     import matplotlib
+    import matplotlib.pyplot as plt
+    from matplotlib import _pylab_helpers, cbook
+    from matplotlib.backend_bases import FigureManagerBase
 
     matplotlib.use("agg")
 
@@ -195,8 +193,8 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             global counter
                             counter += 1
                             figman = next(iter(fig_managers))
-                            from pathlib import Path
                             import os.path
+                            from pathlib import Path
 
                             buf = io.BytesIO()
                             if not qa:

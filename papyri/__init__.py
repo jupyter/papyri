@@ -41,8 +41,9 @@ def gen(names, infer, exec):
 
 @click.command()
 def render():
-    from .render import main as m2
     import trio
+
+    from .render import main as m2
 
     trio.run(m2)
 
@@ -50,8 +51,9 @@ def render():
 @click.command()
 @click.argument("name", nargs=1)
 def ascii(name):
-    from .render import ascii_render
     import trio
+
+    from .render import ascii_render
 
     trio.run(ascii_render, name)
 

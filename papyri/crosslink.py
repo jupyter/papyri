@@ -7,9 +7,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 from types import ModuleType
 
-from velin import NumpyDocString
-
 from numpydoc.docscrape import Parameter
+from velin import NumpyDocString
 
 from .config import base_dir, cache_dir, ingest_dir
 from .gen import keepref, normalise_ref
