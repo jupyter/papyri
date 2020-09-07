@@ -170,6 +170,10 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
     from matplotlib.backend_bases import FigureManagerBase
     from matplotlib import cbook, _pylab_helpers
 
+    import matplotlib
+
+    matplotlib.use("agg")
+
     acc = ""
     import numpy as np
 
@@ -179,7 +183,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
         for item in b:
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
-                fig = None
+                figname = None
                 if exec_:
                     try:
                         with cbook._setattr_cm(
@@ -188,7 +192,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             exec(script, ns)
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         if fig_managers:
-                            print("figs !", fig_managers)
                             global counter
                             counter += 1
                             figman = next(iter(fig_managers))
@@ -199,7 +202,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             if not qa:
                                 qa = obj.__name__
                             figname = f"fig-{qa}-{counter}.png"
-                            print("...", figname)
                             figman.canvas.figure.savefig(
                                 buf, dpi=300, bbox_inches="tight"
                             )
@@ -213,7 +215,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
                 edata.append(["code", (entries, "\n".join(item.out))])
-                if fig:
+                if figname:
                     edata.append(["fig", figname])
             else:
                 edata.append(["text", "\n".join(item.out)])
@@ -443,7 +445,7 @@ class Gen:
                 )
                 t2 = timer(p2, taski)
             else:
-                t2 = nullcontext()
+                t2 = nullcontext
             for qa, a in collected.items():
                 short_description = (qa[:19] + "..") if len(qa) > 21 else qa
                 p2.update(taskp, description=short_description.ljust(17))

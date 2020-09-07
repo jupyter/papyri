@@ -235,6 +235,13 @@ class Ingester:
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
+        for px, f in progress(
+            self.cache_dir.glob(f"{name_glob}/*.png"),
+            description=f"Reading {name} image files ...",
+        ):
+            with open(self.ingest_dir / f.name, "wb") as fw:
+                fw.write(f.read_bytes())
+
         for p, (qa, ndoc) in progress(
             nvisited_items.items(), description="Cleaning double references"
         ):

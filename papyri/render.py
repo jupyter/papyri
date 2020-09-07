@@ -245,7 +245,7 @@ async def _route(ref, store):
 
 def img(subpath):
     assert subpath.endswith("png")
-    with open("/" + subpath, "rb") as f:
+    with open(ingest_dir / subpath, "rb") as f:
         return f.read()
 
 

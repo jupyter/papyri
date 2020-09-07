@@ -277,7 +277,7 @@ body{
             {% if type=='text' %}
                 {{render_paragraph([data])}}
             {% elif type == 'fig' %}
-                <img src="img/{{data}}"/>
+                <div><img src="img/{{data}}"/></div>
             {% else %}
              <pre>{{example(data[0]) -}}
 
