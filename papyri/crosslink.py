@@ -18,6 +18,23 @@ from .utils import progress
 warnings.simplefilter("ignore", UserWarning)
 
 
+@lru_cache()
+def keepref(ref):
+    """
+    Filter to rim out common reference that we usually do not want to keep
+    around in examples; typically most of the builtins, and things we can't
+    import.
+    """
+    if ref.startswith(("builtins.", "__main__")):
+        return False
+    try:
+        __import__(ref)
+        return False
+    except Exception:
+        pass
+    return True
+
+
 def resolve_(qa: str, known_refs, local_ref):
     def resolve(ref):
         if ref in local_ref:

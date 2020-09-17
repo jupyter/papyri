@@ -4,6 +4,8 @@ from datetime import timedelta
 from rich.progress import BarColumn, Progress, ProgressColumn, TextColumn, track, Task
 from rich.text import Text
 
+from typing import Tuple
+
 
 class TimeElapsedColumn(ProgressColumn):
 
@@ -53,3 +55,26 @@ def progress(iterable, *, description="Progress"):
             raise
 
     return gen()
+
+
+def dedent_but_first(text):
+    """
+    simple version of `inspect.cleandoc` that does not trim empty lines
+    """
+    a, *b = text.split("\n")
+    return dedent(a) + "\n" + dedent("\n".join(b))
+
+
+def pos_to_nl(script: str, pos: int) -> Tuple[int, int]:
+    """
+    Convert pigments position to Jedi col/line
+    """
+    rest = pos
+    ln = 0
+    for line in script.splitlines():
+        if len(line) < rest:
+            rest -= len(line) + 1
+            ln += 1
+        else:
+            return ln, rest
+    raise RuntimeError

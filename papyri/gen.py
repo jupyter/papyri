@@ -4,7 +4,6 @@ import json
 import sys
 import time
 from contextlib import contextmanager, nullcontext
-from functools import lru_cache
 from os.path import expanduser
 from pathlib import Path
 from textwrap import dedent
@@ -17,14 +16,10 @@ import jedi
 from pygments.lexers import PythonLexer
 from rich.progress import (
     BarColumn,
-    DownloadColumn,
     Progress,
     ProgressColumn,
-    TaskID,
     Text,
     TextColumn,
-    TimeRemainingColumn,
-    TransferSpeedColumn,
 )
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
@@ -32,47 +27,7 @@ from velin.ref import NumpyDocString
 
 from . import utils
 from .config import base_dir, cache_dir
-from .utils import progress
-
-
-@lru_cache()
-def keepref(ref):
-    """
-    Filter to rim out common reference that we usually do not want to keep
-    around in examples; typically most of the builtins, and things we can't
-    import.
-    """
-    if ref.startswith(("builtins.", "__main__")):
-        return False
-    try:
-        __import__(ref)
-        return False
-    except Exception:
-        pass
-    return True
-
-
-def dedent_but_first(text):
-    """
-    simple version of `inspect.cleandoc` that does not trim empty lines
-    """
-    a, *b = text.split("\n")
-    return dedent(a) + "\n" + dedent("\n".join(b))
-
-
-def pos_to_nl(script: str, pos: int) -> Tuple[int, int]:
-    """
-    Convert pigments position to Jedi col/line
-    """
-    rest = pos
-    ln = 0
-    for line in script.splitlines():
-        if len(line) < rest:
-            rest -= len(line) + 1
-            ln += 1
-        else:
-            return ln, rest
-    raise RuntimeError
+from .utils import pos_to_nl, dedent_but_first, progress
 
 
 def parse_script(script, ns=None, infer=None, prev=""):
@@ -400,6 +355,14 @@ class Gen:
     def do_one_item(self, target_item, ndoc, infer, exec_, qa):
         """
         Get documentation information for one item
+
+        Returns
+        -------
+        Tuple of two items,
+        ndoc:
+            DocBundle with info for current object.
+        figs:
+            dict mapping figure names to figure data.
         """
         if not ndoc["Signature"]:
             sig = None
