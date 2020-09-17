@@ -58,6 +58,7 @@ Unless your use case is widely adopted it is likely not worse the complexity
 import re
 import sys
 from textwrap import indent as _indent
+from typing import Any, List
 
 from papyri.gen import dedent_but_first
 
@@ -389,7 +390,9 @@ def make_block_3(lines: "Lines"):
       raw indent block
 
     """
-
+    a: List[Lines]
+    b: List[Lines]
+    c: List[Lines]
     (a, b, c) = [], [], []
     blocks = []
     state = "a"
@@ -543,6 +546,9 @@ class Lines:
             l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(lines)
         ]
 
+    def __iter__(self):
+        return iter(self._lines)
+
     def __getitem__(self, sl):
         if isinstance(sl, int):
             return self._lines[sl]
@@ -654,7 +660,7 @@ class Example(Block):
     COLOR = GREEN
 
 
-def header_pass(block) -> ["blocks"]:
+def header_pass(block):
     """
     Check each block for potential header, if found, split (or extract) the given block into a header.
 

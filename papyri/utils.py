@@ -1,7 +1,7 @@
 import time
 from datetime import timedelta
 
-from rich.progress import BarColumn, Progress, ProgressColumn, TextColumn, track
+from rich.progress import BarColumn, Progress, ProgressColumn, TextColumn, track, Task
 from rich.text import Text
 
 
@@ -16,7 +16,9 @@ class TimeElapsedColumn(ProgressColumn):
             return Text("-:--:--", style="progress.elapsed")
         elapsed_delta = timedelta(seconds=int(elapsed))
         if task.time_remaining is not None:
-            finish_delta = elapsed_delta + timedelta(seconds=int(task.time_remaining))
+            finish_delta = str(
+                elapsed_delta + timedelta(seconds=int(task.time_remaining))
+            )
         else:
             finish_delta = "--:--:--"
         return Text(

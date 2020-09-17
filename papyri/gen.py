@@ -11,6 +11,7 @@ from textwrap import dedent
 
 # from numpydoc.docscrape import NumpyDocString
 from types import FunctionType, ModuleType
+from typing import List, Dict, Any, Tuple
 
 import jedi
 from pygments.lexers import PythonLexer
@@ -59,7 +60,7 @@ def dedent_but_first(text):
     return dedent(a) + "\n" + dedent("\n".join(b))
 
 
-def pos_to_nl(script: str, pos: int) -> (int, int):
+def pos_to_nl(script: str, pos: int) -> Tuple[int, int]:
     """
     Convert pigments position to Jedi col/line
     """
@@ -71,6 +72,7 @@ def pos_to_nl(script: str, pos: int) -> (int, int):
             ln += 1
         else:
             return ln, rest
+    raise RuntimeError
 
 
 def parse_script(script, ns=None, infer=None, prev=""):
@@ -283,7 +285,7 @@ class TimeElapsedColumn(ProgressColumn):
     # Only refresh twice a second to prevent jitter
     max_refresh = 0.5
 
-    def render(self, task: "Task") -> Text:
+    def render(self, task) -> Text:
         """Show time remaining."""
         from datetime import timedelta
 
@@ -395,7 +397,62 @@ class Gen:
         with (self.cache_dir / root / path).open("wb") as f:
             f.write(data)
 
-    def do_one_mod(self, names, infer, exec_):
+    def do_one_item(self, target_item, ndoc, infer, exec_, qa):
+        """
+        Get documentation information for one item
+        """
+        if not ndoc["Signature"]:
+            sig = None
+            try:
+                sig = str(inspect.signature(target_item))
+            except (ValueError, TypeError):
+                pass
+            if sig:
+                ndoc["Signature"] = qa.split(".")[-1] + sig
+
+        new_see_also = ndoc["See Also"]
+        refs = []
+        if new_see_also:
+            for line in new_see_also:
+                rt, desc = line
+                for ref, type_ in rt:
+                    refs.append(ref)
+
+        try:
+            ndoc.edata, figs = get_example_data(
+                ndoc, infer, obj=target_item, exec_=exec_, qa=qa
+            )
+            ndoc.figs = figs
+        except Exception:
+            ndoc.edata = []
+            print("Error getting example date in ", qa)
+            raise
+
+        ndoc.refs = list(
+            {u[1] for t_, sect in ndoc.edata if t_ == "code" for u in sect[0] if u[1]}
+        )
+        ndoc.refs.extend(refs)
+        ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
+        figs = ndoc.figs
+        del ndoc.figs
+
+        # return ndoc, figs
+
+    def do_one_mod(self, names: List[str], infer: bool, exec_: bool):
+        """
+        can one modules and store resulting docbundle in store locations
+
+        Parameters
+        ----------
+
+        names: List[str]
+            list of (sub)modules names to generate docbundle for. 
+            The first is considered the root module.
+        infer: 
+            Wether to run type inference with jedi.
+        exec_:
+            Wether to try to execute the code blocks and embed resulting values like plots. 
+        """
 
         p = lambda: Progress(
             TextColumn("[progress.description]{task.description}", justify="right"),
@@ -404,6 +461,7 @@ class Gen:
             "[progress.completed]{task.completed} / {task.total}",
             TimeElapsedColumn(),
         )
+        # step one collect all the modules instances we want to analyse.
 
         modules = []
         for name in names:
@@ -413,16 +471,19 @@ class Gen:
                 n0 = getattr(n0, sub)
             modules.append(n0)
 
+        # step 2 try to guess the version number from the top module.
         version = getattr(modules[0], "__version__", "???")
 
         root = names[0].split(".")[0]
-        nvisited_items = {}
+
         task = None
 
+        # clean out previous doc bundle
         self.clean(root)
 
-        collected = Collector(n0).items()
+        collected: Dict[str, Any] = Collector(n0).items()
 
+        # collect all items we want to document.
         for qa, item in collected.items():
             if (nqa := full_qual(item)) != qa:
                 print("after import qa differs : {qa} -> {nqa}")
@@ -432,88 +493,32 @@ class Gen:
                 else:
                     print("differs: {item} != {other}")
 
+        bundle = self.cache_dir / root
         with p() as p2:
-            bundle = self.cache_dir / root
+
+            # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
             t1 = timer(p2, taskp)
-            if infer:
-                taski = p2.add_task(
-                    description="Running type inference in examples",
-                    total=len(collected),
-                )
-                t2 = timer(p2, taski)
-            else:
-                t2 = nullcontext
-            for qa, a in collected.items():
+
+            for qa, target_item in collected.items():
                 short_description = (qa[:19] + "..") if len(qa) > 21 else qa
                 p2.update(taskp, description=short_description.ljust(17))
-                ddd = a.__doc__
-                if ddd is None:
-                    p2.advance(taskp)
-                    if infer:
-                        p2.advance(taski)
+                p2.advance(taskp)
+                item_docstring = target_item.__doc__
+                if item_docstring is None:
                     continue
 
                 # progress.console.print(qa)
                 with t1():
                     try:
-                        ndoc = NumpyDocString(dedent_but_first(ddd))
+                        ndoc = NumpyDocString(dedent_but_first(item_docstring))
                     except:
-                        p2.console.print("Unexpected error parsing", a)
-                        p2.advance(taskp)
-                        if infer:
-                            p2.advance(taski)
+                        p2.console.print("Unexpected error parsing", target_item)
                         continue
-                p2.advance(taskp)
 
-                if not ndoc["Signature"]:
-                    sig = None
-                    try:
-                        sig = str(inspect.signature(a))
-                    except (ValueError, TypeError):
-                        pass
-                    if sig:
-                        ndoc["Signature"] = qa.split(".")[-1] + sig
-
-                new_see_also = ndoc["See Also"]
-                refs = []
-                if new_see_also:
-                    for line in new_see_also:
-                        rt, desc = line
-                        for ref, type_ in rt:
-                            refs.append(ref)
-
-                if getattr(nvisited_items, qa, None):
-                    raise ValueError(f"{qa} already visited")
-                try:
-                    with t2():
-                        ndoc.edata, figs = get_example_data(
-                            ndoc, infer, obj=a, exec_=exec_, qa=qa
-                        )
-                        ndoc.figs = figs
-                except Exception:
-                    ndoc.edata = []
-                    print("Error getting example date in ", qa)
-                    raise
-
-                ndoc.refs = list(
-                    {
-                        u[1]
-                        for t_, sect in ndoc.edata
-                        if t_ == "code"
-                        for u in sect[0]
-                        if u[1]
-                    }
-                )
-                ndoc.refs.extend(refs)
-                ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
-                if infer:
-                    p2.advance(taski)
-                figs = ndoc.figs
-                del ndoc.figs
+                nodc, figs = self.do_one_item(target_item, ndoc, infer, exec_, qa)
                 self.put(root, qa, json.dumps(ndoc.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(root, name, data)
 
-                nvisited_items[qa] = ndoc
             self.put(root, "__papyri__", json.dumps({"version": version}))
