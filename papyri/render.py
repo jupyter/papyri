@@ -204,7 +204,9 @@ class DocData:
 
     def __init__(self, ndoc):
         self.see_also = ndoc.see_also
-        self.edata = ndoc.edata
+
+        # todo: shoudl always have a edata attr.
+        self.edata = getattr(ndoc, "edata", None)
         self.refs = ndoc.refs
         self.content = {}
         self.version = ndoc.version
@@ -288,7 +290,7 @@ async def _ascii_render(name, store=Store(ingest_dir)):
     doc = DocData(ndoc)
 
     return render_one(
-        template=template, ndoc=doc, qa=ref, ext="", backrefs=ndoc.backrefs
+        template=template, doc=doc, qa=ref, ext="", backrefs=ndoc.backrefs
     )
 
 

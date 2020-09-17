@@ -11,7 +11,7 @@ from numpydoc.docscrape import Parameter
 from velin import NumpyDocString
 
 from .config import base_dir, cache_dir, ingest_dir
-from .gen import keepref, normalise_ref
+from .gen import normalise_ref
 from .take2 import Paragraph
 from .utils import progress
 

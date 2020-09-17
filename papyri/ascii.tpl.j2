@@ -57,7 +57,7 @@
 
 {{-green("green")}} refer to items within the same document, {{blue("blue")}} external {{underline("known")}} entities, {{red("red")}} entities we were not able to find and {{yellow("yellow")}} for code, and other "raw" items, typically between double backticks.
 
-{% for section in doc.sections if doc[section] %}
+{% for section in doc.sections if doc.content[section] %}
    |{% if section not in ['Extended Summary','Signature', 'Summary'] %}
    | 
    |{{bold(section)}}
@@ -65,10 +65,10 @@
    |{% endif %}
    |{% if section in ['Summary', 'Extended Summary', 'Notes'] %}
    |
-   |     |{{render_paragraph(doc[section]) | wordwrap | indent(width=8)}}
+   |     |{{render_paragraph(doc.content[section]) | wordwrap | indent(width=8)}}
    |
    |{% elif section in ['Signature'] %}
-   |   |{{ bold(underline(doc[section]))}}
+   |   |{{ bold(underline(doc.content[section]))}}
    |
    |{% elif section in ['See Also'] %}
    |   |{% for sa in doc.see_also %}
@@ -95,7 +95,7 @@
    |   |   |{% if exists=="exists" %}{{ blue(r) }},{% else %}{{ red(r) }},{% endif %}
    |   |{% endfor %}
    |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
-   |   |{% for p in doc[section] %}
+   |   |{% for p in doc.content[section] %}
    |   |   |{% if p[0] %}
    |   |   |    {{bold(green(p[0]))}} : {{p[1]}}
    |   |   |{% else %}
@@ -104,8 +104,8 @@
    |   |   |       {{render_paragraph(p[2]) | wordwrap | indent(width=8) }}
    |   |{% endfor %}
    |{% else %}
-   |    {% if doc[section] %}
-   |        {{doc[section]}}
+   |    {% if doc.content[section] %}
+   |        {{doc.content[section]}}
    |    {% endif %}
    |{% endif %}
 {% endfor%}

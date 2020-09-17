@@ -5,6 +5,7 @@ import sys
 import time
 from contextlib import contextmanager, nullcontext
 from os.path import expanduser
+from functools import lru_cache
 from pathlib import Path
 from textwrap import dedent
 

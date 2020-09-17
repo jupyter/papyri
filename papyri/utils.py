@@ -5,6 +5,7 @@ from rich.progress import BarColumn, Progress, ProgressColumn, TextColumn, track
 from rich.text import Text
 
 from typing import Tuple
+from textwrap import dedent
 
 
 class TimeElapsedColumn(ProgressColumn):
