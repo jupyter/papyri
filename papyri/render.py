@@ -214,24 +214,24 @@ class DocData:
 
 def render_one(template, doc, qa, ext, *, backrefs, parts={}):
     """
-    Return the rendering of one document 
+    Return the rendering of one document
 
     Parameters
     ----------
-    template: 
-        a Jinja@ template object used to render. 
-    doc: DocData 
-        a DocData object with the informations for current object. 
-    qa: str
+    template
+        a Jinja@ template object used to render.
+    doc : DocData
+        a DocData object with the informations for current object.
+    qa : str
         fully qualified name for current object
-    ext: str
-        file extension for url  – should likely be removed and be set on the template 
-        I think that might be passed down to resolve maybe ? 
-    backrefs: list of str
-        backreferences of document pointing to this. 
-    parts: Dict[str, list[(str, str)]
+    ext : str
+        file extension for url  – should likely be removed and be set on the template
+        I think that might be passed down to resolve maybe ?
+    backrefs : list of str
+        backreferences of document pointing to this.
+    parts : Dict[str, list[(str, str)]
         used for navigation and for parts of the breakcrumbs to have navigation to siblings.
-        This is not directly related to current object. 
+        This is not directly related to current object.
 
     """
     # TODO : move this to ingest likely.

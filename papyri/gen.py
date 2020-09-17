@@ -405,10 +405,10 @@ class Gen:
             sig = None
             try:
                 sig = str(inspect.signature(target_item))
+                sig = qa.split(".")[-1] + sig
             except (ValueError, TypeError):
                 pass
-            if sig:
-                ndoc["Signature"] = qa.split(".")[-1] + sig
+            ndoc["Signature"] = sig
 
         new_see_also = ndoc["See Also"]
         refs = []
@@ -435,8 +435,7 @@ class Gen:
         ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
         figs = ndoc.figs
         del ndoc.figs
-
-        # return ndoc, figs
+        return ndoc, figs
 
     def do_one_mod(self, names: List[str], infer: bool, exec_: bool):
         """
@@ -444,14 +443,13 @@ class Gen:
 
         Parameters
         ----------
-
-        names: List[str]
-            list of (sub)modules names to generate docbundle for. 
+        names : List[str]
+            list of (sub)modules names to generate docbundle for.
             The first is considered the root module.
-        infer: 
+        infer : bool
             Wether to run type inference with jedi.
-        exec_:
-            Wether to try to execute the code blocks and embed resulting values like plots. 
+        exec_ : bool
+            Wether to try to execute the code blocks and embed resulting values like plots.
         """
 
         p = lambda: Progress(
