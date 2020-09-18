@@ -174,8 +174,6 @@ def paragraphs(lines):
     return acc
 
 
-
-
 def render_one(template, doc, qa, ext, *, backrefs, parts={}):
     """
     Return the rendering of one document
