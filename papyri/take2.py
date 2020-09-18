@@ -432,12 +432,12 @@ def make_block_3(lines: "Lines"):
 
 class Block:
     """
-    The following is wrong for some case, in particular if there are many paragraph in a row with 0 indent. 
+    The following is wrong for some case, in particular if there are many paragraph in a row with 0 indent.
     we can't ignore blank lines.
 
-    --- 
+    ---
 
-    A chunk of lines that breaks when the indentation reaches 
+    A chunk of lines that breaks when the indentation reaches
     - the last of a list of blank lines if indentation is consistant
     - the last non-0  indented lines
 
@@ -446,9 +446,9 @@ class Block:
     cut after the first blank lines and expect indents, otherwise there is not indent.
     and likely if there is a blank lnes as  a property.
 
-    ---- 
+    ----
 
-    I think the correct alternative is that each block may get an indented children, and that a block is thus: 
+    I think the correct alternative is that each block may get an indented children, and that a block is thus:
 
     - 1) The sequence of consecutive non blank lines with 0 indentation
     - 2) The (potentially absent) blank lines leading to the indent block

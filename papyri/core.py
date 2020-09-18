@@ -14,8 +14,8 @@ class DocData:
     Represent the (in-memory) structure of an object documentation.
     As well as way to reliably serialise/deserialise it.
 
-    TBD: 
-        - how should external resources like images be loaded ? 
+    TBD:
+        - how should external resources like images be loaded ?
 
     """
 
