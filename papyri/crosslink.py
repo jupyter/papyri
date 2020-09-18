@@ -57,29 +57,8 @@ def resolve_(qa: str, known_refs, local_ref):
     return resolve
 
 
-@dataclass
-class Ref:
-    name: str
-    ref: str
-    exists: bool
+from .core import Ref, SeeAlsoItem
 
-    def __hash__(self):
-        return hash((self.name, self.ref, self.exists))
-
-
-@dataclass
-class SeeAlsoItem:
-    name: Ref
-    descriptions: str
-    # there are a few case when the lhs is `:func:something`... in scipy.
-    type: str
-
-    @classmethod
-    def from_json(cls, name, descriptions, type):
-        return cls(Ref(**name), descriptions, type)
-
-    def __hash__(self):
-        return hash((self.name, tuple(self.descriptions)))
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
