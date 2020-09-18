@@ -12,6 +12,7 @@ description-file="Readme.md"
 requires-python=">=3.8"
 requires=[
     "numpydoc",
+    "cachetools",
     "pygments",
     "black",
     "there",
