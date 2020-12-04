@@ -24,7 +24,7 @@ from rich.progress import (
 )
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
-from velin.ref import NumpyDocString
+from .vref import NumpyDocString
 
 from . import utils
 from .config import base_dir, cache_dir
@@ -332,6 +332,46 @@ class DocBlob:
     as well as link to external references, like images generated.
     """
 
+    __slots__ = ("_sections", "example_section_data", "refs", "ordered_sections")
+
+    @property
+    def sections(self):
+        """
+        List of sections in the doc blob docstrings
+
+        """
+        return self._sections
+
+    @sections.setter
+    def sections(self, new):
+        assert not new.keys() - {
+            "Signature",
+            "Summary",
+            "Extended Summary",
+            "Parameters",
+            "Returns",
+            "Yields",
+            "Receives",
+            "Raises",
+            "Warns",
+            "Other Parameters",
+            "Attributes",
+            "Methods",
+            "See Also",
+            "Notes",
+            "Warnings",
+            "References",
+            "Examples",
+            "index",
+        }
+        self._sections = new
+
+    def to_json(self):
+
+        res = {k: getattr(self, k) for k in self.__slots__}
+
+        return res
+
 
 class Gen:
     def __init__(self):
@@ -353,7 +393,7 @@ class Gen:
         with (self.cache_dir / root / path).open("wb") as f:
             f.write(data)
 
-    def do_one_item(self, target_item, ndoc, infer, exec_, qa):
+    def do_one_item(self, target_item, ndoc, infer: bool, exec_, qa):
         """
         Get documentation information for one item
 
@@ -365,6 +405,18 @@ class Gen:
         figs:
             dict mapping figure names to figure data.
         """
+
+        try:
+            print(
+                inspect.getfile(target_item),
+                inspect.getsourcelines(target_item)[1],
+                print(type(target_item)),
+            )
+        except (AttributeError, TypeError):
+            pass
+        except OSError:
+            pass
+
         if not ndoc["Signature"]:
             sig = None
             try:
@@ -399,11 +451,21 @@ class Gen:
         ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
         figs = ndoc.figs
         del ndoc.figs
-        return ndoc, figs
+
+        blob = DocBlob()
+        blob.sections = ndoc.sections
+        blob.example_section_data = ndoc.edata
+        blob.ordered_sections = ndoc.ordered_sections
+        blob.refs = ndoc.refs
+        del ndoc.edata
+        del ndoc.refs
+        del ndoc.ordered_sections
+        # turn the numpydoc thing into a docblob
+        return blob, figs
 
     def do_one_mod(self, names: List[str], infer: bool, exec_: bool):
         """
-        can one modules and store resulting docbundle in store locations
+        Crawl one modules and stores resulting docbundle in self.store.
 
         Parameters
         ----------
@@ -427,7 +489,7 @@ class Gen:
 
         modules = []
         for name in names:
-            x, *r = name.split(".")
+            _, *r = name.split(".")
             n0 = __import__(name)
             for sub in r:
                 n0 = getattr(n0, sub)
@@ -437,8 +499,6 @@ class Gen:
         version = getattr(modules[0], "__version__", "???")
 
         root = names[0].split(".")[0]
-
-        task = None
 
         # clean out previous doc bundle
         self.clean(root)
@@ -456,30 +516,34 @@ class Gen:
                     print("differs: {item} != {other}")
 
         bundle = self.cache_dir / root
+        from contextlib import nullcontext
+
+        p = nullcontext
         with p() as p2:
 
             # just nice display of progression.
-            taskp = p2.add_task(description="parsing", total=len(collected))
-            t1 = timer(p2, taskp)
+            # taskp = p2.add_task(description="parsing", total=len(collected))
+            # t1 = timer(p2, taskp)
 
             for qa, target_item in collected.items():
                 short_description = (qa[:19] + "..") if len(qa) > 21 else qa
-                p2.update(taskp, description=short_description.ljust(17))
-                p2.advance(taskp)
+                # p2.update(taskp, description=short_description.ljust(17))
+                # p2.advance(taskp)
                 item_docstring = target_item.__doc__
                 if item_docstring is None:
                     continue
 
                 # progress.console.print(qa)
+                t1 = nullcontext
                 with t1():
                     try:
                         ndoc = NumpyDocString(dedent_but_first(item_docstring))
                     except:
-                        p2.console.print("Unexpected error parsing", target_item)
+                        # p2.console.print("Unexpected error parsing", target_item)
                         continue
 
-                nodc, figs = self.do_one_item(target_item, ndoc, infer, exec_, qa)
-                self.put(root, qa, json.dumps(ndoc.to_json(), indent=2))
+                doc_blob, figs = self.do_one_item(target_item, ndoc, infer, exec_, qa)
+                self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(root, name, data)
 
