@@ -332,7 +332,13 @@ class DocBlob:
     as well as link to external references, like images generated.
     """
 
-    __slots__ = ("_sections", "example_section_data", "refs", "ordered_sections")
+    __slots__ = (
+        "_sections",
+        "example_section_data",
+        "refs",
+        "ordered_sections",
+        "_parsed_data",
+    )
 
     @property
     def sections(self):
@@ -407,11 +413,12 @@ class Gen:
         """
 
         try:
-            print(
-                inspect.getfile(target_item),
-                inspect.getsourcelines(target_item)[1],
-                print(type(target_item)),
-            )
+            # print(
+            #    inspect.getfile(target_item),
+            #    inspect.getsourcelines(target_item)[1],
+            #    type(target_item),
+            # )
+            pass
         except (AttributeError, TypeError):
             pass
         except OSError:
@@ -457,11 +464,12 @@ class Gen:
         blob.example_section_data = ndoc.edata
         blob.ordered_sections = ndoc.ordered_sections
         blob.refs = ndoc.refs
-        del ndoc.edata
-        del ndoc.refs
-        del ndoc.ordered_sections
+        # del ndoc.edata
+        # del ndoc.refs
+        # del ndoc.ordered_sections
+        blob._parsed_data = ndoc._parsed_data
         # turn the numpydoc thing into a docblob
-        return blob, figs
+        return ndoc, figs
 
     def do_one_mod(self, names: List[str], infer: bool, exec_: bool):
         """
@@ -489,7 +497,7 @@ class Gen:
 
         modules = []
         for name in names:
-            _, *r = name.split(".")
+            x, *r = name.split(".")
             n0 = __import__(name)
             for sub in r:
                 n0 = getattr(n0, sub)
@@ -543,6 +551,7 @@ class Gen:
                         continue
 
                 doc_blob, figs = self.do_one_item(target_item, ndoc, infer, exec_, qa)
+                print("PUT:", root, qa)
                 self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(root, name, data)
