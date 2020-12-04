@@ -16,9 +16,14 @@ from dataclasses import dataclass
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        if dataclasses.is_dataclass(o):
+        if hasattr(o, "__to_json__"):
+            return o.__to_json__(self)
+        elif dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
+
+    def decode(self, s):
+        json.loads(s, object_hook=self.hook)
 
 
 class DocData:
