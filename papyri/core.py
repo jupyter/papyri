@@ -63,15 +63,14 @@ class DocData:
     content = None
     version = None  # version of current package
 
-    def __init__(self, ndoc):
-        self.see_also = ndoc.see_also
+    def __init__(self, doc_blob):
+        self.see_also = doc_blob.see_also
 
-        # todo: shoudl always have a edata attr.
-        self.edata = getattr(ndoc, "edata", None)
-        self.refs = ndoc.refs
-        self.content = {}
-        self.version = ndoc.version
-        for k, v in ndoc.items():
+        self.edata = doc_blob.example_section_data
+        self.refs = doc_blob.refs
+        self.content = doc_blob.sections
+        self.version = doc_blob.version
+        for k, v in doc_blob.sections.items():
             self.content[k] = v
 
     def __to_json__(self) -> Dict[str, Any]:

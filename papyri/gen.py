@@ -26,6 +26,7 @@ from rich.progress import (
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 from .vref import NumpyDocString
+from numpydoc.docscrape import Parameter
 
 from . import utils
 from .config import base_dir, cache_dir
@@ -341,7 +342,6 @@ class DocBlob:
         "example_section_data",
         "refs",
         "ordered_sections",
-        "_parsed_data",
     )
 
     def __init__(self):
@@ -349,7 +349,6 @@ class DocBlob:
         self.example_section_data = None
         self.refs = None
         self.ordered_sections = None
-        self._parsed_data = None
 
     @property
     def sections(self):
@@ -388,6 +387,39 @@ class DocBlob:
         res = {k: getattr(self, k) for k in self.__slots__}
 
         return res
+
+    @classmethod
+    def from_json(cls, obj):
+        nds = cls()
+        for k in cls.__slots__:
+            setattr(nds, k, obj.get(k, None))
+
+        nds._sections["Parameters"] = [
+            Parameter(a, b, c) for (a, b, c) in nds._sections.get("Parameters", [])
+        ]
+
+        for it in (
+            "Returns",
+            "Yields",
+            "Extended Summary",
+            "Receives",
+            "Other Parameters",
+            "Raises",
+            "Warns",
+            "Warnings",
+            "See Also",
+            "Notes",
+            "References",
+            "Examples",
+            "Attributes",
+            "Methods",
+        ):
+            if it not in nds._sections:
+                nds._sections[it] = []
+        for it in ("index",):
+            if it not in nds._sections:
+                nds._sections[it] = {}
+        return nds
 
 
 class Gen:
@@ -473,16 +505,16 @@ class Gen:
         del ndoc.figs
 
         blob = DocBlob()
-        blob.sections = ndoc.sections
+        # blob.sections = ndoc.sections
         blob.example_section_data = ndoc.edata
         blob.ordered_sections = ndoc.ordered_sections
         blob.refs = ndoc.refs
         # del ndoc.edata
         # del ndoc.refs
         # del ndoc.ordered_sections
-        blob._parsed_data = ndoc._parsed_data
+        blob._sections = ndoc._parsed_data
         # turn the numpydoc thing into a docblob
-        return ndoc, figs
+        return blob, figs
 
     def do_one_mod(self, names: List[str], infer: bool, exec_: bool):
         """

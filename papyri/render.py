@@ -95,19 +95,19 @@ async def _route(ref, store):
             br = await brpath.read_text()
         else:
             br = None
-        ndoc = load_one(bytes_, br)
-        local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
-            x[0] for x in ndoc["Returns"] if x[0]
+        doc_blob = load_one(bytes_, br)
+        local_ref = [x[0] for x in doc_blob.sections["Parameters"] if x[0]] + [
+            x[0] for x in doc_blob.sections["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
-        doc = DocData(ndoc)
+        doc = DocData(doc_blob)
         return render_one(
             template=template,
             doc=doc,
             qa=ref,
             ext="",
             parts=siblings,
-            backrefs=ndoc.backrefs,
+            backrefs=doc_blob.backrefs,
         )
     else:
         known_refs = [str(s.name)[:-5] for s in store.glob(f"{ref}*.json")]

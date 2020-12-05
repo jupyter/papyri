@@ -8,14 +8,20 @@ from functools import lru_cache
 from types import ModuleType
 
 from numpydoc.docscrape import Parameter
-from velin import NumpyDocString
 
 from .config import base_dir, cache_dir, ingest_dir
-from .gen import normalise_ref
+from .gen import normalise_ref, DocBlob
 from .take2 import Paragraph
 from .utils import progress
 
+from there import print
+
 warnings.simplefilter("ignore", UserWarning)
+
+
+class IngestedBlobs(DocBlob):
+
+    __slots_ = "backrefs"
 
 
 @lru_cache()
@@ -74,11 +80,11 @@ def assert_normalized(ref):
     return ref
 
 
-def load_one(bytes_, bytes2_, qa=None):
+def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     # blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
 
     data = json.loads(bytes_)
-    blob = NumpyDocString.from_json(data)
+    blob = IngestedBlobs.from_json(data)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("edata", data.pop("example_section_data"))
@@ -97,11 +103,12 @@ def load_one(bytes_, bytes2_, qa=None):
     blob.version = data.pop("version", "")
     data.pop("ordered_sections", None)
     data.pop("backrefs", None)
+    data.pop("_sections", None)
     if data.keys():
         print(data.keys(), qa)
     blob.__dict__.update(data)
     try:
-        if (see_also := blob.get("See Also", None)) and not blob.see_also:
+        if (see_also := blob.sections.get("See Also", None)) and not blob.see_also:
             for nts, d in see_also:
                 for (n, t) in nts:
                     if t and not d:
@@ -114,7 +121,7 @@ def load_one(bytes_, bytes2_, qa=None):
         assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
     blob.see_also = list(set(blob.see_also))
     try:
-        notes = blob["Notes"]
+        notes = blob.sections["Notes"]
         blob.refs.extend(refs := Paragraph.parse_lines(notes).references)
         # if refs:
         # print(qa, refs)
@@ -129,7 +136,7 @@ class Ingester:
         self.cache_dir = cache_dir
         self.ingest_dir = ingest_dir
 
-    def ingest(self, name, check):
+    def ingest(self, name: str, check: bool):
 
         if name == "all":
             name_glob = "**"
@@ -181,13 +188,13 @@ class Ingester:
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f}") from e
 
-        for p, (qa, ndoc) in progress(
+        for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
         ):
-            local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
-                x[0] for x in ndoc["Returns"] if x[0]
+            local_ref = [x[0] for x in doc_blob.sections["Parameters"] if x[0]] + [
+                x[0] for x in doc_blob.sections["Returns"] if x[0]
             ]
-            for ref in ndoc.refs:
+            for ref in doc_blob.refs:
                 resolved, exists = resolve_(qa, nvisited_items, local_ref)(ref)
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
@@ -225,7 +232,7 @@ class Ingester:
                     else:
                         print(resolved, "not valid reference, skipping.")
 
-            for sa in ndoc.see_also:
+            for sa in doc_blob.see_also:
                 resolved, exists = resolve_(qa, nvisited_items, [])(sa.name.name)
                 if exists == "exists":
                     sa.name.exists = True
@@ -237,7 +244,7 @@ class Ingester:
             with open(self.ingest_dir / f.name, "wb") as fw:
                 fw.write(f.read_bytes())
 
-        for p, (qa, ndoc) in progress(
+        for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cleaning double references"
         ):
             # TODO: load backrref from either:
@@ -253,7 +260,7 @@ class Ingester:
             else:
                 ph_data = []
 
-            ndoc.backrefs = list(sorted(set(ndoc.backrefs + ph_data)))
+            doc_blob.backrefs = list(sorted(set(doc_blob.backrefs + ph_data)))
         if name_glob != "**":
             gg = f"{name}*.json"
         else:
@@ -263,10 +270,12 @@ class Ingester:
         ):
             path.unlink()
 
-        for p, (qa, ndoc) in progress(nvisited_items.items(), description="Writing..."):
+        for p, (qa, doc_blob) in progress(
+            nvisited_items.items(), description="Writing..."
+        ):
             root = qa.split(".")[0]
-            ndoc.version = versions.get(root, "?")
-            js = ndoc.to_json()
+            doc_blob.version = versions.get(root, "?")
+            js = doc_blob.to_json()
             br = js.pop("backrefs", [])
             try:
                 path = self.ingest_dir / f"{qa}.json"
