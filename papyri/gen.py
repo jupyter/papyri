@@ -1,3 +1,4 @@
+from __future__ import annotations
 import inspect
 import io
 import json
@@ -29,6 +30,9 @@ from .vref import NumpyDocString
 from . import utils
 from .config import base_dir, cache_dir
 from .utils import pos_to_nl, dedent_but_first, progress
+
+
+from typing import Tuple, List
 
 
 def parse_script(script, ns=None, infer=None, prev=""):
@@ -340,6 +344,13 @@ class DocBlob:
         "_parsed_data",
     )
 
+    def __init__(self):
+        self._sections = None
+        self.example_section_data = None
+        self.refs = None
+        self.ordered_sections = None
+        self._parsed_data = None
+
     @property
     def sections(self):
         """
@@ -399,7 +410,9 @@ class Gen:
         with (self.cache_dir / root / path).open("wb") as f:
             f.write(data)
 
-    def do_one_item(self, target_item, ndoc, infer: bool, exec_, qa):
+    def do_one_item(
+        self, target_item, ndoc, infer: bool, exec_, qa
+    ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
 
@@ -546,14 +559,12 @@ class Gen:
                 with t1():
                     try:
                         ndoc = NumpyDocString(dedent_but_first(item_docstring))
-                    except:
+                    except Exception:
                         p2.console.print(
                             "Unexpected error parsing",
                             target_item,
                             target_item.__name__,
                         )
-                        if "linspace" in target_item.__name__:
-                            raise
                         continue
 
                 doc_blob, figs = self.do_one_item(target_item, ndoc, infer, exec_, qa)

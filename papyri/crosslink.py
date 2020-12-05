@@ -81,7 +81,7 @@ def load_one(bytes_, bytes2_, qa=None):
     blob = NumpyDocString.from_json(data)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
-    data.pop("edata", None)
+    data.pop("edata", data.pop("example_section_data"))
     # blob._parsed_data["Parameters"] = [
     #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
     # ]
