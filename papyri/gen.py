@@ -526,7 +526,7 @@ class Gen:
         bundle = self.cache_dir / root
         from contextlib import nullcontext
 
-        p = nullcontext
+        # p = nullcontext
         with p() as p2:
 
             # just nice display of progression.
@@ -547,11 +547,17 @@ class Gen:
                     try:
                         ndoc = NumpyDocString(dedent_but_first(item_docstring))
                     except:
-                        # p2.console.print("Unexpected error parsing", target_item)
+                        p2.console.print(
+                            "Unexpected error parsing",
+                            target_item,
+                            target_item.__name__,
+                        )
+                        if "linspace" in target_item.__name__:
+                            raise
                         continue
 
                 doc_blob, figs = self.do_one_item(target_item, ndoc, infer, exec_, qa)
-                print("PUT:", root, qa)
+                # print("PUT:", root, qa)
                 self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(root, name, data)
