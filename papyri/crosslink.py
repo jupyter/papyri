@@ -2,6 +2,7 @@ import dataclasses
 import json
 import warnings
 from functools import lru_cache
+from pathlib import Path
 
 
 from .config import cache_dir, ingest_dir
@@ -126,25 +127,20 @@ class Ingester:
         self.cache_dir = cache_dir
         self.ingest_dir = ingest_dir
 
-    def ingest(self, name: str, check: bool):
-
-        if name == "all":
-            name_glob = "**"
-        else:
-            name_glob = name
+    def ingest(self, path: Path, check: bool):
 
         nvisited_items = {}
         versions = {}
         for console, path in progress(
-            self.cache_dir.glob("**/__papyri__.json"),
+            path.glob("**/__papyri__.json"),
             description="Loading package versions...",
         ):
             with path.open() as f:
                 version = json.loads(f.read())["version"]
             versions[path.parent.name] = version
         for p, f in progress(
-            self.cache_dir.glob(f"{name_glob}/*.json"),
-            description=f"Reading {name} doc bundle files ...",
+            path.glob(f"**/*.json"),
+            description=f"Reading {path} doc bundle files ...",
         ):
             if f.is_dir():
                 continue
@@ -227,8 +223,8 @@ class Ingester:
                     sa.name.exists = True
                     sa.name.ref = resolved
         for px, f in progress(
-            self.cache_dir.glob(f"{name_glob}/*.png"),
-            description=f"Reading {name} image files ...",
+            path.glob(f"**/*.png"),
+            description=f"Reading {path} image files ...",
         ):
             with open(self.ingest_dir / f.name, "wb") as fw:
                 fw.write(f.read_bytes())
@@ -250,12 +246,9 @@ class Ingester:
                 ph_data = []
 
             doc_blob.backrefs = list(sorted(set(doc_blob.backrefs + ph_data)))
-        if name_glob != "**":
-            gg = f"{name}*.json"
-        else:
-            gg = "*.json"
         for console, path in progress(
-            self.ingest_dir.glob(gg), description="cleanig previsous files ...."
+            self.ingest_dir.glob("**/*.json"),
+            description="cleanig previsous files ....",
         ):
             path.unlink()
 
@@ -283,5 +276,5 @@ class Ingester:
                 raise RuntimeError(f"error writing to {fname}") from e
 
 
-def main(*args, **kwargs):
-    Ingester().ingest(*args, **kwargs)
+def main(path, check):
+    Ingester().ingest(path, check)

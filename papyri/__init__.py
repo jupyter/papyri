@@ -21,12 +21,13 @@ def main():
 
 
 @click.command()
-@click.argument("name")
+@click.argument("path")
 @click.option("--check/--no-check", default=True)
-def ingest(name, check):
+def ingest(path, check):
     from . import crosslink as cr
+    from pathlib import Path
 
-    cr.main(name, check)
+    cr.main(Path(path), check)
 
 
 @click.command()
