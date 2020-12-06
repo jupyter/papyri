@@ -10,6 +10,7 @@ from numpydoc.docscrape import Parameter
 
 BLACK_REFORMAT = True
 
+
 class NumpyDocString(nds.NumpyDocString):
     """
     subclass a littel bit more lenient on parsing

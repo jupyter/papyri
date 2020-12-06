@@ -59,9 +59,6 @@ def resolve_(qa: str, known_refs, local_ref):
     return resolve
 
 
-
-
-
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):

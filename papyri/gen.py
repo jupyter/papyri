@@ -28,7 +28,6 @@ from .config import cache_dir
 from .utils import pos_to_nl, dedent_but_first, progress
 
 
-
 def parse_script(script, ns=None, infer=None, prev=""):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
@@ -562,7 +561,6 @@ class Gen:
                     del collected[nqa]
                 else:
                     print("differs: {item} != {other}")
-
 
         # p = nullcontext
         with p() as p2:
