@@ -27,6 +27,8 @@ from numpydoc.docscrape import Parameter
 from .config import cache_dir
 from .utils import pos_to_nl, dedent_but_first, progress
 
+from pathlib import Path
+
 
 def parse_script(script, ns=None, infer=None, prev=""):
     """
@@ -213,7 +215,13 @@ def gen_main(names, infer, exec_):
     """
     main entry point
     """
-    Gen().do_one_mod(names, infer, exec_)
+    g = Gen()
+    g.do_one_mod(names, infer, exec_)
+    p = Path(".") / (g.root + "_" + g.version)
+    p.mkdir(exist_ok=True)
+
+    g.clean(p)
+    g.write(p)
 
 
 def timer(progress, task):
@@ -417,23 +425,25 @@ class Gen:
         self.cache_dir = cache_dir
         self.data = {}
 
-    def clean(self, root):
-        bundle = self.cache_dir / root
+    def clean(self, where: Path):
+        where = where / self.root
         for _, path in progress(
-            bundle.glob("*.json"), description="cleaning previous bundle"
+            where.glob("*.json"), description="cleaning previous bundle"
         ):
             path.unlink()
-        bundle.mkdir(exist_ok=True)
+
+    def write(self, where: Path):
+        assert self.root is not None
+        (where / self.root).mkdir(exist_ok=True)
+        for k, v in self.data.items():
+            with (where / self.root / k).open("w") as f:
+                f.write(v)
 
     def put(self, root, path, data):
-        self.data[path] = data
-        with (self.cache_dir / root / f"{path}.json").open("w") as f:
-            f.write(data)
+        self.data[path + ".json"] = data
 
     def put_raw(self, root, path, data):
-        self.data
-        with (self.cache_dir / root / path).open("wb") as f:
-            f.write(data)
+        self.data[path] = data
 
     def do_one_item(
         self, target_item, ndoc, infer: bool, exec_, qa
@@ -546,9 +556,9 @@ class Gen:
 
         root = names[0].split(".")[0]
         self.root = root
+        self.version = version
 
         # clean out previous doc bundle
-        self.clean(root)
 
         collected: Dict[str, Any] = Collector(n0).items()
 
