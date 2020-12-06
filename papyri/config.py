@@ -14,7 +14,7 @@ ingest_dir = base_dir / "ingest"
 ingest_dir.mkdir(parents=True, exist_ok=True)
 
 
-logo = """\
+logo = r"""
   ___                    _ 
  | _ \__ _ _ __ _  _ _ _(_)
  |  _/ _` | '_ \ || | '_| |

@@ -2,13 +2,9 @@ from __future__ import annotations
 import inspect
 import io
 import json
-import sys
 import time
 from contextlib import contextmanager, nullcontext
-from os.path import expanduser
 from functools import lru_cache
-from pathlib import Path
-from textwrap import dedent
 
 # from numpydoc.docscrape import NumpyDocString
 from types import FunctionType, ModuleType
@@ -28,12 +24,9 @@ from velin.examples_section_utils import InOut, splitblank, splitcode
 from .vref import NumpyDocString
 from numpydoc.docscrape import Parameter
 
-from . import utils
-from .config import base_dir, cache_dir
+from .config import cache_dir
 from .utils import pos_to_nl, dedent_but_first, progress
 
-
-from typing import Tuple, List
 
 
 def parse_script(script, ns=None, infer=None, prev=""):
@@ -83,6 +76,7 @@ def parse_script(script, ns=None, infer=None, prev=""):
         try:
             ref = None
             for jed in jeds:
+                failed = ""
                 try:
                     if infer and (text not in (" .=()[],")) and text.isidentifier():
                         inf = jed.infer(line_n + 1, col_n)
@@ -94,12 +88,12 @@ def parse_script(script, ns=None, infer=None, prev=""):
                         ref = ""
                 except (AttributeError, TypeError, Exception):
                     raise
-                    pass
+                    failed = "(jedi failed inference)"
                 break
         except IndexError:
             raise
             ref = ""
-        yield text, ref
+        yield text + failed, ref
     warnings.simplefilter("default", UserWarning)
 
 
@@ -156,8 +150,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             global counter
                             counter += 1
                             figman = next(iter(fig_managers))
-                            import os.path
-                            from pathlib import Path
 
                             buf = io.BytesIO()
                             if not qa:
@@ -170,9 +162,8 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             buf.seek(0)
                             figs.append((figname, buf.read()))
 
-                    except:
+                    except Exception:
                         raise
-                        pass
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
                 edata.append(["code", (entries, "\n".join(item.out))])
@@ -302,7 +293,7 @@ class Collector:
         try:
             qa = full_qual(obj)
         except Exception as e:
-            raise RuntimeError(f"error visiting {'.'.join(self.stack)}")
+            raise RuntimeError(f"error visiting {'.'.join(self.stack)}") from e
         if not qa:
             return
         if not qa.startswith(self.root.__name__):
@@ -425,6 +416,7 @@ class DocBlob:
 class Gen:
     def __init__(self):
         self.cache_dir = cache_dir
+        self.data = {}
 
     def clean(self, root):
         bundle = self.cache_dir / root
@@ -435,10 +427,12 @@ class Gen:
         bundle.mkdir(exist_ok=True)
 
     def put(self, root, path, data):
+        self.data[path] = data
         with (self.cache_dir / root / f"{path}.json").open("w") as f:
             f.write(data)
 
     def put_raw(self, root, path, data):
+        self.data
         with (self.cache_dir / root / path).open("wb") as f:
             f.write(data)
 
@@ -552,6 +546,7 @@ class Gen:
         version = getattr(modules[0], "__version__", "???")
 
         root = names[0].split(".")[0]
+        self.root = root
 
         # clean out previous doc bundle
         self.clean(root)
@@ -562,26 +557,24 @@ class Gen:
         for qa, item in collected.items():
             if (nqa := full_qual(item)) != qa:
                 print("after import qa differs : {qa} -> {nqa}")
-                if (other := collected[nqa]) == item:
+                if collected[nqa] == item:
                     print("present twice")
                     del collected[nqa]
                 else:
                     print("differs: {item} != {other}")
 
-        bundle = self.cache_dir / root
-        from contextlib import nullcontext
 
         # p = nullcontext
         with p() as p2:
 
             # just nice display of progression.
-            # taskp = p2.add_task(description="parsing", total=len(collected))
-            # t1 = timer(p2, taskp)
+            taskp = p2.add_task(description="parsing", total=len(collected))
+            t1 = timer(p2, taskp)
 
             for qa, target_item in collected.items():
                 short_description = (qa[:19] + "..") if len(qa) > 21 else qa
-                # p2.update(taskp, description=short_description.ljust(17))
-                # p2.advance(taskp)
+                p2.update(taskp, description=short_description.ljust(17))
+                p2.advance(taskp)
                 item_docstring = target_item.__doc__
                 if item_docstring is None:
                     continue

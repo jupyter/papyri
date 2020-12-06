@@ -18,8 +18,8 @@ class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if hasattr(o, "__to_json__"):
             return o.__to_json__(self)
-        elif dataclasses.is_dataclass(o):
-            return dataclasses.asdict(o)
+        elif dataclass.is_dataclass(o):
+            return dataclass.asdict(o)
         return super().default(o)
 
     def decode(self, s):

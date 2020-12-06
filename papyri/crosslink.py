@@ -1,20 +1,16 @@
 import dataclasses
 import json
-import os
 import warnings
-from collections import defaultdict
-from dataclasses import dataclass
 from functools import lru_cache
-from types import ModuleType
 
-from numpydoc.docscrape import Parameter
 
-from .config import base_dir, cache_dir, ingest_dir
+from .config import cache_dir, ingest_dir
 from .gen import normalise_ref, DocBlob
 from .take2 import Paragraph
 from .utils import progress
 
 from there import print
+from .core import Ref, SeeAlsoItem
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -63,7 +59,6 @@ def resolve_(qa: str, known_refs, local_ref):
     return resolve
 
 
-from .core import Ref, SeeAlsoItem
 
 
 
@@ -122,9 +117,7 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     blob.see_also = list(set(blob.see_also))
     try:
         notes = blob.sections["Notes"]
-        blob.refs.extend(refs := Paragraph.parse_lines(notes).references)
-        # if refs:
-        # print(qa, refs)
+        blob.refs.extend(Paragraph.parse_lines(notes).references)
     except KeyError:
         pass
     blob.refs = list(sorted(set(blob.refs)))
@@ -146,7 +139,7 @@ class Ingester:
         nvisited_items = {}
         versions = {}
         for console, path in progress(
-            self.cache_dir.glob(f"**/__papyri__.json"),
+            self.cache_dir.glob("**/__papyri__.json"),
             description="Loading package versions...",
         ):
             with path.open() as f:
@@ -201,7 +194,6 @@ class Ingester:
                     # print(qa, 'incommon')
                     nvisited_items[resolved].backrefs.append(qa)
                 elif ref != qa and exists == "missing":
-                    r = resolved.split(".")[0]
                     ex = self.ingest_dir / (resolved + ".json")
                     if ex.exists():
                         with ex.open() as f:
@@ -266,7 +258,7 @@ class Ingester:
         else:
             gg = "*.json"
         for console, path in progress(
-            self.ingest_dir.glob(gg), description=f"cleanig previsous files ...."
+            self.ingest_dir.glob(gg), description="cleanig previsous files ...."
         ):
             path.unlink()
 

@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from quart_trio import QuartTrio
 
 from .config import html_dir, ingest_dir

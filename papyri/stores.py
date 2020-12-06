@@ -49,7 +49,7 @@ header = f"token {PAT}"
 
 
 def gre(pat):
-    return re.compile(pat.replace(".", "\.").replace("*", ".+"))
+    return re.compile(pat.replace(".", r"\.").replace("*", ".+"))
 
 
 class RCache:

@@ -55,10 +55,8 @@ format, it's likely the way to go.
 Unless your use case is widely adopted it is likely not worse the complexity
 """
 
-import re
 import sys
-from textwrap import indent as _indent
-from typing import Any, List
+from typing import List
 
 from papyri.gen import dedent_but_first
 
@@ -106,7 +104,6 @@ class Verbatim(Node):
     @classmethod
     def parse(cls, tokens):
         acc = []
-        consume_start = None
         if len(tokens) < 5:
             return None
         if (tokens[0], tokens[1]) == ("`", "`") and tokens[2].strip():
@@ -164,7 +161,7 @@ class Directive(Node):
             domain, role = tokens[1], tokens[3]
             consume_start = 6
 
-        if consume_start == None:
+        if consume_start is None:
             return None
 
         for i, t in enumerate(tokens[consume_start:]):
@@ -261,7 +258,7 @@ class Paragraph:
 
     def __repr__(self):
 
-        rw = rewrap(self.children, self.width)
+        rw = self.rewrap(self.children, self.width)
 
         p = "\n".join(["".join(repr(x) for x in line) for line in rw])
         return f"""<Paragraph:\n{p}>"""
@@ -407,7 +404,7 @@ def make_block_3(lines: "Lines"):
                 state = "a"
             else:
                 raise ValueError
-        elif l.indent == None:
+        elif l.indent is None:
             if state == "a":
                 state = "b"
                 b.append(l)
@@ -744,12 +741,12 @@ def get_object(qual):
     parts = qual.split(".")
 
     for i in range(len(parts), 1, -1):
-        mod_p, pts = parts[:i], parts[i:]
+        mod_p, _ = parts[:i], parts[i:]
         mod_n = ".".join(mod_p)
         try:
             __import__(mod_n)
             break
-        except:
+        except Exception:
             continue
 
     obj = __import__(parts[0])
