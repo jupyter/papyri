@@ -88,8 +88,9 @@ def parse_script(script, ns=None, infer=None, prev=""):
                     else:
                         ref = ""
                 except (AttributeError, TypeError, Exception):
-                    raise
+                    # raise
                     failed = "(jedi failed inference)"
+                    print("failed inference on ", script, ns, jed, col_n, line_n + 1)
                 break
         except IndexError:
             raise
@@ -340,6 +341,9 @@ class DocBlob:
         "example_section_data",
         "refs",
         "ordered_sections",
+        "item_file",
+        "item_line",
+        "item_type",
     )
 
     def __init__(self):
@@ -459,14 +463,13 @@ class Gen:
         figs:
             dict mapping figure names to figure data.
         """
-
+        item_file = None
+        item_line = None
+        item_type = None
         try:
-            # print(
-            #    inspect.getfile(target_item),
-            #    inspect.getsourcelines(target_item)[1],
-            #    type(target_item),
-            # )
-            pass
+            item_file = inspect.getfile(target_item)
+            item_line = inspect.getsourcelines(target_item)[1]
+            item_type = str(type(target_item))
         except (AttributeError, TypeError):
             pass
         except OSError:
@@ -512,6 +515,10 @@ class Gen:
         blob.example_section_data = ndoc.edata
         blob.ordered_sections = ndoc.ordered_sections
         blob.refs = ndoc.refs
+        blob.item_file = item_file
+        blob.item_line = item_line
+        blob.item_type = item_type
+
         # del ndoc.edata
         # del ndoc.refs
         # del ndoc.ordered_sections
