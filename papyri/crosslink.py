@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 
 
-from .config import cache_dir, ingest_dir
+from .config import ingest_dir
 from .gen import normalise_ref, DocBlob
 from .take2 import Paragraph
 from .utils import progress
@@ -124,20 +124,19 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
 
 class Ingester:
     def __init__(self):
-        self.cache_dir = cache_dir
         self.ingest_dir = ingest_dir
 
     def ingest(self, path: Path, check: bool):
 
         nvisited_items = {}
         versions = {}
-        for console, path in progress(
+        for console, meta_path in progress(
             path.glob("**/__papyri__.json"),
             description="Loading package versions...",
         ):
-            with path.open() as f:
+            with meta_path.open() as f:
                 version = json.loads(f.read())["version"]
-            versions[path.parent.name] = version
+            versions[meta_path.parent.name] = version
         for p, f in progress(
             path.glob(f"**/*.json"),
             description=f"Reading {path} doc bundle files ...",

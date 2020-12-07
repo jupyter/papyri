@@ -238,19 +238,19 @@ async def _ascii_render(name, store=Store(ingest_dir)):
         br = await brpath.read_text()
     else:
         br = None
-    ndoc = load_one(bytes_, br)
+    blob = load_one(bytes_, br)
 
     # TODO : move this to ingest.
-    local_ref = [x[0] for x in ndoc["Parameters"] if x[0]] + [
-        x[0] for x in ndoc["Returns"] if x[0]
+    local_ref = [x[0] for x in blob.sections["Parameters"] if x[0]] + [
+        x[0] for x in blob.sections["Returns"] if x[0]
     ]
 
     # TODO : move this to ingest.
     env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
-    doc = DocData(ndoc)
+    doc = DocData(blob)
 
     return render_one(
-        template=template, doc=doc, qa=ref, ext="", backrefs=ndoc.backrefs
+        template=template, doc=doc, qa=ref, ext="", backrefs=blob.backrefs
     )
 
 

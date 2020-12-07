@@ -8,22 +8,19 @@ from ..render import Store, _ascii_render, _route
 
 async def test_gen_numpy():
     with TemporaryDirectory() as t:
-        NFUNC = 32
+        NFUNC = 36
         t = Path(t)
         g = Gen()
-        g.cache_dir = t / "cache"
-        g.cache_dir.mkdir()
         g.do_one_mod(["papyri"], infer=False, exec_=False)
+        g.write(t)
 
-        num = [x.name[:-5] for x in (t / "cache").glob("papyri/*.json")]
+        num = [x.name[:-5] for x in (t).glob("papyri/*.json")]
         assert len(num) == NFUNC + 1
         assert "papyri.gen.gen_main" in num
-
         ing = Ingester()
-        ing.cache_dir = t / "cache"
         ing.ingest_dir = t / "ingest"
         ing.ingest_dir.mkdir()
-        ing.ingest("papyri", check=True)
+        ing.ingest(t, check=True)
         ing_r = [x.name[:-5] for x in (ing.ingest_dir).glob("*.json")]
         assert len(ing_r) == NFUNC, f"{set(ing_r) - set(num)} | {set(num) - set(ing_r)}"
 
