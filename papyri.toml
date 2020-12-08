@@ -1,0 +1,4 @@
+[numpy]
+infer = false
+execute_exclude_patterns = ['numpy._']
+
