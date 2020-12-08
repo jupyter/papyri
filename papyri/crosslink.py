@@ -145,6 +145,7 @@ class Ingester:
 
         nvisited_items = {}
         versions = {}
+        root = None
         for console, meta_path in progress(
             path.glob("**/__papyri__.json"),
             description="Loading package versions...",
@@ -152,8 +153,9 @@ class Ingester:
             with meta_path.open() as f:
                 version = json.loads(f.read())["version"]
             versions[meta_path.parent.name] = version
+            root = str(meta_path).split('/')[1]
         for p, f in progress(
-            path.glob(f"**/*.json"),
+            path.glob(f"{root}/*.json"),
             description=f"Reading {path} doc bundle files ...",
         ):
             if f.is_dir():
@@ -262,7 +264,7 @@ class Ingester:
 
             doc_blob.backrefs = list(sorted(set(doc_blob.backrefs + ph_data)))
         for console, path in progress(
-            self.ingest_dir.glob("**/*.json"),
+            self.ingest_dir.glob("{root}/*.json"),
             description="cleanig previsous files ....",
         ):
             path.unlink()
