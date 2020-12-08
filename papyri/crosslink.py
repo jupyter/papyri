@@ -16,9 +16,17 @@ from .core import Ref, SeeAlsoItem
 warnings.simplefilter("ignore", UserWarning)
 
 
+from typing import Optional
+
+
 class IngestedBlobs(DocBlob):
 
     __slots_ = "backrefs"
+    # see_also: List[SeeAlsoItem]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.backrefs = []
 
 
 @lru_cache()
@@ -80,7 +88,8 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     blob = IngestedBlobs.from_json(data)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
-    data.pop("edata", data.pop("example_section_data"))
+    data.pop("example_section_data")
+    assert "edata" not in data
     # blob._parsed_data["Parameters"] = [
     #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
     # ]
@@ -96,12 +105,15 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     blob.version = data.pop("version", "")
     data.pop("ordered_sections", None)
     data.pop("backrefs", None)
-    data.pop("_sections", None)
+    data.pop("_content", None)
+    data.pop("item_file", None)
+    data.pop("item_line", None)
+    data.pop("item_type", None)
     if data.keys():
         print(data.keys(), qa)
     blob.__dict__.update(data)
     try:
-        if (see_also := blob.sections.get("See Also", None)) and not blob.see_also:
+        if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
             for nts, d in see_also:
                 for (n, t) in nts:
                     if t and not d:
@@ -114,7 +126,7 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
         assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
     blob.see_also = list(set(blob.see_also))
     try:
-        notes = blob.sections["Notes"]
+        notes = blob.content["Notes"]
         blob.refs.extend(Paragraph.parse_lines(notes).references)
     except KeyError:
         pass
@@ -159,6 +171,7 @@ class Ingester:
                     from pathlib import Path
 
                     brpath = Path(str(f)[:-5] + "br")
+                    br: Optional[str]
                     if brpath.exists():
                         br = brpath.read_text()
                     else:
@@ -176,8 +189,8 @@ class Ingester:
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
         ):
-            local_ref = [x[0] for x in doc_blob.sections["Parameters"] if x[0]] + [
-                x[0] for x in doc_blob.sections["Returns"] if x[0]
+            local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
+                x[0] for x in doc_blob.content["Returns"] if x[0]
             ]
             for ref in doc_blob.refs:
                 resolved, exists = resolve_(qa, nvisited_items, local_ref)(ref)

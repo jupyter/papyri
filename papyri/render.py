@@ -96,8 +96,8 @@ async def _route(ref, store):
         else:
             br = None
         doc_blob = load_one(bytes_, br)
-        local_ref = [x[0] for x in doc_blob.sections["Parameters"] if x[0]] + [
-            x[0] for x in doc_blob.sections["Returns"] if x[0]
+        local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
+            x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
         doc = DocData(doc_blob)
@@ -241,8 +241,8 @@ async def _ascii_render(name, store=Store(ingest_dir)):
     blob = load_one(bytes_, br)
 
     # TODO : move this to ingest.
-    local_ref = [x[0] for x in blob.sections["Parameters"] if x[0]] + [
-        x[0] for x in blob.sections["Returns"] if x[0]
+    local_ref = [x[0] for x in blob.content["Parameters"] if x[0]] + [
+        x[0] for x in blob.content["Returns"] if x[0]
     ]
 
     # TODO : move this to ingest.

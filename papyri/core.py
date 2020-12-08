@@ -10,7 +10,7 @@ and minimal installs.
 from __future__ import annotations
 
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
 
@@ -64,25 +64,22 @@ class DocData:
     version = None  # version of current package
 
     def __init__(self, doc_blob):
+        assert hasattr(doc_blob, "see_also")
         self.see_also = doc_blob.see_also
 
         self.edata = doc_blob.example_section_data
         self.refs = doc_blob.refs
-        self.content = doc_blob.sections
+        self.content = doc_blob.content
         self.version = doc_blob.version
-        for k, v in doc_blob.sections.items():
-            self.content[k] = v
-
-    def __to_json__(self) -> Dict[str, Any]:
-        data = {"content": self.content, "edata": ...}
-        return data
+        # for k, v in doc_blob.sections.items():
+        #    self.content[k] = v
 
 
 @dataclass
 class Ref:
     name: str
-    ref: str
-    exists: bool
+    ref: Optional[str]
+    exists: Optional[bool]
 
     def __hash__(self):
         return hash((self.name, self.ref, self.exists))

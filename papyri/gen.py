@@ -337,7 +337,7 @@ class DocBlob:
     """
 
     __slots__ = (
-        "_sections",
+        "_content",
         "example_section_data",
         "refs",
         "ordered_sections",
@@ -347,21 +347,24 @@ class DocBlob:
     )
 
     def __init__(self):
-        self._sections = None
+        self._content = None
         self.example_section_data = None
         self.refs = None
         self.ordered_sections = None
+        self.item_file = None
+        self.item_line = None
+        self.item_type = None
 
     @property
-    def sections(self):
+    def content(self):
         """
         List of sections in the doc blob docstrings
 
         """
-        return self._sections
+        return self._content
 
-    @sections.setter
-    def sections(self, new):
+    @content.setter
+    def content(self, new):
         assert not new.keys() - {
             "Signature",
             "Summary",
@@ -382,7 +385,7 @@ class DocBlob:
             "Examples",
             "index",
         }
-        self._sections = new
+        self._content = new
 
     def to_json(self):
 
@@ -396,8 +399,8 @@ class DocBlob:
         for k in cls.__slots__:
             setattr(nds, k, obj.get(k, None))
 
-        nds._sections["Parameters"] = [
-            Parameter(a, b, c) for (a, b, c) in nds._sections.get("Parameters", [])
+        nds._content["Parameters"] = [
+            Parameter(a, b, c) for (a, b, c) in nds._content.get("Parameters", [])
         ]
 
         for it in (
@@ -416,11 +419,11 @@ class DocBlob:
             "Attributes",
             "Methods",
         ):
-            if it not in nds._sections:
-                nds._sections[it] = []
+            if it not in nds._content:
+                nds._content[it] = []
         for it in ("index",):
-            if it not in nds._sections:
-                nds._sections[it] = {}
+            if it not in nds._content:
+                nds._content[it] = {}
         return nds
 
 
@@ -511,7 +514,6 @@ class Gen:
         del ndoc.figs
 
         blob = DocBlob()
-        # blob.sections = ndoc.sections
         blob.example_section_data = ndoc.edata
         blob.ordered_sections = ndoc.ordered_sections
         blob.refs = ndoc.refs
@@ -521,8 +523,7 @@ class Gen:
 
         # del ndoc.edata
         # del ndoc.refs
-        # del ndoc.ordered_sections
-        blob._sections = ndoc._parsed_data
+        blob._content = ndoc._parsed_data
         # turn the numpydoc thing into a docblob
         return blob, figs
 

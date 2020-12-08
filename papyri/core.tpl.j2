@@ -273,7 +273,7 @@ body{
         {% endfor %}
 
     {% elif section in ['Examples'] %}
-        {% for type,data in doc.edata %}
+        {% for type,data in doc.example_section_data %}
             {% if type=='text' %}
                 {{render_paragraph([data])}}
             {% elif type == 'fig' %}
