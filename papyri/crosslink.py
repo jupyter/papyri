@@ -153,10 +153,10 @@ class Ingester:
         ):
             with meta_path.open() as f:
                 data = json.loads(f.read())
-                version = data['version']
-                logo = data.get('logo', None)
+                version = data["version"]
+                logo = data.get("logo", None)
             versions[meta_path.parent.name] = version
-            root = str(meta_path).split('/')[1]
+            root = str(meta_path).split("/")[1]
         for p, f in progress(
             path.glob(f"{root}/*.json"),
             description=f"Reading {path} doc bundle files ...",
