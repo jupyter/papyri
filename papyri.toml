@@ -1,4 +1,8 @@
 [numpy]
 infer = false
-execute_exclude_patterns = ['numpy._']
+execute_exclude_patterns = ['numpy._', 'numpy.testing._priv', 'numpy.errstate', 'numpy.seterr', 'numpy.bincount',
+'numpy.core._multiarray_umath.bincount', 'numpy.core._multiarray_umath.datetime_as_string',
+'numpy.core._multiarray_umath.normalize_axis_index', 'numpy.core._multiarray_umath.shares_memory',
+'numpy.datetime_as_string', 'numpy.shares_memory', 'numpy.squeeze', 'numpy.ctypeslib']
+exec_failure = 'fallback'
 

@@ -217,7 +217,8 @@ def gen_main(names, infer, exec_):
     main entry point
     """
     import toml
-    conffile =  Path('papyri.toml')
+
+    conffile = Path("papyri.toml")
     if conffile.exists():
         conf = toml.loads(conffile.read_text())
     else:
@@ -450,7 +451,7 @@ class Gen:
     def __init__(self):
         self.cache_dir = cache_dir
         self.data = {}
-        self.bdata ={}
+        self.bdata = {}
 
     def clean(self, where: Path):
         where = where / self.root
@@ -490,6 +491,10 @@ class Gen:
         figs:
             dict mapping figure names to figure data.
         """
+        blob = DocBlob()
+        import copy
+
+        blob.content = {k: v for k, v in ndoc._parsed_data.items()}
         item_file = None
         item_line = None
         item_type = None
@@ -502,14 +507,15 @@ class Gen:
         except OSError:
             pass
 
-        if not ndoc["Signature"]:
+        if not blob.content["Signature"]:
             sig = None
             try:
                 sig = str(inspect.signature(target_item))
                 sig = qa.split(".")[-1] + sig
             except (ValueError, TypeError):
                 pass
-            ndoc["Signature"] = sig
+            # mutate argument ! BAD
+            blob.content["Signature"] = sig
 
         new_see_also = ndoc["See Also"]
         refs = []
@@ -524,10 +530,10 @@ class Gen:
                 ndoc, infer, obj=target_item, exec_=exec_, qa=qa
             )
             ndoc.figs = figs
-        except Exception:
+        except Exception as e:
             ndoc.edata = []
-            print("Error getting example date in ", qa)
-            raise
+            print("Error getting example data in ", qa)
+            raise ValueError("Error getting example data in ", qa) from e
 
         ndoc.refs = list(
             {u[1] for t_, sect in ndoc.edata if t_ == "code" for u in sect[0] if u[1]}
@@ -537,7 +543,6 @@ class Gen:
         figs = ndoc.figs
         del ndoc.figs
 
-        blob = DocBlob()
         blob.example_section_data = ndoc.edata
         blob.ordered_sections = ndoc.ordered_sections
         blob.refs = ndoc.refs
@@ -547,11 +552,10 @@ class Gen:
 
         # del ndoc.edata
         # del ndoc.refs
-        blob.content = ndoc._parsed_data
         # turn the numpydoc thing into a docblob
         return blob, figs
 
-    def do_one_mod(self, names: List[str], infer: bool, exec_: bool, conf:dict):
+    def do_one_mod(self, names: List[str], infer: bool, exec_: bool, conf: dict):
         """
         Crawl one modules and stores resulting docbundle in self.store.
 
@@ -588,7 +592,7 @@ class Gen:
 
         root = names[0].split(".")[0]
         module_conf = conf.get(root, {})
-        print('Configuration:', conf)
+        print("Configuration:", conf)
         self.root = root
         self.version = version
 
@@ -633,17 +637,29 @@ class Gen:
                             target_item.__name__,
                         )
                         continue
-                execute_exclude_patterns = module_conf.get('execute_exclude_patterns', None)
+                execute_exclude_patterns = module_conf.get(
+                    "execute_exclude_patterns", None
+                )
                 ex = exec_
                 if execute_exclude_patterns:
                     for pat in execute_exclude_patterns:
                         if qa.startswith(pat):
-                            print('will not execute', qa)
+                            print("will not execute", qa)
                             ex = False
                             break
+                else:
+                    print("will run", qa)
 
+                try:
+                    doc_blob, figs = self.do_one_item(target_item, ndoc, infer, ex, qa)
+                except Exception:
+                    if module_conf.get("exec_failure", None) == "fallback":
+                        print("Re-analysing ", qa, "without execution")
+                        # debug:
+                        doc_blob, figs = self.do_one_item(
+                            target_item, ndoc, infer, False, qa
+                        )
 
-                doc_blob, figs = self.do_one_item(target_item, ndoc, infer, ex, qa)
                 self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(root, name, data)
