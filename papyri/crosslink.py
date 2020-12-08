@@ -21,7 +21,7 @@ from typing import Optional
 
 class IngestedBlobs(DocBlob):
 
-    __slots__ = ("backrefs", "see_also", "version")
+    __slots__ = ("backrefs", "see_also", "version", "logo")
     # see_also: List[SeeAlsoItem]
 
     def __init__(self, *args, **kwargs):
@@ -29,7 +29,7 @@ class IngestedBlobs(DocBlob):
         self.backrefs = []
 
     def slots(self):
-        return super().slots() + ["backrefs", "see_also", "version"]
+        return super().slots() + ["backrefs", "see_also", "version", "logo"]
 
 
 @lru_cache()
@@ -112,9 +112,10 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data.pop("item_file", None)
     data.pop("item_line", None)
     data.pop("item_type", None)
+    data.pop("logo", None)
     if data.keys():
         print(data.keys(), qa)
-        raise ValueError("remaining data")
+        raise ValueError("remaining data", data.keys())
     try:
         if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
             for nts, d in see_also:
@@ -151,7 +152,9 @@ class Ingester:
             description="Loading package versions...",
         ):
             with meta_path.open() as f:
-                version = json.loads(f.read())["version"]
+                data = json.loads(f.read())
+                version = data['version']
+                logo = data.get('logo', None)
             versions[meta_path.parent.name] = version
             root = str(meta_path).split('/')[1]
         for p, f in progress(
@@ -197,6 +200,7 @@ class Ingester:
             local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
                 x[0] for x in doc_blob.content["Returns"] if x[0]
             ]
+            doc_blob.logo = logo
             for ref in doc_blob.refs:
                 resolved, exists = resolve_(qa, nvisited_items, local_ref)(ref)
                 # here need to check and load the new files touched.

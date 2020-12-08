@@ -592,6 +592,8 @@ class Gen:
 
         root = names[0].split(".")[0]
         module_conf = conf.get(root, {})
+
+
         print("Configuration:", conf)
         self.root = root
         self.version = version
@@ -641,7 +643,7 @@ class Gen:
                     "execute_exclude_patterns", None
                 )
                 ex = exec_
-                if execute_exclude_patterns:
+                if execute_exclude_patterns and exec_:
                     for pat in execute_exclude_patterns:
                         if qa.startswith(pat):
                             print("will not execute", qa)
@@ -664,4 +666,8 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(root, name, data)
 
-            self.put(root, "__papyri__", json.dumps({"version": version}))
+            if logo := module_conf.get('logo', None):
+                self.put_raw(root, f'{root}-logo.png', Path(logo).read_bytes())
+                self.put(root, "__papyri__", json.dumps({"version": version, "logo": f'{root}-logo.png'}))
+            else:
+                self.put(root, "__papyri__", json.dumps({"version": version}))

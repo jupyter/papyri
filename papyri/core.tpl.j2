@@ -97,7 +97,7 @@ body{
             color: #818181;
             display: block;
           }
-          .sidenav i{
+          .sidenav i, .sidenav img{
               font-size: 100;
               padding-left: 3.5rem;
               padding-right: 3.5rem;
@@ -179,11 +179,16 @@ body{
     </header>
 <div class='container'>
     <div class="sidenav">
-    <i class="fab fa-python"></i>
-    <a href="#">Project Logo ^</a>
-    <a href="#">{{module}}</a>
-    <a href="#">{{version}}</a>
+    {% if not doc.logo %}
+        <i class="fab fa-python"></i>
+        <a href="#">Project Logo ^</a>
+    {% else %}
+        <img src="img/{{doc.logo}}"/>
+    {% endif %}
+    <a href="#">Library: {{module}}</a>
+    <a href="#">Version: {{version}}</a>
     <a href="#">Authors:</a>
+    <a href="#">PyPI:</a>
     <a href="#">Source</a>
     <a href="#">Homepage</a>
     <a href="#">Fundings</a>

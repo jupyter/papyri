@@ -5,4 +5,13 @@ execute_exclude_patterns = ['numpy._', 'numpy.testing._priv', 'numpy.errstate', 
 'numpy.core._multiarray_umath.normalize_axis_index', 'numpy.core._multiarray_umath.shares_memory',
 'numpy.datetime_as_string', 'numpy.shares_memory', 'numpy.squeeze', 'numpy.ctypeslib']
 exec_failure = 'fallback'
+source = 'https://github.com/numpy/numpy'
+homepage = 'https://numpy.org'
+docs = 'https://numpy.org/doc/stable/'
+logo = 'numpy_logo.png'
+[scipy]
+logo = 'scipy_logo.png'
+
+[matplotlib]
+logo = 'matplotlib_logo.png'
 
