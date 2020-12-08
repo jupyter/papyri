@@ -143,7 +143,6 @@ class Ingester:
         self.ingest_dir = ingest_dir
 
     def ingest(self, path: Path, check: bool):
-
         nvisited_items = {}
         versions = {}
         root = None
@@ -156,7 +155,7 @@ class Ingester:
                 version = data["version"]
                 logo = data.get("logo", None)
             versions[meta_path.parent.name] = version
-            root = str(meta_path).split("/")[1]
+            root = str(meta_path).split("/")[-2]
         for p, f in progress(
             path.glob(f"{root}/*.json"),
             description=f"Reading {path} doc bundle files ...",
