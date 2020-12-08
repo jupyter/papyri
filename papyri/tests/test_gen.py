@@ -11,7 +11,7 @@ async def test_gen_numpy():
         NFUNC = 36
         t = Path(t)
         g = Gen()
-        g.do_one_mod(["papyri"], infer=False, exec_=False)
+        g.do_one_mod(["papyri"], infer=False, exec_=False, conf={})
         g.write(t)
 
         num = [x.name[:-5] for x in (t).glob("papyri/*.json")]
