@@ -67,7 +67,7 @@ class DocData:
         assert hasattr(doc_blob, "see_also")
         self.see_also = doc_blob.see_also
 
-        self.edata = doc_blob.example_section_data
+        self.example_section_data = doc_blob.example_section_data
         self.refs = doc_blob.refs
         self.content = doc_blob.content
         self.version = doc_blob.version

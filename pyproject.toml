@@ -21,7 +21,8 @@ requires=[
     "click",
     "velin", 
     "quart-trio",
-    "quart<0.14"
+    "quart<0.14",
+    "toml"
 ]
 
 [tool.flit.scripts]

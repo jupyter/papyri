@@ -101,6 +101,7 @@ async def _route(ref, store):
         ]
         env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
         doc = DocData(doc_blob)
+        doc = doc_blob
         return render_one(
             template=template,
             doc=doc,

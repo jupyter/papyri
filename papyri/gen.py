@@ -216,8 +216,15 @@ def gen_main(names, infer, exec_):
     """
     main entry point
     """
+    import toml
+    conffile =  Path('papyri.toml')
+    if conffile.exists():
+        conf = toml.loads(conffile.read_text())
+    else:
+        conf = {}
+
     g = Gen()
-    g.do_one_mod(names, infer, exec_)
+    g.do_one_mod(names, infer, exec_, conf)
     p = Path(".") / (g.root + "_" + g.version)
     p.mkdir(exist_ok=True)
 
@@ -346,6 +353,17 @@ class DocBlob:
         "item_type",
     )
 
+    def slots(self):
+        return [
+            "_content",
+            "example_section_data",
+            "refs",
+            "ordered_sections",
+            "item_file",
+            "item_line",
+            "item_type",
+        ]
+
     def __init__(self):
         self._content = None
         self.example_section_data = None
@@ -389,16 +407,17 @@ class DocBlob:
 
     def to_json(self):
 
-        res = {k: getattr(self, k) for k in self.__slots__}
+        res = {k: getattr(self, k) for k in self.slots()}
 
         return res
 
     @classmethod
     def from_json(cls, obj):
         nds = cls()
-        for k in cls.__slots__:
-            setattr(nds, k, obj.get(k, None))
-
+        for k in obj:
+            setattr(nds, k, obj.get(k))
+        if nds._content is None:
+            nds._content = {}
         nds._content["Parameters"] = [
             Parameter(a, b, c) for (a, b, c) in nds._content.get("Parameters", [])
         ]
@@ -431,6 +450,7 @@ class Gen:
     def __init__(self):
         self.cache_dir = cache_dir
         self.data = {}
+        self.bdata ={}
 
     def clean(self, where: Path):
         where = where / self.root
@@ -446,11 +466,15 @@ class Gen:
             with (where / self.root / k).open("w") as f:
                 f.write(v)
 
+        for k, v in self.bdata.items():
+            with (where / self.root / k).open("wb") as f:
+                f.write(v)
+
     def put(self, root, path, data):
         self.data[path + ".json"] = data
 
     def put_raw(self, root, path, data):
-        self.data[path] = data
+        self.bdata[path] = data
 
     def do_one_item(
         self, target_item, ndoc, infer: bool, exec_, qa
@@ -523,11 +547,11 @@ class Gen:
 
         # del ndoc.edata
         # del ndoc.refs
-        blob._content = ndoc._parsed_data
+        blob.content = ndoc._parsed_data
         # turn the numpydoc thing into a docblob
         return blob, figs
 
-    def do_one_mod(self, names: List[str], infer: bool, exec_: bool):
+    def do_one_mod(self, names: List[str], infer: bool, exec_: bool, conf:dict):
         """
         Crawl one modules and stores resulting docbundle in self.store.
 
@@ -563,6 +587,8 @@ class Gen:
         version = getattr(modules[0], "__version__", "???")
 
         root = names[0].split(".")[0]
+        module_conf = conf.get(root, {})
+        print('Configuration:', conf)
         self.root = root
         self.version = version
 
@@ -607,9 +633,17 @@ class Gen:
                             target_item.__name__,
                         )
                         continue
+                execute_exclude_patterns = module_conf.get('execute_exclude_patterns', None)
+                ex = exec_
+                if execute_exclude_patterns:
+                    for pat in execute_exclude_patterns:
+                        if qa.startswith(pat):
+                            print('will not execute', qa)
+                            ex = False
+                            break
 
-                doc_blob, figs = self.do_one_item(target_item, ndoc, infer, exec_, qa)
-                # print("PUT:", root, qa)
+
+                doc_blob, figs = self.do_one_item(target_item, ndoc, infer, ex, qa)
                 self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(root, name, data)

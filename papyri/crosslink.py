@@ -21,12 +21,15 @@ from typing import Optional
 
 class IngestedBlobs(DocBlob):
 
-    __slots_ = "backrefs"
+    __slots__ = ("backrefs", "see_also", "version")
     # see_also: List[SeeAlsoItem]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.backrefs = []
+
+    def slots(self):
+        return super().slots() + ["backrefs", "see_also", "version"]
 
 
 @lru_cache()
@@ -88,7 +91,7 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     blob = IngestedBlobs.from_json(data)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
-    data.pop("example_section_data")
+    data.pop("example_section_data", None)
     assert "edata" not in data
     # blob._parsed_data["Parameters"] = [
     #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
@@ -111,7 +114,7 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data.pop("item_type", None)
     if data.keys():
         print(data.keys(), qa)
-    blob.__dict__.update(data)
+        raise ValueError("remaining data")
     try:
         if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
             for nts, d in see_also:

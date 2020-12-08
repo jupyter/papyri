@@ -193,7 +193,7 @@ body{
     <hr/>
     <a>Narrative Docs</a>
     <hr/>
-    {% for section in doc.sections if doc.content[section] %}
+    {% for section in doc.content.keys() if doc.content[section] %}
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
         <a href="#section-{{section}}">{{section}}</a>
     {% endif %}
@@ -255,7 +255,12 @@ body{
 {%- endmacro %}
 
 
-{% for section in doc.sections if doc.content[section] %}
+{{doc.item_file}}
+{{doc.item_line}}
+{{doc.item_type}}
+
+{% for section in doc.content.keys() if doc.content[section] %}
+
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
         <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
