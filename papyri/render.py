@@ -58,9 +58,7 @@ def root():
     for f in filenames:
         sub = tree
         parts = f.split('.')
-        print(parts)
         for i,part in enumerate(parts):
-            print('  '*i, part)
             if part not in sub:
                 sub[part] = {}
             sub = sub[part]
