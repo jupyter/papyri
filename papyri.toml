@@ -18,4 +18,14 @@ logo = 'matplotlib_logo.png'
 [papyri]
 logo = 'papyri-logo.png'
 
+[IPython]
+logo = 'ipython-logo.png'
+
+[dask]
+logo = 'dask-logo.png'
+
+[skimage]
+logo = 'skimage-logo.png'
+
+
 

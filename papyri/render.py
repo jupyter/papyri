@@ -41,6 +41,7 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
+
 def root():
     # nvisited_items = {}
     store = Store(ingest_dir)
@@ -86,6 +87,8 @@ async def _route(ref, store):
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["paragraphs"] = paragraphs
+    env.globals["len"] = len
+
     template = env.get_template("core.tpl.j2")
 
     error = env.get_template("404.tpl.j2")
@@ -115,6 +118,8 @@ async def _route(ref, store):
 
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
 
+
+    
     if await file_.exists():
         bytes_ = await ((store / f"{ref}.json").read_text())
         brpath = store / f"{ref}.br"
@@ -144,7 +149,21 @@ async def _route(ref, store):
             br = json.loads(await brpath.read_text())
         else:
             br = []
-        return error.render(subs=known_refs, backrefs=list(set(br)))
+
+        tree = {}
+        for f in known_refs:
+            sub = tree
+            parts = f.split('.')[len(ref.split('.')):]
+            for i,part in enumerate(parts):
+                if part not in sub:
+                    sub[part] = {}
+                sub = sub[part]
+
+            sub['__link__'] = f
+
+
+
+        return error.render(backrefs=list(set(br)), tree=tree, ref=ref)
 
 
 def img(subpath):
