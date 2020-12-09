@@ -2,6 +2,7 @@ import json
 import os
 from collections import defaultdict
 from pathlib import Path
+from there import print
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from quart_trio import QuartTrio
@@ -41,6 +42,17 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
+from pygments import lex
+from pygments.lexers import PythonLexer
+from pygments.formatters import HtmlFormatter
+
+
+def get_classes(code):
+    list(lex(code, PythonLexer()))
+    FMT = HtmlFormatter()
+    classes = [FMT.ttype2class.get(x) for x, y in lex(code, PythonLexer())]
+    classes = [c if c is not None else "" for c in classes]
+    return classes
 
 def root():
     # nvisited_items = {}
@@ -133,6 +145,19 @@ async def _route(ref, store):
         ]
         env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
         doc = DocData(doc_blob)
+
+        ### dive into the example data, reconstruct the initial code, parse it with pygments,
+        # and append the highlighting class as the third element
+        # I'm thinking the linking strides should be stored separately as the code
+        # it might be simpler, and more compact.
+        for type_, (in_out) in doc.example_section_data:
+            if type_ == "code":
+                in_, out = in_out
+                classes = get_classes("".join([x for x, y in in_]))
+                for ii, cc in zip(in_, classes):
+                    # TODO: Warning here we mutate objects.
+                    ii.append(cc)
+
         doc = doc_blob
         return render_one(
             template=template,
@@ -141,6 +166,7 @@ async def _route(ref, store):
             ext="",
             parts=siblings,
             backrefs=doc_blob.backrefs,
+            pygment_css=HtmlFormatter(style="pastie").get_style_defs(".highlight"),
         )
     else:
         known_refs = [str(s.name)[:-5] for s in store.glob(f"{ref}*.json")]
@@ -233,7 +259,7 @@ def paragraphs(lines):
     return acc
 
 
-def render_one(template, doc, qa, ext, *, backrefs, parts={}):
+def render_one(template, doc, qa, ext, *, backrefs, pygment_css, parts={}):
     """
     Return the rendering of one document
 
@@ -274,6 +300,7 @@ def render_one(template, doc, qa, ext, *, backrefs, parts={}):
         backrefs=backrefs,
         ext=ext,
         parts=parts,
+        pygment_css=pygment_css,
     )
 
 

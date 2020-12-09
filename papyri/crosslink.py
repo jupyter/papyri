@@ -51,11 +51,17 @@ def keepref(ref):
 
 def resolve_(qa: str, known_refs, local_ref):
     def resolve(ref):
+        if ref.startswith("~"):
+            ref = ref[1:]
         if ref in local_ref:
             return ref, "local"
         if ref in known_refs:
             return ref, "exists"
         else:
+            if ref.startswith("."):
+                if (found := qa + ref) in known_refs:
+                    return found, "exists"
+
             parts = qa.split(".")
             for i in range(len(parts)):
                 attempt = ".".join(parts[:i]) + "." + ref

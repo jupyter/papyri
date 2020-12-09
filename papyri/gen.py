@@ -464,6 +464,7 @@ class Gen:
         assert self.root is not None
         (where / self.root).mkdir(exist_ok=True)
         for k, v in self.data.items():
+            print("WRITE", k)
             with (where / self.root / k).open("w") as f:
                 f.write(v)
 
@@ -660,7 +661,6 @@ class Gen:
                         doc_blob, figs = self.do_one_item(
                             target_item, ndoc, infer, False, qa
                         )
-
                 self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(root, name, data)

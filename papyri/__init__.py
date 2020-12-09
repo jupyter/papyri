@@ -32,6 +32,17 @@ def ingest(paths, check):
 
 
 @click.command()
+@click.argument("paths", nargs=-1)
+@click.option("--check/--no-check", default=True)
+def i(paths, check):
+    from . import crosslink as cr
+    from pathlib import Path
+
+    for p in paths:
+        cr.main(Path(p), check)
+
+
+@click.command()
 @click.argument("names", nargs=-1)
 @click.option("--infer/--no-infer", default=True)
 @click.option("--exec/--no-exec", default=False)
@@ -84,6 +95,7 @@ def open(qualname):
 
 
 main.add_command(ingest)
+main.add_command(i)
 main.add_command(gen)
 main.add_command(render)
 main.add_command(open)

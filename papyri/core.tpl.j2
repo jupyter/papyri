@@ -163,7 +163,19 @@ body{
 
 /* Change the background color of the dropdown button when the dropdown content is shown */
 .dropdown:hover .dropbtn {}
-    </style>
+
+
+{{pygment_css}}
+
+.nsl {
+-webkit-touch-callout: none;
+-webkit-user-select: none;
+-khtml-user-select: none;
+-moz-user-select: none;
+-ms-user-select: none;
+user-select: none;
+}
+</style>
 </head>
 <body>
 
@@ -221,17 +233,17 @@ body{
 </div>
 
 {% macro example(entries) -%}
-    {{'>>> ' -}}
-    {%- for text, t_ in entries %}
-       {%- if text == '\n' -%}
-           <br>...&nbsp;
-       {%- else -%}
+    <span class='nsl'>{{'>>> ' -}}</span>{{ '' -}}
+    {%- for text, t_, cc in entries %}
+        {%- if text == '\n' -%}
+            <br><span class='nsl'>...&nbsp;</span>
+        {%- else -%}
             {%- if t_ -%}
-            <a class="foo" title={{t_}}, href="{{t_}}{{ext}}">{{text}}</a>
+            <a class="foo {{cc}}" title={{t_}}, href="{{t_}}{{ext}}">{{text}}</a>
             {%- else -%}
-            {{text}}
+            <span class="{{cc}}">{{text}}</span>
             {%- endif -%}
-       {%- endif -%}
+        {%- endif -%}
     {%- endfor-%}
     {{-'\n'}}
     {%- endmacro %}
@@ -271,9 +283,6 @@ body{
 {%- endmacro %}
 
 
-{{doc.item_file}}
-{{doc.item_line}}
-{{doc.item_type}}
 
 {% for section in doc.content.keys() if doc.content[section] %}
 
@@ -300,7 +309,7 @@ body{
             {% elif type == 'fig' %}
                 <div><img src="img/{{data}}"/></div>
             {% else %}
-             <pre>{{example(data[0]) -}}
+             <pre class='highlight'>{{example(data[0]) -}}
 
              {{- data[1]}}</pre>
             {% endif %}
@@ -359,6 +368,17 @@ body{
     {% endfor %}
     {% endif%}
 {% endif %}
+
+<hr>
+
+To Be Done: </br>
+
+File: {{doc.item_file}} </br>
+Line: {{doc.item_line}} </br>
+type: {{doc.item_type}} </br>
+Commit: </br>
+Tag: </br>
+Link to the right github gitalab repository, file and line (maybe range?)</br>
 </div>
 </body>
 </html>
