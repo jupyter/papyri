@@ -55,11 +55,11 @@ body{
           header > brand, header>:first-child {
               border-right: 1px solid #ccc;
               border-left: 1px solid #ccc;
-              padding: 1rem;
+              padding: 16px;
               padding-top: 0.5rem;
               padding-bottom: 0.5rem;
               display: inline-block; 
-              width: 174px;
+              width: 167px;
 
           }
           brand > a {color:#606c76}
@@ -88,7 +88,7 @@ body{
                 background-color: var(--nc-bg-2);; /* Black */
                 border-right: thin solid #ccc;
                 overflow-x: hidden; /* Disable horizontal scroll */
-                padding-top: 4rem;
+                padding-top: 3rem;
           }
 
           .sidenav a {
@@ -97,12 +97,21 @@ body{
             color: #818181;
             display: block;
           }
-          .sidenav i, .sidenav img{
+          .sidenav img {
+              width: 160px;
+              padding-left:20px;
+              padding-right:20px;
+              border-bottom: solid thin #DDD; 
+              padding-bottom: .5rem;
+              max-width: 100%;
+          }
+          .sidenav i {
               font-size: 100;
               padding-left: 3.5rem;
               padding-right: 3.5rem;
               padding-bottom: .5rem;
               border-bottom: solid thin #DDD; 
+
           }
           .container {
               padding-left: 210px;
@@ -148,7 +157,9 @@ body{
 .dropdown-content a:hover {background-color: #ddd;}
 
 /* Show the dropdown menu on hover */
-.dropdown:hover .dropdown-content {display: block;}
+.dropdown:hover .dropdown-content {display: block;
+    max-height: 80vh;
+    overflow: scroll;}
 
 /* Change the background color of the dropdown button when the dropdown content is shown */
 .dropdown:hover .dropbtn {}
@@ -159,8 +170,8 @@ body{
     <header>
         
         
-        <brand><i class="fab fa-python"></i><a href='https://github.com/carreau/papyri'>PaPyRi</a></brand>
-        <nav> / p / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a> / <a>
+        <brand><i class="fab fa-python"></i><a href='/'>Home</a></brand>
+        <nav> <a href='/' >/ p</a>  / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a> / <a>
                 {% for p,links in parts.items() %}
                     
 

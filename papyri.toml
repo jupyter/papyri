@@ -15,3 +15,7 @@ logo = 'scipy_logo.png'
 [matplotlib]
 logo = 'matplotlib_logo.png'
 
+[papyri]
+logo = 'papyri-logo.png'
+
+

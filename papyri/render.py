@@ -41,6 +41,35 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
+def root():
+    # nvisited_items = {}
+    store = Store(ingest_dir)
+    files = store.glob("*.json")
+
+    env = Environment(
+        loader=FileSystemLoader(os.path.dirname(__file__)),
+        autoescape=select_autoescape(["html", "tpl.j2"]),
+    )
+    env.globals["isstr"] = lambda x: isinstance(x, str)
+    env.globals["len"] = len
+    template = env.get_template("root.tpl.j2")
+    filenames = [_.name[:-5] for _ in files if _.name.endswith('.json')]
+    tree = {}
+    for f in filenames:
+        sub = tree
+        parts = f.split('.')
+        print(parts)
+        for i,part in enumerate(parts):
+            print('  '*i, part)
+            if part not in sub:
+                sub[part] = {}
+            sub = sub[part]
+
+        sub['__link__'] = f
+
+    return template.render(tree=tree)
+
+
 async def _route(ref, store):
     assert isinstance(store, BaseStore)
     if ref == "favicon.ico":
@@ -68,7 +97,7 @@ async def _route(ref, store):
 
     family = sorted(list(store.glob("*.json")))
     family = [str(f.name)[:-5] for f in family]
-    parts = ref.split(".") + ["..."]
+    parts = ref.split(".") + ["+"]
     siblings = {}
     cpath = ""
     # TODO: move this at ingestion time for all the non-top-level.
@@ -125,6 +154,16 @@ def img(subpath):
     with open(ingest_dir / subpath, "rb") as f:
         return f.read()
 
+def logo():
+    import os
+    path = os.path.abspath(__file__)
+    dir_path = Path(os.path.dirname(path))
+    with open((dir_path/'papyri-logo.png'), "rb") as f:
+        return f.read()
+    
+
+    
+
 
 def serve():
 
@@ -135,8 +174,10 @@ def serve():
 
     # return await _route(ref, GHStore(Path('.')))
 
+    app.route("/logo.png")(logo)
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
+    app.route("/")(root)
     port = os.environ.get("PORT", 5000)
     print("Seen config port ", port)
     prod = os.environ.get("PROD", None)
