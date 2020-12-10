@@ -253,7 +253,7 @@ def paragraphs(lines):
 
 
 def render_one(
-    template, doc: IngestedBlobs, qa, ext, *, backrefs, pygment_css, parts={}
+    template, doc: IngestedBlobs, qa, ext, *, backrefs, pygment_css=None, parts={}
 ):
     """
     Return the rendering of one document
@@ -262,8 +262,8 @@ def render_one(
     ----------
     template
         a Jinja@ template object used to render.
-    doc : DocData
-        a DocData object with the informations for current object.
+    doc : DocBlob
+        a Doc object with the informations for current obj
     qa : str
         fully qualified name for current object
     ext : str
@@ -328,11 +328,10 @@ async def _ascii_render(name, store=Store(ingest_dir)):
 
     # TODO : move this to ingest.
     env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
-    doc = DocData(blob)
 
     return render_one(
         template=template,
-        doc=doc,
+        doc=blob,
         qa=ref,
         ext="",
         backrefs=blob.backrefs,
@@ -345,7 +344,6 @@ async def ascii_render(*args, **kwargs):
 
 
 async def main():
-    # nvisited_items = {}
     store = Store(ingest_dir)
     files = store.glob("*")
 
@@ -373,30 +371,29 @@ async def main():
                 br = await brpath.read_text()
             else:
                 br = None
-            ndoc = load_one(bytes_, br)
+            doc_blob: IngestedBlobs = load_one(bytes_, br)
 
         except Exception as e:
             raise RuntimeError(f"error with {document}") from e
 
-        # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
-        local_refs = [x[0] for x in ndoc.content["Parameters"] if x[0]] + [
-            x[0] for x in ndoc.content["Returns"] if x[0]
+        # for p,(qa, doc_blob:IngestedBlobs) in progress(nvisited_items.items(), description='Rendering'):
+        local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
+            x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(qa, known_ref, local_refs)
-        for type_, (in_out) in ndoc.example_section_data:
+        for type_, (in_out) in doc_blob.example_section_data:
             if type_ == "code":
                 in_, out = in_out
                 for ii in in_:
                     ii.append(None)
-        doc = ndoc
         with (html_dir / f"{qa}.html").open("w") as f:
             f.write(
                 render_one(
                     template=template,
-                    doc=doc,
+                    doc=doc_blob,
                     qa=qa,
                     ext=".html",
-                    backrefs=ndoc.backrefs,
+                    backrefs=doc_blob.backrefs,
                     pygment_css=None,
                 )
             )
