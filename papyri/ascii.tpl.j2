@@ -89,7 +89,7 @@
    |   |   |    {{render_lines([data])}}
    |   |   |
    |   |   |{% elif type=='fig' %}
-   |   |   |   &lt;Image&gt;
+       |   |   |            {{yellow("<<Image not included>>")}}
    |   |   |{% else %}
    |   |   |    {{ example(data[0]) }}
    |   |   |    {{ data[1]}}
@@ -108,7 +108,7 @@
    |   |   |{% else %}
    |   |   |    {{green(p[1])}}
    |   |   |{% endif %}
-   |   |   |       {{render_lines(p[2]) | wordwrap | indent(width=8) }}
+   |   |   |       {{render_paragraph(p[2]) | wordwrap | indent(width=8) }}
    |   |{% endfor %}
    |{% else %}
    |    {% if doc.content[section] %}

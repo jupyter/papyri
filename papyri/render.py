@@ -287,6 +287,22 @@ def render_one(
         backrefs = (None, b2)
     else:
         backrefs = (backrefs, None)
+
+    # partial lift of paragraph parsing....
+    # TODO: Move this higher in the ingest
+    sections_ = [
+        "Parameters",
+        "Returns",
+        "Raises",
+        "Yields",
+        "Attributes",
+        "Other Parameters",
+    ]
+    for s in sections_:
+        for i, p in enumerate(doc.content[s]):
+            if p[2]:
+                doc.content[s][i] = (p[0], p[1], paragraphs(p[2]))
+
     return template.render(
         doc=doc,
         qa=qa,
