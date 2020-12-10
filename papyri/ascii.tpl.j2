@@ -72,7 +72,7 @@
    |{% endif %}
    |{% if section in ['Summary', 'Extended Summary', 'Notes'] %}
    |
-   |     |{{render_lines(doc.content[section]) | wordwrap | indent(width=8)}}
+   |     |{{render_paragraph(doc.content[section]) | wordwrap | indent(width=8)}}
    |
    |{% elif section in ['Signature'] %}
    |   |{{ bold(underline(doc.content[section]))}}

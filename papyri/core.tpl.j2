@@ -295,7 +295,7 @@ user-select: none;
         <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
     {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
-        {{render_lines(doc.content[section])}}
+        {{render_paragraph(doc.content[section])}}
     {% elif section in ['Signature'] %}
        <code class='signature'>{{doc.content[section]}}</code>
     {% elif section in ['See Also'] %}

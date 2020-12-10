@@ -303,6 +303,10 @@ def render_one(
             if p[2]:
                 doc.content[s][i] = (p[0], p[1], paragraphs(p[2]))
 
+    for s in ["Summary", "Extended Summary", "Notes"]:
+        if s in doc.content:
+            doc.content[s] = paragraphs(doc.content[s])
+
     return template.render(
         doc=doc,
         qa=qa,
@@ -315,7 +319,9 @@ def render_one(
     )
 
 
-async def _ascii_render(name, store=Store(ingest_dir)):
+async def _ascii_render(name, store=None):
+    if store is None:
+        store = Store(ingest_dir)
     ref = name
 
     env = Environment(
@@ -355,8 +361,8 @@ async def _ascii_render(name, store=Store(ingest_dir)):
     )
 
 
-async def ascii_render(*args, **kwargs):
-    print(await _ascii_render(*args, **kwargs))
+async def ascii_render(name, store=None):
+    print(await _ascii_render(name, store))
 
 
 async def main():

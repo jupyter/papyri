@@ -8,7 +8,7 @@ from ..render import Store, _ascii_render, _route
 
 async def test_gen_numpy():
     with TemporaryDirectory() as t:
-        NFUNC = 36
+        NFUNC = 35
         t = Path(t)
         g = Gen()
         g.do_one_mod(["papyri"], infer=False, exec_=False, conf={})

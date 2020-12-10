@@ -538,7 +538,7 @@ class Line:
 class Lines:
     def __init__(self, lines):
         for l in lines:
-            assert isinstance(l, (str, Line))
+            assert isinstance(l, (str, Line)), f"got {l}"
         self._lines = [
             l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(lines)
         ]
