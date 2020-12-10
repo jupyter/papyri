@@ -80,7 +80,7 @@
    |{% elif section in ['See Also'] %}
    |   |{% for sa in doc.see_also %}
    |   |     {{bold(ref(sa.name))}}
-   |   |         {{render_lines(sa.descriptions) | wordwrap | indent(width=8)}}
+   |   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
    |   |{% endfor %}
    |{% elif section in ['Examples'] %}
    |   |{% for type,data in doc.example_section_data %}

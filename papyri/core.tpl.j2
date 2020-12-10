@@ -274,10 +274,6 @@ user-select: none;
     {%- endfor %}
 {%- endmacro %}
 
-{% macro render_lines(lines) -%}
-    {{render_paragraph(paragraphs(lines))}}
-{%- endmacro %}
-
 
 {% macro ref(r) -%}
     {% if r.exists %}
@@ -303,14 +299,14 @@ user-select: none;
             <dl>
                 <dt>{{ref(sa.name)}}</a>
                 </dt>
-            <dd>{{render_lines(sa.descriptions)}}</dd>
+            <dd>{{render_paragraph(sa.descriptions)}}</dd>
             </dl>
         {% endfor %}
 
     {% elif section in ['Examples'] %}
         {% for type,data in doc.example_section_data %}
             {% if type=='text' %}
-                {{render_lines([data])}}
+                {{render_paragraph(data)}}
             {% elif type == 'fig' %}
                 <div><img src="img/{{data}}"/></div>
             {% else %}

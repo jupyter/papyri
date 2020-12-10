@@ -147,13 +147,15 @@ async def _route(ref, store):
         # and append the highlighting class as the third element
         # I'm thinking the linking strides should be stored separately as the code
         # it might be simpler, and more compact.
-        for type_, (in_out) in doc_blob.example_section_data:
+        for i, (type_, (in_out)) in enumerate(doc_blob.example_section_data):
             if type_ == "code":
                 in_, out = in_out
                 classes = get_classes("".join([x for x, y in in_]))
                 for ii, cc in zip(in_, classes):
                     # TODO: Warning here we mutate objects.
                     ii.append(cc)
+            if type_ == "text":
+                doc_blob.example_section_data[i][1] = paragraphs([in_out])
 
         return render_one(
             template=template,
@@ -307,6 +309,9 @@ def render_one(
         if s in doc.content:
             doc.content[s] = paragraphs(doc.content[s])
 
+    for d in doc.see_also:
+        d.descriptions = paragraphs(d.descriptions)
+
     return template.render(
         doc=doc,
         qa=qa,
@@ -403,11 +408,14 @@ async def main():
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(qa, known_ref, local_refs)
-        for type_, (in_out) in doc_blob.example_section_data:
+        for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
             if type_ == "code":
                 in_, out = in_out
                 for ii in in_:
                     ii.append(None)
+            if type_ == "text":
+                doc_blob.example_section_data[i][1] = paragraphs([in_out])
+
         with (html_dir / f"{qa}.html").open("w") as f:
             f.write(
                 render_one(
