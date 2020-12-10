@@ -8,11 +8,10 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from quart_trio import QuartTrio
 
 from .config import html_dir, ingest_dir
-from .crosslink import load_one, resolve_
+from .crosslink import load_one, resolve_, IngestedBlobs
 from .stores import BaseStore, GHStore, Store
 from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
-from .core import DocData
 
 
 class CleanLoader(FileSystemLoader):
@@ -143,13 +142,12 @@ async def _route(ref, store):
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(ref, known_refs, local_refs)
-        doc = DocData(doc_blob)
 
         ### dive into the example data, reconstruct the initial code, parse it with pygments,
         # and append the highlighting class as the third element
         # I'm thinking the linking strides should be stored separately as the code
         # it might be simpler, and more compact.
-        for type_, (in_out) in doc.example_section_data:
+        for type_, (in_out) in doc_blob.example_section_data:
             if type_ == "code":
                 in_, out = in_out
                 classes = get_classes("".join([x for x, y in in_]))
@@ -157,10 +155,9 @@ async def _route(ref, store):
                     # TODO: Warning here we mutate objects.
                     ii.append(cc)
 
-        doc = doc_blob
         return render_one(
             template=template,
-            doc=doc,
+            doc=doc_blob,
             qa=ref,
             ext="",
             parts=siblings,
@@ -255,7 +252,9 @@ def paragraphs(lines):
     return acc
 
 
-def render_one(template, doc, qa, ext, *, backrefs, pygment_css, parts={}):
+def render_one(
+    template, doc: IngestedBlobs, qa, ext, *, backrefs, pygment_css, parts={}
+):
     """
     Return the rendering of one document
 
@@ -389,7 +388,7 @@ async def main():
                 in_, out = in_out
                 for ii in in_:
                     ii.append(None)
-        doc = DocData(ndoc)
+        doc = ndoc
         with (html_dir / f"{qa}.html").open("w") as f:
             f.write(
                 render_one(

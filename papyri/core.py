@@ -26,52 +26,6 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         json.loads(s, object_hook=self.hook)
 
 
-class DocData:
-    """
-    Represent the (in-memory) structure of an object documentation.
-    As well as way to reliably serialise/deserialise it.
-
-    TBD:
-        - how should external resources like images be loaded ?
-
-    """
-
-    sections = [
-        "Signature",
-        "Summary",
-        "Extended Summary",
-        "Parameters",
-        "Returns",
-        "Yields",
-        "Receives",
-        "Raises",
-        "Warns",
-        "Other Parameters",
-        "Attributes",
-        "Methods",
-        "See Also",
-        "Notes",
-        "Warnings",
-        "References",
-        "Examples",
-        "index",
-    ]  # List of sections in order
-    see_also: List[SeeAlsoItem]  # see also data
-    refs = None  # references
-    # keys and values of all the sections.
-    content = None
-    version = None  # version of current package
-
-    def __init__(self, doc_blob):
-        assert hasattr(doc_blob, "see_also")
-        self.see_also = doc_blob.see_also
-
-        self.example_section_data = doc_blob.example_section_data
-        self.refs = doc_blob.refs
-        self.content = doc_blob.content
-        self.version = doc_blob.version
-
-
 @dataclass
 class Ref:
     name: str

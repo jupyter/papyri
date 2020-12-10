@@ -24,6 +24,7 @@ class IngestedBlobs(DocBlob):
     __slots__ = ("backrefs", "see_also", "version", "logo")
 
     see_also: List[SeeAlsoItem]  # see also data
+    version: str
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
