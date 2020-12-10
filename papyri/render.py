@@ -356,17 +356,19 @@ async def main():
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
+    env.globals["paragraphs"] = paragraphs
     template = env.get_template("core.tpl.j2")
 
     known_ref = [x.name[:-5] for x in store.glob("*")]
 
     html_dir.mkdir(exist_ok=True)
-    for p, fname in progress(files, description="Rendering..."):
-        if fname.startswith("__") or fname.endswith(".br"):
+    document: Store
+    for p, document in progress(files, description="Rendering..."):
+        if document.name.startswith("__") or not document.name.endswith(".json"):
             continue
-        qa = fname[:-5]
+        qa = document.name[:-5]
         try:
-            bytes_ = await (store / fname).read_text()
+            bytes_ = await document.read_text()
             brpath = store / f"{qa}.br"
             if await brpath.exists():
                 br = await brpath.read_text()
@@ -374,21 +376,26 @@ async def main():
                 br = None
             ndoc = load_one(bytes_, br)
 
-            local_ref = [x[0] for x in ndoc["Parameters"] if x[0]]
-            # nvisited_items[qa] = ndoc
+            local_ref = [x[0] for x in ndoc.content["Parameters"] if x[0]]
         except Exception as e:
-            raise RuntimeError(f"error with {fname}") from e
+            raise RuntimeError(f"error with {document}") from e
 
         # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
         env.globals["resolve"] = resolve_(qa, known_ref, local_ref)
+        for type_, (in_out) in ndoc.example_section_data:
+            if type_ == "code":
+                in_, out = in_out
+                for ii in in_:
+                    ii.append(None)
         doc = DocData(ndoc)
         with (html_dir / f"{qa}.html").open("w") as f:
             f.write(
                 render_one(
                     template=template,
-                    ndoc=doc,
+                    doc=doc,
                     qa=qa,
                     ext=".html",
                     backrefs=ndoc.backrefs,
+                    pygment_css=None,
                 )
             )

@@ -4,6 +4,8 @@ from pathlib import Path
 
 import requests
 
+from typing import List
+
 
 class BaseStore:
     def __init__(self, path):
@@ -16,7 +18,10 @@ class BaseStore:
         return type(self)
 
     def __truediv__(self, other):
-        return self._other()(self.path / other)
+        if isinstance(other, str):
+            return self._other()(self.path / other)
+        elif isinstance(other, Store):
+            raise ValueError
 
     def __str__(self):
         return str(self.path)
@@ -27,7 +32,7 @@ class BaseStore:
     async def read_text(self):
         return self.path.read_text()
 
-    def glob(self, arg):
+    def glob(self, arg) -> List[Path]:
         return [self._other()(x) for x in self.path.glob(arg)]
 
     @property
