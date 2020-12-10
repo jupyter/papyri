@@ -57,7 +57,6 @@ class DocData:
         "index",
     ]  # List of sections in order
     see_also: List[SeeAlsoItem]  # see also data
-    edata = None  # example data
     refs = None  # references
     # keys and values of all the sections.
     content = None
@@ -71,8 +70,6 @@ class DocData:
         self.refs = doc_blob.refs
         self.content = doc_blob.content
         self.version = doc_blob.version
-        # for k, v in doc_blob.sections.items():
-        #    self.content[k] = v
 
 
 @dataclass

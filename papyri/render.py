@@ -139,10 +139,10 @@ async def _route(ref, store):
         else:
             br = None
         doc_blob = load_one(bytes_, br)
-        local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
+        local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
-        env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
+        env.globals["resolve"] = resolve_(ref, known_refs, local_refs)
         doc = DocData(doc_blob)
 
         ### dive into the example data, reconstruct the initial code, parse it with pygments,
@@ -313,7 +313,7 @@ async def _ascii_render(name, store=Store(ingest_dir)):
     env.globals["paragraphs"] = paragraphs
     template = env.get_template("ascii.tpl.j2")
 
-    known_ref = [x.name[:-5] for x in store.glob("*")]
+    known_refs = [x.name[:-5] for x in store.glob("*")]
     bytes_ = await (store / f"{ref}.json").read_text()
     brpath = store / f"{ref}.br"
     if await brpath.exists():
@@ -328,7 +328,7 @@ async def _ascii_render(name, store=Store(ingest_dir)):
     ]
 
     # TODO : move this to ingest.
-    env.globals["resolve"] = resolve_(ref, known_ref, local_ref)
+    env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
     doc = DocData(blob)
 
     return render_one(
@@ -376,12 +376,14 @@ async def main():
                 br = None
             ndoc = load_one(bytes_, br)
 
-            local_ref = [x[0] for x in ndoc.content["Parameters"] if x[0]]
         except Exception as e:
             raise RuntimeError(f"error with {document}") from e
 
         # for p,(qa, ndoc) in progress(nvisited_items.items(), description='Rendering'):
-        env.globals["resolve"] = resolve_(qa, known_ref, local_ref)
+        local_refs = [x[0] for x in ndoc.content["Parameters"] if x[0]] + [
+            x[0] for x in ndoc.content["Returns"] if x[0]
+        ]
+        env.globals["resolve"] = resolve_(qa, known_ref, local_refs)
         for type_, (in_out) in ndoc.example_section_data:
             if type_ == "code":
                 in_, out = in_out

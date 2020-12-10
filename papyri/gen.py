@@ -123,7 +123,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
 
     """
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
-    edata = []
+    example_section_data = []
     import matplotlib
     import matplotlib.pyplot as plt
     from matplotlib import _pylab_helpers, cbook
@@ -168,12 +168,12 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                         raise
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
-                edata.append(["code", (entries, "\n".join(item.out))])
+                example_section_data.append(["code", (entries, "\n".join(item.out))])
                 if figname:
-                    edata.append(["fig", figname])
+                    example_section_data.append(["fig", figname])
             else:
-                edata.append(["text", "\n".join(item.out)])
-    return edata, figs
+                example_section_data.append(["text", "\n".join(item.out)])
+    return example_section_data, figs
 
 
 @lru_cache()
@@ -343,6 +343,27 @@ class DocBlob:
     This helps with arbitraty documents (module, examples files) that cannot be parsed by Numpydoc,
     as well as link to external references, like images generated.
     """
+
+    sections = [
+        "Signature",
+        "Summary",
+        "Extended Summary",
+        "Parameters",
+        "Returns",
+        "Yields",
+        "Receives",
+        "Raises",
+        "Warns",
+        "Other Parameters",
+        "Attributes",
+        "Methods",
+        "See Also",
+        "Notes",
+        "Warnings",
+        "References",
+        "Examples",
+        "index",
+    ]  # List of sections in order
 
     __slots__ = (
         "_content",
@@ -527,33 +548,36 @@ class Gen:
                     refs.append(ref)
 
         try:
-            ndoc.edata, figs = get_example_data(
+            ndoc.example_section_data, figs = get_example_data(
                 ndoc, infer, obj=target_item, exec_=exec_, qa=qa
             )
             ndoc.figs = figs
         except Exception as e:
-            ndoc.edata = []
+            ndoc.example_section_data = []
             print("Error getting example data in ", qa)
             raise ValueError("Error getting example data in ", qa) from e
 
         ndoc.refs = list(
-            {u[1] for t_, sect in ndoc.edata if t_ == "code" for u in sect[0] if u[1]}
+            {
+                u[1]
+                for t_, sect in ndoc.example_section_data
+                if t_ == "code"
+                for u in sect[0]
+                if u[1]
+            }
         )
         ndoc.refs.extend(refs)
         ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
         figs = ndoc.figs
         del ndoc.figs
 
-        blob.example_section_data = ndoc.edata
+        blob.example_section_data = ndoc.example_section_data
         blob.ordered_sections = ndoc.ordered_sections
         blob.refs = ndoc.refs
         blob.item_file = item_file
         blob.item_line = item_line
         blob.item_type = item_type
 
-        # del ndoc.edata
-        # del ndoc.refs
-        # turn the numpydoc thing into a docblob
         return blob, figs
 
     def do_one_mod(self, names: List[str], infer: bool, exec_: bool, conf: dict):

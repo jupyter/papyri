@@ -16,13 +16,14 @@ from .core import Ref, SeeAlsoItem
 warnings.simplefilter("ignore", UserWarning)
 
 
-from typing import Optional
+from typing import Optional, List
 
 
 class IngestedBlobs(DocBlob):
 
     __slots__ = ("backrefs", "see_also", "version", "logo")
-    # see_also: List[SeeAlsoItem]
+
+    see_also: List[SeeAlsoItem]  # see also data
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,7 +104,6 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
     # ]
     blob.refs = data.pop("refs", [])
-    # blob.edata = data.pop("edata")
     if bytes2_ is not None:
         backrefs = json.loads(bytes2_)
     else:
