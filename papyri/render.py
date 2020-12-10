@@ -355,6 +355,13 @@ async def _ascii_render(name, store=None):
 
     # TODO : move this to ingest.
     env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
+    for i, (type_, in_out) in enumerate(blob.example_section_data):
+        if type_ == "code":
+            in_, out = in_out
+            for ii in in_:
+                ii.append(None)
+        if type_ == "text":
+            blob.example_section_data[i][1] = paragraphs([in_out])
 
     return render_one(
         template=template,

@@ -1,6 +1,6 @@
 {% macro example(entries) -%}
     {{-'>>> ' -}}
-    {%- for text, t_ in entries %}
+    {%- for text, t_, cc in entries %}
        {%- if text == '\n' -%}
        {{"\n    ... "}}
        {%- else -%}
@@ -35,11 +35,6 @@
 {%- endmacro %}
 
         
-{% macro render_lines(lines) -%}
-    {{render_paragraph(paragraphs(lines))}}
-{%- endmacro %}
-
-
 {%- macro esc(val, stuff) -%}
 [{{val}};m{{stuff}}[0;m
 {%- endmacro %}
@@ -86,7 +81,7 @@
    |   |{% for type,data in doc.example_section_data %}
    |   |   |{% if type=='text' %}
    |   |   |
-   |   |   |    {{render_lines([data])}}
+   |   |   |    {{render_paragraph(data)}}
    |   |   |
    |   |   |{% elif type=='fig' %}
        |   |   |            {{yellow("<<Image not included>>")}}
