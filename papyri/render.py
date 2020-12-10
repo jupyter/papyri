@@ -54,6 +54,7 @@ def get_classes(code):
     classes = [c if c is not None else "" for c in classes]
     return classes
 
+
 def root():
     # nvisited_items = {}
     store = Store(ingest_dir)
@@ -66,17 +67,17 @@ def root():
     env.globals["isstr"] = lambda x: isinstance(x, str)
     env.globals["len"] = len
     template = env.get_template("root.tpl.j2")
-    filenames = [_.name[:-5] for _ in files if _.name.endswith('.json')]
+    filenames = [_.name[:-5] for _ in files if _.name.endswith(".json")]
     tree = {}
     for f in filenames:
         sub = tree
-        parts = f.split('.')
-        for i,part in enumerate(parts):
+        parts = f.split(".")
+        for i, part in enumerate(parts):
             if part not in sub:
                 sub[part] = {}
             sub = sub[part]
 
-        sub['__link__'] = f
+        sub["__link__"] = f
 
     return template.render(tree=tree)
 
@@ -130,8 +131,6 @@ async def _route(ref, store):
 
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
 
-
-    
     if await file_.exists():
         bytes_ = await ((store / f"{ref}.json").read_text())
         brpath = store / f"{ref}.br"
@@ -179,15 +178,13 @@ async def _route(ref, store):
         tree = {}
         for f in known_refs:
             sub = tree
-            parts = f.split('.')[len(ref.split('.')):]
-            for i,part in enumerate(parts):
+            parts = f.split(".")[len(ref.split(".")) :]
+            for i, part in enumerate(parts):
                 if part not in sub:
                     sub[part] = {}
                 sub = sub[part]
 
-            sub['__link__'] = f
-
-
+            sub["__link__"] = f
 
         return error.render(backrefs=list(set(br)), tree=tree, ref=ref)
 
@@ -197,15 +194,14 @@ def img(subpath):
     with open(ingest_dir / subpath, "rb") as f:
         return f.read()
 
+
 def logo():
     import os
+
     path = os.path.abspath(__file__)
     dir_path = Path(os.path.dirname(path))
-    with open((dir_path/'papyri-logo.png'), "rb") as f:
+    with open((dir_path / "papyri-logo.png"), "rb") as f:
         return f.read()
-    
-
-    
 
 
 def serve():
@@ -336,7 +332,12 @@ async def _ascii_render(name, store=Store(ingest_dir)):
     doc = DocData(blob)
 
     return render_one(
-        template=template, doc=doc, qa=ref, ext="", backrefs=blob.backrefs
+        template=template,
+        doc=doc,
+        qa=ref,
+        ext="",
+        backrefs=blob.backrefs,
+        pygment_css=None,
     )
 
 

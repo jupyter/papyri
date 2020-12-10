@@ -76,7 +76,7 @@
    |   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
    |   |{% endfor %}
    |{% elif section in ['Examples'] %}
-   |   |{% for type,data in doc.edata %}
+   |   |{% for type,data in doc.example_section_data %}
    |   |   |{% if type=='text' %}
    |   |   |
    |   |   |    {{render_paragraph([data])}}
