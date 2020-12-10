@@ -248,8 +248,9 @@ user-select: none;
     {{-'\n'}}
     {%- endmacro %}
 
-{% macro render_paragraph(lines) -%}
-{% for prg in paragraphs(lines) %}
+
+{% macro render_paragraph(prgs) -%}
+    {% for prg in prgs %}
         <p>
         {% for type,obj in prg -%}
             {%- if type == 'Word' -%}
@@ -273,6 +274,10 @@ user-select: none;
     {%- endfor %}
 {%- endmacro %}
 
+{% macro render_lines(lines) -%}
+    {{render_paragraph(paragraphs(lines))}}
+{%- endmacro %}
+
 
 {% macro ref(r) -%}
     {% if r.exists %}
@@ -290,7 +295,7 @@ user-select: none;
         <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
     {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
-        {{render_paragraph(doc.content[section])}}
+        {{render_lines(doc.content[section])}}
     {% elif section in ['Signature'] %}
        <code class='signature'>{{doc.content[section]}}</code>
     {% elif section in ['See Also'] %}
@@ -298,14 +303,14 @@ user-select: none;
             <dl>
                 <dt>{{ref(sa.name)}}</a>
                 </dt>
-            <dd>{{render_paragraph(sa.descriptions)}}</dd>
+            <dd>{{render_lines(sa.descriptions)}}</dd>
             </dl>
         {% endfor %}
 
     {% elif section in ['Examples'] %}
         {% for type,data in doc.example_section_data %}
             {% if type=='text' %}
-                {{render_paragraph([data])}}
+                {{render_lines([data])}}
             {% elif type == 'fig' %}
                 <div><img src="img/{{data}}"/></div>
             {% else %}
@@ -330,7 +335,7 @@ user-select: none;
                 <dt>{{p[1]}}</dt>
             {% endif %}
            <dd>
-           {{render_paragraph(p[2])}}
+           {{render_lines(p[2])}}
             </dd>
        {% endfor %}
 

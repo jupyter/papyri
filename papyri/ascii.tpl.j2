@@ -9,8 +9,9 @@
     {%- endfor-%}
 {%- endmacro %}
 
-{%- macro render_paragraph(lines) -%}
-        {%- for type,obj in paragraph(lines) -%}
+{%- macro render_paragraph(prgs) -%}
+    {% for prg in prgs %}
+        {%- for type,obj in prg -%}
             {%- if type == 'Word' -%}
                 {{- obj.value -}}
             {%- elif type == 'Directive' %}
@@ -30,6 +31,12 @@
                 <code>Some {{type}}</code>
             {%- endif -%}
         {%- endfor -%}
+    {%- endfor -%}
+{%- endmacro %}
+
+        
+{% macro render_lines(lines) -%}
+    {{render_paragraph(paragraphs(lines))}}
 {%- endmacro %}
 
 
@@ -65,7 +72,7 @@
    |{% endif %}
    |{% if section in ['Summary', 'Extended Summary', 'Notes'] %}
    |
-   |     |{{render_paragraph(doc.content[section]) | wordwrap | indent(width=8)}}
+   |     |{{render_lines(doc.content[section]) | wordwrap | indent(width=8)}}
    |
    |{% elif section in ['Signature'] %}
    |   |{{ bold(underline(doc.content[section]))}}
@@ -73,13 +80,13 @@
    |{% elif section in ['See Also'] %}
    |   |{% for sa in doc.see_also %}
    |   |     {{bold(ref(sa.name))}}
-   |   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
+   |   |         {{render_lines(sa.descriptions) | wordwrap | indent(width=8)}}
    |   |{% endfor %}
    |{% elif section in ['Examples'] %}
    |   |{% for type,data in doc.example_section_data %}
    |   |   |{% if type=='text' %}
    |   |   |
-   |   |   |    {{render_paragraph([data])}}
+   |   |   |    {{render_lines([data])}}
    |   |   |
    |   |   |{% elif type=='fig' %}
    |   |   |   &lt;Image&gt;
@@ -101,7 +108,7 @@
    |   |   |{% else %}
    |   |   |    {{green(p[1])}}
    |   |   |{% endif %}
-   |   |   |       {{render_paragraph(p[2]) | wordwrap | indent(width=8) }}
+   |   |   |       {{render_lines(p[2]) | wordwrap | indent(width=8) }}
    |   |{% endfor %}
    |{% else %}
    |    {% if doc.content[section] %}
