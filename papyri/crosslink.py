@@ -33,6 +33,14 @@ class IngestedBlobs(DocBlob):
     def slots(self):
         return super().slots() + ["backrefs", "see_also", "version", "logo"]
 
+    @classmethod
+    def from_json(cls, data):
+        instance = super().from_json(data)
+        instance.see_also = [
+            SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
+        ]
+        return instance
+
 
 @lru_cache()
 def keepref(ref):
@@ -93,14 +101,11 @@ def assert_normalized(ref):
 
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
-    # blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
-
     data = json.loads(bytes_)
     blob = IngestedBlobs.from_json(data)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("example_section_data", None)
-    assert "edata" not in data
     # blob._parsed_data["Parameters"] = [
     #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
     # ]
@@ -110,20 +115,8 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     else:
         backrefs = []
     blob.backrefs = backrefs
-    # blob.see_also = data.pop("see_also", [])
-    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
     blob.version = data.pop("version", "")
-    data.pop("ordered_sections", None)
-    data.pop("backrefs", None)
-    data.pop("_content", None)
-    data.pop("item_file", None)
-    data.pop("item_line", None)
-    data.pop("item_type", None)
-    data.pop("aliases", None)
-    data.pop("logo", None)
-    if data.keys():
-        print(data.keys(), qa)
-        raise ValueError("remaining data", data.keys())
+
     try:
         if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
             for nts, d in see_also:
@@ -297,7 +290,7 @@ class Ingester:
                 path_br = self.ingest_dir / f"{qa}.br"
 
                 with path.open("w") as f:
-                    f.write(json.dumps(js, cls=EnhancedJSONEncoder))
+                    f.write(json.dumps(js, cls=EnhancedJSONEncoder, indent=2))
                 if path_br.exists():
                     with path_br.open("r") as f:
                         bb = json.loads(f.read())

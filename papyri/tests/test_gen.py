@@ -1,7 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from ..crosslink import Ingester
+from ..crosslink import Ingester, load_one
 from ..gen import Gen
 from ..render import Store, _ascii_render, _route
 
@@ -17,6 +17,7 @@ async def test_gen_numpy():
         num = [x.name[:-5] for x in (t).glob("papyri/*.json")]
         assert len(num) == NFUNC + 1
         assert "papyri.gen.gen_main" in num
+
         ing = Ingester()
         ing.ingest_dir = t / "ingest"
         ing.ingest_dir.mkdir()

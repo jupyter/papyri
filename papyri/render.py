@@ -400,7 +400,11 @@ async def main():
     html_dir.mkdir(exist_ok=True)
     document: Store
     for p, document in progress(files, description="Rendering..."):
-        if document.name.startswith("__") or not document.name.endswith(".json"):
+        if (
+            document.name.startswith("__")
+            or not document.name.endswith(".json")
+            or document.name.endswith("__papyri__.json")
+        ):
             continue
         qa = document.name[:-5]
         try:
