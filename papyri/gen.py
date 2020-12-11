@@ -771,16 +771,6 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(root, name, data)
 
-            if logo := module_conf.get("logo", None):
-                self.put_raw(root, f"{root}-logo.png", Path(logo).read_bytes())
-                self.put(
-                    root,
-                    "__papyri__",
-                    json.dumps({"version": version, "logo": f"{root}-logo.png"}),
-                )
-            else:
-                self.put(root, "__papyri__", json.dumps({"version": version}))
-
             found = []
             not_found = []
             for k, v in collector.aliases.items():
@@ -789,11 +779,31 @@ class Gen:
                         found.append((k, shorter))
                     else:
                         not_found.append((k, v))
-            for a, b in found:
-                print(a, "->", b)
-            for a, b in not_found:
-                print(a, "??", b)
-            print(len(found), len(not_found))
+            # for a, b in found:
+            #    print(a, "->", b)
+            # for a, b in not_found:
+            #    print(a, "??", b)
+            # print(len(found), len(not_found))
+
+            if logo := module_conf.get("logo", None):
+                self.put_raw(root, f"{root}-logo.png", Path(logo).read_bytes())
+                self.put(
+                    root,
+                    "__papyri__",
+                    json.dumps(
+                        {
+                            "version": version,
+                            "logo": f"{root}-logo.png",
+                            "aliases": found,
+                        }
+                    ),
+                )
+            else:
+                self.put(
+                    root,
+                    "__papyri__",
+                    json.dumps({"version": version, "aliases": found}),
+                )
 
 
 def is_private(path):
