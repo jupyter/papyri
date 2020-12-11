@@ -760,19 +760,19 @@ class Gen:
                             target_item, ndoc, infer, False, qa
                         )
                 doc_blob.aliases = collector.aliases[qa]
-            #    self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
-            #    for name, data in figs:
-            #        self.put_raw(root, name, data)
+                self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
+                for name, data in figs:
+                    self.put_raw(root, name, data)
 
-            # if logo := module_conf.get("logo", None):
-            #    self.put_raw(root, f"{root}-logo.png", Path(logo).read_bytes())
-            #    self.put(
-            #        root,
-            #        "__papyri__",
-            #        json.dumps({"version": version, "logo": f"{root}-logo.png"}),
-            #    )
-            # else:
-            #    self.put(root, "__papyri__", json.dumps({"version": version}))
+            if logo := module_conf.get("logo", None):
+                self.put_raw(root, f"{root}-logo.png", Path(logo).read_bytes())
+                self.put(
+                    root,
+                    "__papyri__",
+                    json.dumps({"version": version, "logo": f"{root}-logo.png"}),
+                )
+            else:
+                self.put(root, "__papyri__", json.dumps({"version": version}))
 
             found = []
             not_found = []
@@ -790,6 +790,10 @@ class Gen:
 
 
 def is_private(path):
+    """
+    Determine if a import path, or fully qualified is private.
+    that usually implies that (one of) the path part starts with a single underscore.
+    """
     for p in path.split("."):
         if p.startswith("_") and not p.startswith("__"):
             return True
@@ -807,6 +811,8 @@ def find_cannonical(qa, aliases):
         - if there are many names that have the same depth and are shorted than the qa, we bail.
 
     We might want to be careful with dunders.
+
+    If we can't find a canonical, there are many, or are identical to the fqa, return None.
     """
     qa_level = qa.count(".")
     min_alias_level = min(a.count(".") for a in set(aliases))
