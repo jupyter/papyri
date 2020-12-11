@@ -162,6 +162,8 @@ class Ingester:
                 data = json.loads(f.read())
                 version = data["version"]
                 logo = data.get("logo", None)
+                aliases = data.get("aliases", {})
+
             versions[meta_path.parent.name] = version
             root = str(meta_path).split("/")[-2]
         for p, f in progress(
@@ -279,6 +281,9 @@ class Ingester:
             description="cleanig previsous files ....",
         ):
             path.unlink()
+
+        with open(self.ingest_dir / f"{root}.__papyri__.json", "w") as f:
+            f.write(json.dumps(aliases))
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."

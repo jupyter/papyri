@@ -565,7 +565,6 @@ class Gen:
         assert self.root is not None
         (where / self.root).mkdir(exist_ok=True)
         for k, v in self.data.items():
-            print("WRITE", k)
             with (where / self.root / k).open("w") as f:
                 f.write(v)
 
@@ -784,6 +783,8 @@ class Gen:
             # for a, b in not_found:
             #    print(a, "??", b)
             # print(len(found), len(not_found))
+
+            found = {k: v for k, v in found}
 
             if logo := module_conf.get("logo", None):
                 self.put_raw(root, f"{root}-logo.png", Path(logo).read_bytes())

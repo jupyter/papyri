@@ -108,6 +108,11 @@ async def _route(ref, store):
 
     file_ = store / f"{ref}.json"
 
+    papp_files = store.glob("*__papyri__.json")
+    for p in papp_files:
+        aliases = json.loads(await p.read_text())
+    print(aliases)
+
     family = sorted(list(store.glob("*.json")))
     family = [str(f.name)[:-5] for f in family]
     parts = ref.split(".") + ["+"]
