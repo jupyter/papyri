@@ -4,6 +4,7 @@ import io
 import json
 import time
 from contextlib import contextmanager, nullcontext
+from collections import defaultdict
 from functools import lru_cache
 
 # from numpydoc.docscrape import NumpyDocString
@@ -283,12 +284,69 @@ def full_qual(obj):
     return None
 
 
+class DFSCollector:
+    def __init__(self, root):
+        assert isinstance(root, ModuleType), root
+        self.root = root
+        self.obj = dict()
+        self.aliases = defaultdict(lambda: [])
+        self._open_list = [(root, [root.__name__])]
+
+    def items(self):
+        while len(self._open_list) >= 1:
+            current, stack = self._open_list.pop(0)
+
+            # numpy objects ane no bool values.
+            if id(current) not in [id(x) for x in self.obj.values()]:
+                self.visit(current, stack)
+
+        return self.obj
+
+    def visit(self, obj, stack):
+        try:
+            qa = full_qual(obj)
+        except Exception as e:
+            raise RuntimeError(f"error visiting {'.'.join(self.stack)}") from e
+        if not qa:
+            return
+        if not qa.startswith(self.root.__name__):
+            return
+        if obj in self.obj.values():
+            return
+        if (qa in self.obj) and self.obj[qa] != obj:
+            pass
+        self.obj[qa] = obj
+        self.aliases[qa].append(".".join(stack))
+
+        if isinstance(obj, ModuleType):
+            return self.visit_ModuleType(obj, stack)
+        elif isinstance(obj, FunctionType):
+            return self.visit_FunctionType(obj, stack)
+        elif isinstance(obj, type):
+            return self.visit_ClassType(obj, stack)
+        else:
+            pass
+
+    def visit_ModuleType(self, mod, stack):
+        for k in dir(mod):
+            self._open_list.append((getattr(mod, k), stack + [k]))
+
+    def visit_ClassType(self, klass, stack):
+        for k, v in klass.__dict__.items():
+            self._open_list.append((v, stack + [k]))
+
+    def visit_FunctionType(self, fun, stack):
+        pass
+
+
 class Collector:
     def __init__(self, root):
         assert isinstance(root, ModuleType), root
         self.root = root
         self.obj = dict()
+        self.aliases = defaultdict(lambda: [])
         self.stack = [self.root.__name__]
+        self._open_list = []
 
     def visit_ModuleType(self, mod):
         for k in dir(mod):
@@ -306,6 +364,9 @@ class Collector:
         pass
 
     def visit(self, obj):
+        pp = False
+        if self.stack == ["scipy", "fft", "set_workers"]:
+            pp = True
         try:
             qa = full_qual(obj)
         except Exception as e:
@@ -315,10 +376,19 @@ class Collector:
         if not qa.startswith(self.root.__name__):
             return
         if obj in self.obj.values():
+            fq = [k for k, v in self.obj.items() if obj is v][0]
+            sn = ".".join(self.stack)
+            if fq != sn:
+                self.aliases[qa].append(sn)
+            if pp:
+                print("SKIP", obj, fq, qa)
             return
         if (qa in self.obj) and self.obj[qa] != obj:
             pass
         self.obj[qa] = obj
+
+        if (sn := ".".join(self.stack)) != qa:
+            self.aliases[qa].append(sn)
 
         if isinstance(obj, ModuleType):
             return self.visit_ModuleType(obj)
@@ -373,6 +443,7 @@ class DocBlob:
         "item_file",
         "item_line",
         "item_type",
+        "aliases",
     )
 
     def slots(self):
@@ -384,6 +455,7 @@ class DocBlob:
             "item_file",
             "item_line",
             "item_type",
+            "aliases",
         ]
 
     def __init__(self):
@@ -394,6 +466,7 @@ class DocBlob:
         self.item_file = None
         self.item_line = None
         self.item_type = None
+        self.aliases = []
 
     @property
     def content(self):
@@ -623,8 +696,8 @@ class Gen:
         self.version = version
 
         # clean out previous doc bundle
-
-        collected: Dict[str, Any] = Collector(n0).items()
+        collector = DFSCollector(n0)
+        collected: Dict[str, Any] = collector.items()
 
         # collect all items we want to document.
         for qa, item in collected.items():
@@ -673,28 +746,79 @@ class Gen:
                             print("will not execute", qa)
                             ex = False
                             break
-                else:
-                    print("will run", qa)
+                # else:
+                #    print("will run", qa)
 
                 try:
                     doc_blob, figs = self.do_one_item(target_item, ndoc, infer, ex, qa)
                 except Exception:
+                    raise
                     if module_conf.get("exec_failure", None) == "fallback":
                         print("Re-analysing ", qa, "without execution")
                         # debug:
                         doc_blob, figs = self.do_one_item(
                             target_item, ndoc, infer, False, qa
                         )
-                self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
-                for name, data in figs:
-                    self.put_raw(root, name, data)
+                doc_blob.aliases = collector.aliases[qa]
+            #    self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
+            #    for name, data in figs:
+            #        self.put_raw(root, name, data)
 
-            if logo := module_conf.get("logo", None):
-                self.put_raw(root, f"{root}-logo.png", Path(logo).read_bytes())
-                self.put(
-                    root,
-                    "__papyri__",
-                    json.dumps({"version": version, "logo": f"{root}-logo.png"}),
-                )
-            else:
-                self.put(root, "__papyri__", json.dumps({"version": version}))
+            # if logo := module_conf.get("logo", None):
+            #    self.put_raw(root, f"{root}-logo.png", Path(logo).read_bytes())
+            #    self.put(
+            #        root,
+            #        "__papyri__",
+            #        json.dumps({"version": version, "logo": f"{root}-logo.png"}),
+            #    )
+            # else:
+            #    self.put(root, "__papyri__", json.dumps({"version": version}))
+
+            found = []
+            not_found = []
+            for k, v in collector.aliases.items():
+                if [item for item in v if item != k]:
+                    if shorter := find_cannonical(k, v):
+                        found.append((k, shorter))
+                    else:
+                        not_found.append((k, v))
+            for a, b in found:
+                print(a, "->", b)
+            for a, b in not_found:
+                print(a, "??", b)
+            print(len(found), len(not_found))
+
+
+def is_private(path):
+    for p in path.split("."):
+        if p.startswith("_") and not p.startswith("__"):
+            return True
+    return False
+
+
+def find_cannonical(qa, aliases):
+    """
+    Given the fully qualified name and a lit of aliases, try to find the canonical one.
+
+    The canonical name is usually:
+        - short (less depth in number of modules)
+        - does not contain special chars like <, > for locals
+        - none of the part start with _.
+        - if there are many names that have the same depth and are shorted than the qa, we bail.
+
+    We might want to be careful with dunders.
+    """
+    qa_level = qa.count(".")
+    min_alias_level = min(a.count(".") for a in set(aliases))
+    if min_alias_level < qa_level:
+        shorter_candidates = [c for c in aliases if c.count(".") <= min_alias_level]
+    else:
+        shorter_candidates = [c for c in aliases if c.count(".") <= qa_level]
+
+    if (
+        len(shorter_candidates) == 1
+        and not is_private(shorter_candidates[0])
+        and shorter_candidates[0] != qa
+    ):
+        return shorter_candidates[0]
+    return None
