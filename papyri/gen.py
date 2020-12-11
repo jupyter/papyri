@@ -308,6 +308,13 @@ class DFSCollector:
         except Exception as e:
             raise RuntimeError(f"error visiting {'.'.join(self.stack)}") from e
         if not qa:
+            if (
+                "__doc__" not in stack
+                and hasattr(obj, "__doc__")
+                and not full_qual(type(obj)).startswith("builtins.")
+            ):
+                # might be worth looking into like np.exp.
+                pass
             return
         if not qa.startswith(self.root.__name__):
             return
