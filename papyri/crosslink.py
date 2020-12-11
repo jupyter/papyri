@@ -119,6 +119,7 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data.pop("item_file", None)
     data.pop("item_line", None)
     data.pop("item_type", None)
+    data.pop("aliases", None)
     data.pop("logo", None)
     if data.keys():
         print(data.keys(), qa)
