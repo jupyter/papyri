@@ -21,7 +21,7 @@ def main():
 
 
 @click.command()
-@click.argument("paths", type=click.Path())
+@click.argument("paths", type=click.Path(), nargs=-1)
 @click.option("--check/--no-check", default=True)
 def ingest(paths, check):
     from . import crosslink as cr

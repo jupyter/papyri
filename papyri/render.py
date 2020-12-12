@@ -103,11 +103,11 @@ async def _route(ref, store):
     template = env.get_template("core.tpl.j2")
 
     error = env.get_template("404.tpl.j2")
-    known_refs = [str(x.name)[:-5] for x in store.glob("*/*/*.json")]
+    known_refs = [str(x.name)[:-5] for x in store.glob("*/module/*.json")]
 
     root = ref.split(".")[0]
 
-    file_ = store / root / root / f"{ref}.json"
+    file_ = store / root / "module" / f"{ref}.json"
 
     papp_files = store.glob(f"{root}/papyri.json")
     for p in papp_files:
@@ -131,7 +131,7 @@ async def _route(ref, store):
     # things. likely want to store that in a tree somewhere But I thing this is
     # doable after purely as frontend thing.
 
-    family = sorted(list(store.glob("*/*/*.json")))
+    family = sorted(list(store.glob("*/module/*.json")))
     family = [str(f.name)[:-5] for f in family]
     parts = ref.split(".") + ["+"]
     siblings = {}
@@ -153,8 +153,8 @@ async def _route(ref, store):
         cpath += part + "."
 
     if await file_.exists():
-        bytes_ = await ((store / f"{root}/{root}/{ref}.json").read_text())
-        brpath = store / root / root / f"{ref}.br"
+        bytes_ = await ((store / f"{root}/module/{ref}.json").read_text())
+        brpath = store / root / "module" / f"{ref}.br"
         if await brpath.exists():
             br = await brpath.read_text()
         else:
@@ -370,9 +370,9 @@ async def _ascii_render(name, store=None):
     env.globals["paragraphs"] = paragraphs
     template = env.get_template("ascii.tpl.j2")
 
-    known_refs = [x.name[:-5] for x in store.glob("*/*/*.json")]
-    bytes_ = await (store / root / root / f"{ref}.json").read_text()
-    brpath = store / root / root / f"{ref}.br"
+    known_refs = [x.name[:-5] for x in store.glob("*/module/*.json")]
+    bytes_ = await (store / root / "module" / f"{ref}.json").read_text()
+    brpath = store / root / "module" / f"{ref}.br"
     if await brpath.exists():
         br = await brpath.read_text()
     else:
@@ -410,7 +410,7 @@ async def ascii_render(name, store=None):
 
 async def main():
     store = Store(ingest_dir)
-    files = store.glob("*/*/*.json")
+    files = store.glob("*/module/*.json")
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -421,7 +421,7 @@ async def main():
     env.globals["paragraphs"] = paragraphs
     template = env.get_template("core.tpl.j2")
 
-    known_refs = [x.name[:-5] for x in store.glob("*/*/*.json")]
+    known_refs = [x.name[:-5] for x in store.glob("*/module/*.json")]
 
     html_dir.mkdir(exist_ok=True)
     document: Store
@@ -436,7 +436,7 @@ async def main():
         root = qa.split(".")[0]
         try:
             bytes_ = await document.read_text()
-            brpath = store / root / root / f"{qa}.br"
+            brpath = store / root / "module" / f"{qa}.br"
             if await brpath.exists():
                 br = await brpath.read_text()
             else:

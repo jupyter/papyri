@@ -566,7 +566,7 @@ class Gen:
 
     def clean(self, where: Path):
         for _, path in progress(
-            (where / self.root).glob("*.json"), description="cleaning previous bundle"
+            (where / "module").glob("*.json"), description="cleaning previous bundle"
         ):
             path.unlink()
         for _, path in progress(
@@ -574,18 +574,17 @@ class Gen:
         ):
             path.unlink()
 
-        if (where / self.root).exists():
-            (where / self.root).rmdir()
+        if (where / "module").exists():
+            (where / "module").rmdir()
         if (where / "assets").exists():
             (where / "assets").rmdir()
         if (where / "papyri.json").exists():
             (where / "papyri.json").unlink()
 
     def write(self, where: Path):
-        assert self.root is not None
-        (where / self.root).mkdir(exist_ok=True)
+        (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
-            with (where / self.root / k).open("w") as f:
+            with (where / "module" / k).open("w") as f:
                 f.write(v)
 
         for k, v in self.bdata.items():
@@ -793,7 +792,7 @@ class Gen:
                 doc_blob.aliases = collector.aliases[qa]
                 self.put(qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
-                    self.put_raw(root, name, data)
+                    self.put_raw(name, data)
 
             found = []
             not_found = []
@@ -812,10 +811,10 @@ class Gen:
             found = {k: v for k, v in found}
 
             if logo := module_conf.get("logo", None):
-                self.put_raw(f"{root}-logo.png", Path(logo).read_bytes())
+                self.put_raw(f"logo.png", Path(logo).read_bytes())
             self.metadata = {
                 "version": version,
-                "logo": f"{root}-logo.png",
+                "logo": f"logo.png",
                 "aliases": found,
                 "module": root,
             }
