@@ -83,14 +83,13 @@ def root():
 
 async def _route(ref, store):
     assert isinstance(store, BaseStore)
+    assert ref != "favicon.ico"
     if ref == "favicon.ico":
-        here = Path(os.path.dirname(__file__))
-        return (here / ref).read_bytes()
+        pass
+    assert ref != "favicon.ico"
 
     if ref.endswith(".html"):
         ref = ref[:-5]
-    if ref == "favicon.ico":
-        return ""
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -104,18 +103,21 @@ async def _route(ref, store):
     template = env.get_template("core.tpl.j2")
 
     error = env.get_template("404.tpl.j2")
-    known_refs = [str(x.name)[:-5] for x in store.glob("*.json")]
+    known_refs = [str(x.name)[:-5] for x in store.glob("*/*/*.json")]
 
-    file_ = store / f"{ref}.json"
+    root = ref.split(".")[0]
 
-    papp_files = store.glob("*__papyri__.json")
+    file_ = store / root / root / f"{ref}.json"
+
+    papp_files = store.glob(f"{root}/papyri.json")
     for p in papp_files:
         aliases = json.loads(await p.read_text())
-    print(aliases)
 
-    family = sorted(list(store.glob("*.json")))
+    family = sorted(list(store.glob("*/*/*.json")))
     family = [str(f.name)[:-5] for f in family]
+    print(family[:10], "...", family[-10:])
     parts = ref.split(".") + ["+"]
+    print(f"{parts=}")
     siblings = {}
     cpath = ""
     # TODO: move this at ingestion time for all the non-top-level.
@@ -126,18 +128,17 @@ async def _route(ref, store):
                     [
                         ".".join(s.split(".")[: i + 1])
                         for s in family
-                        if s.startswith(cpath)
+                        if s.startswith(cpath) and "." in s
                     ]
                 )
             )
         )
+        siblings[part] = [(s, s.split(".")[-1]) for s in sib]
         cpath += part + "."
 
-        siblings[part] = [(s, s.split(".")[-1]) for s in sib]
-
     if await file_.exists():
-        bytes_ = await ((store / f"{ref}.json").read_text())
-        brpath = store / f"{ref}.br"
+        bytes_ = await ((store / f"{root}/{root}/{ref}.json").read_text())
+        brpath = store / root / root / f"{ref}.br"
         if await brpath.exists():
             br = await brpath.read_text()
         else:
@@ -194,13 +195,20 @@ async def _route(ref, store):
 
 
 def img(subpath):
-    assert subpath.endswith("png")
     with open(ingest_dir / subpath, "rb") as f:
         return f.read()
 
 
+def static(name):
+    here = Path(os.path.dirname(__file__))
+
+    def f():
+        return (here / name).read_bytes()
+
+    return f
+
+
 def logo():
-    import os
 
     path = os.path.abspath(__file__)
     dir_path = Path(os.path.dirname(path))
@@ -218,6 +226,7 @@ def serve():
     # return await _route(ref, GHStore(Path('.')))
 
     app.route("/logo.png")(logo)
+    app.route("/favicon.ico")(static("favicon.ico"))
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
     app.route("/")(root)
@@ -333,6 +342,7 @@ async def _ascii_render(name, store=None):
     if store is None:
         store = Store(ingest_dir)
     ref = name
+    root = name.split(".")[0]
 
     env = Environment(
         loader=CleanLoader(os.path.dirname(__file__)),
@@ -344,9 +354,9 @@ async def _ascii_render(name, store=None):
     env.globals["paragraphs"] = paragraphs
     template = env.get_template("ascii.tpl.j2")
 
-    known_refs = [x.name[:-5] for x in store.glob("*")]
-    bytes_ = await (store / f"{ref}.json").read_text()
-    brpath = store / f"{ref}.br"
+    known_refs = [x.name[:-5] for x in store.glob("*/*/*.json")]
+    bytes_ = await (store / root / root / f"{ref}.json").read_text()
+    brpath = store / root / root / f"{ref}.br"
     if await brpath.exists():
         br = await brpath.read_text()
     else:
@@ -384,7 +394,7 @@ async def ascii_render(name, store=None):
 
 async def main():
     store = Store(ingest_dir)
-    files = store.glob("*")
+    files = store.glob("*/*/*.json")
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -395,7 +405,7 @@ async def main():
     env.globals["paragraphs"] = paragraphs
     template = env.get_template("core.tpl.j2")
 
-    known_ref = [x.name[:-5] for x in store.glob("*")]
+    known_refs = [x.name[:-5] for x in store.glob("*/*/*.json")]
 
     html_dir.mkdir(exist_ok=True)
     document: Store
@@ -405,11 +415,12 @@ async def main():
             or not document.name.endswith(".json")
             or document.name.endswith("__papyri__.json")
         ):
-            continue
+            assert False, document.name
         qa = document.name[:-5]
+        root = qa.split(".")[0]
         try:
             bytes_ = await document.read_text()
-            brpath = store / f"{qa}.br"
+            brpath = store / root / root / f"{qa}.br"
             if await brpath.exists():
                 br = await brpath.read_text()
             else:
@@ -423,7 +434,7 @@ async def main():
         local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
-        env.globals["resolve"] = resolve_(qa, known_ref, local_refs)
+        env.globals["resolve"] = resolve_(qa, known_refs, local_refs)
         for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
             if type_ == "code":
                 in_, out = in_out

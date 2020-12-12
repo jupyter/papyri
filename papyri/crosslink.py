@@ -147,20 +147,16 @@ class Ingester:
         nvisited_items = {}
         versions = {}
         root = None
-        for console, meta_path in progress(
-            path.glob("**/__papyri__.json"),
-            description="Loading package versions...",
-        ):
-            with meta_path.open() as f:
-                data = json.loads(f.read())
-                version = data["version"]
-                logo = data.get("logo", None)
-                aliases = data.get("aliases", {})
+        meta_path = path / "papyri.json"
+        with meta_path.open() as f:
+            data = json.loads(f.read())
+            version = data["version"]
+            logo = data.get("logo", None)
+            aliases = data.get("aliases", {})
+            root = data.get("module")
 
-            versions[meta_path.parent.name] = version
-            root = str(meta_path).split("/")[-2]
         for p, f in progress(
-            path.glob(f"{root}/*.json"),
+            (path / root).glob("*.json"),
             description=f"Reading {path} doc bundle files ...",
         ):
             if f.is_dir():
@@ -196,6 +192,9 @@ class Ingester:
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f}") from e
 
+        (self.ingest_dir / root).mkdir(exist_ok=True)
+        (self.ingest_dir / root / root).mkdir(exist_ok=True)
+
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
         ):
@@ -210,7 +209,7 @@ class Ingester:
                     # print(qa, 'incommon')
                     nvisited_items[resolved].backrefs.append(qa)
                 elif ref != qa and exists == "missing":
-                    ex = self.ingest_dir / (resolved + ".json")
+                    ex = self.ingest_dir / root / root / (resolved + ".json")
                     if ex.exists():
                         with ex.open() as f:
                             brpath = Path(str(ex)[:-5] + "br")
@@ -224,7 +223,7 @@ class Ingester:
                                 nvisited_items[resolved].backrefs = []
                             nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
-                        phantom_dir = self.ingest_dir / "__phantom__"
+                        phantom_dir = self.ingest_dir / root / root / "__phantom__"
                         phantom_dir.mkdir(exist_ok=True)
                         ph = phantom_dir / (resolved + ".json")
                         if ph.exists():
@@ -245,11 +244,13 @@ class Ingester:
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
+
+        (self.ingest_dir / root / "assets").mkdir(exist_ok=True)
         for px, f in progress(
-            path.glob(f"**/*.png"),
+            (path / "assets").glob("*"),
             description=f"Reading {path} image files ...",
         ):
-            with open(self.ingest_dir / f.name, "wb") as fw:
+            with open(self.ingest_dir / root / "assets" / f.name, "wb") as fw:
                 fw.write(f.read_bytes())
 
         for p, (qa, doc_blob) in progress(
@@ -258,7 +259,7 @@ class Ingester:
             # TODO: load backrref from either:
             # 1) previsous version fo the file
             # 2) phantom file if first import (and remove the phantom file?)
-            phantom_dir = self.ingest_dir / "__phantom__"
+            phantom_dir = self.ingest_dir / root / root / "__phantom__"
             ph = phantom_dir / (qa + ".json")
             # print('ph?', ph)
             if ph.exists():
@@ -270,24 +271,25 @@ class Ingester:
 
             doc_blob.backrefs = list(sorted(set(doc_blob.backrefs + ph_data)))
         for console, path in progress(
-            self.ingest_dir.glob("{root}/*.json"),
+            (self.ingest_dir / root / root).glob("*.json"),
             description="cleanig previsous files ....",
         ):
             path.unlink()
 
-        with open(self.ingest_dir / f"{root}.__papyri__.json", "w") as f:
+        with open(self.ingest_dir / root / "papyri__.json", "w") as f:
             f.write(json.dumps(aliases))
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."
         ):
-            root = qa.split(".")[0]
-            doc_blob.version = versions.get(root, "?")
+            assert qa.split(".")[0] == root
+            new_root = qa.split(".")[0]
+            doc_blob.version = version
             js = doc_blob.to_json()
             br = js.pop("backrefs", [])
             try:
-                path = self.ingest_dir / f"{qa}.json"
-                path_br = self.ingest_dir / f"{qa}.br"
+                path = self.ingest_dir / new_root / new_root / f"{qa}.json"
+                path_br = self.ingest_dir / new_root / new_root / f"{qa}.br"
 
                 with path.open("w") as f:
                     f.write(json.dumps(js, cls=EnhancedJSONEncoder, indent=2))

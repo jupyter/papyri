@@ -25,7 +25,6 @@ from velin.examples_section_utils import InOut, splitblank, splitcode
 from .vref import NumpyDocString
 from numpydoc.docscrape import Parameter
 
-from .config import cache_dir
 from .utils import pos_to_nl, dedent_but_first, progress
 
 from pathlib import Path
@@ -442,6 +441,15 @@ class DocBlob:
         "index",
     ]  # List of sections in order
 
+    _content: dict
+    refs: list
+    ordered_sections: list
+    item_file: str
+    item_line: int
+    item_type: str
+    aliases: dict
+    example_section_data: list
+
     __slots__ = (
         "_content",
         "example_section_data",
@@ -515,13 +523,15 @@ class DocBlob:
 
     @classmethod
     def from_json(cls, obj):
-        nds = cls()
-        for k in obj:
-            setattr(nds, k, obj.get(k))
-        if nds._content is None:
-            nds._content = {}
-        nds._content["Parameters"] = [
-            Parameter(a, b, c) for (a, b, c) in nds._content.get("Parameters", [])
+        new_doc_blob = cls()
+        for k, v in obj.items():
+            setattr(new_doc_blob, k, v)
+        if new_doc_blob._content is None:
+            new_doc_blob._content = {}
+
+        new_doc_blob._content["Parameters"] = [
+            Parameter(a, b, c)
+            for (a, b, c) in new_doc_blob._content.get("Parameters", [])
         ]
 
         for it in (
@@ -540,26 +550,36 @@ class DocBlob:
             "Attributes",
             "Methods",
         ):
-            if it not in nds._content:
-                nds._content[it] = []
+            if it not in new_doc_blob._content:
+                new_doc_blob._content[it] = []
         for it in ("index",):
-            if it not in nds._content:
-                nds._content[it] = {}
-        return nds
+            if it not in new_doc_blob._content:
+                new_doc_blob._content[it] = {}
+        return new_doc_blob
 
 
 class Gen:
     def __init__(self):
-        self.cache_dir = cache_dir
         self.data = {}
         self.bdata = {}
+        self.metadata = {}
 
     def clean(self, where: Path):
-        where = where / self.root
         for _, path in progress(
-            where.glob("*.json"), description="cleaning previous bundle"
+            (where / self.root).glob("*.json"), description="cleaning previous bundle"
         ):
             path.unlink()
+        for _, path in progress(
+            (where / "assets").glob("*"), description="cleaning previous bundle"
+        ):
+            path.unlink()
+
+        if (where / self.root).exists():
+            (where / self.root).rmdir()
+        if (where / "assets").exists():
+            (where / "assets").rmdir()
+        if (where / "papyri.json").exists():
+            (where / "papyri.json").unlink()
 
     def write(self, where: Path):
         assert self.root is not None
@@ -569,13 +589,18 @@ class Gen:
                 f.write(v)
 
         for k, v in self.bdata.items():
-            with (where / self.root / k).open("wb") as f:
+            assets = where / "assets"
+            assets.mkdir()
+            with (assets / k).open("wb") as f:
                 f.write(v)
 
-    def put(self, root, path, data):
+        with (where / "papyri.json").open("w") as f:
+            f.write(json.dumps(self.metadata, indent=2))
+
+    def put(self, path, data):
         self.data[path + ".json"] = data
 
-    def put_raw(self, root, path, data):
+    def put_raw(self, path, data):
         self.bdata[path] = data
 
     def do_one_item(
@@ -697,7 +722,7 @@ class Gen:
         root = names[0].split(".")[0]
         module_conf = conf.get(root, {})
 
-        print("Configuration:", conf)
+        print("Configuration:", json.dumps(module_conf, indent=2))
         self.root = root
         self.version = version
 
@@ -766,7 +791,7 @@ class Gen:
                             target_item, ndoc, infer, False, qa
                         )
                 doc_blob.aliases = collector.aliases[qa]
-                self.put(root, qa, json.dumps(doc_blob.to_json(), indent=2))
+                self.put(qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(root, name, data)
 
@@ -787,24 +812,13 @@ class Gen:
             found = {k: v for k, v in found}
 
             if logo := module_conf.get("logo", None):
-                self.put_raw(root, f"{root}-logo.png", Path(logo).read_bytes())
-                self.put(
-                    root,
-                    "__papyri__",
-                    json.dumps(
-                        {
-                            "version": version,
-                            "logo": f"{root}-logo.png",
-                            "aliases": found,
-                        }
-                    ),
-                )
-            else:
-                self.put(
-                    root,
-                    "__papyri__",
-                    json.dumps({"version": version, "aliases": found}),
-                )
+                self.put_raw(f"{root}-logo.png", Path(logo).read_bytes())
+            self.metadata = {
+                "version": version,
+                "logo": f"{root}-logo.png",
+                "aliases": found,
+                "module": root,
+            }
 
 
 def is_private(path):

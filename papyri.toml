@@ -20,6 +20,8 @@ logo = 'papyri-logo.png'
 
 [IPython]
 logo = 'ipython-logo.png'
+exec_failure = 'fallback'
+
 
 [dask]
 logo = 'dask-logo.png'
