@@ -113,11 +113,27 @@ async def _route(ref, store):
     for p in papp_files:
         aliases = json.loads(await p.read_text())
 
+    # here we compute the siblings at each level; as well as one level down
+    # this is far from efficient and a hack, but it helps with navigation.
+    # I'm pretty sure we load the full library while we could
+    # load only the current module id not less, and that this could
+    # be done at ingest time or cached.
+    # So basically in the breadcrumps
+    # IPython.lib.display.+
+    #  - IPython will be siblings with numpy; scipy, dask, ....
+    #  - lib (or "IPython.lib"), with "core", "display", "terminal"...
+    #  etc.
+    #  - + are deeper children's
+    #
+    # This is also likely a bit wrong; as I'm sure we want to only show
+    # submodules or sibling modules and not attribute/instance of current class,
+    # though that would need loading the files and looking at the types of
+    # things. likely want to store that in a tree somewhere But I thing this is
+    # doable after purely as frontend thing.
+
     family = sorted(list(store.glob("*/*/*.json")))
     family = [str(f.name)[:-5] for f in family]
-    print(family[:10], "...", family[-10:])
     parts = ref.split(".") + ["+"]
-    print(f"{parts=}")
     siblings = {}
     cpath = ""
     # TODO: move this at ingestion time for all the non-top-level.
