@@ -55,9 +55,8 @@ def get_classes(code):
 
 
 def root():
-    # nvisited_items = {}
     store = Store(ingest_dir)
-    files = store.glob("*.json")
+    files = store.glob("*/module/*.json")
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -92,13 +91,9 @@ async def _route(ref, store):
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
-    env.globals["paragraphs"] = paragraphs
     env.globals["len"] = len
 
     template = env.get_template("core.tpl.j2")
-
-    error = env.get_template("404.tpl.j2")
-
 
     root = ref.split(".")[0]
 
@@ -152,7 +147,7 @@ async def _route(ref, store):
     if await file_.exists():
         # The reference we are trying to view exists;
         # we will now just render it.
-        bytes_ = await ((store / f"{root}/module/{ref}.json").read_text())
+        bytes_ = await file_.read_text()
         brpath = store / root / "module" / f"{ref}.br"
         if await brpath.exists():
             br = await brpath.read_text()
@@ -216,6 +211,7 @@ async def _route(ref, store):
 
             sub["__link__"] = f
 
+        error = env.get_template("404.tpl.j2")
         return error.render(backrefs=list(set(br)), tree=tree, ref=ref)
 
 
