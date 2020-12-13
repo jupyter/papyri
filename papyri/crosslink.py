@@ -212,22 +212,15 @@ class Ingester:
                     print("ref to", ref)
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
-                    # print(qa, 'incommon')
-                    if pp:
-                        print()
                     nvisited_items[resolved].backrefs.append(qa)
                 elif ref != qa and exists == "missing":
                     if "." not in ref:
                         continue
                     ref_root = ref.split(".")[0]
-                    if pp:
-                        print()
                     existing_location = (
                         self.ingest_dir / ref_root / "module" / (resolved + ".json")
                     )
                     if existing_location.exists():
-                        if pp:
-                            print()
                         with existing_location.open() as f:
                             brpath = Path(str(existing_location)[:-5] + "br")
                             if brpath.exists():
@@ -240,27 +233,19 @@ class Ingester:
                                 nvisited_items[resolved].backrefs = []
                             nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
-                        if pp:
-                            print()
                         phantom_dir = (
                             self.ingest_dir / ref_root / "module" / "__phantom__"
                         )
                         phantom_dir.mkdir(exist_ok=True, parents=True)
                         ph = phantom_dir / (resolved + ".json")
                         if ph.exists():
-                            if pp:
-                                print(ph)
                             with ph.open() as f:
                                 ph_data = json.loads(f.read())
 
                         else:
                             ph_data = []
                         ph_data.append(qa)
-                        with ph.open("w") as f:
-                            # print('updating phantom data', ph)
-                            if pp:
-                                print(ph)
-                            f.write(json.dumps(ph_data))
+                        ph.write_text(json.dumps(ph_data))
                     else:
                         print(resolved, "not valid reference, skipping.")
 
