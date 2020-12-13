@@ -153,9 +153,9 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     # at ingestion time.
     # we also need to move this step at generation time,as we (likely), want to
     # do some local pre-processing of the references to already do some resolutions.
-    #for i, (type_, (in_out)) in enumerate(blob.example_section_data):
-    #     if type_ == "text":
-    #         doc_blob.example_section_data[i][1] = paragraphs([in_out])
+    for i, (type_, (in_out)) in enumerate(blob.example_section_data):
+         if type_ == "text":
+             doc_blob.example_section_data[i][1] = paragraphs([in_out])
 
 
 
