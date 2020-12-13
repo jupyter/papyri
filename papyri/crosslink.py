@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .config import ingest_dir
 from .gen import normalise_ref, DocBlob
-from .take2 import Lines, Paragraph, make_block_3
+from .take2 import Lines, Paragraph, make_block_3, Math
 from .utils import progress
 
 from there import print
@@ -28,7 +28,7 @@ def paragraph(lines) -> List[Tuple[str, str]]:
     for c in p.children:
         if type(c).__name__ == "Directive":
             if c.role == "math":
-                acc.append(("Math", c))
+                acc.append(("Math", Math(c.value)))
             else:
                 acc.append((type(c).__name__, c))
         else:
@@ -107,6 +107,8 @@ class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
+        if hasattr(o, 'to_json'):
+            return o.to_json()
         return super().default(o)
 
 
@@ -155,7 +157,10 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     # do some local pre-processing of the references to already do some resolutions.
     for i, (type_, (in_out)) in enumerate(blob.example_section_data):
          if type_ == "text":
-             doc_blob.example_section_data[i][1] = paragraphs([in_out])
+             blob.example_section_data[i][1] = paragraphs([in_out])
+             for ps in blob.example_section_data[i][1]:
+                 for p in ps:
+                     assert p[0] in {'Word', 'Verbatim', 'Directive', 'Math'}, f"{p[0]}, {qa}"
 
 
 

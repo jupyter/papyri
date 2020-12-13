@@ -274,7 +274,6 @@ user-select: none;
     {%- endfor %}
 {%- endmacro %}
 
-
 {% macro ref(r) -%}
     {% if r.exists %}
                 <a href="{{r.ref}}{{ext}}" class='exists'>{{r.name}}</a>
@@ -299,7 +298,7 @@ user-select: none;
             <dl>
                 <dt>{{ref(sa.name)}}</a>
                 </dt>
-            <dd>{{render_paragraph(sa.descriptions)}}</dd>
+                <dd>{{render_paragraph(sa.descriptions)}}</dd>
             </dl>
         {% endfor %}
 

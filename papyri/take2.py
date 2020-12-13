@@ -96,6 +96,13 @@ class Node:
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.value}>"
 
+    def to_json(self):
+        return self.value
+
+    @classmethod
+    def from_json(cls, data):
+        return cls(data)
+
 
 class Verbatim(Node):
     def __init__(self, value):
@@ -123,7 +130,6 @@ class Verbatim(Node):
 
     def __repr__(self):
         return RED("``" + "".join(self.value) + "``")
-
 
 class Directive(Node):
     def __init__(self, value, domain, role):
@@ -191,6 +197,19 @@ class Directive(Node):
         # prefix = ''
         return GREEN(prefix) + HEADER("`" + "".join(self.value) + "`")
 
+    def to_json(self):
+        return [self.value, self.domain, self.role]
+
+    @classmethod
+    def from_json(cls, data):
+        return cls(*data)
+
+
+class Math(Node):
+
+    @property
+    def text(self):
+        return ''.join(self.value)
 
 class Word(Node):
     def __repr__(self):

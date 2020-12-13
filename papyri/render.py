@@ -172,7 +172,22 @@ async def _route(ref, store):
                     # TODO: Warning here we mutate objects.
                     ii.append(cc)
             if type_ == "text":
-                doc_blob.example_section_data[i][1] = paragraphs([in_out])
+                # todo, rehydrade
+                from . import take2 as take2
+                assert len(in_out) == 1
+                new=[]
+                for tt,value in in_out[0]:
+                    assert tt in {'Word', 'Verbatim', 'Directive', 'Math'}, f"{tt}, {value}"
+                    constr = getattr(take2, tt)
+                    nval = constr.from_json(value)
+                    new.append((tt,nval))
+
+                # in_out is a paragraph.
+                doc_blob.example_section_data[i][1] = [new]
+
+
+                #print(in_out)
+
 
         return render_one(
             template=template,
