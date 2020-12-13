@@ -84,12 +84,7 @@ def root():
 async def _route(ref, store):
     assert isinstance(store, BaseStore)
     assert ref != "favicon.ico"
-    if ref == "favicon.ico":
-        pass
-    assert ref != "favicon.ico"
-
-    if ref.endswith(".html"):
-        ref = ref[:-5]
+    assert not ref.endswith(".html")
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -103,11 +98,10 @@ async def _route(ref, store):
     template = env.get_template("core.tpl.j2")
 
     error = env.get_template("404.tpl.j2")
-    known_refs = [str(x.name)[:-5] for x in store.glob("*/module/*.json")]
+
 
     root = ref.split(".")[0]
 
-    file_ = store / root / "module" / f"{ref}.json"
 
     papp_files = store.glob(f"{root}/papyri.json")
     for p in papp_files:
@@ -152,7 +146,12 @@ async def _route(ref, store):
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
         cpath += part + "."
 
+    # End computing siblings.
+
+    file_ = store / root / "module" / f"{ref}.json"
     if await file_.exists():
+        # The reference we are trying to view exists;
+        # we will now just render it.
         bytes_ = await ((store / f"{root}/module/{ref}.json").read_text())
         brpath = store / root / "module" / f"{ref}.br"
         if await brpath.exists():
@@ -163,7 +162,8 @@ async def _route(ref, store):
         local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
-        env.globals["resolve"] = resolve_(ref, known_refs, local_refs)
+        all_known_refs = [str(x.name)[:-5] for x in store.glob("*/module/*.json")]
+        env.globals["resolve"] = resolve_(ref, all_known_refs, local_refs)
 
         ### dive into the example data, reconstruct the initial code, parse it with pygments,
         # and append the highlighting class as the third element
@@ -189,15 +189,24 @@ async def _route(ref, store):
             pygment_css=HtmlFormatter(style="pastie").get_style_defs(".highlight"),
         )
     else:
-        known_refs = [str(s.name)[:-5] for s in store.glob(f"{ref}*.json")]
+        # The reference we are trying to render does not exists
+        # just try to have a nice  error page and try to find local reference and
+        # use the phantom file to list the backreferences to this.
+        # it migt be a page, or a module we do not have documentation about.
+        r = ref.split(".")[0]
+        this_module_known_refs = [
+            str(s.name)[:-5] for s in store.glob(f"{r}/module/{ref}*.json")
+        ]
         brpath = store / "__phantom__" / f"{ref}.json"
         if await brpath.exists():
             br = json.loads(await brpath.read_text())
         else:
             br = []
 
+        # compute a tree from all the references we have to have a nice browsing
+        # interfaces.
         tree = {}
-        for f in known_refs:
+        for f in this_module_known_refs:
             sub = tree
             parts = f.split(".")[len(ref.split(".")) :]
             for i, part in enumerate(parts):

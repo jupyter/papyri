@@ -206,15 +206,30 @@ class Ingester:
             doc_blob.logo = logo
             for ref in doc_blob.refs:
                 resolved, exists = resolve_(qa, nvisited_items, local_ref)(ref)
+                pp = False
+                if "Audio" in qa:
+                    pp = True
+                    print("ref to", ref)
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
                     # print(qa, 'incommon')
+                    if pp:
+                        print()
                     nvisited_items[resolved].backrefs.append(qa)
                 elif ref != qa and exists == "missing":
-                    ex = self.ingest_dir / root / "module" / (resolved + ".json")
-                    if ex.exists():
-                        with ex.open() as f:
-                            brpath = Path(str(ex)[:-5] + "br")
+                    if "." not in ref:
+                        continue
+                    ref_root = ref.split(".")[0]
+                    if pp:
+                        print()
+                    existing_location = (
+                        self.ingest_dir / ref_root / "module" / (resolved + ".json")
+                    )
+                    if existing_location.exists():
+                        if pp:
+                            print()
+                        with existing_location.open() as f:
+                            brpath = Path(str(existing_location)[:-5] + "br")
                             if brpath.exists():
                                 br = brpath.read_text()
                             else:
@@ -225,10 +240,16 @@ class Ingester:
                                 nvisited_items[resolved].backrefs = []
                             nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
-                        phantom_dir = self.ingest_dir / root / "module" / "__phantom__"
-                        phantom_dir.mkdir(exist_ok=True)
+                        if pp:
+                            print()
+                        phantom_dir = (
+                            self.ingest_dir / ref_root / "module" / "__phantom__"
+                        )
+                        phantom_dir.mkdir(exist_ok=True, parents=True)
                         ph = phantom_dir / (resolved + ".json")
                         if ph.exists():
+                            if pp:
+                                print(ph)
                             with ph.open() as f:
                                 ph_data = json.loads(f.read())
 
@@ -237,6 +258,8 @@ class Ingester:
                         ph_data.append(qa)
                         with ph.open("w") as f:
                             # print('updating phantom data', ph)
+                            if pp:
+                                print(ph)
                             f.write(json.dumps(ph_data))
                     else:
                         print(resolved, "not valid reference, skipping.")
@@ -284,13 +307,14 @@ class Ingester:
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."
         ):
-            assert qa.split(".")[0] == root
+            # we might update other modules with backrefs
+            mod_root = qa.split(".")[0]
             doc_blob.version = version
             js = doc_blob.to_json()
             br = js.pop("backrefs", [])
             try:
-                path = self.ingest_dir / root / "module" / f"{qa}.json"
-                path_br = self.ingest_dir / root / "module" / f"{qa}.br"
+                path = self.ingest_dir / mod_root / "module" / f"{qa}.json"
+                path_br = self.ingest_dir / mod_root / "module" / f"{qa}.br"
 
                 with path.open("w") as f:
                     f.write(json.dumps(js, cls=EnhancedJSONEncoder, indent=2))
