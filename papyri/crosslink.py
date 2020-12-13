@@ -107,7 +107,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
-        if hasattr(o, 'to_json'):
+        if hasattr(o, "to_json"):
             return o.to_json()
         return super().default(o)
 
@@ -116,7 +116,6 @@ def assert_normalized(ref):
     # nref = normalise_ref(ref)
     # assert nref == ref, f"{nref} != {ref}"
     return ref
-
 
 
 def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
@@ -149,20 +148,23 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:
         assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
-    
-    # here we parse the example_section_data text paragraph into their 
+
+    # here we parse the example_section_data text paragraph into their
     # detailed representation of tokens this will simplify finding references
     # at ingestion time.
     # we also need to move this step at generation time,as we (likely), want to
     # do some local pre-processing of the references to already do some resolutions.
     for i, (type_, (in_out)) in enumerate(blob.example_section_data):
-         if type_ == "text":
-             blob.example_section_data[i][1] = paragraphs([in_out])
-             for ps in blob.example_section_data[i][1]:
-                 for p in ps:
-                     assert p[0] in {'Word', 'Verbatim', 'Directive', 'Math'}, f"{p[0]}, {qa}"
-
-
+        if type_ == "text":
+            blob.example_section_data[i][1] = paragraphs([in_out])
+            for ps in blob.example_section_data[i][1]:
+                for p in ps:
+                    assert p[0] in {
+                        "Word",
+                        "Verbatim",
+                        "Directive",
+                        "Math",
+                    }, f"{p[0]}, {qa}"
 
     blob.see_also = list(set(blob.see_also))
     try:
@@ -172,7 +174,6 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
         pass
     blob.refs = list(sorted(set(blob.refs)))
     return blob
-
 
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
@@ -188,18 +189,15 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     blob.version = data.pop("version", "")
     blob.refs = data.pop("refs", [])
 
-
     ## verification:
 
-    #for i, (type_, (in_out)) in enumerate(blob.example_section_data):
+    # for i, (type_, (in_out)) in enumerate(blob.example_section_data):
     #        if type_ == "code":
     #            assert len(in_out) == 2
     #        if type_ == "text":
     #            for type_,word in in_out:
     #                assert isinstance(type_, str)
     #                assert isinstance(word, str)
-
-
 
     return blob
 

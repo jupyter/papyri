@@ -131,6 +131,7 @@ class Verbatim(Node):
     def __repr__(self):
         return RED("``" + "".join(self.value) + "``")
 
+
 class Directive(Node):
     def __init__(self, value, domain, role):
         self.value = value
@@ -206,10 +207,10 @@ class Directive(Node):
 
 
 class Math(Node):
-
     @property
     def text(self):
-        return ''.join(self.value)
+        return "".join(self.value)
+
 
 class Word(Node):
     def __repr__(self):
@@ -252,6 +253,7 @@ class FirstCombinator:
 class Paragraph:
 
     children: List[Node]
+
     def __init__(self, children, width=80):
         self.children = children
         self.width = width
