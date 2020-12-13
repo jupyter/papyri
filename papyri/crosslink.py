@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .config import ingest_dir
 from .gen import normalise_ref, DocBlob
-from .take2 import Paragraph
+from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
 
 from there import print
@@ -16,7 +16,36 @@ from .core import Ref, SeeAlsoItem
 warnings.simplefilter("ignore", UserWarning)
 
 
-from typing import Optional, List
+from typing import Optional, List, Tuple, Any
+
+
+def paragraph(lines) -> List[Tuple[str, str]]:
+    """
+    return container of (type, obj)
+    """
+    p = Paragraph.parse_lines(lines)
+    acc = []
+    for c in p.children:
+        if type(c).__name__ == "Directive":
+            if c.role == "math":
+                acc.append(("Math", c))
+            else:
+                acc.append((type(c).__name__, c))
+        else:
+            acc.append((type(c).__name__, c))
+    return acc
+
+
+def paragraphs(lines) -> List[Any]:
+    blocks = make_block_3(Lines(lines))
+    acc = []
+    for b0, b1, b2 in blocks:
+        if b0:
+            acc.append(paragraph([x._line for x in b0]))
+        ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
+        if b2:
+            acc.append(paragraph([x._line for x in b2]))
+    return acc
 
 
 class IngestedBlobs(DocBlob):
@@ -41,22 +70,9 @@ class IngestedBlobs(DocBlob):
         ]
         return instance
 
-
-@lru_cache()
-def keepref(ref):
-    """
-    Filter to rim out common reference that we usually do not want to keep
-    around in examples; typically most of the builtins, and things we can't
-    import.
-    """
-    if ref.startswith(("builtins.", "__main__")):
-        return False
-    try:
-        __import__(ref)
-        return False
-    except Exception:
-        pass
-    return True
+    def to_json(self):
+        data = super().to_json()
+        return data
 
 
 def resolve_(qa: str, known_refs, local_ref):
@@ -100,15 +116,16 @@ def assert_normalized(ref):
     return ref
 
 
-def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
+
+def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
+    """
+    Load the json from a DocBlob and make it an ingested blob.
+    """
     data = json.loads(bytes_)
     blob = IngestedBlobs.from_json(data)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("example_section_data", None)
-    # blob._parsed_data["Parameters"] = [
-    #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
-    # ]
     blob.refs = data.pop("refs", [])
     if bytes2_ is not None:
         backrefs = json.loads(bytes2_)
@@ -126,9 +143,22 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                     blob.see_also.append(SeeAlsoItem(Ref(n, None, None), d, t))
     except Exception as e:
         raise ValueError(f"Error {qa}: {see_also} | {nts}") from e
+
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:
         assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
+    
+    # here we parse the example_section_data text paragraph into their 
+    # detailed representation of tokens this will simplify finding references
+    # at ingestion time.
+    # we also need to move this step at generation time,as we (likely), want to
+    # do some local pre-processing of the references to already do some resolutions.
+    #for i, (type_, (in_out)) in enumerate(blob.example_section_data):
+    #     if type_ == "text":
+    #         doc_blob.example_section_data[i][1] = paragraphs([in_out])
+
+
+
     blob.see_also = list(set(blob.see_also))
     try:
         notes = blob.content["Notes"]
@@ -136,6 +166,36 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     except KeyError:
         pass
     blob.refs = list(sorted(set(blob.refs)))
+    return blob
+
+
+
+def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
+    data = json.loads(bytes_)
+    blob = IngestedBlobs.from_json(data)
+    # blob._parsed_data = data.pop("_parsed_data")
+    data.pop("_parsed_data", None)
+    data.pop("example_section_data", None)
+    # blob._parsed_data["Parameters"] = [
+    #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
+    # ]
+    blob.backrefs = json.loads(bytes2_) if bytes2_ else []
+    blob.version = data.pop("version", "")
+    blob.refs = data.pop("refs", [])
+
+
+    ## verification:
+
+    #for i, (type_, (in_out)) in enumerate(blob.example_section_data):
+    #        if type_ == "code":
+    #            assert len(in_out) == 2
+    #        if type_ == "text":
+    #            for type_,word in in_out:
+    #                assert isinstance(type_, str)
+    #                assert isinstance(word, str)
+
+
+
     return blob
 
 
@@ -160,13 +220,7 @@ class Ingester:
             (path / "module").glob("*.json"),
             description=f"Reading {path} doc bundle files ...",
         ):
-            if f.is_dir():
-                continue
-            fname = f.name
-            if fname == "__papyri__.json":
-                assert False
-                continue
-            qa = fname[:-5]
+            qa = f.name[:-5]
             if check or True:
                 rqa = normalise_ref(qa)
                 if rqa != qa:
@@ -176,21 +230,14 @@ class Ingester:
                 assert rqa == qa, f"{rqa} !+ {qa}"
             try:
                 with f.open() as fff:
-                    from pathlib import Path
-
                     brpath = Path(str(f)[:-5] + "br")
                     br: Optional[str]
                     if brpath.exists():
                         br = brpath.read_text()
                     else:
                         br = None
-                    blob = load_one(fff.read(), br, qa=qa)
-                    if check:
-                        blob.refs = [
-                            assert_normalized(ref) for ref in blob.refs if keepref(ref)
-                        ]
+                    blob = load_one_uningested(fff.read(), br, qa=qa)
                     nvisited_items[qa] = blob
-
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f}") from e
 
@@ -214,23 +261,20 @@ class Ingester:
                 if resolved in nvisited_items and ref != qa:
                     nvisited_items[resolved].backrefs.append(qa)
                 elif ref != qa and exists == "missing":
-                    if "." not in ref:
-                        continue
                     ref_root = ref.split(".")[0]
+                    if ref_root == root:
+                        continue
                     existing_location = (
                         self.ingest_dir / ref_root / "module" / (resolved + ".json")
                     )
                     if existing_location.exists():
                         with existing_location.open() as f:
-                            brpath = Path(str(existing_location)[:-5] + "br")
+                            brpath = Path(str(existing_location)[:-5] + ".br")
                             if brpath.exists():
                                 br = brpath.read_text()
                             else:
                                 br = None
-                            blob = load_one(f.read(), br)
-                            nvisited_items[resolved] = blob
-                            if not hasattr(nvisited_items[resolved], "backrefs"):
-                                nvisited_items[resolved].backrefs = []
+                            nvisited_items[resolved] = load_one(f.read(), br)
                             nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
                         phantom_dir = (
@@ -239,8 +283,7 @@ class Ingester:
                         phantom_dir.mkdir(exist_ok=True, parents=True)
                         ph = phantom_dir / (resolved + ".json")
                         if ph.exists():
-                            with ph.open() as f:
-                                ph_data = json.loads(f.read())
+                            ph_data = json.loads(ph.read_text())
 
                         else:
                             ph_data = []
@@ -260,8 +303,7 @@ class Ingester:
             (path / "assets").glob("*"),
             description=f"Reading {path} image files ...",
         ):
-            with open(self.ingest_dir / root / "assets" / f.name, "wb") as fw:
-                fw.write(f.read_bytes())
+            (self.ingest_dir / root / "assets" / f.name).write_bytes(f.read_bytes())
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cleaning double references"
@@ -271,10 +313,8 @@ class Ingester:
             # 2) phantom file if first import (and remove the phantom file?)
             phantom_dir = self.ingest_dir / root / "module" / "__phantom__"
             ph = phantom_dir / (qa + ".json")
-            # print('ph?', ph)
             if ph.exists():
-                with ph.open() as f:
-                    ph_data = json.loads(f.read())
+                ph_data = json.loads(ph.read_text())
                 print("loading data from phantom file !", ph_data)
             else:
                 ph_data = []
@@ -304,14 +344,12 @@ class Ingester:
                 with path.open("w") as f:
                     f.write(json.dumps(js, cls=EnhancedJSONEncoder, indent=2))
                 if path_br.exists():
-                    with path_br.open("r") as f:
-                        bb = json.loads(f.read())
+                    bb = json.loads(path_br.read_text())
                 else:
                     bb = []
-                with path_br.open("w") as f:
-                    f.write(json.dumps(list(sorted(set(br + bb)))))
+                path_br.write_text(json.dumps(list(sorted(set(br + bb)))))
             except Exception as e:
-                raise RuntimeError(f"error writing to {fname}") from e
+                raise RuntimeError(f"error writing to {path}") from e
 
 
 def main(path, check):

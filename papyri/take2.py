@@ -231,6 +231,8 @@ class FirstCombinator:
 
 
 class Paragraph:
+
+    children: List[Node]
     def __init__(self, children, width=80):
         self.children = children
         self.width = width

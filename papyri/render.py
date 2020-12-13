@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from quart_trio import QuartTrio
 
 from .config import html_dir, ingest_dir
-from .crosslink import load_one, resolve_, IngestedBlobs
+from .crosslink import load_one, resolve_, IngestedBlobs, paragraph, paragraphs
 from .stores import BaseStore, GHStore, Store
 from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
@@ -260,33 +260,6 @@ def serve():
         app.run(port=port)
 
 
-def paragraph(lines):
-    """
-    return container of (type, obj)
-    """
-    p = Paragraph.parse_lines(lines)
-    acc = []
-    for c in p.children:
-        if type(c).__name__ == "Directive":
-            if c.role == "math":
-                acc.append(("Math", c))
-            else:
-                acc.append((type(c).__name__, c))
-        else:
-            acc.append((type(c).__name__, c))
-    return acc
-
-
-def paragraphs(lines):
-    blocks = make_block_3(Lines(lines))
-    acc = []
-    for b0, b1, b2 in blocks:
-        if b0:
-            acc.append(paragraph([x._line for x in b0]))
-        ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
-        if b2:
-            acc.append(paragraph([x._line for x in b2]))
-    return acc
 
 
 def render_one(
