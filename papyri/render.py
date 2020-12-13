@@ -372,7 +372,6 @@ async def _ascii_render(name, store=None):
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
-    env.globals["paragraphs"] = paragraphs
     template = env.get_template("ascii.tpl.j2")
 
     known_refs = [x.name[:-5] for x in store.glob("*/module/*.json")]
@@ -423,7 +422,6 @@ async def main():
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
-    env.globals["paragraphs"] = paragraphs
     template = env.get_template("core.tpl.j2")
 
     known_refs = [x.name[:-5] for x in store.glob("*/module/*.json")]
