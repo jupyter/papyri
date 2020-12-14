@@ -286,12 +286,14 @@ def full_qual(obj):
 
 
 class DFSCollector:
-    def __init__(self, root):
+    def __init__(self, root, others):
         assert isinstance(root, ModuleType), root
         self.root = root
         self.obj = dict()
         self.aliases = defaultdict(lambda: [])
         self._open_list = [(root, [root.__name__])]
+        for o in others:
+            self._open_list.append((o, o.__name__.split('.')))
 
     def items(self):
         while len(self._open_list) >= 1:
@@ -729,7 +731,7 @@ class Gen:
         self.version = version
 
         # clean out previous doc bundle
-        collector = DFSCollector(n0)
+        collector = DFSCollector(modules[0], modules[1:])
         collected: Dict[str, Any] = collector.items()
 
         # collect all items we want to document.
@@ -754,7 +756,12 @@ class Gen:
                 p2.update(taskp, description=short_description.ljust(17))
                 p2.advance(taskp)
                 item_docstring = target_item.__doc__
-                if item_docstring is None:
+
+                # TODO: we may not want tosip items as they may have children
+                # right now keep modules, but we may want to keep classes if
+                # they have documented descendants.
+
+                if item_docstring is None and not isinstance(target_item, ModuleType):
                     continue
 
                 # progress.console.print(qa)
@@ -768,7 +775,10 @@ class Gen:
                             target_item,
                             target_item.__name__,
                         )
-                        continue
+                        if isinstance(target_item, ModuleType):
+                            ndoc = NumpyDocString(f"Was not able to parse docstring for {qa}")
+                        else:
+                            continue
                 execute_exclude_patterns = module_conf.get(
                     "execute_exclude_patterns", None
                 )

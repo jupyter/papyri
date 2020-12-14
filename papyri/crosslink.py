@@ -356,7 +356,6 @@ class Ingester:
             ph = phantom_dir / (qa + ".json")
             if ph.exists():
                 ph_data = json.loads(ph.read_text())
-                print("loading data from phantom file !", ph_data)
             else:
                 ph_data = []
 

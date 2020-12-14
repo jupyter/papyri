@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -345,6 +346,7 @@ user-select: none;
 {% endfor%}
 {% if backrefs[0] or backrefs[1] %}
     <h1 id='section-backrefs'>Back References</h1>
+    <p>The following pages refer to to this document either explicitly or contain code examples using this.</[>
     {% if backrefs[0] is not none %}
     {% for r in backrefs[0] %}
         <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>
