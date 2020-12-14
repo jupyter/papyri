@@ -173,6 +173,8 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                     example_section_data.append(["fig", figname])
             else:
                 example_section_data.append(["text", "\n".join(item.out)])
+
+
     return example_section_data, figs
 
 
@@ -669,12 +671,13 @@ class Gen:
                 if u[1]
             }
         )
+        
+        blob.example_section_data = ndoc.example_section_data
         ndoc.refs.extend(refs)
         ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
         figs = ndoc.figs
         del ndoc.figs
 
-        blob.example_section_data = ndoc.example_section_data
         blob.ordered_sections = ndoc.ordered_sections
         blob.refs = ndoc.refs
         blob.item_file = item_file

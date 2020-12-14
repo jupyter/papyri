@@ -170,27 +170,6 @@ async def _route(ref, store):
                 for ii, cc in zip(in_, classes):
                     # TODO: Warning here we mutate objects.
                     ii.append(cc)
-            if type_ == "text":
-                # todo, rehydrade
-                from . import take2 as take2
-
-                assert len(in_out) == 1
-                new = []
-                for tt, value in in_out[0]:
-                    assert tt in {
-                        "Word",
-                        "Verbatim",
-                        "Directive",
-                        "Math",
-                    }, f"{tt}, {value}"
-                    constr = getattr(take2, tt)
-                    nval = constr.from_json(value)
-                    new.append((tt, nval))
-
-                # in_out is a paragraph.
-                doc_blob.example_section_data[i][1] = [new]
-
-                # print(in_out)
 
         return render_one(
             template=template,
@@ -335,17 +314,19 @@ def render_one(
 
     for d in doc.see_also:
         d.descriptions = paragraphs(d.descriptions)
-
-    return template.render(
-        doc=doc,
-        qa=qa,
-        version=doc.version,
-        module=qa.split(".")[0],
-        backrefs=backrefs,
-        ext=ext,
-        parts=parts,
-        pygment_css=pygment_css,
-    )
+    try:
+        return template.render(
+            doc=doc,
+            qa=qa,
+            version=doc.version,
+            module=qa.split(".")[0],
+            backrefs=backrefs,
+            ext=ext,
+            parts=parts,
+            pygment_css=pygment_css,
+        )
+    except Exception as e:
+        raise ValueError("qa=", qa) from e
 
 
 async def _ascii_render(name, store=None):
@@ -384,8 +365,6 @@ async def _ascii_render(name, store=None):
             in_, out = in_out
             for ii in in_:
                 ii.append(None)
-        if type_ == "text":
-            blob.example_section_data[i][1] = paragraphs([in_out])
 
     return render_one(
         template=template,
@@ -448,8 +427,6 @@ async def main():
                 in_, out = in_out
                 for ii in in_:
                     ii.append(None)
-            if type_ == "text":
-                doc_blob.example_section_data[i][1] = paragraphs([in_out])
 
         with (html_dir / f"{qa}.html").open("w") as f:
             f.write(

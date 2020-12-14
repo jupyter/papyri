@@ -265,7 +265,7 @@ user-select: none;
             {% elif type == 'Math' %}
                 ${{obj.text}}$
             {% elif type == 'Verbatim' %}
-                <code>{{obj.text}}</code>
+                <code class'verbatim'>{{obj.text}}</code>
             {% else %}
                 <code>Some {{type}}</code>
             {%- endif -%}

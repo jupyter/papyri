@@ -63,20 +63,50 @@ class IngestedBlobs(DocBlob):
         return super().slots() + ["backrefs", "see_also", "version", "logo"]
 
     @classmethod
-    def from_json(cls, data):
+    def from_json(cls, data, rehydrate=True ):
         instance = super().from_json(data)
         instance.see_also = [
             SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
         ]
+        # Todo: remove this; hopefully the logic from load_one_uningested
+        # load a DocBlob instaead of un IngestedDocBlob
+        # or more likely the paragraph parsing is made in Gen.
+        if rehydrate:
+            # rehydrate in the example section paragraphs into their actual
+            # instances. This likely should be moved into a specific type of
+            # instance in the Parsed Data.
+            for i, (type_, (in_out)) in enumerate(instance.example_section_data):
+                if type_ == "text":
+                    from . import take2 as take2
+                    assert isinstance(in_out, list), repr(in_out)
+                    assert len(in_out) == 1, f"{len(in_out)}"
+                    new = []
+                    for tt, value in in_out[0]:
+                        assert tt in {
+                            "Word",
+                            "Verbatim",
+                            "Directive",
+                            "Math",
+                        }, f"{tt}, {value}"
+                        constr = getattr(take2, tt)
+                        nval = constr.from_json(value)
+                        new.append((tt, nval))
+
+                    # in_out is a paragraph.
+                    instance.example_section_data[i][1] = [new]
         return instance
 
     def to_json(self):
+        for i, (type_, in_out) in enumerate(self.example_section_data):
+            if type_ == "text":
+                assert isinstance(in_out, list), repr(in_out)
         data = super().to_json()
         return data
 
 
 def resolve_(qa: str, known_refs, local_ref):
     def resolve(ref):
+        assert isinstance(ref, str), type(ref)
         if ref.startswith("~"):
             ref = ref[1:]
         if ref in local_ref:
@@ -123,7 +153,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     Load the json from a DocBlob and make it an ingested blob.
     """
     data = json.loads(bytes_)
-    blob = IngestedBlobs.from_json(data)
+    blob = IngestedBlobs.from_json(data, rehydrate=False)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("example_section_data", None)
@@ -154,9 +184,11 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     # at ingestion time.
     # we also need to move this step at generation time,as we (likely), want to
     # do some local pre-processing of the references to already do some resolutions.
-    for i, (type_, (in_out)) in enumerate(blob.example_section_data):
+    for i, (type_, in_out) in enumerate(blob.example_section_data):
         if type_ == "text":
-            blob.example_section_data[i][1] = paragraphs([in_out])
+            assert isinstance(in_out, str), repr(in_out)
+            ps = paragraphs([in_out])
+            blob.example_section_data[i][1] = ps
             for ps in blob.example_section_data[i][1]:
                 for p in ps:
                     assert p[0] in {
@@ -165,6 +197,12 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                         "Directive",
                         "Math",
                     }, f"{p[0]}, {qa}"
+
+
+    for i, (type_, in_out) in enumerate(blob.example_section_data):
+        if type_ == "text":
+            assert isinstance(in_out, list), repr(in_out)
+            assert len(in_out) == 1, f"{repr(in_out)}"
 
     blob.see_also = list(set(blob.see_also))
     try:
