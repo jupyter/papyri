@@ -8,13 +8,13 @@ from ..render import Store, _ascii_render, _route
 
 async def test_gen_papyri():
     with TemporaryDirectory() as t:
-        NFUNC = 35
+        NFUNC = 45
         t = Path(t)
         g = Gen()
         g.do_one_mod(["papyri"], infer=False, exec_=False, conf={})
         g.write(t)
 
-        num = [x.name[:-5] for x in (t).glob("papyri/*.json")]
+        num = [x.name[:-5] for x in t.glob("module/*.json")]
         assert len(num) == NFUNC + 2
         assert "papyri.gen.gen_main" in num
 
@@ -47,7 +47,7 @@ async def test_gen_numpy():
         ing.ingest_dir.mkdir()
         ing.ingest(t, check=True)
 
-        linspace_file = ing.ingest_dir / "numpy" / "numpy" / "numpy.linspace.json"
+        linspace_file = ing.ingest_dir / "numpy" / "module" / "numpy.linspace.json"
         assert linspace_file.exists()
         linspace_bytes = linspace_file.read_text()
         import json
