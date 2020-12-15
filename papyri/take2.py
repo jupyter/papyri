@@ -86,6 +86,16 @@ class Node:
 
     @classmethod
     def parse(cls, tokens):
+        """
+        Try to parse current `tokens` stream from current position. 
+
+        Returns
+        -------
+        Tuple with the following items:
+            - Node to insert at current position in the token tree; 
+            - None if could not parse.
+
+        """
         return cls(tokens[0]), tokens[1:]
 
     def is_whitespace(self):
@@ -410,6 +420,7 @@ def make_block_3(lines: "Lines"):
       raw indent block
 
     """
+    assert isinstance(lines, Lines)
     a: List[Lines]
     b: List[Lines]
     c: List[Lines]
@@ -533,6 +544,7 @@ class Section:
 class Line:
     def __init__(self, line, number, offset=0):
         assert isinstance(line, str)
+        assert '\n' not in line
         self._line = line
         self._number = number
         self._offset = offset
@@ -560,6 +572,7 @@ class Line:
 
 class Lines:
     def __init__(self, lines):
+        assert isinstance(lines, (list, Lines))
         for l in lines:
             assert isinstance(l, (str, Line)), f"got {l}"
         self._lines = [

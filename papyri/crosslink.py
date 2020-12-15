@@ -37,13 +37,14 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
 
 
 def paragraphs(lines) -> List[Any]:
-    blocks = make_block_3(Lines(lines))
+    blocks_data = make_block_3(Lines(lines))
     acc = []
-    for b0, b1, b2 in blocks:
-        if b0:
-            acc.append(paragraph([x._line for x in b0]))
+
+    for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+        if pre_blank_lines:
+            acc.append(paragraph([x._line for x in pre_blank_lines]))
         ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
-        if b2:
+        if post_black_lines:
             acc.append(paragraph([x._line for x in b2]))
     return acc
 
