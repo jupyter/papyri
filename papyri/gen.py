@@ -188,6 +188,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                 if figname:
                     example_section_data.append(["fig", figname])
             else:
+                assert isinstance(item.out, list)
                 example_section_data.append(["text", "\n".join(item.out)])
 
     return example_section_data, figs
@@ -478,6 +479,7 @@ class DocBlob:
         "item_line",
         "item_type",
         "aliases",
+        "logo",
     )
 
     def slots(self):
@@ -536,7 +538,7 @@ class DocBlob:
 
     def to_json(self):
 
-        res = {k: getattr(self, k) for k in self.slots()}
+        res = {k: getattr(self, k, "") for k in self.slots()}
 
         return res
 

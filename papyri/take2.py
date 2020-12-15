@@ -544,7 +544,7 @@ class Section:
 class Line:
     def __init__(self, line, number, offset=0):
         assert isinstance(line, str)
-        assert '\n' not in line
+        assert "\n" not in line, line
         self._line = line
         self._number = number
         self._offset = offset
@@ -575,6 +575,11 @@ class Lines:
         assert isinstance(lines, (list, Lines))
         for l in lines:
             assert isinstance(l, (str, Line)), f"got {l}"
+            if isinstance(l, str):
+                assert "\n" not in l
+            if isinstance(l, Line):
+                assert "\n" not in l._line
+
         self._lines = [
             l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(lines)
         ]
@@ -791,13 +796,10 @@ def get_object(qual):
     return obj
 
 
-def main(what):
+def main(text):
 
-    ex = get_object(what).__doc__
 
-    ex = dedent_but_first(ex)
-
-    doc = [Block(*b) for b in make_block_3(Lines(ex.split("\n"))[:])]
+    doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
     doc = [x for pairs in doc for x in header_pass(pairs)]
     doc = header_level_pass(doc)
     doc = [x for pairs in doc for x in example_pass(pairs)]
@@ -821,6 +823,8 @@ if __name__ == "__main__":
         what = sys.argv[1]
     else:
         what = "numpy"
-    doc = main(what)
+    ex = get_object(what).__doc__
+    ex = dedent_but_first(ex)
+    doc = main(ex)
     for b in doc:
         print(b)

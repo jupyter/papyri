@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .config import ingest_dir
 from .gen import normalise_ref, DocBlob
-from .take2 import Lines, Paragraph, make_block_3, Math
+from .take2 import Lines, Paragraph, make_block_3, Math, main as t2main, Line
 from .utils import progress
 
 from there import print
@@ -37,15 +37,28 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
 
 
 def paragraphs(lines) -> List[Any]:
+    assert isinstance(lines, list)
+    for l in lines:
+        if isinstance(l, str):
+            assert "\n" not in l
+        else:
+            assert "\n" not in l._line
     blocks_data = make_block_3(Lines(lines))
     acc = []
 
-    for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+    blocks_data = t2main("\n".join(lines))
+
+    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+    for block in blocks_data:
+        pre_blank_lines = block.lines
+        blank_lines = block.wh
+        post_black_lines = block.ind
         if pre_blank_lines:
             acc.append(paragraph([x._line for x in pre_blank_lines]))
         ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
         if post_black_lines:
-            acc.append(paragraph([x._line for x in b2]))
+            acc.append(paragraph([x._line for x in post_black_lines]))
+        print(block)
     return acc
 
 
@@ -81,7 +94,7 @@ class IngestedBlobs(DocBlob):
                     from . import take2 as take2
 
                     assert isinstance(in_out, list), repr(in_out)
-                    assert len(in_out) == 1, f"{len(in_out)}"
+                    # assert len(in_out) == 1, f"{len(in_out)}"
                     new = []
                     for tt, value in in_out[0]:
                         assert tt in {
@@ -189,7 +202,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     for i, (type_, in_out) in enumerate(blob.example_section_data):
         if type_ == "text":
             assert isinstance(in_out, str), repr(in_out)
-            ps = paragraphs([in_out])
+            ps = paragraphs(in_out.split("\n"))
             blob.example_section_data[i][1] = ps
             for ps in blob.example_section_data[i][1]:
                 for p in ps:
@@ -203,7 +216,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     for i, (type_, in_out) in enumerate(blob.example_section_data):
         if type_ == "text":
             assert isinstance(in_out, list), repr(in_out)
-            assert len(in_out) == 1, f"{repr(in_out)}"
+            # assert len(in_out) == 1, f"{repr(in_out)}"
 
     blob.see_also = list(set(blob.see_also))
     try:
@@ -318,7 +331,7 @@ class Ingester:
                                 br = brpath.read_text()
                             else:
                                 br = None
-                            nvisited_items[resolved] = load_one(f1.read(), br)
+                            nvisited_items[resolved] = load_one(f1.read_bytes(), br)
                             nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
                         phantom_dir = (

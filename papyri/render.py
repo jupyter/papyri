@@ -273,7 +273,6 @@ def serve():
     app = QuartTrio(__name__)
 
     async def r(ref):
-        print("RRRRRRRRRR")
         return await _route(ref, Store(str(ingest_dir)))
 
     async def g(module):
