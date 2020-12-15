@@ -86,13 +86,14 @@ async def gallery(module, store):
     import json
 
     from papyri.crosslink import IngestedBlobs
+
     figmap = []
-    for p in store.glob(f'{module}/module/*.json'):
+    for p in store.glob(f"{module}/module/*.json"):
         data = json.loads(await p.read_text())
         i = IngestedBlobs.from_json(data)
-        
-        for k in {u[1] for u in i.example_section_data if u[0] == 'fig'}:
-            figmap.append((p.parts[-3],k,p.name[:-5]))
+
+        for k in {u[1] for u in i.example_section_data if u[0] == "fig"}:
+            figmap.append((p.parts[-3], k, p.name[:-5]))
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -104,7 +105,6 @@ async def gallery(module, store):
 
     return env.get_template("gallery.tpl.j2").render(figmap=figmap)
 
-    
 
 async def _route(ref, store):
     assert isinstance(store, BaseStore)
@@ -149,6 +149,7 @@ async def _route(ref, store):
     family = [str(f.name)[:-5] for f in family]
     parts = ref.split(".") + ["+"]
     from collections import OrderedDict
+
     siblings = OrderedDict()
     cpath = ""
     # TODO: move this at ingestion time for all the non-top-level.
@@ -166,8 +167,8 @@ async def _route(ref, store):
         )
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
         cpath += part + "."
-    if not siblings['+']:
-        del siblings['+']
+    if not siblings["+"]:
+        del siblings["+"]
 
     # End computing siblings.
 
@@ -196,7 +197,7 @@ async def _route(ref, store):
             if type_ == "code":
                 if len(in_out) == 2:
                     in_, out = in_out
-                    in_out.append('old_version')
+                    in_out.append("old_version")
                 elif len(in_out) == 3:
                     in_, out, ce_status = in_out
                 classes = get_classes("".join([x for x, y in in_]))
@@ -272,15 +273,14 @@ def serve():
     app = QuartTrio(__name__)
 
     async def r(ref):
-        print('RRRRRRRRRR')
+        print("RRRRRRRRRR")
         return await _route(ref, Store(str(ingest_dir)))
 
     async def g(module):
         return await gallery(module, Store(str(ingest_dir)))
 
     async def gr():
-        return await gallery('*', Store(str(ingest_dir)))
-
+        return await gallery("*", Store(str(ingest_dir)))
 
     # return await _route(ref, GHStore(Path('.')))
 
@@ -408,7 +408,7 @@ async def _ascii_render(name, store=None):
             if len(in_out) == 2:
                 in_, out = in_out
             elif len(in_out) == 3:
-                in_, out,_ = in_out
+                in_, out, _ = in_out
             else:
                 raise ValueError
             for ii in in_:

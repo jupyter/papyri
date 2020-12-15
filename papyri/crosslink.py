@@ -16,10 +16,10 @@ from .core import Ref, SeeAlsoItem
 warnings.simplefilter("ignore", UserWarning)
 
 
-from typing import Optional, List, Tuple, Any
+from typing import Optional, List, Tuple, Any, Dict
 
 
-def paragraph(lines) -> List[Tuple[str, str]]:
+def paragraph(lines) -> List[Tuple[str, Any]]:
     """
     return container of (type, obj)
     """
@@ -63,7 +63,7 @@ class IngestedBlobs(DocBlob):
         return super().slots() + ["backrefs", "see_also", "version", "logo"]
 
     @classmethod
-    def from_json(cls, data, rehydrate=True ):
+    def from_json(cls, data, rehydrate=True):
         instance = super().from_json(data)
         instance.see_also = [
             SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
@@ -78,6 +78,7 @@ class IngestedBlobs(DocBlob):
             for i, (type_, (in_out)) in enumerate(instance.example_section_data):
                 if type_ == "text":
                     from . import take2 as take2
+
                     assert isinstance(in_out, list), repr(in_out)
                     assert len(in_out) == 1, f"{len(in_out)}"
                     new = []
@@ -198,7 +199,6 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                         "Math",
                     }, f"{p[0]}, {qa}"
 
-
     for i, (type_, in_out) in enumerate(blob.example_section_data):
         if type_ == "text":
             assert isinstance(in_out, list), repr(in_out)
@@ -246,7 +246,7 @@ class Ingester:
 
     def ingest(self, path: Path, check: bool):
         nvisited_items = {}
-        versions = {}
+        versions: Dict[Any, Any] = {}
         root = None
         meta_path = path / "papyri.json"
         print(f"{path=}")
@@ -257,11 +257,13 @@ class Ingester:
             aliases = data.get("aliases", {})
             root = data.get("module")
 
-        for p, f in progress(
+        del f
+
+        for p, f1 in progress(
             (path / "module").glob("*.json"),
             description=f"Reading {path} doc bundle files ...",
         ):
-            qa = f.name[:-5]
+            qa = f1.name[:-5]
             if check or True:
                 rqa = normalise_ref(qa)
                 if rqa != qa:
@@ -270,8 +272,8 @@ class Ingester:
                     continue
                 assert rqa == qa, f"{rqa} !+ {qa}"
             try:
-                with f.open() as fff:
-                    brpath = Path(str(f)[:-5] + "br")
+                with f1.open() as fff:
+                    brpath = Path(str(f1)[:-5] + "br")
                     br: Optional[str]
                     if brpath.exists():
                         br = brpath.read_text()
@@ -280,7 +282,7 @@ class Ingester:
                     blob = load_one_uningested(fff.read(), br, qa=qa)
                     nvisited_items[qa] = blob
             except Exception as e:
-                raise RuntimeError(f"error Reading to {f}") from e
+                raise RuntimeError(f"error Reading to {f1}") from e
 
         (self.ingest_dir / root).mkdir(exist_ok=True)
         (self.ingest_dir / root / "module").mkdir(exist_ok=True)
@@ -315,7 +317,7 @@ class Ingester:
                                 br = brpath.read_text()
                             else:
                                 br = None
-                            nvisited_items[resolved] = load_one(f.read(), br)
+                            nvisited_items[resolved] = load_one(f1.read(), br)
                             nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
                         phantom_dir = (
@@ -344,7 +346,7 @@ class Ingester:
             (path / "assets").glob("*"),
             description=f"Reading {path} image files ...",
         ):
-            (self.ingest_dir / root / "assets" / f.name).write_bytes(f.read_bytes())
+            (self.ingest_dir / root / "assets" / f1.name).write_bytes(f1.read_bytes())
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cleaning double references"

@@ -38,9 +38,6 @@ class BaseStore:
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.path} 0x{id(self):x}>"
 
-    def __str__(self):
-        return repr(self)
-
     @property
     def name(self):
         return self.path.name

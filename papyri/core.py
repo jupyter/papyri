@@ -39,7 +39,7 @@ class Ref:
 @dataclass
 class SeeAlsoItem:
     name: Ref
-    descriptions: str
+    descriptions: List[Any]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: str
 

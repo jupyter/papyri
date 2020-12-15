@@ -9,7 +9,7 @@ from functools import lru_cache
 
 # from numpydoc.docscrape import NumpyDocString
 from types import FunctionType, ModuleType
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 import jedi
 from pygments.lexers import PythonLexer
@@ -141,12 +141,12 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
                 figname = None
-                ce_status = 'None'
+                ce_status = "None"
                 try:
-                    compile(script, '<>','exec')
-                    ce_status = 'compiled'
+                    compile(script, "<>", "exec")
+                    ce_status = "compiled"
                 except SyntaxError:
-                    ce_status = 'syntax_error'
+                    ce_status = "syntax_error"
                     pass
                 if exec_:
                     try:
@@ -154,7 +154,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             FigureManagerBase, show=lambda self: None
                         ):
                             exec(script, ns)
-                            ce_status = 'execed'
+                            ce_status = "execed"
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         if fig_managers:
                             global counter
@@ -173,22 +173,22 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             figs.append((figname, buf.read()))
 
                     except Exception as e:
-                        print('exception executing...')
+                        print("exception executing...")
                         pass
-                        #import traceback
-                        #traceback.print_exc()
-                        #print(script)
-                        #print(e)
-                        #raise
+                        # import traceback
+                        # traceback.print_exc()
+                        # print(script)
+                        # print(e)
+                        # raise
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
-                example_section_data.append(["code", (entries,
-                    "\n".join(item.out), ce_status)])
+                example_section_data.append(
+                    ["code", (entries, "\n".join(item.out), ce_status)]
+                )
                 if figname:
                     example_section_data.append(["fig", figname])
             else:
                 example_section_data.append(["text", "\n".join(item.out)])
-
 
     return example_section_data, figs
 
@@ -308,7 +308,7 @@ class DFSCollector:
         self.aliases = defaultdict(lambda: [])
         self._open_list = [(root, [root.__name__])]
         for o in others:
-            self._open_list.append((o, o.__name__.split('.')))
+            self._open_list.append((o, o.__name__.split(".")))
 
     def items(self):
         while len(self._open_list) >= 1:
@@ -463,9 +463,9 @@ class DocBlob:
     _content: dict
     refs: list
     ordered_sections: list
-    item_file: str
-    item_line: int
-    item_type: str
+    item_file: Optional[str]
+    item_line: Optional[int]
+    item_type: Optional[str]
     aliases: dict
     example_section_data: list
 
@@ -615,14 +615,14 @@ class Gen:
         with (where / "papyri.json").open("w") as f:
             f.write(json.dumps(self.metadata, indent=2))
 
-    def put(self, path : str, data):
+    def put(self, path: str, data):
         self.data[path + ".json"] = data
 
-    def put_raw(self, path : str, data):
+    def put_raw(self, path: str, data):
         self.bdata[path] = data
 
     def do_one_item(
-            self, target_item:str, ndoc, infer: bool, exec_:bool, qa:str
+        self, target_item: Any, ndoc, infer: bool, exec_: bool, qa: str
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
@@ -688,7 +688,7 @@ class Gen:
                 if u[1]
             }
         )
-        
+
         blob.example_section_data = ndoc.example_section_data
         ndoc.refs.extend(refs)
         ndoc.refs = [normalise_ref(r) for r in sorted(set(ndoc.refs))]
@@ -791,7 +791,9 @@ class Gen:
                             target_item.__name__,
                         )
                         if isinstance(target_item, ModuleType):
-                            ndoc = NumpyDocString(f"Was not able to parse docstring for {qa}")
+                            ndoc = NumpyDocString(
+                                f"Was not able to parse docstring for {qa}"
+                            )
                         else:
                             continue
                 execute_exclude_patterns = module_conf.get(
@@ -822,21 +824,14 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(name, data)
 
-            found = []
+            found = {}
             not_found = []
             for k, v in collector.aliases.items():
                 if [item for item in v if item != k]:
                     if shorter := find_cannonical(k, v):
-                        found.append((k, shorter))
+                        found[k] = shorter
                     else:
                         not_found.append((k, v))
-            # for a, b in found:
-            #    print(a, "->", b)
-            # for a, b in not_found:
-            #    print(a, "??", b)
-            # print(len(found), len(not_found))
-
-            found = {k: v for k, v in found}
 
             if logo := module_conf.get("logo", None):
                 self.put_raw(f"logo.png", Path(logo).read_bytes())
@@ -859,7 +854,7 @@ def is_private(path):
     return False
 
 
-def find_cannonical(qa:str, aliases:List[str]):
+def find_cannonical(qa: str, aliases: List[str]):
     """
     Given the fully qualified name and a lit of aliases, try to find the canonical one.
 
