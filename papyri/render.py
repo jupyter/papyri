@@ -405,7 +405,12 @@ async def _ascii_render(name, store=None):
     env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
     for i, (type_, in_out) in enumerate(blob.example_section_data):
         if type_ == "code":
-            in_, out = in_out
+            if len(in_out) == 2:
+                in_, out = in_out
+            elif len(in_out) == 3:
+                in_, out,_ = in_out
+            else:
+                raise ValueError
             for ii in in_:
                 ii.append(None)
 
