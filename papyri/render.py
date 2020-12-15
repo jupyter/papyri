@@ -80,6 +80,32 @@ def root():
     return template.render(tree=tree)
 
 
+async def gallery(module, store):
+
+    from pathlib import Path
+    import json
+
+    from papyri.crosslink import IngestedBlobs
+    figmap = []
+    for p in store.glob(f'{module}/module/*.json'):
+        data = json.loads(await p.read_text())
+        i = IngestedBlobs.from_json(data)
+        
+        for k in {u[1] for u in i.example_section_data if u[0] == 'fig'}:
+            figmap.append((p.parts[-3],k,p.name[:-5]))
+
+    env = Environment(
+        loader=FileSystemLoader(os.path.dirname(__file__)),
+        autoescape=select_autoescape(["html", "tpl.j2"]),
+    )
+    env.globals["len"] = len
+    env.globals["paragraph"] = paragraph
+    env.globals["len"] = len
+
+    return env.get_template("gallery.tpl.j2").render(figmap=figmap)
+
+    
+
 async def _route(ref, store):
     assert isinstance(store, BaseStore)
     assert ref != "favicon.ico"
@@ -122,7 +148,8 @@ async def _route(ref, store):
     family = sorted(list(store.glob("*/module/*.json")))
     family = [str(f.name)[:-5] for f in family]
     parts = ref.split(".") + ["+"]
-    siblings = {}
+    from collections import OrderedDict
+    siblings = OrderedDict()
     cpath = ""
     # TODO: move this at ingestion time for all the non-top-level.
     for i, part in enumerate(parts):
@@ -139,6 +166,8 @@ async def _route(ref, store):
         )
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
         cpath += part + "."
+    if not siblings['+']:
+        del siblings['+']
 
     # End computing siblings.
 
@@ -165,7 +194,11 @@ async def _route(ref, store):
         # it might be simpler, and more compact.
         for i, (type_, (in_out)) in enumerate(doc_blob.example_section_data):
             if type_ == "code":
-                in_, out = in_out
+                if len(in_out) == 2:
+                    in_, out = in_out
+                    in_out.append('old_version')
+                elif len(in_out) == 3:
+                    in_, out, ce_status = in_out
                 classes = get_classes("".join([x for x, y in in_]))
                 for ii, cc in zip(in_, classes):
                     # TODO: Warning here we mutate objects.
@@ -239,7 +272,15 @@ def serve():
     app = QuartTrio(__name__)
 
     async def r(ref):
+        print('RRRRRRRRRR')
         return await _route(ref, Store(str(ingest_dir)))
+
+    async def g(module):
+        return await gallery(module, Store(str(ingest_dir)))
+
+    async def gr():
+        return await gallery('*', Store(str(ingest_dir)))
+
 
     # return await _route(ref, GHStore(Path('.')))
 
@@ -247,6 +288,8 @@ def serve():
     app.route("/favicon.ico")(static("favicon.ico"))
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
+    app.route("/gallery/")(gr)
+    app.route("/gallery/<module>")(g)
     app.route("/")(root)
     port = os.environ.get("PORT", 5000)
     print("Seen config port ", port)

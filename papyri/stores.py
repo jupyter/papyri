@@ -54,6 +54,10 @@ class BaseStore:
     def __eq__(self, other):
         return self.path == other.path
 
+    @property
+    def parts(self):
+        return self.path.parts
+
 
 PAT = os.environ.get("PAT", None)
 header = f"token {PAT}"

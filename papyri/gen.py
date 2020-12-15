@@ -141,12 +141,20 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
             if isinstance(item, InOut):
                 script = "\n".join(item.in_)
                 figname = None
+                ce_status = 'None'
+                try:
+                    compile(script, '<>','exec')
+                    ce_status = 'compiled'
+                except SyntaxError:
+                    ce_status = 'syntax_error'
+                    pass
                 if exec_:
                     try:
                         with cbook._setattr_cm(
                             FigureManagerBase, show=lambda self: None
                         ):
                             exec(script, ns)
+                            ce_status = 'execed'
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         if fig_managers:
                             global counter
@@ -164,11 +172,18 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             buf.seek(0)
                             figs.append((figname, buf.read()))
 
-                    except Exception:
-                        raise
+                    except Exception as e:
+                        print('exception executing...')
+                        pass
+                        #import traceback
+                        #traceback.print_exc()
+                        #print(script)
+                        #print(e)
+                        #raise
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
-                example_section_data.append(["code", (entries, "\n".join(item.out))])
+                example_section_data.append(["code", (entries,
+                    "\n".join(item.out), ce_status)])
                 if figname:
                     example_section_data.append(["fig", figname])
             else:
@@ -591,23 +606,23 @@ class Gen:
             with (where / "module" / k).open("w") as f:
                 f.write(v)
 
+        assets = where / "assets"
+        assets.mkdir()
         for k, v in self.bdata.items():
-            assets = where / "assets"
-            assets.mkdir()
             with (assets / k).open("wb") as f:
                 f.write(v)
 
         with (where / "papyri.json").open("w") as f:
             f.write(json.dumps(self.metadata, indent=2))
 
-    def put(self, path, data):
+    def put(self, path : str, data):
         self.data[path + ".json"] = data
 
-    def put_raw(self, path, data):
+    def put_raw(self, path : str, data):
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item, ndoc, infer: bool, exec_, qa
+            self, target_item:str, ndoc, infer: bool, exec_:bool, qa:str
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
@@ -844,7 +859,7 @@ def is_private(path):
     return False
 
 
-def find_cannonical(qa, aliases):
+def find_cannonical(qa:str, aliases:List[str]):
     """
     Given the fully qualified name and a lit of aliases, try to find the canonical one.
 
