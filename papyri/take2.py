@@ -233,6 +233,7 @@ class Word(Node):
 def lex(lines):
     acc = ""
     for l in lines:
+        assert isinstance(l, str), l
         for c in l:
             if c in " `*_:":
                 if acc:
@@ -689,6 +690,24 @@ class Header:
 class BlockDirective(Block):
     COLOR = ORANGE
 
+    def __init__(self, lines, wh, ind):
+        self.lines = lines
+        self.wh= wh
+        self.ind = ind
+
+        assert lines[0].startswith('.. ')
+        l0  = lines[0]
+        pred, *postd = l0.split('::')
+        print(postd)
+        assert pred.startswith('.. ')
+        self.directive_name = pred[3:]
+        self.args0 = postd
+        self.inner = Paragraph.parse_lines([x._line for x in self.ind])
+
+
+
+
+
 
 class DefListItem(Block):
     COLOR = BLUE
@@ -778,6 +797,15 @@ def block_directive_pass(block):
     return [block]
 
 
+def paragraphs_pass(block):
+    if not type(block) == Block:
+        return [block]
+    else:
+        # likely incorrect for the indented part.
+        return [Paragraph.parse_lines([l._line for l in block.lines])] +\
+                [Paragraph.parse_lines([l._line for l in block.ind])]
+
+
 def get_object(qual):
     parts = qual.split(".")
 
@@ -805,6 +833,7 @@ def main(text):
     doc = [x for pairs in doc for x in example_pass(pairs)]
     doc = [x for pairs in doc for x in block_directive_pass(pairs)]
     doc = [x for pairs in doc for x in deflist_item_pass(pairs)]
+    doc = [x for pairs in doc for x in paragraphs_pass(pairs)]
     # TODO: third pass to set the header level for each header.
     # TODO: forth pass to make sections.
 

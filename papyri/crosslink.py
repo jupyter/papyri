@@ -36,7 +36,7 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
     return acc
 
 
-def paragraphs(lines) -> List[Any]:
+def P2(lines) -> List[Any]:
     assert isinstance(lines, list)
     for l in lines:
         if isinstance(l, str):
@@ -49,16 +49,33 @@ def paragraphs(lines) -> List[Any]:
     blocks_data = t2main("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for block in blocks_data:
-        pre_blank_lines = block.lines
-        blank_lines = block.wh
-        post_black_lines = block.ind
+    #for block in blocks_data:
+        #print(block)
+    return blocks_data
+
+def paragraphs(lines) -> List[Any]:
+    assert isinstance(lines, list)
+    for l in lines:
+        if isinstance(l, str):
+            assert "\n" not in l
+        else:
+            assert "\n" not in l._line
+    blocks_data = make_block_3(Lines(lines))
+    acc = []
+
+    #blocks_data = t2main("\n".join(lines))
+
+    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+    for pre_blank_lines,blank_lines,post_black_lines in blocks_data:
+        #pre_blank_lines = block.lines
+        #blank_lines = block.wh
+        #post_black_lines = block.ind
         if pre_blank_lines:
             acc.append(paragraph([x._line for x in pre_blank_lines]))
         ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
         if post_black_lines:
             acc.append(paragraph([x._line for x in post_black_lines]))
-        print(block)
+        #print(block)
     return acc
 
 
@@ -354,13 +371,13 @@ class Ingester:
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
-
+        del f1
         (self.ingest_dir / root / "assets").mkdir(exist_ok=True)
-        for px, f in progress(
+        for px, f2 in progress(
             (path / "assets").glob("*"),
             description=f"Reading {path} image files ...",
         ):
-            (self.ingest_dir / root / "assets" / f1.name).write_bytes(f1.read_bytes())
+            (self.ingest_dir / root / "assets" / f2.name).write_bytes(f2.read_bytes())
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cleaning double references"

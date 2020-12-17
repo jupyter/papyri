@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from quart_trio import QuartTrio
 
 from .config import html_dir, ingest_dir
-from .crosslink import load_one, resolve_, IngestedBlobs, paragraph, paragraphs
+from .crosslink import load_one, resolve_, IngestedBlobs, paragraph, paragraphs, P2
 from .stores import BaseStore, GHStore, Store
 from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
@@ -349,10 +349,15 @@ def render_one(
         for i, p in enumerate(doc.content[s]):
             if p[2]:
                 doc.content[s][i] = (p[0], p[1], paragraphs(p[2]))
-
+    pes=  []
+    for it in P2(doc.content['Extended Summary']):
+        pes.append((it.__class__.__name__, it))
+    
     for s in ["Summary", "Extended Summary", "Notes"]:
         if s in doc.content:
             doc.content[s] = paragraphs(doc.content[s])
+
+
 
     for d in doc.see_also:
         d.descriptions = paragraphs(d.descriptions)
@@ -366,6 +371,7 @@ def render_one(
             ext=ext,
             parts=parts,
             pygment_css=pygment_css,
+            pes=pes
         )
     except Exception as e:
         raise ValueError("qa=", qa) from e

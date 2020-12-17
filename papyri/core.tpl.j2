@@ -190,6 +190,29 @@ body{
 -ms-user-select: none;
 user-select: none;
 }
+
+
+.block_directive{
+
+    border-left: thin solid var(--nc-lk-1);
+    padding-bottom: 8px;
+    padding-left: 12px;
+}
+
+.block_directive.head{
+
+    border: thin solid var(--nc-lk-1);
+}
+
+
+.block_directive > p{
+    margin-left: 2em;
+    margin-top: 1em;
+}
+.head {
+    font-family: monospace;
+    color: var(--nc-lk-1);
+}
 </style>
 </head>
 <body>
@@ -199,22 +222,19 @@ user-select: none;
         
         <brand><i class="fab fa-python"></i><a href='/'>Home</a></brand>
         <nav> <a href='/' >/ p</a>  / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a> / <a>
-                {% for p,links in parts.items() %}
-                    
-                    {% if links %}
+            {% for p,links in parts.items() %}
+                {% if links %}
                     <div class="dropdown">
                         <a class="dropbtn">{{p}}</a>{% if not loop.last %}.{% endif %}
-                    <div class="dropdown-content">
-                        {% for link,name in links %}
+                        <div class="dropdown-content">
+                        {% for link,name in links -%}
                             <a href="{{link}}">{{name}}</a>
                         {% endfor %}
+                        </div>
                     </div>
-                    </div>
-                {% endif %}
-                {% endfor %}
-
-
-        </a> </nav>
+                {% endif -%}
+            {% endfor -%}
+        </a></nav>
     </header>
 <div class='container'>
     <div class="sidenav">
@@ -237,18 +257,17 @@ user-select: none;
     <hr/>
     <a>Narrative Docs</a>
     <hr/>
-    {% for section in doc.content.keys() if doc.content[section] %}
-    {% if section not in ['Extended Summary','Signature', 'Summary'] %}
+    {%- for section in doc.content.keys() if doc.content[section] -%}
+    {%- if section not in ['Extended Summary','Signature', 'Summary'] -%}
         <a href="#section-{{section}}">{{section}}</a>
-    {% endif %}
-    {% endfor %}
-    {% if backrefs[0] or backrefs[1] %}
+    {%  endif -%}
+    {%  endfor -%}
+    {%- if backrefs[0] or backrefs[1] -%}
         <a href="#section-backrefs">BackRef</a>
-    {% endif %}
-
+    {%  endif %}
 </div>
 
-{% macro example(entries) -%}
+{%- macro example(entries) -%}
 <span class='nsl'>{{'>>> ' -}}</span>{{ '' -}}
     {%- for text, t_, cc in entries %}
         {%- if text == '\n' -%}
@@ -265,28 +284,89 @@ user-select: none;
     {%- endmacro %}
 
 
+{% macro render_inner(type, obj) -%}
+    {%- if type == 'Word' -%}
+        {{-obj.value-}}
+    {%- elif type == 'Directive' -%}
+        {%- set ref, exists = resolve(obj.text) -%}
+        {%- if exists=='local' -%}
+            <code><a href="#{{ref}}" class='{{exists}}'>{{obj.text}}</a></code>
+        {%- else -%}
+            <code><a href="{{ref}}{{ext}}" class='{{exists}}'>{{obj.text}}</a></code>
+        {%- endif -%}
+    {% elif type == 'Math' %}
+        ${{obj.text}}$
+    {% elif type == 'Verbatim' %}
+        <code class'verbatim'>{{obj.text}}</code>
+    {% else %}
+        <code>Some {{type}}</code>
+    {%- endif -%}
+{%- endmacro %}
+
 {% macro render_paragraph(prgs) -%}
     {% for prg in prgs %}
         <p>
-        {% for type,obj in prg -%}
-            {%- if type == 'Word' -%}
-                {{-obj.value-}}
-            {%- elif type == 'Directive' -%}
-                {% set ref, exists = resolve(obj.text) %}
-                {% if exists=='local' %}
-                    <code><a href="#{{ref}}" class='{{exists}}'>{{obj.text}}</a></code>
-                {% else %}
-                    <code><a href="{{ref}}{{ext}}" class='{{exists}}'>{{obj.text}}</a></code>
-                {% endif %}
-            {% elif type == 'Math' %}
-                ${{obj.text}}$
-            {% elif type == 'Verbatim' %}
-                <code class'verbatim'>{{obj.text}}</code>
-            {% else %}
-                <code>Some {{type}}</code>
-            {%- endif -%}
-        {%- endfor %}
+            {%- for type,obj in prg -%}
+                {{- render_inner(type, obj) -}} 
+            {%- endfor -%}
         </p>
+    {%- endfor %}
+{%- endmacro %}
+
+
+{% macro lines(self) -%}
+    {%- for x in self %}
+        {{-x.text}}
+    {% endfor -%}
+{% endmacro %}
+
+
+
+{% macro block(self) -%}
+{{lines(self.lines)}}
+{{lines(self.wh)}}
+{{lines(self.ind)}}
+    </br>
+{% endmacro %}
+
+{% macro block_directive(dve) -%}
+<div class='block_directive'>
+    <div class='head'>.. {{dve.directive_name}}:: {{dve.args0}}</div>
+    {{block_paragraph(dve.inner)}}
+</div>
+{% endmacro %}
+
+
+
+{% macro block_paragraph(pgr) -%}
+<p >
+{%- for c in pgr.children -%}
+    {{-render_inner(c.__class__.__name__, c)-}}
+{%- endfor -%}
+</p>
+{% endmacro %}
+
+
+
+{% macro render_II(prgs) -%}
+    {% for type,obj in prgs %}
+       {%- if type == 'Directive' -%}
+           {{obj}}
+       {% elif type == 'Math' %}
+           {{obj}}
+       {% elif type == 'BlockDirective' %}
+            {{block_directive(obj)}}
+       {% elif type == 'Verbatim' %}
+           {{obj}}
+       {% elif type == 'Paragraph' %}
+           {{block_paragraph(obj)}}
+       {% elif type == 'Block' %}
+           {{block(obj)}}
+       {% else %}
+           <code>Some {{type}}</code>
+       {%- endif -%}
+
+
     {%- endfor %}
 {%- endmacro %}
 
@@ -296,7 +376,11 @@ user-select: none;
     {% else %}
                 <b class='missing'>{{r.name}}</b>
     {% endif %}
-{%- endmacro %}
+    {%- endmacro %}
+
+    <hr/>
+    {{render_II(pes)}}
+    <hr/>
 
 
 
