@@ -9,6 +9,13 @@
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
     <script type="text/x-mathjax-config">
+        // only process math in math tags (faster and less false positive with `...`)
+        MathJax = {
+          options: {
+            ignoreHtmlClass: 'tex2jax_ignore',    //  class that marks tags not to search
+            processHtmlClass: 'tex2jax_process',  //  class that marks tags that should be searched
+          }
+        };
         MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
     </script>
     <script type="text/javascript" async
@@ -215,7 +222,7 @@ user-select: none;
 }
 </style>
 </head>
-<body>
+<body class="tex2jax_ignore">
 
     <header>
         
@@ -295,7 +302,7 @@ user-select: none;
             <code><a href="{{ref}}{{ext}}" class='{{exists}}'>{{obj.text}}</a></code>
         {%- endif -%}
     {% elif type == 'Math' %}
-        ${{obj.text}}$
+        <span class="tex2jax_process">${{obj.text}}$</span>
     {% elif type == 'Verbatim' %}
         <code class'verbatim'>{{obj.text}}</code>
     {% else %}
@@ -304,7 +311,7 @@ user-select: none;
 {%- endmacro %}
 
 {% macro render_paragraph(prgs) -%}
-    {% for prg in prgs %}
+{% for prg in prgs %}
         <p>
             {%- for type,obj in prg -%}
                 {{- render_inner(type, obj) -}} 
@@ -378,10 +385,6 @@ user-select: none;
     {% endif %}
     {%- endmacro %}
 
-    <hr/>
-    {{render_II(pes)}}
-    <hr/>
-
 
 
 {% for section in doc.content.keys() if doc.content[section] %}
@@ -389,8 +392,10 @@ user-select: none;
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
         <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
-    {% if section in ['Summary', 'Extended Summary', 'Notes'] %}
+    {% if section in ['Summary', 'Notes'] %}
         {{render_paragraph(doc.content[section])}}
+    {% elif section in ['Extended Summary'] %}
+        {{render_II(doc.content[section])}}
     {% elif section in ['Signature'] %}
        <code class='signature'>{{doc.content[section]}}</code>
     {% elif section in ['See Also'] %}

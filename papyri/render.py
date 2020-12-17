@@ -349,13 +349,18 @@ def render_one(
         for i, p in enumerate(doc.content[s]):
             if p[2]:
                 doc.content[s][i] = (p[0], p[1], paragraphs(p[2]))
-    pes=  []
-    for it in P2(doc.content['Extended Summary']):
-        pes.append((it.__class__.__name__, it))
-    
-    for s in ["Summary", "Extended Summary", "Notes"]:
+
+    for s in ["Summary", "Notes"]:
         if s in doc.content:
             doc.content[s] = paragraphs(doc.content[s])
+
+    for s in [ "Extended Summary"]:
+        if s in doc.content:
+            data = doc.content[s]
+            res = []
+            for it in P2(data):
+                res.append((it.__class__.__name__, it))
+            doc.content[s] = res
 
 
 
@@ -371,7 +376,6 @@ def render_one(
             ext=ext,
             parts=parts,
             pygment_css=pygment_css,
-            pes=pes
         )
     except Exception as e:
         raise ValueError("qa=", qa) from e
