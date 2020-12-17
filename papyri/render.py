@@ -350,11 +350,7 @@ def render_one(
             if p[2]:
                 doc.content[s][i] = (p[0], p[1], paragraphs(p[2]))
 
-    for s in ["Summary", "Notes"]:
-        if s in doc.content:
-            doc.content[s] = paragraphs(doc.content[s])
-
-    for s in [ "Extended Summary"]:
+    for s in [ "Extended Summary", "Summary",  "Notes"]:
         if s in doc.content:
             data = doc.content[s]
             res = []

@@ -392,9 +392,7 @@ user-select: none;
     {% if section not in ['Extended Summary','Signature', 'Summary'] %}
         <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
-    {% if section in ['Summary', 'Notes'] %}
-        {{render_paragraph(doc.content[section])}}
-    {% elif section in ['Extended Summary'] %}
+    {% if section in ['Extended Summary', 'Summary',  'Notes'] %}
         {{render_II(doc.content[section])}}
     {% elif section in ['Signature'] %}
        <code class='signature'>{{doc.content[section]}}</code>
@@ -436,9 +434,10 @@ user-select: none;
             {% else %}
                 <dt>{{p[1]}}</dt>
             {% endif %}
+        </dl>
            <dd>
            {{render_paragraph(p[2])}}
-        </dd>
+            </dd>
        {% endfor %}
 
    </pre>
