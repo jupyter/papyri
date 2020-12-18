@@ -43,14 +43,14 @@ def P2(lines) -> List[Any]:
             assert "\n" not in l
         else:
             assert "\n" not in l._line
-    blocks_data = make_block_3(Lines(lines))
     acc = []
+
 
     blocks_data = t2main("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
     #for block in blocks_data:
-        #print(block)
+    #    print(block)
     return blocks_data
 
 def paragraphs(lines) -> List[Any]:
@@ -99,6 +99,8 @@ class IngestedBlobs(DocBlob):
         instance.see_also = [
             SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
         ]
+        for d in instance.see_also:
+            assert isinstance(d.descriptions, list), qa
         # Todo: remove this; hopefully the logic from load_one_uningested
         # load a DocBlob instaead of un IngestedDocBlob
         # or more likely the paragraph parsing is made in Gen.
@@ -203,6 +205,8 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                 for (n, t) in nts:
                     if t and not d:
                         d, t = t, None
+                    if not isinstance(d, list):
+                        d =[d]
                     blob.see_also.append(SeeAlsoItem(Ref(n, None, None), d, t))
     except Exception as e:
         raise ValueError(f"Error {qa}: {see_also} | {nts}") from e

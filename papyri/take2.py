@@ -508,6 +508,16 @@ class Block:
         )
 
 
+class BlockError(Block):
+
+    @classmethod
+    def from_block(cls, block):
+        return cls(block.lines, block.wh, block.ind)
+
+
+
+
+
 class Section:
     """
     A section start (or not) with a header.
@@ -704,6 +714,18 @@ class BlockDirective(Block):
         self.args0 = postd
         self.inner = Paragraph.parse_lines([x._line for x in self.ind])
 
+class BlockVerbatim(Block):
+
+    def __init__(self, lines):
+
+        self.lines = lines
+
+    def __repr__(self):
+        return type(self).COLOR(
+            f"<{self.__class__.__name__} '{len(self.lines)}'> with\n"
+            + indent("\n".join([str(l) for l in self.lines]), "    ")
+        )
+
 
 
 
@@ -802,8 +824,31 @@ def paragraphs_pass(block):
         return [block]
     else:
         # likely incorrect for the indented part.
-        return [Paragraph.parse_lines([l._line for l in block.lines])] +\
-                [Paragraph.parse_lines([l._line for l in block.ind])]
+        if block.ind:
+            assert isinstance(block.lines, Lines)
+            lines = block.lines
+            if not lines:
+                return [BlockError.from_block(block)]
+            if lines[-1]._line.endswith('::'):
+                return [Paragraph.parse_lines([l._line for l in block.lines])] +\
+                [BlockVerbatim(block.ind)]
+            else:
+                return [Paragraph.parse_lines([l._line for l in block.lines])] +\
+                       [Paragraph.parse_lines([l._line for l in block.ind])]
+        else:
+            return [Paragraph.parse_lines([l._line for l in block.lines])]
+
+def empty_pass(doc):
+    ret = []
+    for b in doc:
+        if not block.lines:
+            assert not block.wh
+            assert not block.ind
+            continue
+        ret.append(b)
+    return ret
+
+
 
 
 def get_object(qual):

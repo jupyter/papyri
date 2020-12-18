@@ -45,7 +45,9 @@ class SeeAlsoItem:
 
     @classmethod
     def from_json(cls, name, descriptions, type):
+        assert isinstance(descriptions, list)
         return cls(Ref(**name), descriptions, type)
+        assert isinstance(self.descriptions, list)
 
     def __hash__(self):
         return hash((self.name, tuple(self.descriptions)))

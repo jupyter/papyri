@@ -668,6 +668,7 @@ class Gen:
         if new_see_also:
             for line in new_see_also:
                 rt, desc = line
+                assert isinstance(desc, list), line
                 for ref, type_ in rt:
                     refs.append(ref)
 

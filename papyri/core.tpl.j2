@@ -356,7 +356,9 @@ user-select: none;
 
 
 {% macro render_II(prgs) -%}
+    <h5>New renderer</h5>
     {% for type,obj in prgs %}
+        <h6>Blurb</h6>
        {%- if type == 'Directive' -%}
            {{obj}}
        {% elif type == 'Math' %}
@@ -367,14 +369,29 @@ user-select: none;
            {{obj}}
        {% elif type == 'Paragraph' %}
            {{block_paragraph(obj)}}
+       {% elif type == 'BlockVerbatim' %}
+            <pre>
+           {%- for l in obj.lines -%}
+{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
+           {%- endfor -%}</pre>
        {% elif type == 'Block' %}
            {{block(obj)}}
        {% else %}
-           <code>Some {{type}}</code>
+           <code>Some {{type}} Not implemented yet</code>
+                        <pre>
+           {%- for l in obj.lines -%}
+{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
+           {%- endfor -%}</pre><pre>
+            {%- for l in obj.ind -%}
+{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
+           {%- endfor -%}</pre>
+
+
        {%- endif -%}
 
 
     {%- endfor %}
+    <h5>End</h5>
 {%- endmacro %}
 
 {% macro ref(r) -%}

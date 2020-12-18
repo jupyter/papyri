@@ -361,6 +361,7 @@ def render_one(
 
 
     for d in doc.see_also:
+        assert isinstance(d.descriptions, list), qa
         d.descriptions = paragraphs(d.descriptions)
     try:
         return template.render(
@@ -477,18 +478,25 @@ async def main():
         env.globals["resolve"] = resolve_(qa, known_refs, local_refs)
         for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
             if type_ == "code":
-                in_, out = in_out
+                if len(in_out) == 2:
+                    in_, out = in_out
+                    in_out.append("old_version")
+                elif len(in_out) == 3:
+                    in_, out, ce_status = in_out
                 for ii in in_:
                     ii.append(None)
 
         with (html_dir / f"{qa}.html").open("w") as f:
-            f.write(
-                render_one(
-                    template=template,
-                    doc=doc_blob,
-                    qa=qa,
-                    ext=".html",
-                    backrefs=doc_blob.backrefs,
-                    pygment_css=None,
+            try:
+                f.write(
+                    render_one(
+                        template=template,
+                        doc=doc_blob,
+                        qa=qa,
+                        ext=".html",
+                        backrefs=doc_blob.backrefs,
+                        pygment_css=None,
+                    )
                 )
-            )
+            except Exception as e:
+                raise ValueError(f'error writin {qa=}') from e
