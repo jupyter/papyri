@@ -211,7 +211,7 @@ img {
             {% if loop.changed(link) %}
                 <h3><a href='/{{link}}'>{{link}}</a></h3>
             {% endif %}
-            <img src='/img/{{module}}/assets/{{filename}}'/>
+            <img async=on src='/img/{{module}}/assets/{{filename}}'/>
         {%endfor%}
 
 </div>
