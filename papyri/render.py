@@ -350,15 +350,13 @@ def render_one(
             if p[2]:
                 doc.content[s][i] = (p[0], p[1], paragraphs(p[2]))
 
-    for s in [ "Extended Summary", "Summary",  "Notes"]:
+    for s in ["Extended Summary", "Summary", "Notes"]:
         if s in doc.content:
             data = doc.content[s]
             res = []
             for it in P2(data):
                 res.append((it.__class__.__name__, it))
             doc.content[s] = res
-
-
 
     for d in doc.see_also:
         assert isinstance(d.descriptions, list), qa
@@ -499,4 +497,4 @@ async def main():
                     )
                 )
             except Exception as e:
-                raise ValueError(f'error writin {qa=}') from e
+                raise ValueError(f"error writin {qa=}") from e

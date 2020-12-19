@@ -45,13 +45,13 @@ def P2(lines) -> List[Any]:
             assert "\n" not in l._line
     acc = []
 
-
     blocks_data = t2main("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    #for block in blocks_data:
+    # for block in blocks_data:
     #    print(block)
     return blocks_data
+
 
 def paragraphs(lines) -> List[Any]:
     assert isinstance(lines, list)
@@ -63,19 +63,19 @@ def paragraphs(lines) -> List[Any]:
     blocks_data = make_block_3(Lines(lines))
     acc = []
 
-    #blocks_data = t2main("\n".join(lines))
+    # blocks_data = t2main("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for pre_blank_lines,blank_lines,post_black_lines in blocks_data:
-        #pre_blank_lines = block.lines
-        #blank_lines = block.wh
-        #post_black_lines = block.ind
+    for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+        # pre_blank_lines = block.lines
+        # blank_lines = block.wh
+        # post_black_lines = block.ind
         if pre_blank_lines:
             acc.append(paragraph([x._line for x in pre_blank_lines]))
         ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
         if post_black_lines:
             acc.append(paragraph([x._line for x in post_black_lines]))
-        #print(block)
+        # print(block)
     return acc
 
 
@@ -206,7 +206,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                     if t and not d:
                         d, t = t, None
                     if not isinstance(d, list):
-                        d =[d]
+                        d = [d]
                     blob.see_also.append(SeeAlsoItem(Ref(n, None, None), d, t))
     except Exception as e:
         raise ValueError(f"Error {qa}: {see_also} | {nts}") from e
@@ -378,8 +378,7 @@ class Ingester:
         del f1
         (self.ingest_dir / root / "assets").mkdir(exist_ok=True)
         for px, f2 in progress(
-            (path / "assets").glob("*"),
-            description=f"Reading {path} image files ...",
+            (path / "assets").glob("*"), description=f"Reading {path} image files ...",
         ):
             (self.ingest_dir / root / "assets" / f2.name).write_bytes(f2.read_bytes())
 

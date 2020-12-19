@@ -509,13 +509,9 @@ class Block:
 
 
 class BlockError(Block):
-
     @classmethod
     def from_block(cls, block):
         return cls(block.lines, block.wh, block.ind)
-
-
-
 
 
 class Section:
@@ -702,20 +698,20 @@ class BlockDirective(Block):
 
     def __init__(self, lines, wh, ind):
         self.lines = lines
-        self.wh= wh
+        self.wh = wh
         self.ind = ind
 
-        assert lines[0].startswith('.. ')
-        l0  = lines[0]
-        pred, *postd = l0.split('::')
+        assert lines[0].startswith(".. ")
+        l0 = lines[0]
+        pred, *postd = l0.split("::")
         print(postd)
-        assert pred.startswith('.. ')
+        assert pred.startswith(".. ")
         self.directive_name = pred[3:]
         self.args0 = postd
         self.inner = Paragraph.parse_lines([x._line for x in self.ind])
 
-class BlockVerbatim(Block):
 
+class BlockVerbatim(Block):
     def __init__(self, lines):
 
         self.lines = lines
@@ -725,10 +721,6 @@ class BlockVerbatim(Block):
             f"<{self.__class__.__name__} '{len(self.lines)}'> with\n"
             + indent("\n".join([str(l) for l in self.lines]), "    ")
         )
-
-
-
-
 
 
 class DefListItem(Block):
@@ -829,14 +821,17 @@ def paragraphs_pass(block):
             lines = block.lines
             if not lines:
                 return [BlockError.from_block(block)]
-            if lines[-1]._line.endswith('::'):
-                return [Paragraph.parse_lines([l._line for l in block.lines])] +\
-                [BlockVerbatim(block.ind)]
+            if lines[-1]._line.endswith("::"):
+                return [Paragraph.parse_lines([l._line for l in block.lines])] + [
+                    BlockVerbatim(block.ind)
+                ]
             else:
-                return [Paragraph.parse_lines([l._line for l in block.lines])] +\
-                       [Paragraph.parse_lines([l._line for l in block.ind])]
+                return [Paragraph.parse_lines([l._line for l in block.lines])] + [
+                    Paragraph.parse_lines([l._line for l in block.ind])
+                ]
         else:
             return [Paragraph.parse_lines([l._line for l in block.lines])]
+
 
 def empty_pass(doc):
     ret = []
@@ -847,8 +842,6 @@ def empty_pass(doc):
             continue
         ret.append(b)
     return ret
-
-
 
 
 def get_object(qual):
@@ -870,7 +863,6 @@ def get_object(qual):
 
 
 def main(text):
-
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
     doc = [x for pairs in doc for x in header_pass(pairs)]

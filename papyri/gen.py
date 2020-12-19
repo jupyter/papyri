@@ -102,7 +102,7 @@ def parse_script(script, ns=None, infer=None, prev=""):
 counter = 0
 
 
-def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
+def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -122,6 +122,8 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
         whether to run type inference; which can be time consuming.
 
     """
+    if not config:
+        config = {}
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     example_section_data = []
     import matplotlib
@@ -136,6 +138,8 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
 
     ns = {"np": np, "plt": plt, obj.__name__: obj}
     figs = []
+    fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+    assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
     for b in blocks:
         for item in b:
             if isinstance(item, InOut):
@@ -148,6 +152,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                 except SyntaxError:
                     ce_status = "syntax_error"
                     pass
+                raise_in_fig = False
                 if exec_:
                     try:
                         with cbook._setattr_cm(
@@ -156,24 +161,40 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                             exec(script, ns)
                             ce_status = "execed"
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                        if fig_managers:
+                        assert (len(fig_managers)) in (0, 1)
+                        if fig_managers and (
+                            ("plt.show" in script)
+                            or not config.get("wait_for_plt_show", True)
+                        ):
+                            raise_in_fig = True
+
                             global counter
                             counter += 1
                             figman = next(iter(fig_managers))
 
-                            buf = io.BytesIO()
                             if not qa:
                                 qa = obj.__name__
                             figname = f"fig-{qa}-{counter}.png"
+                            buf = io.BytesIO()
                             figman.canvas.figure.savefig(
-                                buf, dpi=300, bbox_inches="tight"
+                                buf, dpi=300  # , bbox_inches="tight"
                             )
-                            plt.close("all")
                             buf.seek(0)
                             figs.append((figname, buf.read()))
+                            plt.close("all")
+                            raise_in_fig = False
 
                     except Exception as e:
-                        print("exception executing...")
+                        print(f"exception executing... {qa}")
+                        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                        if len(fig_managers) == 1:
+                            figman = next(iter(fig_managers))
+                            plt.close("all")
+                        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                        assert len(fig_managers) == 0
+                        if ("2d" in qa) or (raise_in_fig):
+                            raise
+
                         pass
                         # import traceback
                         # traceback.print_exc()
@@ -191,6 +212,10 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None):
                 assert isinstance(item.out, list)
                 example_section_data.append(["text", "\n".join(item.out)])
 
+    # TODO fix this if plt.close not called and still a ligering figure.
+    fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+    if len(fig_managers) != 0:
+        plt.close("all")
     return example_section_data, figs
 
 
@@ -624,7 +649,7 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, infer: bool, exec_: bool, qa: str
+        self, target_item: Any, ndoc, infer: bool, exec_: bool, qa: str, config=None
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
@@ -637,6 +662,8 @@ class Gen:
         figs:
             dict mapping figure names to figure data.
         """
+        if config is None:
+            config = {}
         blob = DocBlob()
         import copy
 
@@ -674,7 +701,7 @@ class Gen:
 
         try:
             ndoc.example_section_data, figs = get_example_data(
-                ndoc, infer, obj=target_item, exec_=exec_, qa=qa
+                ndoc, infer, obj=target_item, exec_=exec_, qa=qa, config=config
             )
             ndoc.figs = figs
         except Exception as e:
@@ -806,21 +833,22 @@ class Gen:
                 if execute_exclude_patterns and exec_:
                     for pat in execute_exclude_patterns:
                         if qa.startswith(pat):
-                            print("will not execute", qa)
                             ex = False
                             break
                 # else:
                 #    print("will run", qa)
 
                 try:
-                    doc_blob, figs = self.do_one_item(target_item, ndoc, infer, ex, qa)
+                    doc_blob, figs = self.do_one_item(
+                        target_item, ndoc, infer, ex, qa, config=module_conf
+                    )
                 except Exception:
                     raise
                     if module_conf.get("exec_failure", None) == "fallback":
                         print("Re-analysing ", qa, "without execution")
                         # debug:
                         doc_blob, figs = self.do_one_item(
-                            target_item, ndoc, infer, False, qa
+                            target_item, ndoc, infer, False, qa, config=module_conf
                         )
                 doc_blob.aliases = collector.aliases[qa]
                 self.put(qa, json.dumps(doc_blob.to_json(), indent=2))

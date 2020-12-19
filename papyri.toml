@@ -16,6 +16,7 @@ logo = 'scipy_logo.png'
 
 [matplotlib]
 logo = 'matplotlib_logo.png'
+wait_for_plt_show = false
 
 [papyri]
 logo = 'papyri-logo.png'
