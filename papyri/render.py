@@ -190,8 +190,7 @@ async def _route(ref, store):
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
         all_known_refs = [str(x.name)[:-5] for x in store.glob("*/module/*.json")]
-        env.globals["resolve"] = resolve_(ref, all_known_refs, local_refs)
-        env.globals["unreachable"] = unreachable
+        #env.globals["unreachable"] = unreachable
         env.globals["unreachable"] = lambda x: "UNREACHABLELLLLL"+str(x)
 
 
@@ -373,7 +372,6 @@ async def _ascii_render(name, store=None):
     ]
 
     # TODO : move this to ingest.
-    env.globals["resolve"] = resolve_(ref, known_refs, local_refs)
     env.globals["unreachable"] = unreachable
 
     prepare_doc(doc_blob, ref, known_refs, local_refs)
@@ -500,7 +498,6 @@ async def main():
         local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
-        env.globals["resolve"] = resolve_(qa, known_refs, local_refs)
         env.globals["unreachable"] = unreachable
         prepare_doc(doc_blob, qa, known_refs, local_refs)
         data = render_one(
