@@ -395,16 +395,16 @@ async def _ascii_render(name, store=None):
         br = await brpath.read_text()
     else:
         br = None
-    blob = load_one(bytes_, br)
+    doc_blob = load_one(bytes_, br)
 
     # TODO : move this to ingest.
-    local_ref = [x[0] for x in blob.content["Parameters"] if x[0]] + [
-        x[0] for x in blob.content["Returns"] if x[0]
+    local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
+        x[0] for x in doc_blob.content["Returns"] if x[0]
     ]
 
     # TODO : move this to ingest.
     env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
-    for i, (type_, in_out) in enumerate(blob.example_section_data):
+    for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
         if type_ == "code":
             assert len(in_out) == 3
             in_, out, _ = in_out
@@ -413,10 +413,10 @@ async def _ascii_render(name, store=None):
 
     return render_one(
         template=template,
-        doc=blob,
+        doc=doc_blob,
         qa=ref,
         ext="",
-        backrefs=blob.backrefs,
+        backrefs=doc_blob.backrefs,
         pygment_css=None,
     )
 

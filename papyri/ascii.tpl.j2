@@ -9,29 +9,96 @@
     {%- endfor-%}
 {%- endmacro %}
 
+{% macro render_inner(type, obj) -%}
+   |{%- if type == 'Word' -%}
+   |   |{{- obj.value -}}
+   |{%- elif type == 'Directive' %}
+   |   |{% set ref, exists = resolve(obj.text) %}
+   |   |{% if exists=='local' %}
+   |   |    {{-green(obj.text)-}}
+   |   |{% elif exists=='exists' %}
+   |   |    {{-blue(obj.text)-}}
+   |   |{% else %}
+   |   |    {{-red(obj.text)-}}
+   |   |{% endif %}
+   |{% elif type == 'Math' %}
+   |    ${{obj.text}}$
+   |{% elif type == 'Verbatim' %}
+   |    {{-yellow(obj.text)-}}
+   |{% else %}
+   |    Some {{type}}
+   |{%- endif -%}
+{%- endmacro %}
+
+{% macro block_paragraph(pgr) -%}
+{%- for c in pgr.children -%}
+    |{{-render_inner(c.__class__.__name__, c)-}}
+{%- endfor -%}
+{% endmacro %}
+
+
+
+{% macro block_directive(dve) -%}
+{{blue("..")}}{{blue(dve.directive_name)}}{{blue("::")}} {{dve.args0}}
+    |{{block_paragraph(dve.inner)}}
+{% endmacro %}
+
+{% macro render_II(prgs) -%}
+   |{% for type,obj in prgs %}
+   |   |{%- if type == 'Directive' -%}
+   |   |   |{{obj}}
+   |   |{% elif type == 'Math' %}
+   |   |   |{{obj}}
+   |   |{% elif type == 'BlockDirective' %}
+   |   |   |{{'\n'}}{{block_directive(obj)}}
+   |   |{% elif type == 'Verbatim' %}
+   |   |   |{{obj}}
+   |   |{% elif type == 'Paragraph' %}
+   |   |   |{{block_paragraph(obj)}}
+   |   |{% elif type == 'BlockVerbatim' %}
+   |   |   |{%- for l in obj.lines -%}
+   |   |   |   |{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
+   |   |   |{%- endfor -%}
+   |   |{% elif type == 'Block' %}
+   |   |   |{{block(obj)}}
+   |   |{% else %}
+   |   |   |Some {{type}} Not implemented yet
+   |   |   |{%- for l in obj.lines -%}
+   |   |   |   |{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
+   |   |   |{%- endfor -%}
+   |   |   |{%- for l in obj.ind -%}
+   |   |   |   |{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
+   |   |   |{%- endfor -%}
+   |   |{%- endif -%}
+   |{%- endfor %}
+{%- endmacro %}
+
+
+
+
 {%- macro render_paragraph(prgs) -%}
-    {% for prg in prgs %}
-        {%- for type,obj in prg -%}
-            {%- if type == 'Word' -%}
-                {{- obj.value -}}
-            {%- elif type == 'Directive' %}
-                {% set ref, exists = resolve(obj.text) %}
-                {% if exists=='local' %}
-                    {{-green(obj.text)-}}
-                {% elif exists=='exists' %}
-                    {{-blue(obj.text)-}}
-                {% else %}
-                    {{-red(obj.text)-}}
-                {% endif %}
-            {% elif type == 'Math' %}
-                ${{obj.text}}$
-            {% elif type == 'Verbatim' %}
-                {{-yellow(obj.text)-}}
-            {% else %}
-                <code>Some {{type}}</code>
-            {%- endif -%}
-        {%- endfor -%}
-    {%- endfor -%}
+   |{% for prg in prgs %}
+   |   |{%- for type,obj in prg -%}
+   |   |   |{%- if type == 'Word' -%}
+   |   |   |    {{- obj.value -}}
+   |   |   |{%- elif type == 'Directive' %}
+   |   |   |    {% set ref, exists = resolve(obj.text) %}
+   |   |   |    {% if exists=='local' %}
+   |   |   |        {{-green(obj.text)-}}
+   |   |   |    {% elif exists=='exists' %}
+   |   |   |        {{-blue(obj.text)-}}
+   |   |   |    {% else %}
+   |   |   |        {{-red(obj.text)-}}
+   |   |   |    {% endif %}
+   |   |   |{% elif type == 'Math' %}
+   |   |   |    ${{obj.text}}$
+   |   |   |{% elif type == 'Verbatim' %}
+   |   |   |    {{-yellow(obj.text)-}}
+   |   |   |{% else %}
+   |   |   |    Some {{type}}
+   |   |   |{%- endif -%}
+   |   |{%- endfor -%}
+   |{%- endfor -%}
 {%- endmacro %}
 
         
@@ -67,7 +134,7 @@
    |{% endif %}
    |{% if section in ['Summary', 'Extended Summary', 'Notes'] %}
    |
-   |     |{{render_paragraph(doc.content[section]) | wordwrap | indent(width=8)}}
+   |     |{{render_II(doc.content[section]) | wordwrap}}
    |
    |{% elif section in ['Signature'] %}
    |   |{{ bold(underline(doc.content[section]))}}
