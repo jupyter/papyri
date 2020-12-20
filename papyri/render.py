@@ -202,6 +202,8 @@ async def _route(ref, store):
                     # TODO: Warning here we mutate objects.
                     ii.append(cc)
 
+        doc_blob.refs = [(resolve_(ref, all_known_refs, local_refs)(x), x) for  x in doc_blob.refs]
+        
         return render_one(
             template=template,
             doc=doc_blob,
@@ -390,6 +392,7 @@ async def _ascii_render(name, store=None):
 
     known_refs = [x.name[:-5] for x in store.glob("*/module/*.json")]
     bytes_ = await (store / root / "module" / f"{ref}.json").read_text()
+    print('loading ', (store / root / "module" / f"{ref}.json"))
     brpath = store / root / "module" / f"{ref}.br"
     if await brpath.exists():
         br = await brpath.read_text()
@@ -398,18 +401,21 @@ async def _ascii_render(name, store=None):
     doc_blob = load_one(bytes_, br)
 
     # TODO : move this to ingest.
-    local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
+    local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
         x[0] for x in doc_blob.content["Returns"] if x[0]
     ]
 
     # TODO : move this to ingest.
-    env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
+    env.globals["resolve"] = resolve_(ref, known_refs, local_refs)
     for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
         if type_ == "code":
             assert len(in_out) == 3
             in_, out, _ = in_out
             for ii in in_:
                 ii.append(None)
+
+    doc_blob.refs = [(resolve_(ref, known_refs, local_refs)(x),x) for  x in doc_blob.refs]
+    print(doc_blob.refs)
 
     return render_one(
         template=template,
@@ -475,6 +481,7 @@ async def main():
                     # TODO: Warning here we mutate objects.
                     ii.append(cc)
 
+        doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
         data = render_one(
             template=template,
             doc=doc_blob,

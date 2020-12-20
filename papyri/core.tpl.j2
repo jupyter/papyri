@@ -438,8 +438,7 @@ user-select: none;
             
          {% endfor %}
          See :
-         {% for r in doc.refs %}
-            {% set ref, exists = resolve(r) %}
+         {% for (ref, exists), r in doc.refs %}
             <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
          {% endfor %}
    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters'] %}

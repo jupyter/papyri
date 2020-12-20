@@ -159,8 +159,7 @@
    |   |{%- endfor %}
    |   |    {{underline("See:")}}
    |   |{{"        "}}
-   |   |{%- for r in doc.refs -%}
-   |   |   |{% set ref, exists = resolve(r) -%}
+   |   |{%- for (ref, exists), r in doc.refs -%}
    |   |   |{% if exists=="exists" %}{{ blue(r) }},{% else %}{{ red(r) }},{% endif %}
    |   |{% endfor %}
    |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
