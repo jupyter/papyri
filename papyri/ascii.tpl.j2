@@ -31,9 +31,9 @@
 {%- endmacro %}
 
 {% macro block_paragraph(pgr) -%}
-{%- for c in pgr.children -%}
-    |{{-render_inner(c.__class__.__name__, c)-}}
-{%- endfor -%}
+   |{%- for c in pgr.children -%}
+   |    |{{-render_inner(c.__class__.__name__, c)-}}
+   |{%- endfor -%}
 {% endmacro %}
 
 

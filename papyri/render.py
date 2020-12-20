@@ -189,21 +189,8 @@ async def _route(ref, store):
         all_known_refs = [str(x.name)[:-5] for x in store.glob("*/module/*.json")]
         env.globals["resolve"] = resolve_(ref, all_known_refs, local_refs)
 
-        ### dive into the example data, reconstruct the initial code, parse it with pygments,
-        # and append the highlighting class as the third element
-        # I'm thinking the linking strides should be stored separately as the code
-        # it might be simpler, and more compact.
-        for i, (type_, (in_out)) in enumerate(doc_blob.example_section_data):
-            if type_ == "code":
-                assert len(in_out) == 3
-                in_, out, ce_status = in_out
-                classes = get_classes("".join([x for x, y in in_]))
-                for ii, cc in zip(in_, classes):
-                    # TODO: Warning here we mutate objects.
-                    ii.append(cc)
 
-        doc_blob.refs = [(resolve_(ref, all_known_refs, local_refs)(x), x) for  x in doc_blob.refs]
-        
+        prepare_doc(doc_blob, ref, all_known_refs, local_refs)
         return render_one(
             template=template,
             doc=doc_blob,
@@ -407,16 +394,8 @@ async def _ascii_render(name, store=None):
 
     # TODO : move this to ingest.
     env.globals["resolve"] = resolve_(ref, known_refs, local_refs)
-    for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
-        if type_ == "code":
-            assert len(in_out) == 3
-            in_, out, _ = in_out
-            for ii in in_:
-                ii.append(None)
 
-    doc_blob.refs = [(resolve_(ref, known_refs, local_refs)(x),x) for  x in doc_blob.refs]
-    print(doc_blob.refs)
-
+    prepare_doc(doc_blob, ref, known_refs, local_refs)
     return render_one(
         template=template,
         doc=doc_blob,
@@ -430,6 +409,21 @@ async def _ascii_render(name, store=None):
 async def ascii_render(name, store=None):
     print(await _ascii_render(name, store))
 
+
+def prepare_doc(doc_blob, qa, known_refs, local_refs):
+    ### dive into the example data, reconstruct the initial code, parse it with pygments,
+    # and append the highlighting class as the third element
+    # I'm thinking the linking strides should be stored separately as the code
+    # it might be simpler, and more compact.
+    for i, (type_, (in_out)) in enumerate(doc_blob.example_section_data):
+        if type_ == "code":
+            assert len(in_out) == 3
+            in_, out, ce_status = in_out
+            classes = get_classes("".join([x for x, y in in_]))
+            for ii, cc in zip(in_, classes):
+                # TODO: Warning here we mutate objects.
+                ii.append(cc)
+    doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
 
 async def main():
     store = Store(ingest_dir)
@@ -472,16 +466,7 @@ async def main():
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(qa, known_refs, local_refs)
-        for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
-            if type_ == "code":
-                assert len(in_out) == 3
-                in_, out, ce_status = in_out
-                classes = get_classes("".join([x for x, y in in_]))
-                for ii, cc in zip(in_, classes):
-                    # TODO: Warning here we mutate objects.
-                    ii.append(cc)
-
-        doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
+        prepare_doc(doc_blob, qa, known_refs, local_refs)
         data = render_one(
             template=template,
             doc=doc_blob,
