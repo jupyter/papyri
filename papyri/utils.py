@@ -17,7 +17,6 @@ class TimeElapsedColumn(ProgressColumn):
         self.avg = None
         super().__init__(*args, **kwargs)
 
-
     def render(self, task: "Task"):
         elapsed = task.elapsed
         if elapsed is None:
@@ -27,8 +26,12 @@ class TimeElapsedColumn(ProgressColumn):
             if self.avg is None:
                 self.avg = elapsed_delta + timedelta(seconds=int(task.time_remaining))
             else:
-                self.avg = (99*self.avg+elapsed_delta + timedelta(seconds=int(task.time_remaining)))/100
-            finish_delta = str(self.avg).split('.')[0]
+                self.avg = (
+                    99 * self.avg
+                    + elapsed_delta
+                    + timedelta(seconds=int(task.time_remaining))
+                ) / 100
+            finish_delta = str(self.avg).split(".")[0]
         else:
             finish_delta = "--:--:--"
         return Text(

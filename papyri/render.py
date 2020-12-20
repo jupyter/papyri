@@ -195,11 +195,8 @@ async def _route(ref, store):
         # it might be simpler, and more compact.
         for i, (type_, (in_out)) in enumerate(doc_blob.example_section_data):
             if type_ == "code":
-                if len(in_out) == 2:
-                    in_, out = in_out
-                    in_out.append("old_version")
-                elif len(in_out) == 3:
-                    in_, out, ce_status = in_out
+                assert len(in_out) == 3
+                in_, out, ce_status = in_out
                 classes = get_classes("".join([x for x, y in in_]))
                 for ii, cc in zip(in_, classes):
                     # TODO: Warning here we mutate objects.
@@ -409,12 +406,8 @@ async def _ascii_render(name, store=None):
     env.globals["resolve"] = resolve_(ref, known_refs, local_ref)
     for i, (type_, in_out) in enumerate(blob.example_section_data):
         if type_ == "code":
-            if len(in_out) == 2:
-                in_, out = in_out
-            elif len(in_out) == 3:
-                in_, out, _ = in_out
-            else:
-                raise ValueError
+            assert len(in_out) == 3
+            in_, out, _ = in_out
             for ii in in_:
                 ii.append(None)
 
@@ -469,39 +462,34 @@ async def main():
         except Exception as e:
             raise RuntimeError(f"error with {document}") from e
 
-        # for p,(qa, doc_blob:IngestedBlobs) in progress(nvisited_items.items(), description='Rendering'):
         local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(qa, known_refs, local_refs)
         for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
             if type_ == "code":
-                if len(in_out) == 2:
-                    in_, out = in_out
-                    in_out.append("old_version")
-                elif len(in_out) == 3:
-                    in_, out, ce_status = in_out
-                for ii in in_:
-                    ii.append(None)
+                assert len(in_out) == 3
+                in_, out, ce_status = in_out
+                classes = get_classes("".join([x for x, y in in_]))
+                for ii, cc in zip(in_, classes):
+                    # TODO: Warning here we mutate objects.
+                    ii.append(cc)
 
+        data = render_one(
+            template=template,
+            doc=doc_blob,
+            qa=qa,
+            ext=".html",
+            backrefs=doc_blob.backrefs,
+            pygment_css=HtmlFormatter(style="pastie").get_style_defs(".highlight"),
+        )
         with (html_dir / f"{qa}.html").open("w") as f:
-            try:
-                f.write(
-                    render_one(
-                        template=template,
-                        doc=doc_blob,
-                        qa=qa,
-                        ext=".html",
-                        backrefs=doc_blob.backrefs,
-                        pygment_css=None,
-                    )
-                )
-            except Exception as e:
-                raise ValueError(f"error writin {qa=}") from e
+            f.write(data)
+
     assets = store.glob("*/assets/*")
     for asset in assets:
-        b = html_dir / 'img' / asset.parts[-3] / asset.parts [-2]
+        b = html_dir / "img" / asset.parts[-3] / asset.parts[-2]
         b.mkdir(parents=True, exist_ok=True)
         import shutil
-        shutil.copy(asset.path, b/asset.name)
 
+        shutil.copy(asset.path, b / asset.name)
