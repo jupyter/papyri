@@ -14,8 +14,8 @@ from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
 
 
-def unreachable():
-    assert False
+def unreachable(obj):
+    assert False, f"Unreachable: {obj}"
 
 class CleanLoader(FileSystemLoader):
     """

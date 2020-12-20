@@ -13,13 +13,13 @@
    |{%- if type == 'Word' -%}
    |   |{{- obj.value -}}
    |{%- elif type == 'Directive' %}
-   |   |{% set ref, exists = resolve(obj.text) %}
    |   |{% if obj.exists=='local' %}
    |   |    {{-green(obj.text)-}}
    |   |{% elif obj.exists=='exists' %}
    |   |    {{-blue(obj.text)-}}
+   |   |{% elif obj.exists=='missing' %}
+   |   |    {{-unreachable(obj)}}
    |   |{% else %}
-   |   |    {{-red(obj.text)-}}
    |   |{% endif %}
    |{% elif type == 'Math' %}
    |    ${{obj.text}}$
@@ -82,12 +82,12 @@
    |   |   |{%- if type == 'Word' -%}
    |   |   |    {{- obj.value -}}
    |   |   |{%- elif type == 'Directive' %}
-   |   |   |    {% set ref, exists = resolve(obj.text) %}
-   |   |   |    {% if exists=='local' %}
+   |   |   |    {% if obj.exists=='local' %}
    |   |   |        {{-green(obj.text)-}}
-   |   |   |    {% elif exists=='exists' %}
+   |   |   |    {% elif obj.exists=='exists' %}
    |   |   |        {{-blue(obj.text)-}}
    |   |   |    {% else %}
+   |   |   |        {{-unreachable()-}}
    |   |   |        {{-red(obj.text)-}}
    |   |   |    {% endif %}
    |   |   |{% elif type == 'Math' %}
