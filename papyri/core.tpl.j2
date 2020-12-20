@@ -300,7 +300,7 @@ user-select: none;
         {%- elif obj.exists in ('exists', 'missing') -%}
         <code><a href="{{obj.ref}}{{ext}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
         {% else %}
-            {{unreachable(obj.exists)}}
+            {{unreachable(obj)}}
         {%- endif -%}
     {% elif type == 'Math' %}
         <span class="tex2jax_process">${{obj.text}}$</span>

@@ -192,6 +192,7 @@ async def _route(ref, store):
         all_known_refs = [str(x.name)[:-5] for x in store.glob("*/module/*.json")]
         env.globals["resolve"] = resolve_(ref, all_known_refs, local_refs)
         env.globals["unreachable"] = unreachable
+        env.globals["unreachable"] = lambda x: "UNREACHABLELLLLL"+str(x)
 
 
         prepare_doc(doc_blob, ref, all_known_refs, local_refs)
@@ -326,9 +327,6 @@ def render_one(
         backrefs = (backrefs, None)
 
 
-    for d in doc.see_also:
-        assert isinstance(d.descriptions, list), qa
-        d.descriptions = paragraphs(d.descriptions)
     try:
         return template.render(
             doc=doc,
@@ -406,6 +404,12 @@ def prepare_doc(doc_blob, qa, known_refs, local_refs):
             for ii, cc in zip(in_, classes):
                 # TODO: Warning here we mutate objects.
                 ii.append(cc)
+        if type_ == 'text':
+            assert len(in_out) == 1, len(in_out)
+            for t_, it in in_out[0]:
+                  if it.__class__.__name__ == 'Directive':
+                      it.ref, it.exists = resolve_(qa, known_refs, local_refs)(it.text)
+
     doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
     # partial lift of paragraph parsing....
     # TODO: Move this higher in the ingest
@@ -440,7 +444,15 @@ def prepare_doc(doc_blob, qa, known_refs, local_refs):
                 res.append((it.__class__.__name__, it))
             doc_blob.content[s] = res
 
-    for s in ["Parameters", 'Returns']:
+    for d in doc_blob.see_also:
+        assert isinstance(d.descriptions, list), qa
+        d.descriptions = paragraphs(d.descriptions)
+        for dsc in d.descriptions:
+            for t,it in dsc:
+                if it.__class__.__name__ == 'Directive':
+                    it.ref, it.exists = resolve_(qa, known_refs, local_refs)(it.text)
+
+    for s in sections_:
         if s in doc_blob.content:
             for param,type_, desc in doc_blob.content[s]:
                 for line in desc:
