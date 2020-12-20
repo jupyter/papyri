@@ -498,3 +498,10 @@ async def main():
                 )
             except Exception as e:
                 raise ValueError(f"error writin {qa=}") from e
+    assets = store.glob("*/assets/*")
+    for asset in assets:
+        b = html_dir / 'img' / asset.parts[-3] / asset.parts [-2]
+        b.mkdir(parents=True, exist_ok=True)
+        import shutil
+        shutil.copy(asset.path, b/asset.name)
+

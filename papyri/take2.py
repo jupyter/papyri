@@ -704,7 +704,6 @@ class BlockDirective(Block):
         assert lines[0].startswith(".. ")
         l0 = lines[0]
         pred, *postd = l0.split("::")
-        print(postd)
         assert pred.startswith(".. ")
         self.directive_name = pred[3:]
         self.args0 = postd
