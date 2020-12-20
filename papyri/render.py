@@ -14,6 +14,9 @@ from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
 
 
+def unreachable():
+    assert False
+
 class CleanLoader(FileSystemLoader):
     """
     A loader for ascii/ansi that remove all leading spaces and pipes  until the last pipe.
@@ -188,6 +191,7 @@ async def _route(ref, store):
         ]
         all_known_refs = [str(x.name)[:-5] for x in store.glob("*/module/*.json")]
         env.globals["resolve"] = resolve_(ref, all_known_refs, local_refs)
+        env.globals["unreachable"] = unreachable
 
 
         prepare_doc(doc_blob, ref, all_known_refs, local_refs)
@@ -321,28 +325,6 @@ def render_one(
     else:
         backrefs = (backrefs, None)
 
-    # partial lift of paragraph parsing....
-    # TODO: Move this higher in the ingest
-    sections_ = [
-        "Parameters",
-        "Returns",
-        "Raises",
-        "Yields",
-        "Attributes",
-        "Other Parameters",
-    ]
-    for s in sections_:
-        for i, p in enumerate(doc.content[s]):
-            if p[2]:
-                doc.content[s][i] = (p[0], p[1], paragraphs(p[2]))
-
-    for s in ["Extended Summary", "Summary", "Notes"]:
-        if s in doc.content:
-            data = doc.content[s]
-            res = []
-            for it in P2(data):
-                res.append((it.__class__.__name__, it))
-            doc.content[s] = res
 
     for d in doc.see_also:
         assert isinstance(d.descriptions, list), qa
@@ -394,6 +376,7 @@ async def _ascii_render(name, store=None):
 
     # TODO : move this to ingest.
     env.globals["resolve"] = resolve_(ref, known_refs, local_refs)
+    env.globals["unreachable"] = unreachable
 
     prepare_doc(doc_blob, ref, known_refs, local_refs)
     return render_one(
@@ -424,6 +407,46 @@ def prepare_doc(doc_blob, qa, known_refs, local_refs):
                 # TODO: Warning here we mutate objects.
                 ii.append(cc)
     doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
+    # partial lift of paragraph parsing....
+    # TODO: Move this higher in the ingest
+    sections_ = [
+        "Parameters",
+        "Returns",
+        "Raises",
+        "Yields",
+        "Attributes",
+        "Other Parameters",
+    ]
+    for s in sections_:
+        for i, p in enumerate(doc_blob.content[s]):
+            if p[2]:
+                doc_blob.content[s][i] = (p[0], p[1], paragraphs(p[2]))
+
+
+    def do_paragraph(p):
+         for child in p.children:
+             if child.__class__.__name__ == 'Directive':
+                 child.ref, child.exists = resolve_(qa, known_refs, local_refs)(child.text)
+
+    for s in ["Extended Summary", "Summary", "Notes"]:
+        if s in doc_blob.content:
+            data = doc_blob.content[s]
+            res = []
+            for it in P2(data):
+                if it.__class__.__name__ == 'Paragraph':
+                    do_paragraph(it)
+                if it.__class__.__name__ == 'BlockDirective':
+                    do_paragraph(it.inner)
+                res.append((it.__class__.__name__, it))
+            doc_blob.content[s] = res
+
+    for s in ["Parameters", 'Returns']:
+        if s in doc_blob.content:
+            for param,type_, desc in doc_blob.content[s]:
+                for line in desc:
+                    for t,it in line:
+                        if it.__class__.__name__ == 'Directive':
+                            it.ref, it.exists = resolve_(qa, known_refs, local_refs)(it.text)
 
 async def main():
     store = Store(ingest_dir)
@@ -466,6 +489,7 @@ async def main():
             x[0] for x in doc_blob.content["Returns"] if x[0]
         ]
         env.globals["resolve"] = resolve_(qa, known_refs, local_refs)
+        env.globals["unreachable"] = unreachable
         prepare_doc(doc_blob, qa, known_refs, local_refs)
         data = render_one(
             template=template,

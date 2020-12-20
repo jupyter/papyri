@@ -14,9 +14,9 @@
    |   |{{- obj.value -}}
    |{%- elif type == 'Directive' %}
    |   |{% set ref, exists = resolve(obj.text) %}
-   |   |{% if exists=='local' %}
+   |   |{% if obj.exists=='local' %}
    |   |    {{-green(obj.text)-}}
-   |   |{% elif exists=='exists' %}
+   |   |{% elif obj.exists=='exists' %}
    |   |    {{-blue(obj.text)-}}
    |   |{% else %}
    |   |    {{-red(obj.text)-}}

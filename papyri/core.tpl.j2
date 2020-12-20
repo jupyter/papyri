@@ -295,11 +295,10 @@ user-select: none;
     {%- if type == 'Word' -%}
         {{-obj.value-}}
     {%- elif type == 'Directive' -%}
-        {%- set ref, exists = resolve(obj.text) -%}
-        {%- if exists=='local' -%}
-            <code><a href="#{{ref}}" class='{{exists}}'>{{obj.text}}</a></code>
+        {%- if obj.exists=='local' -%}
+            <code><a href="#{{obj.ref}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
         {%- else -%}
-            <code><a href="{{ref}}{{ext}}" class='{{exists}}'>{{obj.text}}</a></code>
+            <code><a href="{{obj.ref}}{{ext}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
         {%- endif -%}
     {% elif type == 'Math' %}
         <span class="tex2jax_process">${{obj.text}}$</span>
