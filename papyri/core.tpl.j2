@@ -232,11 +232,15 @@ user-select: none;
         
         
         <brand><i class="fab fa-python"></i><a href='/'>Home</a></brand>
-        <nav> <a href='/' >/ p</a>  / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a>
+        <nav> <a href='/' >/ p</a>  / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a>&nbsp;/&nbsp;
             {% for p,links in parts.items() %}
                 {% if links %}
                     <div class="dropdown">
-                        <a class="dropbtn">{{p}}</a>{% if not loop.last %}.{% endif %}
+                        {% for link,name in links -%}
+                            {% if name == p %}
+                                <a class="dropbtn" href='{{link}}{{ext}}'>{{p}}</a>{% if not loop.last %}.{% endif %}
+                            {% endif %}
+                        {% endfor %}
                         <div class="dropdown-content">
                         {% for link,name in links -%}
                             <a href="{{link}}{{ext}}">{{name}}</a>
@@ -293,7 +297,7 @@ user-select: none;
         {%- endif -%}
     {%- endfor-%}
     {{-'\n'}}
-    {%- endmacro %}
+{%- endmacro %}
 
 
 {% macro render_inner(type, obj) -%}
