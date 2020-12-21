@@ -415,8 +415,7 @@ user-select: none;
     {% elif section in ['See Also'] %}
         {% for sa in doc.see_also %}
             <dl>
-                <dt>{{ref(sa.name)}}</a>
-                </dt>
+                <dt><a>{{ref(sa.name)}}</a></dt>
                 <dd>{{render_paragraph(sa.descriptions)}}</dd>
             </dl>
         {% endfor %}
@@ -450,7 +449,7 @@ user-select: none;
        <dl>
            {% for p in doc.content[section] %}
             {% if p[0] %}
-                <dt><a id={{p[0]}}>{{p[0]}}</a> : {{p[1]}}</dt>
+                <dt><a id="{{p[0]}}">{{p[0]}}</a> : {{p[1]}}</dt>
             {% else %}
                 <dt>{{p[1]}}</dt>
             {% endif %}
