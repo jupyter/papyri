@@ -255,7 +255,8 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     blob.see_also = list(set(blob.see_also))
     try:
         notes = blob.content["Notes"]
-        blob.refs.extend(Paragraph.parse_lines(notes).references)
+        if notes:
+            blob.refs.extend(Paragraph.parse_lines(notes).references)
     except KeyError:
         pass
     blob.refs = list(sorted(set(blob.refs)))
@@ -331,11 +332,12 @@ class Ingester:
                     nvisited_items[qa] = blob
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f1}") from e
+        del f1
 
         (self.ingest_dir / root).mkdir(exist_ok=True)
         (self.ingest_dir / root / "module").mkdir(exist_ok=True)
         known_refs = frozenset(nvisited_items.keys())
-
+    
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
         ):
@@ -360,14 +362,13 @@ class Ingester:
                         self.ingest_dir / ref_root / "module" / (resolved + ".json")
                     )
                     if existing_location.exists():
-                        with existing_location.open() as f:
-                            brpath = Path(str(existing_location)[:-5] + ".br")
-                            if brpath.exists():
-                                br = brpath.read_text()
-                            else:
-                                br = None
-                            nvisited_items[resolved] = load_one(f1.read_bytes(), br)
-                            nvisited_items[resolved].backrefs.append(qa)
+                        brpath = Path(str(existing_location)[:-5] + ".br")
+                        if brpath.exists():
+                            br = brpath.read_text()
+                        else:
+                            br = None
+                        nvisited_items[resolved] = load_one(existing_location.read_bytes(), br)
+                        nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
                         phantom_dir = (
                             self.ingest_dir / ref_root / "module" / "__phantom__"
@@ -389,7 +390,6 @@ class Ingester:
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
-        del f1
         (self.ingest_dir / root / "assets").mkdir(exist_ok=True)
         for px, f2 in progress(
             (path / "assets").glob("*"), description=f"Reading {path} image files ...",
@@ -418,6 +418,7 @@ class Ingester:
 
         with open(self.ingest_dir / root / "papyri.json", "w") as f:
             f.write(json.dumps(aliases))
+
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."
