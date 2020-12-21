@@ -270,7 +270,8 @@ user-select: none;
     <hr/>
     {%- for section in doc.content.keys() if doc.content[section] -%}
     {%- if section not in ['Extended Summary','Signature', 'Summary'] -%}
-        <a href="#section-{{section}}">{{section}}</a>
+    <a href="#section-{{section}}">{{section}}</a>
+
     {%  endif -%}
     {%  endfor -%}
     {%- if backrefs[0] or backrefs[1] -%}
@@ -361,9 +362,7 @@ user-select: none;
 
 
 {% macro render_II(prgs) -%}
-    <h5>New renderer</h5>
     {% for type,obj in prgs %}
-        <h6>Blurb</h6>
        {%- if type == 'Directive' -%}
            {{obj}}
        {% elif type == 'Math' %}
@@ -383,20 +382,14 @@ user-select: none;
            {{block(obj)}}
        {% else %}
            <code>Some {{type}} Not implemented yet</code>
-                        <pre>
            {%- for l in obj.lines -%}
 {{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
            {%- endfor -%}</pre><pre>
             {%- for l in obj.ind -%}
 {{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
            {%- endfor -%}</pre>
-
-
        {%- endif -%}
-
-
     {%- endfor %}
-    <h5>End</h5>
 {%- endmacro %}
 
 {% macro ref(r) -%}
@@ -411,10 +404,11 @@ user-select: none;
 
 {% for section in doc.content.keys() if doc.content[section] %}
 
-    {% if section not in ['Extended Summary','Signature', 'Summary'] %}
+    {% if section not in ['Extended Summary','Signature', 'Summary'] and doc.content[section] %}
         <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
     {% if section in ['Extended Summary', 'Summary',  'Notes'] %}
+        <!-- rendering {{section}} -->
         {{render_II(doc.content[section])}}
     {% elif section in ['Signature'] %}
        <code class='signature'>{{doc.content[section]}}</code>
@@ -483,7 +477,7 @@ user-select: none;
     {% endif%}
     {% if backrefs[1] is not none %}
         {% for k,v in backrefs[1].items() %}
-         <h2>{{k}}</h2>
+         <h3>{{k}}</h3>
          {% if len(v) < 30 %}
          {% for r in v %}
             <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>

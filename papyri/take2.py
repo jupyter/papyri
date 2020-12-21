@@ -271,6 +271,7 @@ class Paragraph:
 
     @classmethod
     def parse_lines(cls, lines):
+        assert lines
         tokens = list(lex(lines))
 
         rest = tokens
@@ -492,6 +493,8 @@ class Block:
     COLOR = lambda x: x
 
     def __init__(self, lines, wh, ind, *, reason=None):
+        if not lines:
+            lines = [':: workaround numpyoc summary/ext summary bug ']
         self.lines = Lines(lines)
         self.wh = Lines(wh)
         self.ind = Lines(ind)
@@ -707,7 +710,10 @@ class BlockDirective(Block):
         assert pred.startswith(".. ")
         self.directive_name = pred[3:]
         self.args0 = postd
-        self.inner = Paragraph.parse_lines([x._line for x in self.ind])
+        if self.ind:
+            self.inner = Paragraph.parse_lines([x._line for x in self.ind])
+        else:
+            self.inner = None
 
 
 class BlockVerbatim(Block):
@@ -861,9 +867,13 @@ def get_object(qual):
     return obj
 
 
+def assert_block_lines(blocks):
+    for b in blocks:
+        assert b.lines
 def main(text):
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
+    assert_block_lines(doc), "raw blocks"
     doc = [x for pairs in doc for x in header_pass(pairs)]
     doc = header_level_pass(doc)
     doc = [x for pairs in doc for x in example_pass(pairs)]

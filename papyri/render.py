@@ -220,7 +220,7 @@ async def _route(ref, store):
             br = await brpath.read_text()
         else:
             br = None
-        all_known_refs = {str(x.name)[:-5] for x in store.glob("*/module/*.json")}
+        all_known_refs = frozenset({str(x.name)[:-5] for x in store.glob("*/module/*.json")})
         #env.globals["unreachable"] = unreachable
         env.globals["unreachable"] = lambda x: "UNREACHABLELLLLL"+str(x)
 
@@ -459,6 +459,7 @@ def prepare_doc(doc_blob, qa, known_refs):
 
 
     def do_paragraph(p):
+         assert p
          for child in p.children:
              if child.__class__.__name__ == 'Directive':
                  child.ref, child.exists = resolve_(qa, known_refs, local_refs)(child.text)
@@ -467,10 +468,12 @@ def prepare_doc(doc_blob, qa, known_refs):
         if s in doc_blob.content:
             data = doc_blob.content[s]
             res = []
+            if not data:
+                continue
             for it in P2(data):
                 if it.__class__.__name__ == 'Paragraph':
                     do_paragraph(it)
-                if it.__class__.__name__ == 'BlockDirective':
+                if it.__class__.__name__ == 'BlockDirective' and it.inner:
                     do_paragraph(it.inner)
                 res.append((it.__class__.__name__, it))
             doc_blob.content[s] = res

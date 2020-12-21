@@ -44,7 +44,7 @@ def P2(lines) -> List[Any]:
         else:
             assert "\n" not in l._line
     acc = []
-
+    assert lines
     blocks_data = t2main("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
@@ -334,6 +334,7 @@ class Ingester:
 
         (self.ingest_dir / root).mkdir(exist_ok=True)
         (self.ingest_dir / root / "module").mkdir(exist_ok=True)
+        known_refs = frozenset(nvisited_items.keys())
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
@@ -343,7 +344,7 @@ class Ingester:
             ]
             doc_blob.logo = logo
             for ref in doc_blob.refs:
-                resolved, exists = resolve_(qa, nvisited_items, local_ref)(ref)
+                resolved, exists = resolve_(qa, known_refs, local_ref)(ref)
                 pp = False
                 if "Audio" in qa:
                     pp = True
@@ -384,7 +385,7 @@ class Ingester:
                         print(resolved, "not valid reference, skipping.")
 
             for sa in doc_blob.see_also:
-                resolved, exists = resolve_(qa, nvisited_items, [])(sa.name.name)
+                resolved, exists = resolve_(qa, known_refs, [])(sa.name.name)
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
