@@ -149,7 +149,7 @@ body{
           pre.highlight.compiled {
             border-left: 3px solid #7d77d2;
           }
-          pre.highlight.syntax_error {
+          pre.highlight.syntax_error, pre.highlight.exception_in_exec {
             border-left: 3px solid #f44336;
           }
 
@@ -430,6 +430,8 @@ user-select: none;
             {% else %}
                 {% if data[2] == 'syntax_error' -%}
                     <span class='warning'>This example raised an error at execution time but compiled correctly</span>
+                {%-elif data[2] == 'exception_in_exec' -%}
+                    <span class='warning'>This example is valid syntax, but raise an exception at execution</span>
                 {%-elif data[2] == 'compiled' -%}
                     <span class='note'>This example is valid syntax, but we were not able to check execution</span>
                 {%-endif-%}

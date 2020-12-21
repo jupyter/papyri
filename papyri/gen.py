@@ -158,8 +158,12 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                         with cbook._setattr_cm(
                             FigureManagerBase, show=lambda self: None
                         ):
-                            exec(script, ns)
-                            ce_status = "execed"
+                            try:
+                                exec(script, ns)
+                                ce_status = "execed"
+                            except Exception:
+                                ce_status = "exception_in_exec"
+                                raise 
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         assert (len(fig_managers)) in (0, 1)
                         if fig_managers and (

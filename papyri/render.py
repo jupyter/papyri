@@ -149,6 +149,7 @@ def compute_siblings(ref, family):
         cpath += part + "."
     if not siblings["+"]:
         del siblings["+"]
+    print(siblings.keys())
     return siblings
 
 
