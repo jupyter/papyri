@@ -6,6 +6,11 @@ import requests
 
 from typing import List
 
+from functools import lru_cache
+
+@lru_cache
+def glob_cache(path, arg):
+    return list(path.glob(arg))
 
 class BaseStore:
     def __init__(self, path):
@@ -33,7 +38,7 @@ class BaseStore:
         return self.path.read_text()
 
     def glob(self, arg) -> List[Path]:
-        return [self._other()(x) for x in self.path.glob(arg)]
+        return [self._other()(x) for x in glob_cache(self.path, arg)]
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.path} 0x{id(self):x}>"

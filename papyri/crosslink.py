@@ -137,9 +137,20 @@ class IngestedBlobs(DocBlob):
         data = super().to_json()
         return data
 
+@lru_cache
+def _at_in(q0, known_refs):
+    return [q for q in known_refs if q.startswith(q0)]
+
 
 def resolve_(qa: str, known_refs, local_ref):
     def resolve(ref):
+        if ref.startswith('builtins.'):
+            return ref, 'missing'
+        if ref.startswith('str.'):
+            return ref, 'missing'
+        if ref in {'None','False', 'True'}:
+            return ref, 'missing'
+
         assert isinstance(ref, str), type(ref)
         if ref.startswith("~"):
             ref = ref[1:]
@@ -151,6 +162,8 @@ def resolve_(qa: str, known_refs, local_ref):
             if ref.startswith("."):
                 if (found := qa + ref) in known_refs:
                     return found, "exists"
+                else:
+                    return ref, "missing"
 
             parts = qa.split(".")
             for i in range(len(parts)):
@@ -159,7 +172,7 @@ def resolve_(qa: str, known_refs, local_ref):
                     return attempt, "exists"
 
         q0 = qa.split(".")[0]
-        attempts = [q for q in known_refs if q.startswith(q0) and (ref in q)]
+        attempts = [q for q in _at_in(q0, known_refs) if (ref in q)]
         if len(attempts) == 1:
             return attempts[0], "exists"
         return ref, "missing"

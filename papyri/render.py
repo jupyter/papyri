@@ -12,6 +12,7 @@ from .crosslink import load_one, resolve_, IngestedBlobs, paragraph, paragraphs,
 from .stores import BaseStore, GHStore, Store
 from .take2 import Lines, Paragraph, make_block_3
 from .utils import progress
+from collections import OrderedDict
 
 
 def unreachable(obj):
@@ -109,6 +110,77 @@ async def gallery(module, store):
     return env.get_template("gallery.tpl.j2").render(figmap=figmap)
 
 
+# here we compute the siblings at each level; as well as one level down
+# this is far from efficient and a hack, but it helps with navigation.
+# I'm pretty sure we load the full library while we could
+# load only the current module id not less, and that this could
+# be done at ingest time or cached.
+# So basically in the breadcrumps
+# IPython.lib.display.+
+#  - IPython will be siblings with numpy; scipy, dask, ....
+#  - lib (or "IPython.lib"), with "core", "display", "terminal"...
+#  etc.
+#  - + are deeper children's
+#
+# This is also likely a bit wrong; as I'm sure we want to only show
+# submodules or sibling modules and not attribute/instance of current class,
+# though that would need loading the files and looking at the types of
+# things. likely want to store that in a tree somewhere But I thing this is
+# doable after purely as frontend thing.
+
+def compute_siblings(ref, family):
+    parts = ref.split(".") + ["+"]
+    siblings = OrderedDict()
+    cpath = ""
+    # TODO: move this at ingestion time for all the non-top-level.
+    for i, part in enumerate(parts):
+        sib = list(
+            sorted(
+                set(
+                    [
+                        ".".join(s.split(".")[: i + 1])
+                        for s in family
+                        if s.startswith(cpath) and "." in s
+                    ]
+                )
+            )
+        )
+        siblings[part] = [(s, s.split(".")[-1]) for s in sib]
+        cpath += part + "."
+    if not siblings["+"]:
+        del siblings["+"]
+    return siblings
+
+
+def make_tree(names):    
+    from collections import defaultdict, OrderedDict
+    rd = lambda: defaultdict(rd)
+    tree = defaultdict(rd)
+
+    for n in names:
+        parts = n.split('.')
+        branch = tree
+        for p in parts:
+            branch = branch[p]
+    return tree
+
+def cs2(ref, tree):
+    parts = ref.split('.')+["+"]
+    siblings = OrderedDict()
+    cpath = ""
+    branch = tree
+    for p in parts:
+        res = list(sorted([(f"{cpath}{k}",k) for k in branch.keys() if k != '+']))
+        if res:
+            siblings[p] = res
+        else:
+            break
+        
+        branch = branch[p]
+        cpath += p + "."
+    return siblings
+    
+        
 async def _route(ref, store):
     assert isinstance(store, BaseStore)
     assert ref != "favicon.ico"
@@ -130,48 +202,11 @@ async def _route(ref, store):
     for p in papp_files:
         aliases = json.loads(await p.read_text())
 
-    # here we compute the siblings at each level; as well as one level down
-    # this is far from efficient and a hack, but it helps with navigation.
-    # I'm pretty sure we load the full library while we could
-    # load only the current module id not less, and that this could
-    # be done at ingest time or cached.
-    # So basically in the breadcrumps
-    # IPython.lib.display.+
-    #  - IPython will be siblings with numpy; scipy, dask, ....
-    #  - lib (or "IPython.lib"), with "core", "display", "terminal"...
-    #  etc.
-    #  - + are deeper children's
-    #
-    # This is also likely a bit wrong; as I'm sure we want to only show
-    # submodules or sibling modules and not attribute/instance of current class,
-    # though that would need loading the files and looking at the types of
-    # things. likely want to store that in a tree somewhere But I thing this is
-    # doable after purely as frontend thing.
 
     family = sorted(list(store.glob("*/module/*.json")))
     family = [str(f.name)[:-5] for f in family]
-    parts = ref.split(".") + ["+"]
-    from collections import OrderedDict
 
-    siblings = OrderedDict()
-    cpath = ""
-    # TODO: move this at ingestion time for all the non-top-level.
-    for i, part in enumerate(parts):
-        sib = list(
-            sorted(
-                set(
-                    [
-                        ".".join(s.split(".")[: i + 1])
-                        for s in family
-                        if s.startswith(cpath) and "." in s
-                    ]
-                )
-            )
-        )
-        siblings[part] = [(s, s.split(".")[-1]) for s in sib]
-        cpath += part + "."
-    if not siblings["+"]:
-        del siblings["+"]
+    siblings = compute_siblings(ref, family)
 
     # End computing siblings.
 
@@ -185,16 +220,13 @@ async def _route(ref, store):
             br = await brpath.read_text()
         else:
             br = None
-        doc_blob = load_one(bytes_, br)
-        local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
-            x[0] for x in doc_blob.content["Returns"] if x[0]
-        ]
-        all_known_refs = [str(x.name)[:-5] for x in store.glob("*/module/*.json")]
+        all_known_refs = {str(x.name)[:-5] for x in store.glob("*/module/*.json")}
         #env.globals["unreachable"] = unreachable
         env.globals["unreachable"] = lambda x: "UNREACHABLELLLLL"+str(x)
 
 
-        prepare_doc(doc_blob, ref, all_known_refs, local_refs)
+        doc_blob = load_one(bytes_, br)
+        prepare_doc(doc_blob, ref, all_known_refs)
         return render_one(
             template=template,
             doc=doc_blob,
@@ -356,25 +388,20 @@ async def _ascii_render(name, store=None):
     env.globals["paragraph"] = paragraph
     template = env.get_template("ascii.tpl.j2")
 
-    known_refs = [x.name[:-5] for x in store.glob("*/module/*.json")]
+    known_refs = frozenset({x.name[:-5] for x in store.glob("*/module/*.json")})
     bytes_ = await (store / root / "module" / f"{ref}.json").read_text()
-    print('loading ', (store / root / "module" / f"{ref}.json"))
     brpath = store / root / "module" / f"{ref}.br"
     if await brpath.exists():
         br = await brpath.read_text()
     else:
         br = None
-    doc_blob = load_one(bytes_, br)
 
-    # TODO : move this to ingest.
-    local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
-        x[0] for x in doc_blob.content["Returns"] if x[0]
-    ]
 
     # TODO : move this to ingest.
     env.globals["unreachable"] = unreachable
-
-    prepare_doc(doc_blob, ref, known_refs, local_refs)
+    
+    doc_blob = load_one(bytes_, br)
+    prepare_doc(doc_blob, ref, known_refs)
     return render_one(
         template=template,
         doc=doc_blob,
@@ -389,11 +416,25 @@ async def ascii_render(name, store=None):
     print(await _ascii_render(name, store))
 
 
-def prepare_doc(doc_blob, qa, known_refs, local_refs):
+def prepare_doc(doc_blob, qa, known_refs):
+    assert hash(known_refs)
+    sections_ = [
+        "Parameters",
+        "Returns",
+        "Raises",
+        "Yields",
+        "Attributes",
+        "Other Parameters",
+    ]
     ### dive into the example data, reconstruct the initial code, parse it with pygments,
     # and append the highlighting class as the third element
     # I'm thinking the linking strides should be stored separately as the code
     # it might be simpler, and more compact.
+    # TODO : move this to ingest.
+    local_refs = []
+    for s in sections_:
+        local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
+        
     for i, (type_, (in_out)) in enumerate(doc_blob.example_section_data):
         if type_ == "code":
             assert len(in_out) == 3
@@ -411,14 +452,6 @@ def prepare_doc(doc_blob, qa, known_refs, local_refs):
     doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
     # partial lift of paragraph parsing....
     # TODO: Move this higher in the ingest
-    sections_ = [
-        "Parameters",
-        "Returns",
-        "Raises",
-        "Yields",
-        "Attributes",
-        "Other Parameters",
-    ]
     for s in sections_:
         for i, p in enumerate(doc_blob.content[s]):
             if p[2]:
@@ -461,7 +494,7 @@ def prepare_doc(doc_blob, qa, known_refs, local_refs):
 async def main():
     store = Store(ingest_dir)
     files = store.glob("*/module/*.json")
-
+    css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
@@ -470,10 +503,18 @@ async def main():
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
-    known_refs = [x.name[:-5] for x in store.glob("*/module/*.json")]
+    known_refs = frozenset({x.name[:-5] for x in store.glob("*/module/*.json")})
+    assert len(known_refs) >= 1
 
     html_dir.mkdir(exist_ok=True)
     document: Store
+    family = sorted(list(store.glob("*/module/*.json")))
+    family = [str(f.name)[:-5] for f in family]
+    assert set(family) == set(known_refs)
+    family = known_refs
+
+    tree = make_tree(known_refs)
+
     for p, document in progress(files, description="Rendering..."):
         if (
             document.name.startswith("__")
@@ -495,18 +536,18 @@ async def main():
         except Exception as e:
             raise RuntimeError(f"error with {document}") from e
 
-        local_refs = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
-            x[0] for x in doc_blob.content["Returns"] if x[0]
-        ]
+        siblings = cs2(qa, tree)
+
         env.globals["unreachable"] = unreachable
-        prepare_doc(doc_blob, qa, known_refs, local_refs)
+        prepare_doc(doc_blob, qa, known_refs)
         data = render_one(
             template=template,
             doc=doc_blob,
             qa=qa,
             ext=".html",
+            parts=siblings,
             backrefs=doc_blob.backrefs,
-            pygment_css=HtmlFormatter(style="pastie").get_style_defs(".highlight"),
+            pygment_css=css_data,
         )
         with (html_dir / f"{qa}.html").open("w") as f:
             f.write(data)

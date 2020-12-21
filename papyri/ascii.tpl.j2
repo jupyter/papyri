@@ -1,10 +1,10 @@
 {% macro example(entries) -%}
-    {{-'>>> ' -}}
+    {{-blue('>>> ') -}}
     {%- for text, t_, cc in entries %}
        {%- if text == '\n' -%}
        {{"\n    ... "}}
        {%- else -%}
-            {{text}}
+            {{white(text)}}
        {%- endif -%}
     {%- endfor-%}
 {%- endmacro %}
@@ -108,6 +108,8 @@
 
 {% macro bold(stuff) -%}{{esc(1,stuff)}}{%- endmacro %}
 {% macro underline(stuff) -%}{{esc(4,stuff)}}{%- endmacro %}
+
+{% macro black(stuff) -%}{{esc(30,stuff)}}{%- endmacro %}
 {% macro red(stuff) -%}{{esc(31,stuff)}}{%- endmacro %}
 {% macro green(stuff) -%}{{esc(32,stuff)}}{%- endmacro %}
 {% macro yellow(stuff) -%}{{esc(33,stuff)}}{%- endmacro %}
@@ -151,7 +153,9 @@
    |   |   |    {{render_paragraph(data)}}
    |   |   |
    |   |   |{% elif type=='fig' %}
-       |   |   |            {{yellow("<<Image not included>>")}}
+   |   |   |        {{yellow("┌────────────────────┐")}}
+   |   |   |        {{yellow("│ Image not included │")}}
+   |   |   |        {{yellow("└────────────────────┘")}}
    |   |   |{% else %}
    |   |   |    {{ example(data[0]) }}
    |   |   |    {{ data[1]}}

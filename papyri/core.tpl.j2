@@ -144,8 +144,12 @@ body{
           pre.highlight.execed {
             border-left: 3px solid #0070f3;
           }
+          .note {color: #7d77d2}
           .warning {color: #f44336}
           pre.highlight.compiled {
+            border-left: 3px solid #7d77d2;
+          }
+          pre.highlight.syntax_error {
             border-left: 3px solid #f44336;
           }
 
@@ -235,7 +239,7 @@ user-select: none;
                         <a class="dropbtn">{{p}}</a>{% if not loop.last %}.{% endif %}
                         <div class="dropdown-content">
                         {% for link,name in links -%}
-                            <a href="{{link}}">{{name}}</a>
+                            <a href="{{link}}{{ext}}">{{name}}</a>
                         {% endfor %}
                         </div>
                     </div>
@@ -430,8 +434,11 @@ user-select: none;
             {% elif type == 'fig' %}
                 <div><img src="img/{{module}}/assets/{{data}}"/></div>
             {% else %}
-                {% if data[2] == 'compiled' %}<span class='warning'>This example raised an error at execusion time but
-                    compiled correctly</span>{%endif%}
+                {% if data[2] == 'syntax_error' -%}
+                    <span class='warning'>This example raised an error at execution time but compiled correctly</span>
+                {%-elif data[2] == 'compiled' -%}
+                    <span class='note'>This example is valid syntax, but we were not able to check execution</span>
+                {%-endif-%}
             <pre class='highlight {{data[2]}}'>{{example(data[0]) -}}
 
              {{- data[1]}}</pre>
