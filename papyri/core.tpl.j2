@@ -232,7 +232,7 @@ user-select: none;
         
         
         <brand><i class="fab fa-python"></i><a href='/'>Home</a></brand>
-        <nav> <a href='/' >/ p</a>  / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a> / <a>
+        <nav> <a href='/' >/ p</a>  / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a>
             {% for p,links in parts.items() %}
                 {% if links %}
                     <div class="dropdown">
@@ -245,7 +245,7 @@ user-select: none;
                     </div>
                 {% endif -%}
             {% endfor -%}
-        </a></nav>
+        </nav>
     </header>
 <div class='container'>
     <div class="sidenav">
@@ -310,7 +310,7 @@ user-select: none;
     {% elif type == 'Math' %}
         <span class="tex2jax_process">${{obj.text}}$</span>
     {% elif type == 'Verbatim' %}
-        <code class'verbatim'>{{obj.text}}</code>
+        <code class='verbatim'>{{obj.text}}</code>
     {% else %}
         <code>Some {{type}}</code>
     {%- endif -%}
@@ -339,7 +339,7 @@ user-select: none;
 {{lines(self.lines)}}
 {{lines(self.wh)}}
 {{lines(self.ind)}}
-    </br>
+    <br/>
 {% endmacro %}
 
 {% macro block_directive(dve) -%}
