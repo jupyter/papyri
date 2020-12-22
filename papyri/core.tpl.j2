@@ -237,9 +237,9 @@ user-select: none;
                 {% if links %}
                     <div class="dropdown">
                         {% for link,name in links -%}
-                            {% if name == p %}
+                            {%- if name == p -%}
                                 <a class="dropbtn" href='{{link}}{{ext}}'>{{p}}</a>{% if not loop.last %}.{% endif %}
-                            {% endif %}
+                            {%- endif -%}
                         {% endfor %}
                         <div class="dropdown-content">
                         {% for link,name in links -%}
