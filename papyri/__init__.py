@@ -15,7 +15,40 @@ logo = r"""
 import typer
 from typing import List
 
-app = typer.Typer()
+app = typer.Typer(
+    help="""
+
+Generate Rich documentation for IPython, Jupyter, and publish online. 
+
+Generating Docs:
+
+    To generate documentation IR for publishing. 
+
+    $ papyri gen numpy
+
+    Will generate in CWD the folder `numpy_$numpyversion`.
+
+Ingesting Docs:
+
+    To crosslink a given set of IR with current existing documentation IRs
+
+    $ papyri ingest numpy_$numpyversion [....]
+
+Generating standalone HTML for all the kown docs
+
+    $ papyri render
+
+To start a server that generate html on the fly
+    
+    $ papyri serve
+
+View w given function docs in text with ansi coloring
+
+    $ papyri ascii numpy.linspace
+
+
+"""
+)
 
 
 def _intro():
@@ -40,7 +73,22 @@ def ingest(paths: List[Path], check: bool = False):
 
 
 @app.command()
-def gen(names: List[str], infer: bool, exec: bool):
+def gen(
+    names: List[str],
+    infer: bool = typer.Option(
+        True, help="Whether to run type inference on code examples."
+    ),
+    exec: bool = typer.Option(
+        False, help="Whether to attempt to execute doctring code."
+    ),
+):
+    """
+    Generate documentation for a given package.
+
+    First item should be the root package to import, if subpackages need to be
+    analyzed  but are not accessible from the root pass them as extra arguments.
+
+    """
     _intro()
     from papyri.gen import gen_main
 
