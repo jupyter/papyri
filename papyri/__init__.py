@@ -3,8 +3,6 @@ Papyri – in progress
 """
 __version__ = "0.0.2"
 
-import click
-
 logo = r"""
   ___                    _ 
  | _ \__ _ _ __ _  _ _ _(_)
@@ -14,46 +12,44 @@ logo = r"""
 """
 
 
-@click.group()
-def main():
+import typer
+from typing import List
+
+app = typer.Typer()
+
+
+def _intro():
     print(logo)
     print(__version__)
 
 
-@click.command()
-@click.argument("paths", type=click.Path(), nargs=-1)
-@click.option("--check/--no-check", default=True)
-def ingest(paths, check):
+def main():
+    app()
+
+
+from pathlib import Path
+
+
+@app.command()
+def ingest(paths: List[Path], check: bool = False):
+    _intro()
     from . import crosslink as cr
-    from pathlib import Path
 
     for p in paths:
         cr.main(Path(p), check)
 
 
-@click.command()
-@click.argument("paths", nargs=-1, type=click.Path())
-@click.option("--check/--no-check", default=True)
-def i(paths, check):
-    from . import crosslink as cr
-    from pathlib import Path
-
-    for p in paths:
-        cr.main(Path(p), check)
-
-
-@click.command()
-@click.argument("names", nargs=-1)
-@click.option("--infer/--no-infer", default=True)
-@click.option("--exec/--no-exec", default=False)
-def gen(names, infer, exec):
+@app.command()
+def gen(names: List[str], infer: bool, exec: bool):
+    _intro()
     from papyri.gen import gen_main
 
     gen_main(names, infer=infer, exec_=exec)
 
 
-@click.command()
+@app.command()
 def render():
+    _intro()
     import trio
 
     from .render import main as m2
@@ -61,9 +57,9 @@ def render():
     trio.run(m2)
 
 
-@click.command()
-@click.argument("name", nargs=1)
-def ascii(name):
+@app.command()
+def ascii(name: str):
+    _intro()
     import trio
 
     from .render import ascii_render
@@ -71,16 +67,17 @@ def ascii(name):
     trio.run(ascii_render, name)
 
 
-@click.command()
+@app.command()
 def serve():
+    _intro()
     from .render import serve
 
     serve()
 
 
-@click.command()
-@click.argument("qualname", required=True)
-def open(qualname):
+@app.command()
+def open(qualname: str):
+    _intro()
     import webbrowser
 
     from .config import html_dir
@@ -92,15 +89,6 @@ def open(qualname):
         sys.exit("No doc for " + qualname + f" ({path})")
     print("opening", str(path))
     webbrowser.get().open("file://" + str(path), new=1)
-
-
-main.add_command(ingest)
-main.add_command(i)
-main.add_command(gen)
-main.add_command(render)
-main.add_command(open)
-main.add_command(ascii)
-main.add_command(serve)
 
 if __name__ == "__main__":
     main()

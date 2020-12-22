@@ -3,7 +3,7 @@ pygments
 there
 rich
 jedi
-click
+typer
 velin
 quart-trio
 flit
