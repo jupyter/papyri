@@ -236,6 +236,9 @@ user-select: none;
             {% for p,links in parts.items() %}
                 {% if links %}
                     <div class="dropdown">
+                        {% if p =='+' %}
+                                <a class="dropbtn" >{{p}}</a>{% if not loop.last %}.{% endif %}
+                        {% endif %}
                         {% for link,name in links -%}
                             {%- if name == p -%}
                                 <a class="dropbtn" href='{{link}}{{ext}}'>{{p}}</a>{% if not loop.last %}.{% endif %}

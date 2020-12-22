@@ -271,9 +271,20 @@ def gen_main(names, infer, exec_):
     else:
         conf = {}
 
+    global_conffile = Path("~/.papyri/config.toml").expanduser()
+    if global_conffile.exists():
+        global_conf = toml.loads(global_conffile.read_text())
+    else:
+        global_conf = {}
+
+    tp = global_conf.get("global", {}).get("target_path", ".")
+
+    target_dir = Path(tp).expanduser()
+
+    print(target_dir)
     g = Gen()
     g.do_one_mod(names, infer, exec_, conf)
-    p = Path(".") / (g.root + "_" + g.version)
+    p = target_dir / (g.root + "_" + g.version)
     p.mkdir(exist_ok=True)
 
     g.clean(p)
