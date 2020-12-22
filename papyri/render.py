@@ -227,6 +227,12 @@ async def _route(ref, store):
 
 
         doc_blob = load_one(bytes_, br)
+        parts_links = {}
+        acc = ""
+        for k in siblings.keys():
+            acc += k
+            parts_links[k] = acc
+            acc += "."
         prepare_doc(doc_blob, ref, all_known_refs)
         return render_one(
             template=template,
@@ -234,6 +240,7 @@ async def _route(ref, store):
             qa=ref,
             ext="",
             parts=siblings,
+            parts_links=parts_links,
             backrefs=doc_blob.backrefs,
             pygment_css=HtmlFormatter(style="pastie").get_style_defs(".highlight"),
         )
@@ -323,7 +330,15 @@ def serve():
 
 
 def render_one(
-    template, doc: IngestedBlobs, qa, ext, *, backrefs, pygment_css=None, parts={}
+    template,
+    doc: IngestedBlobs,
+    qa,
+    ext,
+    *,
+    backrefs,
+    pygment_css=None,
+    parts={},
+    parts_links={},
 ):
     """
     Return the rendering of one document
@@ -368,6 +383,7 @@ def render_one(
             backrefs=backrefs,
             ext=ext,
             parts=parts,
+            parts_links=parts_links,
             pygment_css=pygment_css,
         )
     except Exception as e:
@@ -447,8 +463,13 @@ def prepare_doc(doc_blob, qa, known_refs):
         if type_ == 'text':
             assert len(in_out) == 1, len(in_out)
             for t_, it in in_out[0]:
-                  if it.__class__.__name__ == 'Directive':
-                      it.ref, it.exists = resolve_(qa, known_refs, local_refs)(it.text)
+                if it.__class__.__name__ == "Directive" and it.domain is None:
+                    if it.domain is None and it.role is None:
+                        it.ref, it.exists = resolve_(qa, known_refs, local_refs)(
+                            it.text
+                        )
+                    else:
+                        print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
 
     doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
     # partial lift of paragraph parsing....
@@ -543,6 +564,12 @@ async def main():
         siblings = cs2(qa, tree)
 
         env.globals["unreachable"] = unreachable
+        parts_links = {}
+        acc = ""
+        for k in siblings.keys():
+            acc += k
+            parts_links[k] = acc
+            acc += "."
         prepare_doc(doc_blob, qa, known_refs)
         data = render_one(
             template=template,
@@ -550,6 +577,7 @@ async def main():
             qa=qa,
             ext=".html",
             parts=siblings,
+            parts_links=parts_links,
             backrefs=doc_blob.backrefs,
             pygment_css=css_data,
         )

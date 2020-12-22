@@ -237,13 +237,10 @@ user-select: none;
                 {% if links %}
                     <div class="dropdown">
                         {% if p =='+' %}
-                                <a class="dropbtn" >{{p}}</a>{% if not loop.last %}.{% endif %}
+                            <a class="dropbtn" >{{p}}</a>{% if not loop.last %}.{% endif %}
+                        {% else %}
+                            <a class="dropbtn" href='{{parts_links[p]}}{{ext}}'>{{p}}</a>{% if not loop.last %}.{% endif %}
                         {% endif %}
-                        {% for link,name in links -%}
-                            {%- if name == p -%}
-                                <a class="dropbtn" href='{{link}}{{ext}}'>{{p}}</a>{% if not loop.last %}.{% endif %}
-                            {%- endif -%}
-                        {% endfor %}
                         <div class="dropdown-content">
                         {% for link,name in links -%}
                             <a href="{{link}}{{ext}}">{{name}}</a>
@@ -312,7 +309,7 @@ user-select: none;
         {%- elif obj.exists in ('exists', 'missing') -%}
         <code><a href="{{obj.ref}}{{ext}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
         {% else %}
-            {{unreachable(obj)}}
+            <code>{{obj.text}} (UNHANDLED DIRECTIVE,{{obj.domain}}, {{obj,role}} )</code>
         {%- endif -%}
     {% elif type == 'Math' %}
         <span class="tex2jax_process">${{obj.text}}$</span>
