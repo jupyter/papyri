@@ -1,6 +1,5 @@
 numpydoc
 pygments
-black
 there
 rich
 jedi
