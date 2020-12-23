@@ -479,11 +479,6 @@ def prepare_doc(doc_blob, qa, known_refs):
 
     # partial lift of paragraph parsing....
     # TODO: Move this higher in the ingest
-    for s in sections_:
-        for i, p in enumerate(doc_blob.content[s]):
-            if p[2]:
-                doc_blob.content[s][i] = (p[0], p[1], paragraphs(p[2]))
-
 
     local_refs = []
     for s in sections_:
@@ -493,6 +488,7 @@ def prepare_doc(doc_blob, qa, known_refs):
     ]
 
     def do_paragraph(children, known_refs, local_refs):
+        assert isinstance(children, list)
         new_children = []
         for child in children:
             if child.__class__.__name__ == "Directive":
@@ -529,13 +525,21 @@ def prepare_doc(doc_blob, qa, known_refs):
 
     for s in sections_:
         if s in doc_blob.content:
-            for param,type_, desc in doc_blob.content[s]:
+            assert isinstance(doc_blob.content[s], list)
+            new_content = []
+            for param, type_, desc in doc_blob.content[s]:
+                assert isinstance(desc, list)
                 for line in desc:
+
+                    assert isinstance(line, list), line
                     for t, it in line:
+                        assert not isinstance(it, str)
                         if it.__class__.__name__ == "Directive":
                             it.ref, it.exists = resolve_(
                                 qa, known_refs, local_refs, it.text
                             )
+                new_content.append((param, type_, desc))
+            doc_blob.content[s] = new_content
 
 
 async def main():

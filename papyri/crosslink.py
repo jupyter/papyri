@@ -182,6 +182,11 @@ class IngestedBlobs(DocBlob):
                 "Attributes",
                 "Other Parameters",
             ]
+            for s in sections_:
+                for i, p in enumerate(instance.content[s]):
+                    if p[2]:
+                        instance.content[s][i] = (p[0], p[1], paragraphs(p[2]))
+
             ### dive into the example data, reconstruct the initial code, parse it with pygments,
             # and append the highlighting class as the third element
             # I'm thinking the linking strides should be stored separately as the code
