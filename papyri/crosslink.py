@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .config import ingest_dir
 from .gen import normalise_ref, DocBlob
-from .take2 import Lines, Paragraph, make_block_3, Math, main as t2main, Line
+from .take2 import Lines, Paragraph, make_block_3, Math, main as t2main, Line, Link
 from .utils import progress
 
 from there import print
@@ -79,6 +79,49 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
+def processed_example_data(example_section_data, local_refs, qa):
+    new_example_section_data = []
+    for i, (type_, in_out) in enumerate(example_section_data):
+        if type_ == "code":
+            assert len(in_out) == 3
+
+            in_, out, ce_status = in_out
+            if len(in_[0]) == 2:
+                classes = get_classes("".join([x for x, y in in_]))
+                for ii, cc in zip(in_, classes):
+                    # TODO: Warning here we mutate objects.
+                    ii.append(cc)
+        if type_ == "text":
+            assert len(in_out) == 1, len(in_out)
+            new_io = []
+            for t_, it in in_out[0]:
+                if it.__class__.__name__ == "Directive" and it.domain is None:
+                    if it.domain is None and it.role is None:
+                        ref, exists = resolve_(qa, frozenset(), local_refs, it.text)
+                        if exists != "missing":
+                            t_ = "Link"
+                            it = Link(it.text, ref, exists, exists != "missing")
+                    else:
+                        print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
+                new_io.append((t_, it))
+            in_out = [new_io]
+        new_example_section_data.append((type_, in_out))
+    return new_example_section_data
+
+
+from pygments import lex
+from pygments.lexers import PythonLexer
+from pygments.formatters import HtmlFormatter
+
+
+def get_classes(code):
+    list(lex(code, PythonLexer()))
+    FMT = HtmlFormatter()
+    classes = [FMT.ttype2class.get(x) for x, y in lex(code, PythonLexer())]
+    classes = [c if c is not None else "" for c in classes]
+    return classes
+
+
 class IngestedBlobs(DocBlob):
 
     __slots__ = ("backrefs", "see_also", "version", "logo")
@@ -94,7 +137,7 @@ class IngestedBlobs(DocBlob):
         return super().slots() + ["backrefs", "see_also", "version", "logo"]
 
     @classmethod
-    def from_json(cls, data, rehydrate=True):
+    def from_json(cls, data, rehydrate=True, qa=None):
         instance = super().from_json(data)
         instance.see_also = [
             SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
@@ -105,6 +148,7 @@ class IngestedBlobs(DocBlob):
         # load a DocBlob instaead of un IngestedDocBlob
         # or more likely the paragraph parsing is made in Gen.
         if rehydrate:
+            assert qa is not None
             # rehydrate in the example section paragraphs into their actual
             # instances. This likely should be moved into a specific type of
             # instance in the Parsed Data.
@@ -121,6 +165,7 @@ class IngestedBlobs(DocBlob):
                             "Verbatim",
                             "Directive",
                             "Math",
+                            "Link",
                         }, f"{tt}, {value}"
                         constr = getattr(take2, tt)
                         nval = constr.from_json(value)
@@ -128,6 +173,28 @@ class IngestedBlobs(DocBlob):
 
                     # in_out is a paragraph.
                     instance.example_section_data[i][1] = [new]
+
+            sections_ = [
+                "Parameters",
+                "Returns",
+                "Raises",
+                "Yields",
+                "Attributes",
+                "Other Parameters",
+            ]
+            ### dive into the example data, reconstruct the initial code, parse it with pygments,
+            # and append the highlighting class as the third element
+            # I'm thinking the linking strides should be stored separately as the code
+            # it might be simpler, and more compact.
+            # TODO : move this to ingest.
+            assert qa is not None
+            local_refs = []
+            for s in sections_:
+                local_refs = local_refs + [x[0] for x in instance.content[s] if x[0]]
+            instance.example_section_data = processed_example_data(
+                instance.example_section_data, local_refs, qa
+            )
+
         return instance
 
     def to_json(self):
@@ -142,42 +209,39 @@ def _at_in(q0, known_refs):
     return [q for q in known_refs if q.startswith(q0)]
 
 
-def resolve_(qa: str, known_refs, local_ref):
-    def resolve(ref):
-        if ref.startswith('builtins.'):
-            return ref, 'missing'
-        if ref.startswith('str.'):
-            return ref, 'missing'
-        if ref in {'None','False', 'True'}:
-            return ref, 'missing'
-
-        assert isinstance(ref, str), type(ref)
-        if ref.startswith("~"):
-            ref = ref[1:]
-        if ref in local_ref:
-            return ref, "local"
-        if ref in known_refs:
-            return ref, "exists"
-        else:
-            if ref.startswith("."):
-                if (found := qa + ref) in known_refs:
-                    return found, "exists"
-                else:
-                    return ref, "missing"
-
-            parts = qa.split(".")
-            for i in range(len(parts)):
-                attempt = ".".join(parts[:i]) + "." + ref
-                if attempt in known_refs:
-                    return attempt, "exists"
-
-        q0 = qa.split(".")[0]
-        attempts = [q for q in _at_in(q0, known_refs) if (ref in q)]
-        if len(attempts) == 1:
-            return attempts[0], "exists"
+def resolve_(qa: str, known_refs, local_ref, ref):
+    assert isinstance(ref, str), type(ref)
+    if ref.startswith("builtins."):
+        return ref, "missing"
+    if ref.startswith("str."):
+        return ref, "missing"
+    if ref in {"None", "False", "True"}:
         return ref, "missing"
 
-    return resolve
+    if ref.startswith("~"):
+        ref = ref[1:]
+    if ref in local_ref:
+        return ref, "local"
+    if ref in known_refs:
+        return ref, "exists"
+    else:
+        if ref.startswith("."):
+            if (found := qa + ref) in known_refs:
+                return found, "exists"
+            else:
+                return ref, "missing"
+
+        parts = qa.split(".")
+        for i in range(len(parts)):
+            attempt = ".".join(parts[:i]) + "." + ref
+            if attempt in known_refs:
+                return attempt, "exists"
+
+    q0 = qa.split(".")[0]
+    attempts = [q for q in _at_in(q0, known_refs) if (ref in q)]
+    if len(attempts) == 1:
+        return attempts[0], "exists"
+    return ref, "missing"
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -265,7 +329,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data = json.loads(bytes_)
-    blob = IngestedBlobs.from_json(data)
+    blob = IngestedBlobs.from_json(data, qa=qa)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("example_section_data", None)
@@ -346,7 +410,7 @@ class Ingester:
             ]
             doc_blob.logo = logo
             for ref in doc_blob.refs:
-                resolved, exists = resolve_(qa, known_refs, local_ref)(ref)
+                resolved, exists = resolve_(qa, known_refs, local_ref, ref)
                 pp = False
                 if "Audio" in qa:
                     pp = True
@@ -367,7 +431,9 @@ class Ingester:
                             br = brpath.read_text()
                         else:
                             br = None
-                        nvisited_items[resolved] = load_one(existing_location.read_bytes(), br)
+                        nvisited_items[resolved] = load_one(
+                            existing_location.read_bytes(), br, qa=resolved
+                        )
                         nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
                         phantom_dir = (
@@ -386,7 +452,7 @@ class Ingester:
                         print(resolved, "not valid reference, skipping.")
 
             for sa in doc_blob.see_also:
-                resolved, exists = resolve_(qa, known_refs, [])(sa.name.name)
+                resolved, exists = resolve_(qa, known_refs, [], sa.name.name)
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved

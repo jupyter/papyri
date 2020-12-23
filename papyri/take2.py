@@ -168,6 +168,13 @@ class Link(Node):
         self.kind = kind
         self.exists = exists
 
+    def to_json(self):
+        return [self.value, self.reference, self.kind, self.exists]
+
+    @classmethod
+    def from_json(cls, data):
+        return cls(*data)
+
 
 class Directive(Node):
     def __init__(self, value, domain, role):

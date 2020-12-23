@@ -8,7 +8,14 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from quart_trio import QuartTrio
 
 from .config import html_dir, ingest_dir
-from .crosslink import load_one, resolve_, IngestedBlobs, paragraph, paragraphs, P2
+from .crosslink import (
+    load_one,
+    resolve_,
+    IngestedBlobs,
+    paragraph,
+    paragraphs,
+    P2,
+)
 from .stores import BaseStore, GHStore, Store
 from .take2 import Lines, Paragraph, make_block_3, Link
 from .utils import progress
@@ -45,17 +52,6 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-from pygments import lex
-from pygments.lexers import PythonLexer
-from pygments.formatters import HtmlFormatter
-
-
-def get_classes(code):
-    list(lex(code, PythonLexer()))
-    FMT = HtmlFormatter()
-    classes = [FMT.ttype2class.get(x) for x, y in lex(code, PythonLexer())]
-    classes = [c if c is not None else "" for c in classes]
-    return classes
 
 
 def root():
@@ -180,8 +176,11 @@ def cs2(ref, tree):
         branch = branch[p]
         cpath += p + "."
     return siblings
-    
+
         
+from pygments.formatters import HtmlFormatter
+
+
 async def _route(ref, store):
     assert isinstance(store, BaseStore)
     assert ref != "favicon.ico"
@@ -226,7 +225,7 @@ async def _route(ref, store):
         env.globals["unreachable"] = lambda x: "UNREACHABLELLLLL"+str(x)
 
 
-        doc_blob = load_one(bytes_, br)
+        doc_blob = load_one(bytes_, br, qa=ref)
         parts_links = {}
         acc = ""
         for k in siblings.keys():
@@ -433,6 +432,32 @@ async def ascii_render(name, store=None):
     print(await _ascii_render(name, store))
 
 
+def processed_example_data_nonlocal(example_section_data, known_refs, qa):
+    new_example_section_data = []
+    for i, (type_, in_out) in enumerate(example_section_data):
+        if type_ == "code":
+            assert len(in_out) == 3
+            in_, out, ce_status = in_out
+            assert len(in_[0]) == 3
+        if type_ == "text":
+            assert len(in_out) == 1, len(in_out)
+            new_io = []
+            for t_, it in in_out[0]:
+                if it.__class__.__name__ == "Directive" and it.domain is None:
+                    if it.domain is None and it.role is None:
+                        ref, exists = resolve_(qa, known_refs, frozenset(), it.text)
+                        assert exists != "local"
+                        if exists != "missing":
+                            t_ = "Link"
+                            it = Link(it.text, ref, exists, exists != "missing")
+                    else:
+                        print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
+                new_io.append((t_, it))
+            in_out = [new_io]
+        new_example_section_data.append((type_, in_out))
+    return new_example_section_data
+
+
 def prepare_doc(doc_blob, qa, known_refs):
     assert hash(known_refs)
     sections_ = [
@@ -448,38 +473,10 @@ def prepare_doc(doc_blob, qa, known_refs):
     # I'm thinking the linking strides should be stored separately as the code
     # it might be simpler, and more compact.
     # TODO : move this to ingest.
-    local_refs = []
-    for s in sections_:
-        local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
+    doc_blob.example_section_data = processed_example_data_nonlocal(
+        doc_blob.example_section_data, known_refs, qa=qa
+    )
 
-    new_example_section_data = []
-    for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
-        if type_ == "code":
-            assert len(in_out) == 3
-            in_, out, ce_status = in_out
-            classes = get_classes("".join([x for x, y in in_]))
-            for ii, cc in zip(in_, classes):
-                # TODO: Warning here we mutate objects.
-                ii.append(cc)
-        if type_ == 'text':
-            assert len(in_out) == 1, len(in_out)
-            new_io = []
-            for t_, it in in_out[0]:
-                if it.__class__.__name__ == "Directive" and it.domain is None:
-                    if it.domain is None and it.role is None:
-                        ref, exists = resolve_(qa, known_refs, local_refs)(it.text)
-                        if exists != "missing":
-                            t_ = "Link"
-                            it = Link(it.text, ref, exists, exists != "missing")
-                    else:
-                        print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
-                new_io.append((t_, it))
-            in_out = [new_io]
-        new_example_section_data.append((type_, in_out))
-
-    doc_blob.example_section_data = new_example_section_data
-
-    doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
     # partial lift of paragraph parsing....
     # TODO: Move this higher in the ingest
     for s in sections_:
@@ -488,17 +485,23 @@ def prepare_doc(doc_blob, qa, known_refs):
                 doc_blob.content[s][i] = (p[0], p[1], paragraphs(p[2]))
 
 
-    def do_paragraph(p):
-        assert p
+    local_refs = []
+    for s in sections_:
+        local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
+    doc_blob.refs = [
+        (resolve_(qa, known_refs, local_refs, x), x) for x in doc_blob.refs
+    ]
+
+    def do_paragraph(children, known_refs, local_refs):
         new_children = []
-        for child in p.children:
+        for child in children:
             if child.__class__.__name__ == "Directive":
-                ref, exists = resolve_(qa, known_refs, local_refs)(child.text)
+                ref, exists = resolve_(qa, known_refs, local_refs, child.text)
                 if exists != "missing":
                     t_ = "Link"
                     child = Link(child.text, ref, exists, exists != "missing")
             new_children.append(child)
-        p.children = new_children
+        return new_children
 
     for s in ["Extended Summary", "Summary", "Notes"]:
         if s in doc_blob.content:
@@ -508,9 +511,11 @@ def prepare_doc(doc_blob, qa, known_refs):
                 continue
             for it in P2(data):
                 if it.__class__.__name__ == 'Paragraph':
-                    do_paragraph(it)
-                if it.__class__.__name__ == 'BlockDirective' and it.inner:
-                    do_paragraph(it.inner)
+                    it.children = do_paragraph(it.children, known_refs, local_refs)
+                if it.__class__.__name__ == "BlockDirective" and it.inner:
+                    it.inner.children = do_paragraph(
+                        it.inner.children, known_refs, local_refs
+                    )
                 res.append((it.__class__.__name__, it))
             doc_blob.content[s] = res
 
@@ -520,15 +525,18 @@ def prepare_doc(doc_blob, qa, known_refs):
         for dsc in d.descriptions:
             for t,it in dsc:
                 if it.__class__.__name__ == 'Directive':
-                    it.ref, it.exists = resolve_(qa, known_refs, local_refs)(it.text)
+                    it.ref, it.exists = resolve_(qa, known_refs, local_refs, it.text)
 
     for s in sections_:
         if s in doc_blob.content:
             for param,type_, desc in doc_blob.content[s]:
                 for line in desc:
-                    for t,it in line:
-                        if it.__class__.__name__ == 'Directive':
-                            it.ref, it.exists = resolve_(qa, known_refs, local_refs)(it.text)
+                    for t, it in line:
+                        if it.__class__.__name__ == "Directive":
+                            it.ref, it.exists = resolve_(
+                                qa, known_refs, local_refs, it.text
+                            )
+
 
 async def main():
     store = Store(ingest_dir)
@@ -570,7 +578,7 @@ async def main():
                 br = await brpath.read_text()
             else:
                 br = None
-            doc_blob: IngestedBlobs = load_one(bytes_, br)
+            doc_blob: IngestedBlobs = load_one(bytes_, br, qa=qa)
 
         except Exception as e:
             raise RuntimeError(f"error with {document}") from e
