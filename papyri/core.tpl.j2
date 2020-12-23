@@ -305,11 +305,22 @@ user-select: none;
         {{-obj.value-}}
     {%- elif type == 'Directive' -%}
         {%- if obj.exists=='local' -%}
+            {#{unreachable(obj.__dict__)}#}
             <code><a href="#{{obj.ref}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
         {%- elif obj.exists in ('exists', 'missing') -%}
-        <code><a href="{{obj.ref}}{{ext}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
+            <code><a href="{{obj.ref}}{{ext}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
         {% else %}
             <code>{{obj.text}} (UNHANDLED DIRECTIVE,{{obj.domain}}, {{obj,role}} )</code>
+            {#{unreachable(obj.__dict__)}#}
+        {%- endif -%}
+    {%- elif type == 'Link' -%}
+        {# Links have : value, reference, kind exists#}
+        {%- if obj.kind=='local' -%}
+            <code><a link href="#{{obj.reference}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
+        {%- elif obj.kind in ('exists', ) -%}
+            <code><a link href="{{obj.ref}}{{ext}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
+        {% else %}
+            {{unreachable(obj.__dict__)}}
         {%- endif -%}
     {% elif type == 'Math' %}
         <span class="tex2jax_process">${{obj.text}}$</span>

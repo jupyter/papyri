@@ -10,13 +10,13 @@ from quart_trio import QuartTrio
 from .config import html_dir, ingest_dir
 from .crosslink import load_one, resolve_, IngestedBlobs, paragraph, paragraphs, P2
 from .stores import BaseStore, GHStore, Store
-from .take2 import Lines, Paragraph, make_block_3
+from .take2 import Lines, Paragraph, make_block_3, Link
 from .utils import progress
 from collections import OrderedDict
 
 
-def unreachable(obj):
-    assert False, f"Unreachable: {obj}"
+def unreachable(*obj):
+    assert False, f"Unreachable: {obj=}"
 
 class CleanLoader(FileSystemLoader):
     """
@@ -451,8 +451,9 @@ def prepare_doc(doc_blob, qa, known_refs):
     local_refs = []
     for s in sections_:
         local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
-        
-    for i, (type_, (in_out)) in enumerate(doc_blob.example_section_data):
+
+    new_example_section_data = []
+    for i, (type_, in_out) in enumerate(doc_blob.example_section_data):
         if type_ == "code":
             assert len(in_out) == 3
             in_, out, ce_status = in_out
@@ -462,14 +463,21 @@ def prepare_doc(doc_blob, qa, known_refs):
                 ii.append(cc)
         if type_ == 'text':
             assert len(in_out) == 1, len(in_out)
+            new_io = []
             for t_, it in in_out[0]:
                 if it.__class__.__name__ == "Directive" and it.domain is None:
                     if it.domain is None and it.role is None:
-                        it.ref, it.exists = resolve_(qa, known_refs, local_refs)(
-                            it.text
-                        )
+                        ref, exists = resolve_(qa, known_refs, local_refs)(it.text)
+                        if exists != "missing":
+                            t_ = "Link"
+                            it = Link(it.text, ref, exists, exists != "missing")
                     else:
                         print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
+                new_io.append((t_, it))
+            in_out = [new_io]
+        new_example_section_data.append((type_, in_out))
+
+    doc_blob.example_section_data = new_example_section_data
 
     doc_blob.refs = [(resolve_(qa, known_refs, local_refs)(x), x) for  x in doc_blob.refs]
     # partial lift of paragraph parsing....
@@ -481,10 +489,16 @@ def prepare_doc(doc_blob, qa, known_refs):
 
 
     def do_paragraph(p):
-         assert p
-         for child in p.children:
-             if child.__class__.__name__ == 'Directive':
-                 child.ref, child.exists = resolve_(qa, known_refs, local_refs)(child.text)
+        assert p
+        new_children = []
+        for child in p.children:
+            if child.__class__.__name__ == "Directive":
+                ref, exists = resolve_(qa, known_refs, local_refs)(child.text)
+                if exists != "missing":
+                    t_ = "Link"
+                    child = Link(child.text, ref, exists, exists != "missing")
+            new_children.append(child)
+        p.children = new_children
 
     for s in ["Extended Summary", "Summary", "Notes"]:
         if s in doc_blob.content:
@@ -570,19 +584,22 @@ async def main():
             acc += k
             parts_links[k] = acc
             acc += "."
-        prepare_doc(doc_blob, qa, known_refs)
-        data = render_one(
-            template=template,
-            doc=doc_blob,
-            qa=qa,
-            ext=".html",
-            parts=siblings,
-            parts_links=parts_links,
-            backrefs=doc_blob.backrefs,
-            pygment_css=css_data,
-        )
-        with (html_dir / f"{qa}.html").open("w") as f:
-            f.write(data)
+        try:
+            prepare_doc(doc_blob, qa, known_refs)
+            data = render_one(
+                template=template,
+                doc=doc_blob,
+                qa=qa,
+                ext=".html",
+                parts=siblings,
+                parts_links=parts_links,
+                backrefs=doc_blob.backrefs,
+                pygment_css=css_data,
+            )
+            with (html_dir / f"{qa}.html").open("w") as f:
+                f.write(data)
+        except Exception as e:
+            raise type(e)(f"Error in {qa}") from e
 
     assets = store.glob("*/assets/*")
     for asset in assets:

@@ -142,6 +142,33 @@ class Verbatim(Node):
         return RED("``" + "".join(self.value) + "``")
 
 
+class Link(Node):
+    """
+    Links are usually the end goal of a directive,
+    they are a way to link to another document.
+    They contain a text; which will be what the user will see,
+    as well as a reference to the document pointed to.
+    They should also have an attribute to know whether the link is a
+     - Local item (same document)
+     - Internal item (same module)
+     - External item (another module)
+     - Web : a url to another page non papyri aware.
+     - Exist: bool wether the thing they point to exists.
+
+
+    - I'm wondering if those should be descendant of directive not to lose information and be able to reconsruct the
+    directive from it.
+    - A Link might get several token for multiline; I'm not sure about that either, and wether the inner text should be
+      a block or not.
+    """
+
+    def __init__(self, value, reference, kind, exists):
+        self.value = value
+        self.reference = reference
+        self.kind = kind
+        self.exists = exists
+
+
 class Directive(Node):
     def __init__(self, value, domain, role):
         self.value = value
