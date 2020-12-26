@@ -458,6 +458,18 @@ def processed_example_data_nonlocal(example_section_data, known_refs, qa):
     return new_example_section_data
 
 
+def do_paragraph(children, known_refs, local_refs, qa):
+    assert isinstance(children, list)
+    new_children = []
+    for child in children:
+        if child.__class__.__name__ == "Directive":
+            ref, exists = resolve_(qa, known_refs, local_refs, child.text)
+            if exists != "missing":
+                t_ = "Link"
+                child = Link(child.text, ref, exists, exists != "missing")
+        new_children.append(child)
+    return new_children
+
 def prepare_doc(doc_blob, qa, known_refs):
     assert hash(known_refs)
     sections_ = [
@@ -483,37 +495,26 @@ def prepare_doc(doc_blob, qa, known_refs):
     local_refs = []
     for s in sections_:
         local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
+
     doc_blob.refs = [
         (resolve_(qa, known_refs, local_refs, x), x) for x in doc_blob.refs
     ]
 
-    def do_paragraph(children, known_refs, local_refs):
-        assert isinstance(children, list)
-        new_children = []
-        for child in children:
-            if child.__class__.__name__ == "Directive":
-                ref, exists = resolve_(qa, known_refs, local_refs, child.text)
-                if exists != "missing":
-                    t_ = "Link"
-                    child = Link(child.text, ref, exists, exists != "missing")
-            new_children.append(child)
-        return new_children
 
-    for s in ["Extended Summary", "Summary", "Notes"]:
-        if s in doc_blob.content:
-            data = doc_blob.content[s]
+    for section in ["Extended Summary", "Summary", "Notes"]:
+        if section in doc_blob.content:
+            data = doc_blob.content[section]
             res = []
-            if not data:
-                continue
-            for it in P2(data):
+            assert isinstance(data, list)
+            for it in data:
                 if it.__class__.__name__ == 'Paragraph':
-                    it.children = do_paragraph(it.children, known_refs, local_refs)
+                    it.children = do_paragraph(it.children, known_refs, local_refs, qa)
                 if it.__class__.__name__ == "BlockDirective" and it.inner:
                     it.inner.children = do_paragraph(
-                        it.inner.children, known_refs, local_refs
+                        it.inner.children, known_refs, local_refs, qa
                     )
                 res.append((it.__class__.__name__, it))
-            doc_blob.content[s] = res
+            doc_blob.content[section] = res
 
     for d in doc_blob.see_also:
         assert isinstance(d.descriptions, list), qa

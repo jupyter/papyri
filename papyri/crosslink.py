@@ -8,6 +8,7 @@ from pathlib import Path
 from .config import ingest_dir
 from .gen import normalise_ref, DocBlob
 from .take2 import Lines, Paragraph, make_block_3, Math, main as t2main, Line, Link
+from . import take2 as take2
 from .utils import progress
 
 from there import print
@@ -44,7 +45,7 @@ def P2(lines) -> List[Any]:
         else:
             assert "\n" not in l._line
     acc = []
-    assert lines
+    assert lines, lines
     blocks_data = t2main("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
@@ -154,7 +155,6 @@ class IngestedBlobs(DocBlob):
             # instance in the Parsed Data.
             for i, (type_, (in_out)) in enumerate(instance.example_section_data):
                 if type_ == "text":
-                    from . import take2 as take2
 
                     assert isinstance(in_out, list), repr(in_out)
                     # assert len(in_out) == 1, f"{len(in_out)}"
@@ -199,6 +199,11 @@ class IngestedBlobs(DocBlob):
             instance.example_section_data = processed_example_data(
                 instance.example_section_data, local_refs, qa
             )
+
+            for section in ["Extended Summary", "Summary", "Notes"]:
+                if section in instance.content:
+                    if data := instance.content[section]:
+                        instance.content[section] = P2(data)
 
         return instance
 
@@ -296,6 +301,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:
         assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
+    blob.see_also = list(set(blob.see_also))
 
     # here we parse the example_section_data text paragraph into their
     # detailed representation of tokens this will simplify finding references
@@ -321,7 +327,6 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
             assert isinstance(in_out, list), repr(in_out)
             # assert len(in_out) == 1, f"{repr(in_out)}"
 
-    blob.see_also = list(set(blob.see_also))
     try:
         notes = blob.content["Notes"]
         if notes:
