@@ -29,11 +29,11 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
     for c in p.children:
         if type(c).__name__ == "Directive":
             if c.role == "math":
-                acc.append(("Math", Math(c.value)))
+                acc.append(Math(c.value))
             else:
-                acc.append((type(c).__name__, c))
+                acc.append(c)
         else:
-            acc.append((type(c).__name__, c))
+            acc.append(c)
     return acc
 
 
@@ -95,16 +95,15 @@ def processed_example_data(example_section_data, local_refs, qa):
         if type_ == "text":
             assert len(in_out) == 1, len(in_out)
             new_io = []
-            for t_, it in in_out[0]:
+            for it in in_out[0]:
                 if it.__class__.__name__ == "Directive" and it.domain is None:
                     if it.domain is None and it.role is None:
                         ref, exists = resolve_(qa, frozenset(), local_refs, it.text)
                         if exists != "missing":
-                            t_ = "Link"
                             it = Link(it.text, ref, exists, exists != "missing")
                     else:
                         print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
-                new_io.append((t_, it))
+                new_io.append(it)
             in_out = [new_io]
         new_example_section_data.append((type_, in_out))
     return new_example_section_data
@@ -169,7 +168,7 @@ class IngestedBlobs(DocBlob):
                         }, f"{tt}, {value}"
                         constr = getattr(take2, tt)
                         nval = constr.from_json(value)
-                        new.append((tt, nval))
+                        new.append(nval)
 
                     # in_out is a paragraph.
                     instance.example_section_data[i][1] = [new]

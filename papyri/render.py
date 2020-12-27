@@ -220,10 +220,11 @@ async def _route(ref, store):
             br = await brpath.read_text()
         else:
             br = None
-        all_known_refs = frozenset({str(x.name)[:-5] for x in store.glob("*/module/*.json")})
-        #env.globals["unreachable"] = unreachable
-        env.globals["unreachable"] = lambda x: "UNREACHABLELLLLL"+str(x)
-
+        all_known_refs = frozenset(
+            {str(x.name)[:-5] for x in store.glob("*/module/*.json")}
+        )
+        # env.globals["unreachable"] = unreachable
+        env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
         doc_blob = load_one(bytes_, br, qa=ref)
         parts_links = {}
@@ -442,7 +443,8 @@ def processed_example_data_nonlocal(example_section_data, known_refs, qa):
         if type_ == "text":
             assert len(in_out) == 1, len(in_out)
             new_io = []
-            for t_, it in in_out[0]:
+            for it in in_out[0]:
+                assert not isinstance(it, tuple), it
                 if it.__class__.__name__ == "Directive" and it.domain is None:
                     if it.domain is None and it.role is None:
                         ref, exists = resolve_(qa, known_refs, frozenset(), it.text)
@@ -452,7 +454,7 @@ def processed_example_data_nonlocal(example_section_data, known_refs, qa):
                             it = Link(it.text, ref, exists, exists != "missing")
                     else:
                         print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
-                new_io.append((t_, it))
+                new_io.append(it)
             in_out = [new_io]
         new_example_section_data.append((type_, in_out))
     return new_example_section_data
@@ -519,7 +521,7 @@ def prepare_doc(doc_blob, qa, known_refs):
         assert isinstance(d.descriptions, list), qa
         d.descriptions = paragraphs(d.descriptions)
         for dsc in d.descriptions:
-            for t,it in dsc:
+            for it in dsc:
                 if it.__class__.__name__ == 'Directive':
                     it.ref, it.exists = resolve_(qa, known_refs, local_refs, it.text)
     for s in sections_:
@@ -531,7 +533,7 @@ def prepare_doc(doc_blob, qa, known_refs):
                 for line in desc:
 
                     assert isinstance(line, list), line
-                    for t, it in line:
+                    for it in line:
                         assert not isinstance(it, str)
                         if it.__class__.__name__ == "Directive":
                             it.ref, it.exists = resolve_(
@@ -596,6 +598,10 @@ async def main():
             parts_links[k] = acc
             acc += "."
         try:
+            for (type_, in_out) in doc_blob.example_section_data:
+                if type_ == "text":
+                    for it in in_out[0]:
+                        assert not isinstance(it, tuple), it
             prepare_doc(doc_blob, qa, known_refs)
             data = render_one(
                 template=template,

@@ -334,8 +334,8 @@ user-select: none;
 {% macro render_paragraph(prgs) -%}
 {% for prg in prgs %}
         <p>
-            {%- for type,obj in prg -%}
-                {{- render_inner(type, obj) -}} 
+            {%- for obj in prg -%}
+                {{- render_inner(obj.__class__.__name__, obj) -}} 
             {%- endfor -%}
         </p>
     {%- endfor %}
@@ -397,6 +397,7 @@ user-select: none;
            {{block(obj)}}
        {% else %}
            <code>Some {{type}} Not implemented yet</code>
+           {{unreachable(type, obj)}}
            {%- for l in obj.lines -%}
 {{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
            {%- endfor -%}</pre><pre>
