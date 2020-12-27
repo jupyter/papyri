@@ -458,17 +458,13 @@ def processed_example_data_nonlocal(example_section_data, known_refs, qa):
     return new_example_section_data
 
 
-def do_paragraph(children, known_refs, local_refs, qa):
-    assert isinstance(children, list)
-    new_children = []
-    for child in children:
-        if child.__class__.__name__ == "Directive":
-            ref, exists = resolve_(qa, known_refs, local_refs, child.text)
-            if exists != "missing":
-                t_ = "Link"
-                child = Link(child.text, ref, exists, exists != "missing")
-        new_children.append(child)
-    return new_children
+def do_span(span, known_refs, local_refs, qa):
+    if span.__class__.__name__ == "Directive":
+        ref, exists = resolve_(qa, known_refs, local_refs, span.text)
+        if exists != "missing":
+            t_ = "Link"
+            span = Link(span.text, ref, exists, exists != "missing")
+    return span
 
 def prepare_doc(doc_blob, qa, known_refs):
     assert hash(known_refs)
@@ -504,15 +500,18 @@ def prepare_doc(doc_blob, qa, known_refs):
     for section in ["Extended Summary", "Summary", "Notes"]:
         if section in doc_blob.content:
             data = doc_blob.content[section]
-            res = []
             assert isinstance(data, list)
+            res = []
             for it in data:
-                if it.__class__.__name__ == 'Paragraph':
-                    it.children = do_paragraph(it.children, known_refs, local_refs, qa)
+                if it.__class__.__name__ == "Paragraph":
+                    it.children = [
+                        do_span(c, known_refs, local_refs, qa) for c in it.children
+                    ]
                 if it.__class__.__name__ == "BlockDirective" and it.inner:
-                    it.inner.children = do_paragraph(
-                        it.inner.children, known_refs, local_refs, qa
-                    )
+                    it.inner.children = [
+                        do_span(c, known_refs, local_refs, qa)
+                        for c in it.inner.children
+                    ]
                 res.append((it.__class__.__name__, it))
             doc_blob.content[section] = res
 
@@ -523,7 +522,6 @@ def prepare_doc(doc_blob, qa, known_refs):
             for t,it in dsc:
                 if it.__class__.__name__ == 'Directive':
                     it.ref, it.exists = resolve_(qa, known_refs, local_refs, it.text)
-
     for s in sections_:
         if s in doc_blob.content:
             assert isinstance(doc_blob.content[s], list)

@@ -80,7 +80,91 @@ BOLD = lambda x: "\033[1m" + x + "\033[0m"
 UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 
-class Node:
+base_types = {int, str, bool}
+
+from typing import List, Union
+
+
+class Base:
+    @classmethod
+    def _deserialise(cls, **kwargs):
+        instance = cls()
+        for k, v in kwargs.items():
+            setattr(instance, k, v)
+        return instance
+
+
+def hashable(v):
+    try:
+        hash(v)
+        return True
+    except TypeError:
+        return False
+
+
+def serialize(instance, annotation):
+    if (annotation in base_types) and (isinstance(instance, annotation)):
+        return instance
+    elif getattr(annotation, "__origin__", None) is list and isinstance(instance, list):
+        inner_annotation = annotation.__args__
+        assert len(inner_annotation) == 1, inner_annotation
+        return [serialize(x, inner_annotation[0]) for x in instance]
+    elif getattr(annotation, "__origin__", None) is Union:
+
+        inner_annotation = annotation.__args__
+        assert type(instance) in inner_annotation
+        ma = [x for x in inner_annotation if type(instance) is x]
+        assert len(ma) == 1
+        ann_ = ma[0]
+        return {"type": ann_.__name__, "data": serialize(instance, ann_)}
+    elif (
+        isinstance(instance, Base)
+        and (instance.__class__.__name__ == getattr(annotation, "_name", None))
+        or type(instance) == annotation
+    ):
+        data = {}
+        for k, v in instance.__annotations__.items():
+            data[k] = serialize(getattr(instance, k), v)
+        return data
+
+    else:
+        assert False, f"{instance}, {annotation}, {annotation._name}"
+
+
+# type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
+def deserialize(type_, annotation, data):
+    if (
+        hashable(annotation)
+        and (annotation in base_types)
+        and (isinstance(data, annotation))
+    ):
+        return data
+    elif getattr(annotation, "__origin__", None) is list and isinstance(data, list):
+        inner_annotation = annotation.__args__
+        assert len(inner_annotation) == 1, inner_annotation
+        return [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
+    elif getattr(annotation, "__origin__", None) is Union:
+        inner_annotation = annotation.__args__
+        real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
+        assert len(real_type) == 1
+        real_type = real_type[0]
+        return deserialize(real_type, real_type.__annotations__, data["data"])
+    elif (
+        type(type_) == Base
+        and (type_.__name__ == getattr(annotation, "_name", None))
+        or type(data) == dict
+    ):
+        loc = {}
+        for k, v in type_.__annotations__.items():
+            loc[k] = deserialize(v, v, data[k])
+        print(type_, loc)
+        return type_._deserialise(**loc)
+
+    else:
+        assert False, f"{instance}, {annotation}, {annotation._name}"
+
+
+class Node(Base):
     def __init__(self, value):
         self.value = value
 
@@ -295,7 +379,13 @@ class FirstCombinator:
         return None
 
 
-class Paragraph:
+class Section(Node):
+    pass
+
+
+class Paragraph(Node):
+
+    __slots__ = ["children", "width"]
 
     children: List[Node]
 
