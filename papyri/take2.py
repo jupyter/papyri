@@ -55,10 +55,12 @@ format, it's likely the way to go.
 Unless your use case is widely adopted it is likely not worse the complexity
 """
 
+from __future__ import annotations
 import sys
 from typing import List
 
 from papyri.gen import dedent_but_first
+from there import print
 
 ex = """
 For the most part, direct use of the object-oriented library is encouraged when
@@ -80,15 +82,21 @@ BOLD = lambda x: "\033[1m" + x + "\033[0m"
 UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 
-base_types = {int, str, bool}
+base_types = {int, str, bool, type(None)}
 
 from typing import List, Union
+from typing import get_type_hints
 
 
 class Base:
     @classmethod
+    def _instance(cls):
+        return cls()
+
+    @classmethod
     def _deserialise(cls, **kwargs):
-        instance = cls()
+        # print("will deserialise", cls)
+        instance = cls._instance()
         for k, v in kwargs.items():
             setattr(instance, k, v)
         return instance
@@ -103,6 +111,7 @@ def hashable(v):
 
 
 def serialize(instance, annotation):
+    # print("will serialise", type(instance), "as", annotation)
     if (annotation in base_types) and (isinstance(instance, annotation)):
         return instance
     elif getattr(annotation, "__origin__", None) is list and isinstance(instance, list):
@@ -112,7 +121,9 @@ def serialize(instance, annotation):
     elif getattr(annotation, "__origin__", None) is Union:
 
         inner_annotation = annotation.__args__
-        assert type(instance) in inner_annotation
+        assert (
+            type(instance) in inner_annotation
+        ), f"{type(instance)} not in {inner_annotation}"
         ma = [x for x in inner_annotation if type(instance) is x]
         assert len(ma) == 1
         ann_ = ma[0]
@@ -123,23 +134,28 @@ def serialize(instance, annotation):
         or type(instance) == annotation
     ):
         data = {}
-        for k, v in instance.__annotations__.items():
+        for k, v in get_type_hints(type(instance)).items():
             data[k] = serialize(getattr(instance, k), v)
+        assert data
         return data
 
     else:
-        assert False, f"{instance}, {annotation}, {annotation._name}"
+        assert False, f"{instance}, {annotation}"
 
 
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
 def deserialize(type_, annotation, data):
+    if data != 0:
+        assert data != {}
+    assert annotation != {}
+    assert annotation is not dict
     if (
         hashable(annotation)
         and (annotation in base_types)
         and (isinstance(data, annotation))
     ):
         return data
-    elif getattr(annotation, "__origin__", None) is list and isinstance(data, list):
+    if getattr(annotation, "__origin__", None) is list and isinstance(data, list):
         inner_annotation = annotation.__args__
         assert len(inner_annotation) == 1, inner_annotation
         return [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
@@ -148,25 +164,38 @@ def deserialize(type_, annotation, data):
         real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
         assert len(real_type) == 1
         real_type = real_type[0]
-        return deserialize(real_type, real_type.__annotations__, data["data"])
+        return deserialize(real_type, real_type, data["data"])
     elif (
         type(type_) == Base
         and (type_.__name__ == getattr(annotation, "_name", None))
         or type(data) == dict
     ):
         loc = {}
-        for k, v in type_.__annotations__.items():
-            loc[k] = deserialize(v, v, data[k])
-        print(type_, loc)
+        new_ann = get_type_hints(type_).items()
+        assert new_ann
+        for k, v in new_ann:
+            assert k in data.keys(), f"{data}, {k}"
+            if data[k] != 0:
+                assert data[k] != {}, f"{data}, {k}, {type_}"
+            intermediate = deserialize(v, v, data[k])
+            assert intermediate != {}, f"{v}, {data}, {k}"
+            loc[k] = intermediate
         return type_._deserialise(**loc)
 
     else:
-        assert False, f"{instance}, {annotation}, {annotation._name}"
+        assert False, f"{type_}, {annotation!r}"
 
 
 class Node(Base):
     def __init__(self, value):
         self.value = value
+
+    def __eq__(self, other):
+        return (type(self) == type(other)) and (self.value == other.value)
+
+    @classmethod
+    def _instance(cls):
+        return cls(value=None)
 
     @classmethod
     def parse(cls, tokens):
@@ -261,12 +290,21 @@ class Link(Node):
 
 
 class Directive(Node):
+
+    value: List[str]
+    domain: Union[str, None]
+    role: Union[str, None]
+
     def __init__(self, value, domain, role):
         self.value = value
         self.domain = domain
         if domain:
             assert role
         self.role = role
+
+    @classmethod
+    def _instance(cls):
+        return cls("", "", "")
 
     @property
     def text(self):
@@ -341,6 +379,12 @@ class Math(Node):
 
 
 class Word(Node):
+    value: str
+
+    @classmethod
+    def _instance(cls):
+        return cls("")
+
     def __repr__(self):
         return UNDERLINE(self.value)
 
@@ -387,11 +431,18 @@ class Paragraph(Node):
 
     __slots__ = ["children", "width"]
 
-    children: List[Node]
+    children: List[Union[Paragraph, Word, Directive]]
 
     def __init__(self, children, width=80):
         self.children = children
         self.width = width
+
+    def __eq__(self, other):
+        return (type(self) == type(other)) and (self.children == other.children)
+
+    @classmethod
+    def _instance(cls):
+        return cls([])
 
     @classmethod
     def parse_lines(cls, lines):
@@ -587,7 +638,7 @@ def make_block_3(lines: "Lines"):
     return blocks
 
 
-class Block:
+class Block(Node):
     """
     The following is wrong for some case, in particular if there are many paragraph in a row with 0 indent.
     we can't ignore blank lines.
@@ -675,13 +726,29 @@ class Section:
 # wrapper around handling lines
 
 
-class Line:
+class Line(Node):
+
+    _line: str
+    _number: int
+    _offset: int
+
     def __init__(self, line, number, offset=0):
         assert isinstance(line, str)
         assert "\n" not in line, line
         self._line = line
         self._number = number
         self._offset = offset
+
+    def __eq__(self, other):
+        for attr in ["_line", "_number", "_offset"]:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+
+        return type(self) == type(other)
+
+    @classmethod
+    def _instance(cls):
+        return cls("", 0)
 
     @property
     def text(self):
@@ -704,7 +771,10 @@ class Line:
         return len(self._line) - len(self._line.lstrip()) - self._offset
 
 
-class Lines:
+class Lines(Node):
+
+    _lines: List[Line]
+
     def __init__(self, lines):
         assert isinstance(lines, (list, Lines))
         for l in lines:
@@ -717,6 +787,13 @@ class Lines:
         self._lines = [
             l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(lines)
         ]
+
+    def __eq__(self, other):
+        return (type(self) == type(other)) and (self._lines == other._lines)
+
+    @classmethod
+    def _instance(cls):
+        return cls([])
 
     def __iter__(self):
         return iter(self._lines)
@@ -841,9 +918,19 @@ class BlockDirective(Block):
 
 
 class BlockVerbatim(Block):
+
+    lines: Lines
+
     def __init__(self, lines):
 
         self.lines = lines
+
+    def __eq__(self, other):
+        return (type(self) == type(other)) and (self.lines == other.lines)
+
+    @classmethod
+    def _instance(cls):
+        return cls("")
 
     def __repr__(self):
         return type(self).COLOR(
