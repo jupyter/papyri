@@ -395,6 +395,11 @@ user-select: none;
            {%- endfor -%}</pre>
        {% elif type == 'Block' %}
            {{block(obj)}}
+           {{unreachable(obj)}}
+       {% elif type == 'DefListItem' %}
+           {{block(obj)}}
+       {% elif type == 'Example' %}
+           {{block(obj)}}
        {% else %}
            <code>Some {{type}} Not implemented yet</code>
            {{unreachable(type, obj)}}

@@ -390,12 +390,11 @@ def render_one(
         raise ValueError("qa=", qa) from e
 
 
-async def _ascii_render(name, store=None):
-    if store is None:
-        store = Store(ingest_dir)
-    ref = name
-    root = name.split(".")[0]
+from functools import lru_cache
 
+
+@lru_cache
+def _ascci_env():
     env = Environment(
         loader=CleanLoader(os.path.dirname(__file__)),
         lstrip_blocks=True,
@@ -403,9 +402,20 @@ async def _ascii_render(name, store=None):
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
-    template = env.get_template("ascii.tpl.j2")
+    return env
 
-    known_refs = frozenset({x.name[:-5] for x in store.glob("*/module/*.json")})
+
+async def _ascii_render(name, store, known_refs=None):
+    if store is None:
+        store = Store(ingest_dir)
+    ref = name
+    root = name.split(".")[0]
+
+    env = _ascci_env()
+
+    template = env.get_template("ascii.tpl.j2")
+    if known_refs is None:
+        known_refs = frozenset({x.name[:-5] for x in store.glob("*/module/*.json")})
     bytes_ = await (store / root / "module" / f"{ref}.json").read_text()
     brpath = store / root / "module" / f"{ref}.br"
     if await brpath.exists():
@@ -413,8 +423,7 @@ async def _ascii_render(name, store=None):
     else:
         br = None
 
-
-    # TODO : move this to ingest.
+    ## TODO : move this to ingest.
     env.globals["unreachable"] = unreachable
     
     doc_blob = load_one(bytes_, br, qa=name)
@@ -575,6 +584,8 @@ async def main():
         ):
             assert False, document.name
         qa = document.name[:-5]
+        # help to keep ascii bug free.
+        await _ascii_render(qa, store, known_refs=known_refs)
         root = qa.split(".")[0]
         try:
             bytes_ = await document.read_text()

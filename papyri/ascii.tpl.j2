@@ -78,7 +78,7 @@
 
 {%- macro render_paragraph(prgs) -%}
    |{% for prg in prgs %}
-   |   |{%- for type,obj in prg -%}
+   |   |{%- for obj in prg -%}
    |   |   |{%- if type == 'Word' -%}
    |   |   |    {{- obj.value -}}
    |   |   |{%- elif type == 'Directive' %}
@@ -90,12 +90,12 @@
    |   |   |        {{-unreachable()-}}
    |   |   |        {{-red(obj.text)-}}
    |   |   |    {% endif %}
-   |   |   |{% elif type == 'Math' %}
+   |   |   |{% elif obj.__class__.__name__ == 'Math' %}
    |   |   |    ${{obj.text}}$
-   |   |   |{% elif type == 'Verbatim' %}
+   |   |   |{% elif obj.__class__.__name__ == 'Verbatim' %}
    |   |   |    {{-yellow(obj.text)-}}
    |   |   |{% else %}
-   |   |   |    Some {{type}}
+   |   |   |    Some {{obj.__class__.__name__}}
    |   |   |{%- endif -%}
    |   |{%- endfor -%}
    |{%- endfor -%}
