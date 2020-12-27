@@ -416,7 +416,7 @@ async def _ascii_render(name, store=None):
     # TODO : move this to ingest.
     env.globals["unreachable"] = unreachable
     
-    doc_blob = load_one(bytes_, br)
+    doc_blob = load_one(bytes_, br, qa=name)
     prepare_doc(doc_blob, ref, known_refs)
     return render_one(
         template=template,
