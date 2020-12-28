@@ -101,49 +101,7 @@ def parse_script(script, ns=None, infer=None, prev=""):
     warnings.simplefilter("default", UserWarning)
 
 
-class Section(Node):
-    children: List[Union[Code, Text]]
-
-    def __init__(self, children=None):
-        if children is None:
-            children = []
-        self.children = children
-
-    def __getitem__(self, k):
-        return self.children[k]
-
-    def __setitem__(self, k, v):
-        self.children[k] = v
-
-    def __iter__(self):
-        return iter(self.children)
-
-    def append(self, item):
-        self.children.append(item)
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.children}>"
-
-
-class Code(Node):
-    entries: List[Tuple[Optional[str]]]
-    out: str
-    ce_status: str
-
-    def __init__(self, entries=None, out=None, ce_status=None):
-        self.entries = entries
-        self.out = out
-        self.ce_status = ce_status
-
-
-class Text(Node):
-    value: str
-    pass
-
-
-class Fig(Node):
-    pass
-
+from .take2 import Section, Code, Text, Fig
 
 def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None):
     """Extract example section data from a NumpyDocstring

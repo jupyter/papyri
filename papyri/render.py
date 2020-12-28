@@ -17,7 +17,7 @@ from .crosslink import (
     P2,
 )
 from .stores import BaseStore, GHStore, Store
-from .take2 import Lines, Paragraph, make_block_3, Link, Node
+from .take2 import Lines, Paragraph, make_block_3, Link, Node, Section
 from .utils import progress
 from collections import OrderedDict
 
@@ -443,7 +443,7 @@ async def ascii_render(name, store=None):
 
 
 def processed_example_data_nonlocal(example_section_data, known_refs, qa):
-    new_example_section_data = []
+    new_example_section_data = Section()
     for i, (type_, in_out) in enumerate(example_section_data):
         if type_ == "code":
             assert len(in_out) == 3

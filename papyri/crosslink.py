@@ -16,6 +16,7 @@ from .take2 import (
     Line,
     Link,
     Node,
+    Section,
 )
 from . import take2 as take2
 from .utils import progress
@@ -90,19 +91,22 @@ def paragraphs(lines) -> List[Any]:
 
 
 def processed_example_data(example_section_data, local_refs, qa):
-    new_example_section_data = []
-    for i, (type_, in_out) in enumerate(example_section_data):
-        if type_ == "code":
-            assert len(in_out) == 3
+    new_example_section_data = Section()
+    for i, in_out in enumerate(example_section_data):
+        type_ = in_out.__class__.__name__
+        if type_ == "Code":
 
-            in_, out, ce_status = in_out
+            in_, out, ce_status = in_out.entries, in_out.out, in_out.ce_status
+            new_in = []
             if len(in_[0]) == 2:
                 classes = get_classes("".join([x for x, y in in_]))
                 for ii, cc in zip(in_, classes):
                     # TODO: Warning here we mutate objects.
-                    ii.append(cc)
-        if type_ == "text":
+                    new_in.append(ii + (cc,))
+                in_out.entries = new_in
+        if type_ == "Text":
             assert len(in_out) == 1, len(in_out)
+            assert False, "Todo, need to implement parsing this to paragraaphs."
             new_io = []
             for it in in_out[0]:
                 if it.__class__.__name__ == "Directive" and it.domain is None:
@@ -114,7 +118,7 @@ def processed_example_data(example_section_data, local_refs, qa):
                         print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
                 new_io.append(it)
             in_out = [new_io]
-        new_example_section_data.append((type_, in_out))
+        new_example_section_data.append(in_out)
     return new_example_section_data
 
 
@@ -146,86 +150,110 @@ class IngestedBlobs(DocBlob):
         return super().slots() + ["backrefs", "see_also", "version", "logo"]
 
     @classmethod
-    def from_json(cls, data, rehydrate, qa=None):
+    def from_json(cls, data, qa=None):
         instance = super().from_json(data)
         instance.see_also = [
             SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
         ]
         for d in instance.see_also:
             assert isinstance(d.descriptions, list), qa
+
         # Todo: remove this; hopefully the logic from load_one_uningested
         # load a DocBlob instaead of un IngestedDocBlob
         # or more likely the paragraph parsing is made in Gen.
-        if rehydrate:
-            assert qa is not None
-            # rehydrate in the example section paragraphs into their actual
-            # instances. This likely should be moved into a specific type of
-            # instance in the Parsed Data.
-            for i, (type_, (in_out)) in enumerate(instance.example_section_data):
-                if type_ == "text":
-                    assert in_out, in_out
+        assert isinstance(instance.example_section_data, dict), type(
+            instance.example_section_data
+        )
+        assert qa is not None
+        sec = Section.from_json(instance.example_section_data)
+        new_sec = Section()
 
-                    assert isinstance(in_out, list), repr(in_out)
-                    # assert len(in_out) == 1, f"{len(in_out)}"
-                    new = []
-                    for value in in_out[0]:
-                        tt = type(value)
-                        assert tt in {
-                            "Word",
-                            "Verbatim",
-                            "Directive",
-                            "Math",
-                            "Link",
-                        }, f"{tt}, {value}"
-                        constr = getattr(take2, tt)
-                        nval = constr.from_json(value)
-                        new.append(nval)
+        for in_out in sec:
+            type_ = in_out.__class__.__name__
+            assert type_ in ("Code", "Text", "Fig"), f"{type_}, {in_out}"
+            if type_ == "Text":
+                pass
+                # !!! MOVE This To GEN ?
+                # assert isinstance(in_out, str), repr(in_out)
+                # ps = paragraphs(in_out.split("\n"))
+                # blob.example_section_data[i][1] = ps
+                # for ps in in_out:
+                #    for p in ps:
+                #        assert p.__class__.__name__ in {
+                #            "Word",
+                #            "Verbatim",
+                #            "Directive",
+                #            "Math",
+                #        }, f"{p[0]}, {qa}"
+            else:
+                new_sec.append(in_out)
+        instance.example_section_data = new_sec
+        # rehydrate in the example section paragraphs into their actual
+        # instances. This likely should be moved into a specific type of
+        # instance in the Parsed Data.
+        for i, in_out in enumerate(instance.example_section_data):
+            type_ = in_out.__class__.__name__
+            assert type_ in ("Text", "Code", "Fig"), in_out
+            if type_ == "Text":
+                assert not in_out.value
+                assert in_out, in_out
 
-                    # in_out is a paragraph.
-                    instance.example_section_data[i][1] = [new]
+                assert isinstance(in_out, list), repr(in_out)
+                # assert len(in_out) == 1, f"{len(in_out)}"
+                new = []
+                for value in in_out[0]:
+                    tt = type(value)
+                    assert False
+                    assert tt in {
+                        "Word",
+                        "Verbatim",
+                        "Directive",
+                        "Math",
+                        "Link",
+                    }, f"{tt}, {value}"
+                    constr = getattr(take2, tt)
+                    nval = constr.from_json(value)
+                    new.append(nval)
 
-            sections_ = [
-                "Parameters",
-                "Returns",
-                "Raises",
-                "Yields",
-                "Attributes",
-                "Other Parameters",
-            ]
-            # for s in sections_:
-            #    #for i, p in enumerate(instance.content[s]):
-            #    #    if p[2]:
-            #    #        instance.content[s][i] = (p[0], p[1], paragraphs(p[2]))
+                # in_out is a paragraph.
+                instance.example_section_data[i][1] = [new]
 
-            ### dive into the example data, reconstruct the initial code, parse it with pygments,
-            # and append the highlighting class as the third element
-            # I'm thinking the linking strides should be stored separately as the code
-            # it might be simpler, and more compact.
-            # TODO : move this to ingest.
-            assert qa is not None
-            local_refs = []
-            for s in sections_:
-                local_refs = local_refs + [x[0] for x in instance.content[s] if x[0]]
-            instance.example_section_data = processed_example_data(
-                instance.example_section_data, local_refs, qa
-            )
+        sections_ = [
+            "Parameters",
+            "Returns",
+            "Raises",
+            "Yields",
+            "Attributes",
+            "Other Parameters",
+        ]
+        # for s in sections_:
+        #    #for i, p in enumerate(instance.content[s]):
+        #    #    if p[2]:
+        #    #        instance.content[s][i] = (p[0], p[1], paragraphs(p[2]))
 
-            for section in ["Extended Summary", "Summary", "Notes"]:
-                if section in instance.content:
-                    if data := instance.content[section]:
-                        instance.content[section] = P2(data)
-                        for d in instance.content[section]:
-                            assert isinstance(d, take2.Node), f"{d}, {type(d)}"
+        ### dive into the example data, reconstruct the initial code, parse it with pygments,
+        # and append the highlighting class as the third element
+        # I'm thinking the linking strides should be stored separately as the code
+        # it might be simpler, and more compact.
+        # TODO : move this to ingest.
+        assert qa is not None
+        local_refs = []
+        for s in sections_:
+            local_refs = local_refs + [x[0] for x in instance.content[s] if x[0]]
+        instance.example_section_data = processed_example_data(
+            instance.example_section_data, local_refs, qa
+        )
+
+        #        for section in ["Extended Summary", "Summary", "Notes"]:
+        #            if section in instance.content:
+        #                if data := instance.content[section]:
+        #                    instance.content[section] = Section(P2(data))
+        #                    for d in instance.content[section]:
+        #                        assert isinstance(d, take2.Node), f"{d}, {type(d)}"
 
         return instance
 
     def to_json(self):
-        # for i, (type_, in_out) in enumerate(self.example_section_data):
-        #    if type_ == "text":
-        #        assert isinstance(in_out, list), repr(in_out)
-        #        for element in in_out:
-        #            for e in element:
-        #                assert isinstance(e, Node), f"{e}, {type(e)}"
         data = super().to_json()
         return data
 
@@ -289,7 +317,18 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     Load the json from a DocBlob and make it an ingested blob.
     """
     data = json.loads(bytes_)
-    blob = IngestedBlobs.from_json(data, rehydrate=False)
+
+    instance = DocBlob.from_json(data)
+
+    blob = IngestedBlobs()
+    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
+    for d in blob.see_also:
+        assert isinstance(d.descriptions, list), qa
+
+    for k in instance.slots():
+        setattr(blob, k, getattr(instance, k))
+
+    # blob = IngestedBlobs.from_json(data, rehydrate=False)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("example_section_data", None)
@@ -330,10 +369,10 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
 
     for in_out in sec:
         type_ = in_out.__class__.__name__
-        assert type_ in ("Code", "Text"), f"{type_}, {in_out}"
+        assert type_ in ("Code", "Text", "Fig"), f"{type_}, {in_out}"
         if type_ == "Text":
             pass
-            # !!! MOVE ThIS To GEN ?
+            # !!! MOVE This To GEN ?
             # assert isinstance(in_out, str), repr(in_out)
             # ps = paragraphs(in_out.split("\n"))
             # blob.example_section_data[i][1] = ps
@@ -356,13 +395,19 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
             blob.refs.extend(Paragraph.parse_lines(notes).references)
     except KeyError:
         pass
+    for section in ["Extended Summary", "Summary", "Notes"]:
+        if section in instance.content:
+            if data := instance.content[section]:
+                instance.content[section] = Section(P2(data))
+                for d in instance.content[section]:
+                    assert isinstance(d, take2.Node), f"{d}, {type(d)}"
     blob.refs = list(sorted(set(blob.refs)))
     return blob
 
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data = json.loads(bytes_)
-    blob = IngestedBlobs.from_json(data, qa=qa, rehydrate=True)
+    blob = IngestedBlobs.from_json(data, qa=qa)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("example_section_data", None)
@@ -465,11 +510,14 @@ class Ingester:
                         else:
                             br = None
                         print(existing_location)
-                        nvisited_items[resolved] = load_one(
-                            existing_location.read_bytes(),
-                            br,
-                            qa=resolved,
-                        )
+                        try:
+                            nvisited_items[resolved] = load_one(
+                                existing_location.read_bytes(),
+                                br,
+                                qa=resolved,
+                            )
+                        except Exception as e:
+                            raise type(e)(f"Error in {qa} {existing_location}")
                         nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
                         phantom_dir = (

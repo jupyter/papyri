@@ -57,7 +57,7 @@ Unless your use case is widely adopted it is likely not worse the complexity
 
 from __future__ import annotations
 import sys
-from typing import List
+from typing import List, Tuple, Optional, Union
 
 from papyri.gen import dedent_but_first
 from there import print
@@ -115,45 +115,56 @@ def hashable(v):
 
 def serialize(instance, annotation):
     # print("will serialise", type(instance), "as", annotation)
-    if (annotation in base_types) and (isinstance(instance, annotation)):
-        return instance
-    elif getattr(annotation, "__origin__", None) is tuple and isinstance(
-        instance, tuple
-    ):
-        # this may be slightly incorrect as usually tuple as positionally type dependant.
-        inner_annotation = annotation.__args__
-        assert len(inner_annotation) == 1, inner_annotation
-        return tuple(serialize(x, inner_annotation[0]) for x in instance)
-    elif getattr(annotation, "__origin__", None) is list and isinstance(instance, list):
-        inner_annotation = annotation.__args__
-        assert len(inner_annotation) == 1, inner_annotation
-        return [serialize(x, inner_annotation[0]) for x in instance]
-    elif getattr(annotation, "__origin__", None) is Union:
+    try:
+        if (annotation in base_types) and (isinstance(instance, annotation)):
+            return instance
+        elif getattr(annotation, "__origin__", None) is tuple and isinstance(
+            instance, tuple
+        ):
+            # this may be slightly incorrect as usually tuple as positionally type dependant.
+            inner_annotation = annotation.__args__
+            assert len(inner_annotation) == 1, inner_annotation
+            return tuple(serialize(x, inner_annotation[0]) for x in instance)
+        elif getattr(annotation, "__origin__", None) is list and isinstance(
+            instance, list
+        ):
+            inner_annotation = annotation.__args__
+            assert len(inner_annotation) == 1, inner_annotation
+            return [serialize(x, inner_annotation[0]) for x in instance]
+        elif getattr(annotation, "__origin__", None) is Union:
 
-        inner_annotation = annotation.__args__
-        if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
-            # here we are optional; we _likely_ can avoid doing the union trick and store just the type, or null
-            pass
-        assert (
-            type(instance) in inner_annotation
-        ), f"{type(instance)} not in {inner_annotation}"
-        ma = [x for x in inner_annotation if type(instance) is x]
-        assert len(ma) == 1
-        ann_ = ma[0]
-        return {"type": ann_.__name__, "data": serialize(instance, ann_)}
-    elif (
-        isinstance(instance, Base)
-        and (instance.__class__.__name__ == getattr(annotation, "_name", None))
-        or type(instance) == annotation
-    ):
-        data = {}
-        for k, v in get_type_hints(type(instance)).items():
-            data[k] = serialize(getattr(instance, k), v)
-        assert data, instance
-        return data
+            inner_annotation = annotation.__args__
+            if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
+                # here we are optional; we _likely_ can avoid doing the union trick and store just the type, or null
+                pass
+            assert (
+                type(instance) in inner_annotation
+            ), f"{type(instance)} not in {inner_annotation}, {instance}"
+            ma = [x for x in inner_annotation if type(instance) is x]
+            assert len(ma) == 1
+            ann_ = ma[0]
+            return {"type": ann_.__name__, "data": serialize(instance, ann_)}
+        elif (
+            isinstance(instance, Base)
+            and (instance.__class__.__name__ == getattr(annotation, "_name", None))
+            or type(instance) == annotation
+        ):
+            data = {}
+            for k, v in get_type_hints(type(instance)).items():
+                data[k] = serialize(getattr(instance, k), v)
+            assert (
+                data
+            ), f"Error serializing {instance=}, of type {type(instance)}, no data found. Did you type annotate?"
+            return data
 
-    else:
-        assert False, f"{instance}, {annotation}"
+        else:
+            assert (
+                False
+            ), f"Error serializing {instance}, expected  {annotation}, got {type(instance)}"
+    except Exception as e:
+        raise type(e)(
+            f"Error serialising {instance}, expecting {annotation}, got {type(instance)}"
+        ) from e
 
 
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
@@ -185,9 +196,9 @@ def deserialize(type_, annotation, data):
         real_type = real_type[0]
         return deserialize(real_type, real_type, data["data"])
     elif (
-        type(type_) == Base
+        issubclass(type_, Base)
         and (type_.__name__ == getattr(annotation, "_name", None))
-        or type(data) == dict
+        or type(data) is dict
     ):
         loc = {}
         new_ann = get_type_hints(type_).items()
@@ -202,7 +213,7 @@ def deserialize(type_, annotation, data):
         return type_._deserialise(**loc)
 
     else:
-        assert False, f"{type_}, {annotation!r}"
+        assert False, f"{type_}, {annotation!r}, {data}"
 
 
 class Node(Base):
@@ -247,6 +258,8 @@ class Node(Base):
 
 
 class Verbatim(Node):
+    value: List[str]
+
     def __init__(self, value):
         self.value = value
 
@@ -432,9 +445,66 @@ class FirstCombinator:
         return None
 
 
-class Section(Node):
-    pass
+from typing import get_type_hints
 
+class Section(Node):
+    children: List[
+        Union[
+            Code,
+            Text,
+            Fig,
+            Paragraph,
+            DefListItem,
+            BlockDirective,
+            Example,
+            BlockVerbatim,
+        ]
+    ]
+
+    def __init__(self, children=None):
+        if children is None:
+            children = []
+        self.children = children
+        tt = get_type_hints(type(self))["children"].__args__[0].__args__
+        for c in children:
+            assert isinstance(c, tt), f"{c} not in {tt}"
+
+    def __getitem__(self, k):
+        return self.children[k]
+
+    def __setitem__(self, k, v):
+        self.children[k] = v
+
+    def __iter__(self):
+        return iter(self.children)
+
+    def append(self, item):
+        self.children.append(item)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.children}>"
+
+
+class Code(Node):
+    entries: List[Tuple[Optional[str]]]
+    out: str
+    ce_status: str
+
+    def __init__(self, entries=None, out=None, ce_status=None):
+        self.entries = entries
+        self.out = out
+        self.ce_status = ce_status
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
+
+
+class Text(Node):
+    value: str
+
+
+class Fig(Node):
+    value: str
 
 class Paragraph(Node):
 
@@ -701,35 +771,35 @@ class BlockError(Block):
         return cls(block.lines, block.wh, block.ind)
 
 
-class Section:
-    """
-    A section start (or not) with a header.
-
-    And have a body
-    """
-
-    def __init__(self, lines):
-        self.lines = lines
-
-    @property
-    def header(self):
-        if is_at_header(self.lines):
-            return self.lines[0:2]
-        else:
-            return None, None
-
-    @property
-    def body(self):
-        if is_at_header(self.lines):
-            return make_blocks_2(self.lines[2:])
-        else:
-            return make_blocks_2(self.lines)
-
-    def __repr__(self):
-        return (
-            f"<Section header='{self.header[0]}' body-len='{len(self.lines)}'> with\n"
-            + indent("\n".join([str(b) for b in self.body]) + "...END\n\n", "    |")
-        )
+# class Section:
+#    """
+#    A section start (or not) with a header.
+#
+#    And have a body
+#    """
+#
+#    def __init__(self, lines):
+#        self.lines = lines
+#
+#    @property
+#    def header(self):
+#        if is_at_header(self.lines):
+#            return self.lines[0:2]
+#        else:
+#            return None, None
+#
+#    @property
+#    def body(self):
+#        if is_at_header(self.lines):
+#            return make_blocks_2(self.lines[2:])
+#        else:
+#            return make_blocks_2(self.lines)
+#
+#    def __repr__(self):
+#        return (
+#            f"<Section header='{self.header[0]}' body-len='{len(self.lines)}'> with\n"
+#            + indent("\n".join([str(b) for b in self.body]) + "...END\n\n", "    |")
+#        )
 
 
 # wrapper around handling lines
@@ -907,6 +977,13 @@ class Header:
 
 
 class BlockDirective(Block):
+    lines: Lines
+    wh: Lines
+    ind: Lines
+
+    directive_name: str
+    args0: List[str]
+    inner: Optional[Paragraph]
     COLOR = ORANGE
 
     def __init__(self, lines, wh, ind):
@@ -951,10 +1028,18 @@ class BlockVerbatim(Block):
         return serialize(self, type(self))
 
 class DefListItem(Block):
+    lines: Lines
+    wh: Lines
+    ind: Lines
+
     COLOR = BLUE
 
 
 class Example(Block):
+    lines: Lines
+    wh: Lines
+    ind: Lines
+
     COLOR = GREEN
 
 
