@@ -17,7 +17,7 @@ from .crosslink import (
     P2,
 )
 from .stores import BaseStore, GHStore, Store
-from .take2 import Lines, Paragraph, make_block_3, Link
+from .take2 import Lines, Paragraph, make_block_3, Link, Node
 from .utils import progress
 from collections import OrderedDict
 
@@ -523,7 +523,8 @@ def prepare_doc(doc_blob, qa, known_refs):
                         do_span(c, known_refs, local_refs, qa)
                         for c in it.inner.children
                     ]
-                res.append((it.__class__.__name__, it))
+                assert isinstance(it, Node), f"{it=}, {type(it)}"
+                res.append(it)
             doc_blob.content[section] = res
 
     for d in doc_blob.see_also:

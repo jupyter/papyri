@@ -7,7 +7,16 @@ from pathlib import Path
 
 from .config import ingest_dir
 from .gen import normalise_ref, DocBlob
-from .take2 import Lines, Paragraph, make_block_3, Math, main as t2main, Line, Link
+from .take2 import (
+    Lines,
+    Paragraph,
+    make_block_3,
+    Math,
+    main as t2main,
+    Line,
+    Link,
+    Node,
+)
 from . import take2 as take2
 from .utils import progress
 
@@ -137,7 +146,7 @@ class IngestedBlobs(DocBlob):
         return super().slots() + ["backrefs", "see_also", "version", "logo"]
 
     @classmethod
-    def from_json(cls, data, rehydrate=True, qa=None):
+    def from_json(cls, data, rehydrate, qa=None):
         instance = super().from_json(data)
         instance.see_also = [
             SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
@@ -154,11 +163,13 @@ class IngestedBlobs(DocBlob):
             # instance in the Parsed Data.
             for i, (type_, (in_out)) in enumerate(instance.example_section_data):
                 if type_ == "text":
+                    assert in_out, in_out
 
                     assert isinstance(in_out, list), repr(in_out)
                     # assert len(in_out) == 1, f"{len(in_out)}"
                     new = []
-                    for tt, value in in_out[0]:
+                    for value in in_out[0]:
+                        tt = type(value)
                         assert tt in {
                             "Word",
                             "Verbatim",
@@ -181,10 +192,10 @@ class IngestedBlobs(DocBlob):
                 "Attributes",
                 "Other Parameters",
             ]
-            for s in sections_:
-                for i, p in enumerate(instance.content[s]):
-                    if p[2]:
-                        instance.content[s][i] = (p[0], p[1], paragraphs(p[2]))
+            # for s in sections_:
+            #    #for i, p in enumerate(instance.content[s]):
+            #    #    if p[2]:
+            #    #        instance.content[s][i] = (p[0], p[1], paragraphs(p[2]))
 
             ### dive into the example data, reconstruct the initial code, parse it with pygments,
             # and append the highlighting class as the third element
@@ -203,13 +214,18 @@ class IngestedBlobs(DocBlob):
                 if section in instance.content:
                     if data := instance.content[section]:
                         instance.content[section] = P2(data)
+                        for d in instance.content[section]:
+                            assert isinstance(d, take2.Node), f"{d}, {type(d)}"
 
         return instance
 
     def to_json(self):
-        for i, (type_, in_out) in enumerate(self.example_section_data):
-            if type_ == "text":
-                assert isinstance(in_out, list), repr(in_out)
+        # for i, (type_, in_out) in enumerate(self.example_section_data):
+        #    if type_ == "text":
+        #        assert isinstance(in_out, list), repr(in_out)
+        #        for element in in_out:
+        #            for e in element:
+        #                assert isinstance(e, Node), f"{e}, {type(e)}"
         data = super().to_json()
         return data
 
@@ -307,24 +323,32 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     # at ingestion time.
     # we also need to move this step at generation time,as we (likely), want to
     # do some local pre-processing of the references to already do some resolutions.
-    for i, (type_, in_out) in enumerate(blob.example_section_data):
-        if type_ == "text":
-            assert isinstance(in_out, str), repr(in_out)
-            ps = paragraphs(in_out.split("\n"))
-            blob.example_section_data[i][1] = ps
-            for ps in blob.example_section_data[i][1]:
-                for p in ps:
-                    assert p[0] in {
-                        "Word",
-                        "Verbatim",
-                        "Directive",
-                        "Math",
-                    }, f"{p[0]}, {qa}"
+    from .gen import Section
 
-    for i, (type_, in_out) in enumerate(blob.example_section_data):
-        if type_ == "text":
-            assert isinstance(in_out, list), repr(in_out)
-            # assert len(in_out) == 1, f"{repr(in_out)}"
+    sec = Section.from_json(blob.example_section_data)
+    new_sec = Section()
+
+    for in_out in sec:
+        type_ = in_out.__class__.__name__
+        assert type_ in ("Code", "Text"), f"{type_}, {in_out}"
+        if type_ == "Text":
+            pass
+            # !!! MOVE ThIS To GEN ?
+            # assert isinstance(in_out, str), repr(in_out)
+            # ps = paragraphs(in_out.split("\n"))
+            # blob.example_section_data[i][1] = ps
+            # for ps in in_out:
+            #    for p in ps:
+            #        assert p.__class__.__name__ in {
+            #            "Word",
+            #            "Verbatim",
+            #            "Directive",
+            #            "Math",
+            #        }, f"{p[0]}, {qa}"
+        else:
+            new_sec.append(in_out)
+    blob.example_section_data = new_sec
+
 
     try:
         notes = blob.content["Notes"]
@@ -338,7 +362,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data = json.loads(bytes_)
-    blob = IngestedBlobs.from_json(data, qa=qa)
+    blob = IngestedBlobs.from_json(data, qa=qa, rehydrate=True)
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("example_section_data", None)
@@ -440,8 +464,11 @@ class Ingester:
                             br = brpath.read_text()
                         else:
                             br = None
+                        print(existing_location)
                         nvisited_items[resolved] = load_one(
-                            existing_location.read_bytes(), br, qa=resolved
+                            existing_location.read_bytes(),
+                            br,
+                            qa=resolved,
                         )
                         nvisited_items[resolved].backrefs.append(qa)
                     elif "/" not in resolved:

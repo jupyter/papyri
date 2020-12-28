@@ -9,7 +9,7 @@ from functools import lru_cache
 
 # from numpydoc.docscrape import NumpyDocString
 from types import FunctionType, ModuleType
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional, Union
 
 import jedi
 from pygments.lexers import PythonLexer
@@ -17,7 +17,7 @@ from rich.progress import (
     BarColumn,
     Progress,
     ProgressColumn,
-    Text,
+    Text as RichText,
     TextColumn,
 )
 from there import print
@@ -28,6 +28,8 @@ from numpydoc.docscrape import Parameter
 from .utils import pos_to_nl, dedent_but_first, progress
 
 from pathlib import Path
+
+from .take2 import Node
 
 
 def parse_script(script, ns=None, infer=None, prev=""):
@@ -99,7 +101,48 @@ def parse_script(script, ns=None, infer=None, prev=""):
     warnings.simplefilter("default", UserWarning)
 
 
-counter = 0
+class Section(Node):
+    children: List[Union[Code, Text]]
+
+    def __init__(self, children=None):
+        if children is None:
+            children = []
+        self.children = children
+
+    def __getitem__(self, k):
+        return self.children[k]
+
+    def __setitem__(self, k, v):
+        self.children[k] = v
+
+    def __iter__(self):
+        return iter(self.children)
+
+    def append(self, item):
+        self.children.append(item)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.children}>"
+
+
+class Code(Node):
+    entries: List[Tuple[Optional[str]]]
+    out: str
+    ce_status: str
+
+    def __init__(self, entries=None, out=None, ce_status=None):
+        self.entries = entries
+        self.out = out
+        self.ce_status = ce_status
+
+
+class Text(Node):
+    value: str
+    pass
+
+
+class Fig(Node):
+    pass
 
 
 def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None):
@@ -125,7 +168,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     if not config:
         config = {}
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
-    example_section_data = []
+    example_section_data = Section()
     import matplotlib
     import matplotlib.pyplot as plt
     from matplotlib import _pylab_helpers, cbook
@@ -136,6 +179,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     acc = ""
     import numpy as np
 
+    counter = 0
     ns = {"np": np, "plt": plt, obj.__name__: obj}
     figs = []
     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
@@ -172,7 +216,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                         ):
                             raise_in_fig = True
 
-                            global counter
                             counter += 1
                             figman = next(iter(fig_managers))
 
@@ -207,14 +250,17 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                         # raise
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
+                # example_section_data.append(
+                #    ["code", (entries, "\n".join(item.out), ce_status)]
+                # )
                 example_section_data.append(
-                    ["code", (entries, "\n".join(item.out), ce_status)]
+                    Code(entries, "\n".join(item.out), ce_status)
                 )
                 if figname:
-                    example_section_data.append(["fig", figname])
+                    example_section_data.append(Fig(figname))
             else:
                 assert isinstance(item.out, list)
-                example_section_data.append(["text", "\n".join(item.out)])
+                example_section_data.append(Text("\n".join(item.out)))
 
     # TODO fix this if plt.close not called and still a ligering figure.
     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
@@ -311,15 +357,17 @@ class TimeElapsedColumn(ProgressColumn):
     # Only refresh twice a second to prevent jitter
     max_refresh = 0.5
 
-    def render(self, task) -> Text:
+    def render(self, task) -> RichText:
         """Show time remaining."""
         from datetime import timedelta
 
         ctime = task.fields.get("ctime", None)
         if ctime is None:
-            return Text("-:--:--", style="progress.remaining")
+            return RichText("-:--:--", style="progress.remaining")
         ctime_delta = timedelta(seconds=int(ctime))
-        return Text(str(ctime_delta), style="progress.remaining", overflow="ellipsis")
+        return RichText(
+            str(ctime_delta), style="progress.remaining", overflow="ellipsis"
+        )
 
 
 def full_qual(obj):
@@ -508,7 +556,7 @@ class DocBlob:
     item_line: Optional[int]
     item_type: Optional[str]
     aliases: dict
-    example_section_data: list
+    example_section_data: List
 
     __slots__ = (
         "_content",
@@ -578,7 +626,12 @@ class DocBlob:
 
     def to_json(self):
 
-        res = {k: getattr(self, k, "") for k in self.slots()}
+        res = {
+            k: getattr(self, k, "")
+            for k in self.slots()
+            if k not in {"example_section_data"}
+        }
+        res["example_section_data"] = self.example_section_data.to_json()
 
         return res
 
@@ -727,9 +780,9 @@ class Gen:
         ndoc.refs = list(
             {
                 u[1]
-                for t_, sect in ndoc.example_section_data
-                if t_ == "code"
-                for u in sect[0]
+                for span in ndoc.example_section_data
+                if span.__class__.__name__ == "Code"
+                for u in span.entries
                 if u[1]
             }
         )

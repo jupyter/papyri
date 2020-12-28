@@ -96,7 +96,10 @@ class Base:
     @classmethod
     def _deserialise(cls, **kwargs):
         # print("will deserialise", cls)
-        instance = cls._instance()
+        try:
+            instance = cls._instance()
+        except Exception as e:
+            raise type(e)(f"Error deserialising {cls}, {kwargs})") from e
         for k, v in kwargs.items():
             setattr(instance, k, v)
         return instance
@@ -114,6 +117,13 @@ def serialize(instance, annotation):
     # print("will serialise", type(instance), "as", annotation)
     if (annotation in base_types) and (isinstance(instance, annotation)):
         return instance
+    elif getattr(annotation, "__origin__", None) is tuple and isinstance(
+        instance, tuple
+    ):
+        # this may be slightly incorrect as usually tuple as positionally type dependant.
+        inner_annotation = annotation.__args__
+        assert len(inner_annotation) == 1, inner_annotation
+        return tuple(serialize(x, inner_annotation[0]) for x in instance)
     elif getattr(annotation, "__origin__", None) is list and isinstance(instance, list):
         inner_annotation = annotation.__args__
         assert len(inner_annotation) == 1, inner_annotation
@@ -121,6 +131,9 @@ def serialize(instance, annotation):
     elif getattr(annotation, "__origin__", None) is Union:
 
         inner_annotation = annotation.__args__
+        if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
+            # here we are optional; we _likely_ can avoid doing the union trick and store just the type, or null
+            pass
         assert (
             type(instance) in inner_annotation
         ), f"{type(instance)} not in {inner_annotation}"
@@ -136,7 +149,7 @@ def serialize(instance, annotation):
         data = {}
         for k, v in get_type_hints(type(instance)).items():
             data[k] = serialize(getattr(instance, k), v)
-        assert data
+        assert data, instance
         return data
 
     else:
@@ -155,7 +168,13 @@ def deserialize(type_, annotation, data):
         and (isinstance(data, annotation))
     ):
         return data
-    if getattr(annotation, "__origin__", None) is list and isinstance(data, list):
+    if getattr(annotation, "__origin__", None) is tuple and isinstance(data, list):
+        inner_annotation = annotation.__args__
+        assert len(inner_annotation) == 1, inner_annotation
+        return tuple(
+            [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
+        )
+    elif getattr(annotation, "__origin__", None) is list and isinstance(data, list):
         inner_annotation = annotation.__args__
         assert len(inner_annotation) == 1, inner_annotation
         return [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
@@ -187,7 +206,7 @@ def deserialize(type_, annotation, data):
 
 
 class Node(Base):
-    def __init__(self, value):
+    def __init__(self, value=None):
         self.value = value
 
     def __eq__(self, other):
@@ -195,7 +214,7 @@ class Node(Base):
 
     @classmethod
     def _instance(cls):
-        return cls(value=None)
+        return cls()
 
     @classmethod
     def parse(cls, tokens):
@@ -220,11 +239,11 @@ class Node(Base):
         return f"<{self.__class__.__name__}: {self.value}>"
 
     def to_json(self):
-        return self.value
+        return serialize(self, type(self))
 
     @classmethod
     def from_json(cls, data):
-        return cls(data)
+        return deserialize(cls, cls, data)
 
 
 class Verbatim(Node):
@@ -275,19 +294,16 @@ class Link(Node):
       a block or not.
     """
 
+    value: str
+    reference: str
+    kind: str
+    exists: bool
+
     def __init__(self, value, reference, kind, exists):
         self.value = value
         self.reference = reference
         self.kind = kind
         self.exists = exists
-
-    def to_json(self):
-        return [self.value, self.reference, self.kind, self.exists]
-
-    @classmethod
-    def from_json(cls, data):
-        return cls(*data)
-
 
 class Directive(Node):
 
@@ -364,13 +380,6 @@ class Directive(Node):
         # prefix = ''
         return GREEN(prefix) + HEADER("`" + "".join(self.value) + "`")
 
-    def to_json(self):
-        return [self.value, self.domain, self.role]
-
-    @classmethod
-    def from_json(cls, data):
-        return cls(*data)
-
 
 class Math(Node):
     @property
@@ -431,7 +440,7 @@ class Paragraph(Node):
 
     __slots__ = ["children", "width"]
 
-    children: List[Union[Paragraph, Word, Directive]]
+    children: List[Union[Paragraph, Word, Directive, Verbatim]]
 
     def __init__(self, children, width=80):
         self.children = children
@@ -938,6 +947,8 @@ class BlockVerbatim(Block):
             + indent("\n".join([str(l) for l in self.lines]), "    ")
         )
 
+    def to_json(self):
+        return serialize(self, type(self))
 
 class DefListItem(Block):
     COLOR = BLUE

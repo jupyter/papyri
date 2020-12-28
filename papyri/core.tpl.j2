@@ -377,7 +377,8 @@ user-select: none;
 
 
 {% macro render_II(prgs) -%}
-    {% for type,obj in prgs %}
+    {% for obj in prgs.children %}
+    {%- set type = obj.__class__.__name__ -%}
        {%- if type == 'Directive' -%}
            {{obj}}
        {% elif type == 'Math' %}
