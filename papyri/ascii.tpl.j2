@@ -78,27 +78,35 @@
 
 
 {%- macro render_paragraph(prgs) -%}
+   |{% if not prgs.__class__.__name__ ==  'list' %}
+   |{{ unreachable('Not a list') }}
+   |{% endif %}
    |{% for prg in prgs %}
-   |   |{%- for obj in prg -%}
-   |   |   |{%- if type == 'Word' -%}
-   |   |   |    {{- obj.value -}}
-   |   |   |{%- elif type == 'Directive' %}
-   |   |   |    {% if obj.exists=='local' %}
-   |   |   |        {{-green(obj.text)-}}
-   |   |   |    {% elif obj.exists=='exists' %}
-   |   |   |        {{-blue(obj.text)-}}
-   |   |   |    {% else %}
-   |   |   |        {{-unreachable()-}}
-   |   |   |        {{-red(obj.text)-}}
-   |   |   |    {% endif %}
-   |   |   |{% elif obj.__class__.__name__ == 'Math' %}
-   |   |   |    ${{obj.text}}$
-   |   |   |{% elif obj.__class__.__name__ == 'Verbatim' %}
-   |   |   |    {{-yellow(obj.text)-}}
-   |   |   |{% else %}
-   |   |   |    Some {{obj.__class__.__name__}}
-   |   |   |{%- endif -%}
-   |   |{%- endfor -%}
+   |   |{% if prg.__class__.__name__ ==  'Paragraph' %}
+   |   |   |{%- for obj in prg.children -%}
+   |   |   |   |{%- if type == 'Word' -%}
+   |   |   |   |    {{- obj.value -}}
+   |   |   |   |{%- elif type == 'Directive' %}
+   |   |   |   |    {% if obj.exists=='local' %}
+   |   |   |   |        {{-green(obj.text)-}}
+   |   |   |   |    {% elif obj.exists=='exists' %}
+   |   |   |   |        {{-blue(obj.text)-}}
+   |   |   |   |    {% else %}
+   |   |   |   |        {{-unreachable()-}}
+   |   |   |   |        {{-red(obj.text)-}}
+   |   |   |   |    {% endif %}
+   |   |   |   |{% elif obj.__class__.__name__ == 'Math' %}
+   |   |   |   |    ${{obj.text}}$
+   |   |   |   |{% elif obj.__class__.__name__ == 'Verbatim' %}
+   |   |   |   |    {{-yellow(obj.text)-}}
+   |   |   |   |{% else %}
+   |   |   |   |    Some {{obj.__class__.__name__}}
+   |   |   |   |{%- endif -%}
+   |   |   |{%- endfor -%}
+   |   |{% elif  prg.__class__.__name__ in  ('BlockDirective',)  %}
+   |   |{% else %}
+   |   |   |{{ unreachable('Not a Paragraph', prg) }}
+   |   |{% endif %}
    |{%- endfor -%}
 {%- endmacro %}
 
@@ -145,7 +153,7 @@
    |{% elif section in ['See Also'] %}
    |   |{% for sa in doc.see_also %}
    |   |     {{bold(ref(sa.name))}}
-   |   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
+   |   |         {{render_II(sa.descriptions) | wordwrap | indent(width=8)}}
    |   |{% endfor %}
    |{% elif section in ['Examples'] %}
    |   |{% for type,data in doc.example_section_data %}
@@ -174,7 +182,7 @@
    |   |   |{% else %}
    |   |   |    {{green(p[1])}}
    |   |   |{% endif %}
-   |   |   |       {{render_paragraph(p[2]) | wordwrap | indent(width=8) }}
+   |   |   |       {{render_II(p[2]) | wordwrap | indent(width=8) }}
    |   |{% endfor %}
    |{% else %}
    |    {% if doc.content[section] %}

@@ -44,7 +44,8 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
                 acc.append(c)
         else:
             acc.append(c)
-    return acc
+    p.children = acc
+    return p
 
 
 def P2(lines) -> List[Node]:

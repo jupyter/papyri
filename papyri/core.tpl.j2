@@ -300,10 +300,10 @@ user-select: none;
 {%- endmacro %}
 
 
-{% macro render_inner(type, obj) -%}
-    {%- if type == 'Word' -%}
+{% macro render_inner(type_, obj) -%}
+    {%- if type_ == 'Word' -%}
         {{-obj.value-}}
-    {%- elif type == 'Directive' -%}
+    {%- elif type_ == 'Directive' -%}
         {%- if obj.exists=='local' -%}
             {#{unreachable(obj.__dict__)}#}
             <code><a href="#{{obj.ref}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
@@ -313,7 +313,7 @@ user-select: none;
             <code>{{obj.text}} (UNHANDLED DIRECTIVE,{{obj.domain}}, {{obj,role}} )</code>
             {#{unreachable(obj.__dict__)}#}
         {%- endif -%}
-    {%- elif type == 'Link' -%}
+    {%- elif type_ == 'Link' -%}
         {# Links have : value, reference, kind exists#}
         {%- if obj.kind=='local' -%}
             <code><a link href="#{{obj.reference}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
@@ -322,19 +322,23 @@ user-select: none;
         {% else %}
             {{unreachable(obj.__dict__)}}
         {%- endif -%}
-    {% elif type == 'Math' %}
+    {% elif type_ == 'Math' %}
         <span class="tex2jax_process">${{obj.text}}$</span>
-    {% elif type == 'Verbatim' %}
+    {% elif type_ == 'Verbatim' %}
         <code class='verbatim'>{{obj.text}}</code>
     {% else %}
-        <code>Some {{type}}</code>
+        <code>Some B |{{type_}}|</code>
+        {{unreachable(obj)}}
     {%- endif -%}
 {%- endmacro %}
 
 {% macro render_paragraph(prgs) -%}
 {% for prg in prgs %}
+   {% if not prg.__class__.__name__ ==  'Paragraph' %}
+   {{ unreachable('Not a Paragraph', prg) }}
+   {% endif %}
         <p>
-            {%- for obj in prg -%}
+            {%- for obj in prg.children -%}
                 {{- render_inner(obj.__class__.__name__, obj) -}} 
             {%- endfor -%}
         </p>
@@ -376,17 +380,21 @@ user-select: none;
 
 
 
-{% macro render_II(prgs) -%}
-    {% for obj in prgs.children %}
-    {%- set type = obj.__class__.__name__ -%}
-       {%- if type == 'Directive' -%}
-           {{obj}}
+{% macro render_II(obj) -%}
+    {% if obj.__class__.__name__ == 'Paragraph' %}
+        {{block_paragraph(obj)}}
+    {% else %}
+       {%- set type = obj.__class__.__name__ -%}
+       {%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim') -%}
+            {{unreachable()}}
+       {%- elif type == 'Directive' -%}
+           {{unreachable()}}
        {% elif type == 'Math' %}
-           {{obj}}
+           {{unreachable()}}
        {% elif type == 'BlockDirective' %}
             {{block_directive(obj)}}
        {% elif type == 'Verbatim' %}
-           {{obj}}
+           {{unreachable()}}
        {% elif type == 'Paragraph' %}
            {{block_paragraph(obj)}}
        {% elif type == 'BlockVerbatim' %}
@@ -401,9 +409,13 @@ user-select: none;
            {{block(obj)}}
        {% elif type == 'Example' %}
            {{block(obj)}}
+       {% elif type == 'Section' %}
+           {% for item in obj %}
+               {{ render_II(item) }}
+           {% endfor %}
        {% else %}
-           <code>Some {{type}} Not implemented yet</code>
-           {{unreachable(type, obj)}}
+           <code>Some A {{type}} Not implemented yet</code>
+           {#{{unreachable(type, obj)}}#}
            {%- for l in obj.lines -%}
 {{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
            {%- endfor -%}</pre><pre>
@@ -411,7 +423,7 @@ user-select: none;
 {{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
            {%- endfor -%}</pre>
        {%- endif -%}
-    {%- endfor %}
+    {%- endif %}
 {%- endmacro %}
 
 {% macro ref(r) -%}
@@ -476,9 +488,12 @@ user-select: none;
                 <dt>{{p[1]}}</dt>
             {% endif %}
         </dl>
-           <dd>
-           {{render_paragraph(p[2])}}
-            </dd>
+
+        <dd>
+            {% for item in p[2] %}
+                {{render_II(item)}}
+            {% endfor %}
+        </dd>
        {% endfor %}
 
    </pre>

@@ -234,8 +234,8 @@ async def _route(ref, store):
         all_known_refs = frozenset(
             {str(x.name)[:-5] for x in store.glob("*/module/*.json")}
         )
-        # env.globals["unreachable"] = unreachable
-        env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
+        env.globals["unreachable"] = unreachable
+        # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
         doc_blob = load_one(bytes_, br, qa=ref)
         parts_links = {}
@@ -551,7 +551,17 @@ def prepare_doc(doc_blob, qa, known_refs):
         assert isinstance(d.descriptions, list), qa
         d.descriptions = paragraphs(d.descriptions)
         for dsc in d.descriptions:
-            for it in dsc:
+            assert isinstance(
+                dsc,
+                (
+                    Paragraph,
+                    BlockDirective,
+                    BlockVerbatim,
+                    DefListItem,
+                    Example,
+                ),
+            )
+            for it in dsc.children:
                 if it.__class__.__name__ == 'Directive':
                     it.ref, it.exists = resolve_(qa, known_refs, local_refs, it.text)
     for s in sections_:
@@ -585,7 +595,7 @@ def prepare_doc(doc_blob, qa, known_refs):
                                 )
                 else:
                     blocks = []
-                new_content.append((param, type_, [blocks]))
+                new_content.append((param, type_, blocks))
             doc_blob.content[s] = new_content
 
 
