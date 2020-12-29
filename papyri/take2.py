@@ -436,7 +436,6 @@ class FirstCombinator:
         return None
 
 
-
 class Section(Node):
     children: List[
         Union[
@@ -448,6 +447,7 @@ class Section(Node):
             BlockDirective,
             Example,
             BlockVerbatim,
+            Param,
         ]
     ]
 
@@ -473,6 +473,44 @@ class Section(Node):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.children}>"
+
+
+class Param(Node):
+    param: str
+    type_: str
+    desc: List[
+        Union[
+            Code,
+            Text,
+            Fig,
+            Paragraph,
+            DefListItem,
+            BlockDirective,
+            Example,
+            BlockVerbatim,
+        ]
+    ]
+
+    def __init__(self, param=None, type_=None, desc=None):
+        self.param = param
+        self.type_ = type_
+        self.desc = desc
+
+    @property
+    def children(self):
+        return self.desc
+
+    @children.setter
+    def children(self, values):
+        self.desc = values
+
+    def __getitem__(self, index):
+        return [self.param, self.type_, self.desc][index]
+
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__}: {self.param=}, {self.type_=}, {self.desc=}>"
+        )
 
 
 class Code(Node):

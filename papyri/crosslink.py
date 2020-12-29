@@ -158,7 +158,42 @@ class IngestedBlobs(DocBlob):
 
     @classmethod
     def from_json(cls, data, qa=None):
-        instance = super().from_json(data)
+        instance = cls()
+        for k, v in data.items():
+            setattr(instance, k, v)
+        if instance._content is None:
+            instance._content = {}
+
+        # instance._content["Parameters"] = [
+        #    Parameter(a, b, c) for (a, b, c) in instance._content.get("Parameters", [])
+        # ]
+
+        for it in (
+            "Returns",
+            "Yields",
+            "Extended Summary",
+            "Receives",
+            "Other Parameters",
+            "Raises",
+            "Warns",
+            "Warnings",
+            "See Also",
+            "Notes",
+            "References",
+            "Examples",
+            "Attributes",
+            "Methods",
+        ):
+            assert it in instance._content
+            if it not in instance._content:
+                assert False
+                instance._content[it] = []
+        for it in ("index",):
+            assert "index" in instance._content
+            if it not in instance._content:
+                assert False
+                instance._content[it] = {}
+
         instance.see_also = [
             SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
         ]
@@ -250,6 +285,7 @@ class IngestedBlobs(DocBlob):
             "Yields",
             "Attributes",
             "Other Parameters",
+            "Warns",
         ]
         # for s in sections_:
         #    #for i, p in enumerate(instance.content[s]):
@@ -269,14 +305,14 @@ class IngestedBlobs(DocBlob):
             instance.example_section_data, local_refs, qa
         )
 
-        for section in ["Extended Summary", "Summary", "Notes"]:
+        for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if (data := instance.content.get(section, None)) is not None:
                 if data == []:
                     instance.content[section] = Section()
                 else:
                     instance.content[section] = Section.from_json(data)
 
-        for section in ["Extended Summary", "Summary", "Notes"]:
+        for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if (data := instance.content.get(section, None)) is not None:
                 assert isinstance(data, Section), data
 
@@ -435,6 +471,30 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     for section in ["Extended Summary", "Summary", "Notes"]:
         if (data := blob.content.get(section, None)) is not None:
             assert isinstance(data, Section), data
+
+    sections_ = [
+        "Parameters",
+        "Returns",
+        "Raises",
+        "Yields",
+        "Attributes",
+        "Other Parameters",
+        "Warns",
+    ]
+    from .take2 import Param
+
+    for s in sections_:
+        if s in blob.content:
+            assert isinstance(blob.content[s], list)
+            new_content = Section()
+            for param, type_, desc in blob.content[s]:
+                assert isinstance(desc, list)
+                blocks = []
+                items = []
+                if desc:
+                    items = P2(desc)
+                new_content.append(Param(param, type_, items))
+            blob.content[s] = new_content
 
     return blob
 

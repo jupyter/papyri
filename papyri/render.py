@@ -460,38 +460,6 @@ async def ascii_render(name, store=None):
     print(await _ascii_render(name, store))
 
 
-def processed_example_data_nonlocal(example_section_data, known_refs, qa):
-    assert isinstance(example_section_data, Section)
-    new_example_section_data = Section()
-    for i, in_out in enumerate(example_section_data):
-        type_ = in_out.__class__.__name__
-        assert type_ in (
-            "Code",
-            "Fig",
-            "Paragraph",
-            "BlockDirective",
-            "BlockVerbatim",
-            "DefListItem",
-            "Example",
-        ), type_
-        assert type_ != "Text"
-        if type_ == "Code":
-            in_ = in_out.entries
-            assert len(in_[0]) == 3, "in type has 3 elements: token link, and css class"
-        # todo: reintegrate changing directives to Links.
-        new_example_section_data.append(in_out)
-    return new_example_section_data
-
-
-def do_span(span, known_refs, local_refs, qa):
-    if span.__class__.__name__ == "Directive":
-        ref, exists = resolve_(qa, known_refs, local_refs, span.text)
-        if exists != "missing":
-            t_ = "Link"
-            span = Link(span.text, ref, exists, exists != "missing")
-    return span
-
-
 class TreeReplacer:
     def visit(self, node):
         assert not isinstance(node, list)
@@ -547,6 +515,7 @@ class DirectiveVisiter(TreeReplacer):
             self.qa, self.known_refs, self.local_refs, directive.text
         )
         if exists != "missing":
+            print("Found", exists, directive.text, "->", ref)
             return [Link(directive.text, ref, exists, exists != "missing")]
         return [directive]
 
@@ -575,7 +544,6 @@ def prepare_doc(doc_blob, qa, known_refs):
     visitor = DirectiveVisiter(qa, known_refs, local_refs)
 
     res = visitor.visit(doc_blob.example_section_data)
-    assert isinstance(res, Section)
     doc_blob.example_section_data = res
 
     # doc_blob.example_section_data = processed_example_data_nonlocal(
@@ -589,13 +557,9 @@ def prepare_doc(doc_blob, qa, known_refs):
         (resolve_(qa, known_refs, local_refs, x), x) for x in doc_blob.refs
     ]
 
-
-    for section in ["Extended Summary", "Summary", "Notes"]:
+    for section in ["Extended Summary", "Summary", "Notes"] + sections_:
         if section in doc_blob.content:
-            data = doc_blob.content[section]
-            res = visitor.visit(data)
-            assert isinstance(res, Section)
-            doc_blob.content[section] = res
+            doc_blob.content[section] = visitor.visit(doc_blob.content[section])
 
     for d in doc_blob.see_also:
         assert isinstance(d.descriptions, list), qa
@@ -605,34 +569,6 @@ def prepare_doc(doc_blob, qa, known_refs):
         for dsc in tree:
             new_desc.append(visitor.visit(dsc))
         d.descriptions = new_desc
-    for s in sections_:
-        if s in doc_blob.content:
-            assert isinstance(doc_blob.content[s], list)
-            new_content = []
-            for param, type_, desc in doc_blob.content[s]:
-                assert isinstance(desc, list)
-                blocks = []
-                if desc:
-                    items = P2(desc)
-                    for block in items:
-
-                        assert isinstance(
-                            block,
-                            (
-                                Paragraph,
-                                BlockDirective,
-                                BlockVerbatim,
-                                DefListItem,
-                                Example,
-                            ),
-                        ), block
-
-                        blocks.append(visitor.visit(block))
-
-                else:
-                    pass
-                new_content.append((param, type_, blocks))
-            doc_blob.content[s] = new_content
 
 
 async def main():
