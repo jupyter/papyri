@@ -456,7 +456,7 @@ user-select: none;
 
     {% elif section in ['Examples'] %}
         {% for data in doc.example_section_data %}
-            {%- set type = obj.__class__.__name__ -%}
+            {%- set type = data.__class__.__name__ -%}
             {% if type=='Text' %}
                 {{render_paragraph(data)}}
             {% elif type == 'Fig' %}
