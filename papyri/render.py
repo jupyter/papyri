@@ -500,6 +500,7 @@ def prepare_doc(doc_blob, qa, known_refs):
         "Yields",
         "Attributes",
         "Other Parameters",
+        "Warns",
     ]
     ### dive into the example data, reconstruct the initial code, parse it with pygments,
     # and append the highlighting class as the third element

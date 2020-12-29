@@ -310,7 +310,7 @@ user-select: none;
         {%- elif obj.exists in ('exists', 'missing') -%}
             <code><a href="{{obj.ref}}{{ext}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
         {% else %}
-            <code>{{obj.text}} (UNHANDLED DIRECTIVE,{{obj.domain}}, {{obj,role}} )</code>
+            <code>:{{obj.domain}}:{{obj.role}}:`{{obj.text}}`</code>
             {#{unreachable(obj.__dict__)}#}
         {%- endif -%}
     {%- elif type_ == 'Link' -%}
@@ -478,7 +478,7 @@ user-select: none;
          {% for (ref, exists), r in doc.refs %}
             <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
          {% endfor %}
-   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters'] %}
+   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] %}
 
        <dl>
            {% for p in doc.content[section] %}

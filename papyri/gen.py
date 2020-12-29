@@ -208,9 +208,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                         # raise
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
-                # example_section_data.append(
-                #    ["code", (entries, "\n".join(item.out), ce_status)]
-                # )
                 example_section_data.append(
                     Code(entries, "\n".join(item.out), ce_status)
                 )
