@@ -55,7 +55,6 @@ def P2(lines) -> List[Node]:
             assert "\n" not in l
         else:
             assert "\n" not in l._line
-    acc = []
     assert lines, lines
     blocks_data = t2main("\n".join(lines))
 
@@ -370,7 +369,8 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                         d, t = t, None
                     if not isinstance(d, list):
                         d = [d]
-                    blob.see_also.append(SeeAlsoItem(Ref(n, None, None), d, t))
+                    sai = SeeAlsoItem(Ref(n, None, None), d, t)
+                    blob.see_also.append(sai)
     except Exception as e:
         raise ValueError(f"Error {qa}: {see_also} | {nts}") from e
 

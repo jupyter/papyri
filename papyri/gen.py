@@ -29,7 +29,7 @@ from .utils import pos_to_nl, dedent_but_first, progress
 
 from pathlib import Path
 
-from .take2 import Node
+from .take2 import Section, Code, Text, Fig, Node
 
 
 def parse_script(script, ns=None, infer=None, prev=""):
@@ -101,7 +101,6 @@ def parse_script(script, ns=None, infer=None, prev=""):
     warnings.simplefilter("default", UserWarning)
 
 
-from .take2 import Section, Code, Text, Fig
 
 def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None):
     """Extract example section data from a NumpyDocstring
@@ -511,7 +510,7 @@ class DocBlob:
     item_line: Optional[int]
     item_type: Optional[str]
     aliases: dict
-    example_section_data: List
+    example_section_data: Section
 
     __slots__ = (
         "_content",
