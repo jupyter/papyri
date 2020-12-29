@@ -493,6 +493,12 @@ def do_span(span, known_refs, local_refs, qa):
 
 
 class TreeReplacer:
+    def visit(self, node):
+        assert not isinstance(node, list)
+        res = self.generic_visit(node)
+        assert len(res) == 1
+        return res[0]
+
     def generic_visit(self, node) -> List[Node]:
         assert node is not None
         try:
@@ -568,9 +574,7 @@ def prepare_doc(doc_blob, qa, known_refs):
     # TODO : move this to ingest.
     visitor = DirectiveVisiter(qa, known_refs, local_refs)
 
-    res = visitor.generic_visit(doc_blob.example_section_data)
-    assert len(res) == 1
-    res = res[0]
+    res = visitor.visit(doc_blob.example_section_data)
     assert isinstance(res, Section)
     doc_blob.example_section_data = res
 
@@ -589,9 +593,7 @@ def prepare_doc(doc_blob, qa, known_refs):
     for section in ["Extended Summary", "Summary", "Notes"]:
         if section in doc_blob.content:
             data = doc_blob.content[section]
-            res = visitor.generic_visit(data)
-            assert len(res) == 1
-            res = res[0]
+            res = visitor.visit(data)
             assert isinstance(res, Section)
             doc_blob.content[section] = res
 
@@ -601,10 +603,7 @@ def prepare_doc(doc_blob, qa, known_refs):
         tree = paragraphs(d.descriptions)
         new_desc = []
         for dsc in tree:
-            res = visitor.generic_visit(dsc)
-            assert len(res) == 1
-            res = res[0]
-            new_desc.append(res)
+            new_desc.append(visitor.visit(dsc))
         d.descriptions = new_desc
     for s in sections_:
         if s in doc_blob.content:
@@ -628,10 +627,7 @@ def prepare_doc(doc_blob, qa, known_refs):
                             ),
                         ), block
 
-                        res = visitor.generic_visit(block)
-                        assert len(res) == 1
-                        res = res[0]
-                        blocks.append(res)
+                        blocks.append(visitor.visit(block))
 
                 else:
                     pass
