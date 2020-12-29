@@ -17,7 +17,18 @@ from .crosslink import (
     P2,
 )
 from .stores import BaseStore, GHStore, Store
-from .take2 import Lines, Paragraph, make_block_3, Link, Node, Section
+from .take2 import (
+    Lines,
+    Paragraph,
+    make_block_3,
+    Link,
+    Node,
+    Section,
+    BlockDirective,
+    DefListItem,
+    Example,
+    BlockVerbatim,
+)
 from .utils import progress
 from collections import OrderedDict
 
@@ -427,7 +438,10 @@ async def _ascii_render(name, store, known_refs=None):
     env.globals["unreachable"] = unreachable
     
     doc_blob = load_one(bytes_, br, qa=name)
-    prepare_doc(doc_blob, ref, known_refs)
+    try:
+        prepare_doc(doc_blob, ref, known_refs)
+    except Exception as e:
+        raise type(e)(f"Error preparing ASCII {name}")
     return render_one(
         template=template,
         doc=doc_blob,
@@ -444,12 +458,14 @@ async def ascii_render(name, store=None):
 
 def processed_example_data_nonlocal(example_section_data, known_refs, qa):
     new_example_section_data = Section()
-    for i, (type_, in_out) in enumerate(example_section_data):
-        if type_ == "code":
-            assert len(in_out) == 3
-            in_, out, ce_status = in_out
+    for i, in_out in enumerate(example_section_data):
+        type_ = in_out.__class__.__name__
+        assert type_ in ("Text", "Code", "Fig")
+        if type_ == "Code":
+            # assert len(in_out) == 3
+            in_, out, ce_status = in_out.entries, in_out.out, in_out.ce_status
             assert len(in_[0]) == 3
-        if type_ == "text":
+        if type_ == "Text":
             assert len(in_out) == 1, len(in_out)
             new_io = []
             for it in in_out[0]:
@@ -511,8 +527,12 @@ def prepare_doc(doc_blob, qa, known_refs):
     for section in ["Extended Summary", "Summary", "Notes"]:
         if section in doc_blob.content:
             data = doc_blob.content[section]
-            assert isinstance(data, list)
-            res = []
+            if data == []:
+                data = Section()
+            else:
+                assert not isinstance(data, list), data
+                data = Section.from_json(data)
+            res = Section()
             for it in data:
                 if it.__class__.__name__ == "Paragraph":
                     it.children = [
@@ -540,16 +560,32 @@ def prepare_doc(doc_blob, qa, known_refs):
             new_content = []
             for param, type_, desc in doc_blob.content[s]:
                 assert isinstance(desc, list)
-                for line in desc:
+                if desc:
+                    blocks = P2(desc)
+                    for block in blocks:
 
-                    assert isinstance(line, list), line
-                    for it in line:
-                        assert not isinstance(it, str)
-                        if it.__class__.__name__ == "Directive":
-                            it.ref, it.exists = resolve_(
-                                qa, known_refs, local_refs, it.text
-                            )
-                new_content.append((param, type_, desc))
+                        assert isinstance(
+                            block,
+                            (
+                                Paragraph,
+                                BlockDirective,
+                                BlockVerbatim,
+                                DefListItem,
+                                Example,
+                            ),
+                        ), block
+                        if not isinstance(block, Paragraph):
+                            continue
+
+                        for it in block.children:
+                            assert not isinstance(it, str)
+                            if it.__class__.__name__ == "Directive":
+                                it.ref, it.exists = resolve_(
+                                    qa, known_refs, local_refs, it.text
+                                )
+                else:
+                    blocks = []
+                new_content.append((param, type_, [blocks]))
             doc_blob.content[s] = new_content
 
 
@@ -610,8 +646,8 @@ async def main():
             parts_links[k] = acc
             acc += "."
         try:
-            for (type_, in_out) in doc_blob.example_section_data:
-                if type_ == "text":
+            for in_out in doc_blob.example_section_data:
+                if in_out.__class__.__name__ == "text":
                     for it in in_out[0]:
                         assert not isinstance(it, tuple), it
             prepare_doc(doc_blob, qa, known_refs)

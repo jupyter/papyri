@@ -260,7 +260,7 @@ class Node(Base):
 class Verbatim(Node):
     value: List[str]
 
-    def __init__(self, value):
+    def __init__(self, value=None):
         self.value = value
 
     @classmethod
@@ -854,7 +854,9 @@ class Lines(Node):
 
     _lines: List[Line]
 
-    def __init__(self, lines):
+    def __init__(self, lines=None):
+        if lines is None:
+            lines = []
         assert isinstance(lines, (list, Lines))
         for l in lines:
             assert isinstance(l, (str, Line)), f"got {l}"
@@ -986,7 +988,9 @@ class BlockDirective(Block):
     inner: Optional[Paragraph]
     COLOR = ORANGE
 
-    def __init__(self, lines, wh, ind):
+    def __init__(self, lines=None, wh=None, ind=None):
+        if None in (lines, wh, ind):
+            return
         self.lines = lines
         self.wh = wh
         self.ind = ind
@@ -1032,6 +1036,11 @@ class DefListItem(Block):
     wh: Lines
     ind: Lines
 
+    def __init__(self, lines=None, wh=None, ind=None):
+        self.lines = lines
+        self.wh = wh
+        self.ind = ind
+
     COLOR = BLUE
 
 
@@ -1039,6 +1048,11 @@ class Example(Block):
     lines: Lines
     wh: Lines
     ind: Lines
+
+    def __init__(self, lines=None, wh=None, ind=None):
+        self.lines = lines
+        self.wh = wh
+        self.ind = ind
 
     COLOR = GREEN
 

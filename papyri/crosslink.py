@@ -47,7 +47,7 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
     return acc
 
 
-def P2(lines) -> List[Any]:
+def P2(lines) -> List[Node]:
     assert isinstance(lines, list)
     for l in lines:
         if isinstance(l, str):
