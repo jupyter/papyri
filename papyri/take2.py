@@ -980,6 +980,19 @@ class BlockDirective(Block):
     inner: Optional[Paragraph]
     COLOR = ORANGE
 
+    @property
+    def children(self):
+        if self.inner is not None:
+            yield self.inner
+
+    @children.setter
+    def children(self, value):
+        assert len(value) in [0, 1]
+        if len(value) == 0:
+            assert not self.inner
+        else:
+            self.inner = value[0]
+
     def __init__(self, lines=None, wh=None, ind=None):
         if None in (lines, wh, ind):
             return

@@ -269,12 +269,16 @@ class IngestedBlobs(DocBlob):
             instance.example_section_data, local_refs, qa
         )
 
-        #        for section in ["Extended Summary", "Summary", "Notes"]:
-        #            if section in instance.content:
-        #                if data := instance.content[section]:
-        #                    instance.content[section] = Section(P2(data))
-        #                    for d in instance.content[section]:
-        #                        assert isinstance(d, take2.Node), f"{d}, {type(d)}"
+        for section in ["Extended Summary", "Summary", "Notes"]:
+            if (data := instance.content.get(section, None)) is not None:
+                if data == []:
+                    instance.content[section] = Section()
+                else:
+                    instance.content[section] = Section.from_json(data)
+
+        for section in ["Extended Summary", "Summary", "Notes"]:
+            if (data := instance.content.get(section, None)) is not None:
+                assert isinstance(data, Section), data
 
         return instance
 
@@ -425,12 +429,17 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                 for d in instance.content[section]:
                     assert isinstance(d, take2.Node), f"{d}, {type(d)}"
     blob.refs = list(sorted(set(blob.refs)))
+    for section in ["Extended Summary", "Summary", "Notes"]:
+        if (data := _blob.content.get(section, None)) is not None:
+            assert isinstance(data, Section), data
+
     return blob
 
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data = json.loads(bytes_)
     blob = IngestedBlobs.from_json(data, qa=qa)
+
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)
     data.pop("example_section_data", None)

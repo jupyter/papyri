@@ -32,6 +32,8 @@ from .take2 import (
 from .utils import progress
 from collections import OrderedDict
 
+from typing import List
+
 
 def unreachable(*obj):
     assert False, f"Unreachable: {obj=}"
@@ -484,6 +486,31 @@ def do_span(span, known_refs, local_refs, qa):
             span = Link(span.text, ref, exists, exists != "missing")
     return span
 
+
+class TreeReplacer:
+    def generic_visit(self, node) -> List[Node]:
+        name = node.__class__.__name__
+        if method := getattr(self, "replace_" + name, None):
+            new_nodes = method(node)
+        elif name in ["Word", "Verbatim", "Example", "DefListItem", "BlockVerbatim"]:
+            return [node]
+        else:
+            new_children = []
+            for c in node.children:
+                replacement = self.generic_visit(c)
+                assert isinstance(replacement, list)
+                new_children.extend(replacement)
+            node.children = new_children
+            new_nodes = [node]
+        assert isinstance(new_nodes, list)
+        return new_nodes
+
+
+class DirectiveVisiter(TreeReplacer):
+    def replace_Directive(self, directive):
+        return [Link("span.text", "ref", "exists", 'exists != "missing"')]
+
+
 def prepare_doc(doc_blob, qa, known_refs):
     assert hash(known_refs)
     sections_ = [
@@ -519,24 +546,20 @@ def prepare_doc(doc_blob, qa, known_refs):
     for section in ["Extended Summary", "Summary", "Notes"]:
         if section in doc_blob.content:
             data = doc_blob.content[section]
-            if data == []:
-                data = Section()
-            else:
-                assert not isinstance(data, list), data
-                data = Section.from_json(data)
-            res = Section()
-            for it in data:
-                if it.__class__.__name__ == "Paragraph":
-                    it.children = [
-                        do_span(c, known_refs, local_refs, qa) for c in it.children
-                    ]
-                if it.__class__.__name__ == "BlockDirective" and it.inner:
-                    it.inner.children = [
-                        do_span(c, known_refs, local_refs, qa)
-                        for c in it.inner.children
-                    ]
-                assert isinstance(it, Node), f"{it=}, {type(it)}"
-                res.append(it)
+            res = DirectiveVisiter().generic_visit(data)[0]
+            assert isinstance(res, Section)
+            # res = Section()
+            # for it in data:
+            #     if it.__class__.__name__ == "Paragraph":
+            #         it.children = [
+            #             do_span(c, known_refs, local_refs, qa) for c in it.children
+            #         ]
+            #     if it.__class__.__name__ == "BlockDirective" and it.inner:
+            #         it.inner.children = [
+            #             do_span(c, known_refs, local_refs, qa)
+            #             for c in it.inner.children
+            #         ]
+            #     res.append(it)
             doc_blob.content[section] = res
 
     for d in doc_blob.see_also:
@@ -652,6 +675,7 @@ async def main():
                 if in_out.__class__.__name__ == "text":
                     for it in in_out[0]:
                         assert not isinstance(it, tuple), it
+
             prepare_doc(doc_blob, qa, known_refs)
             data = render_one(
                 template=template,
