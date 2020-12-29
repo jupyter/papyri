@@ -413,18 +413,18 @@ def _ascci_env():
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
-    return env
+    env.globals["unreachable"] = unreachable
+    template = env.get_template("ascii.tpl.j2")
+    return env, template
 
 
-async def _ascii_render(name, store, known_refs=None):
+async def _ascii_render(name, store, known_refs=None, template=None):
     if store is None:
         store = Store(ingest_dir)
     ref = name
     root = name.split(".")[0]
 
-    env = _ascci_env()
-
-    template = env.get_template("ascii.tpl.j2")
+    env, template = _ascci_env()
     if known_refs is None:
         known_refs = frozenset({x.name[:-5] for x in store.glob("*/module/*.json")})
     bytes_ = await (store / root / "module" / f"{ref}.json").read_text()
@@ -435,8 +435,6 @@ async def _ascii_render(name, store, known_refs=None):
         br = None
 
     ## TODO : move this to ingest.
-    env.globals["unreachable"] = unreachable
-    
     doc_blob = load_one(bytes_, br, qa=name)
     try:
         prepare_doc(doc_blob, ref, known_refs)
@@ -632,7 +630,7 @@ async def main():
             assert False, document.name
         qa = document.name[:-5]
         # help to keep ascii bug free.
-        await _ascii_render(qa, store, known_refs=known_refs)
+        # await _ascii_render(qa, store, known_refs=known_refs)
         root = qa.split(".")[0]
         try:
             bytes_ = await document.read_text()

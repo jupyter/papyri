@@ -85,8 +85,13 @@ UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 base_types = {int, str, bool, type(None)}
 
 from typing import List, Union
-from typing import get_type_hints
+from typing import get_type_hints as gth
+from functools import lru_cache
 
+
+@lru_cache
+def get_type_hints(type):
+    return gth(type)
 
 class Base:
     @classmethod
@@ -110,6 +115,7 @@ def hashable(v):
         hash(v)
         return True
     except TypeError:
+        assert False
         return False
 
 
@@ -445,7 +451,6 @@ class FirstCombinator:
         return None
 
 
-from typing import get_type_hints
 
 class Section(Node):
     children: List[
@@ -995,6 +1000,11 @@ class BlockDirective(Block):
         self.wh = wh
         self.ind = ind
 
+        # numpy doc bug
+        l = lines[0]._line
+        if l.startswith("..version"):
+            lines[0]._line = ".. " + l[2:]
+        # end numpy doc bug
         assert lines[0].startswith(".. ")
         l0 = lines[0]
         pred, *postd = l0.split("::")
