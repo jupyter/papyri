@@ -456,21 +456,21 @@ user-select: none;
 
     {% elif section in ['Examples'] %}
         {% for type,data in doc.example_section_data %}
-            {% if type=='text' %}
+            {% if type=='Text' %}
                 {{render_paragraph(data)}}
-            {% elif type == 'fig' %}
+            {% elif type == 'Fig' %}
                 <div><img src="img/{{module}}/assets/{{data}}"/></div>
             {% else %}
-                {% if data[2] == 'syntax_error' -%}
+                {% if data.ce_status == 'syntax_error' -%}
                     <span class='warning'>This example raised an error at execution time but compiled correctly</span>
-                {%-elif data[2] == 'exception_in_exec' -%}
+                {%-elif data.ce_status == 'exception_in_exec' -%}
                     <span class='warning'>This example is valid syntax, but raise an exception at execution</span>
-                {%-elif data[2] == 'compiled' -%}
+                {%-elif data.ce_status == 'compiled' -%}
                     <span class='note'>This example is valid syntax, but we were not able to check execution</span>
                 {%-endif-%}
-            <pre class='highlight {{data[2]}}'>{{example(data[0]) -}}
+            <pre class='highlight {{data.ce_status}}'>{{example(data.entries) -}}
 
-             {{- data[1]}}</pre>
+             {{- data.out}}</pre>
             {% endif %}
             
          {% endfor %}
