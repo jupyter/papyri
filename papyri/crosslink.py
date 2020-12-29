@@ -279,10 +279,6 @@ class IngestedBlobs(DocBlob):
 
         return instance
 
-    def to_json(self):
-        data = super().to_json()
-        return data
-
 @lru_cache
 def _at_in(q0, known_refs):
     return [q for q in known_refs if q.startswith(q0)]
