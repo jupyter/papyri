@@ -459,7 +459,7 @@ user-select: none;
             {% if type=='Text' %}
                 {{render_paragraph(data)}}
             {% elif type == 'Fig' %}
-                <div><img src="img/{{module}}/assets/{{data}}"/></div>
+                <div><img src="img/{{module}}/assets/{{data.value}}"/></div>
             {% else %}
                 {% if data.ce_status == 'syntax_error' -%}
                     <span class='warning'>This example raised an error at execution time but compiled correctly</span>
