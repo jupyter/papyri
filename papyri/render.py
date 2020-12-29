@@ -515,7 +515,6 @@ class DirectiveVisiter(TreeReplacer):
             self.qa, self.known_refs, self.local_refs, directive.text
         )
         if exists != "missing":
-            print("Found", exists, directive.text, "->", ref)
             return [Link(directive.text, ref, exists, exists != "missing")]
         return [directive]
 
@@ -529,7 +528,6 @@ def prepare_doc(doc_blob, qa, known_refs):
         "Yields",
         "Attributes",
         "Other Parameters",
-        "Warns",
     ]
 
     local_refs = []

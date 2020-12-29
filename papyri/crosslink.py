@@ -286,7 +286,19 @@ class IngestedBlobs(DocBlob):
             "Attributes",
             "Other Parameters",
             "Warns",
+            ##
+            "Warnings",
+            "Methods",
+            # "Summary",
+            "Receives",
+            # "Notes",
+            # "Signature",
+            #'Extended Summary',
+            #'References'
+            #'See Also'
+            #'Examples'
         ]
+        # print(set(instance.content.keys()) - set(sections_))
         # for s in sections_:
         #    #for i, p in enumerate(instance.content[s]):
         #    #    if p[2]:
@@ -307,6 +319,9 @@ class IngestedBlobs(DocBlob):
 
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if (data := instance.content.get(section, None)) is not None:
+                assert isinstance(data, (list, dict)), f"{section} {data}"
+                if isinstance(data, list) and data:
+                    assert False, f"{section} {data}"
                 if data == []:
                     instance.content[section] = Section()
                 else:
@@ -458,7 +473,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
             blob.refs.extend(Paragraph.parse_lines(notes).references)
     except KeyError:
         pass
-    for section in ["Extended Summary", "Summary", "Notes"]:
+    for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
         if section in instance.content:
             if data := instance.content[section]:
                 instance.content[section] = Section(P2(data))
@@ -468,7 +483,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                 instance.content[section] = Section()
 
     blob.refs = list(sorted(set(blob.refs)))
-    for section in ["Extended Summary", "Summary", "Notes"]:
+    for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
         if (data := blob.content.get(section, None)) is not None:
             assert isinstance(data, Section), data
 
@@ -480,6 +495,10 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
         "Attributes",
         "Other Parameters",
         "Warns",
+        ##"Warnings",
+        "Methods",
+        # "Summary",
+        "Receives",
     ]
     from .take2 import Param
 
@@ -584,10 +603,6 @@ class Ingester:
             doc_blob.logo = logo
             for ref in doc_blob.refs:
                 resolved, exists = resolve_(qa, known_refs, local_ref, ref)
-                pp = False
-                if "Audio" in qa:
-                    pp = True
-                    print("ref to", ref)
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
                     nvisited_items[resolved].backrefs.append(qa)
