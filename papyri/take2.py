@@ -738,7 +738,9 @@ class Block(Node):
 
     def __init__(self, lines, wh, ind, *, reason=None):
         if not lines:
-            lines = [':: workaround numpyoc summary/ext summary bug ']
+            lines = [
+                ":: workaround numpyoc summary/ext summary bug in take2::Line.__init__"
+            ]
         self.lines = Lines(lines)
         self.wh = Lines(wh)
         self.ind = Lines(ind)

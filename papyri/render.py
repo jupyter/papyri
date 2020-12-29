@@ -458,27 +458,37 @@ def processed_example_data_nonlocal(example_section_data, known_refs, qa):
     new_example_section_data = Section()
     for i, in_out in enumerate(example_section_data):
         type_ = in_out.__class__.__name__
-        assert type_ in ("Text", "Code", "Fig")
+        assert type_ in (
+            "Text",
+            "Code",
+            "Fig",
+            "Paragraph",
+            "BlockDirective",
+            "BlockVerbatim",
+            "DefListItem",
+            "Example",
+        ), type_
         if type_ == "Code":
             # assert len(in_out) == 3
             in_, out, ce_status = in_out.entries, in_out.out, in_out.ce_status
             assert len(in_[0]) == 3
         if type_ == "Text":
-            assert len(in_out) == 1, len(in_out)
-            new_io = []
-            for it in in_out[0]:
-                assert not isinstance(it, tuple), it
-                if it.__class__.__name__ == "Directive" and it.domain is None:
-                    if it.domain is None and it.role is None:
-                        ref, exists = resolve_(qa, known_refs, frozenset(), it.text)
-                        assert exists != "local"
-                        if exists != "missing":
-                            t_ = "Link"
-                            it = Link(it.text, ref, exists, exists != "missing")
-                    else:
-                        print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
-                new_io.append(it)
-            in_out = [new_io]
+            pass
+            # assert len(in_out) == 1, len(in_out)
+            # new_io = []
+            # for it in in_out[0]:
+            #    assert not isinstance(it, tuple), it
+            #    if it.__class__.__name__ == "Directive" and it.domain is None:
+            #        if it.domain is None and it.role is None:
+            #            ref, exists = resolve_(qa, known_refs, frozenset(), it.text)
+            #            assert exists != "local"
+            #            if exists != "missing":
+            #                t_ = "Link"
+            #                it = Link(it.text, ref, exists, exists != "missing")
+            #        else:
+            #            print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
+            #    new_io.append(it)
+            # in_out = [new_io]
         new_example_section_data.append((type_, in_out))
     return new_example_section_data
 

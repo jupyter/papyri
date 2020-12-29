@@ -105,21 +105,28 @@ def processed_example_data(example_section_data, local_refs, qa):
                     # TODO: Warning here we mutate objects.
                     new_in.append(ii + (cc,))
                 in_out.entries = new_in
-        if type_ == "Text":
-            assert len(in_out) == 1, len(in_out)
-            assert False, "Todo, need to implement parsing this to paragraaphs."
-            new_io = []
-            for it in in_out[0]:
-                if it.__class__.__name__ == "Directive" and it.domain is None:
-                    if it.domain is None and it.role is None:
-                        ref, exists = resolve_(qa, frozenset(), local_refs, it.text)
-                        if exists != "missing":
-                            it = Link(it.text, ref, exists, exists != "missing")
-                    else:
-                        print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
-                new_io.append(it)
-            in_out = [new_io]
-        new_example_section_data.append(in_out)
+            new_example_section_data.append(in_out)
+        elif type_ == "Text":
+            # assert len(in_out) == 1, len(in_out)
+            blocks = P2(in_out.value.split("\n"))
+            # assert False, "Todo, need to implement parsing this to paragraaphs."
+            # new_io = []
+            # for it in in_out[0]:
+            #    if it.__class__.__name__ == "Directive" and it.domain is None:
+            #        if it.domain is None and it.role is None:
+            #            ref, exists = resolve_(qa, frozenset(), local_refs, it.text)
+            #            if exists != "missing":
+            #                it = Link(it.text, ref, exists, exists != "missing")
+            #        else:
+            #            print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
+            #    new_io.append(it)
+            # in_out = [new_io]
+            for b in blocks:
+                new_example_section_data.append(b)
+
+        else:
+            new_example_section_data.append(in_out)
+
     return new_example_section_data
 
 
@@ -171,7 +178,16 @@ class IngestedBlobs(DocBlob):
 
         for in_out in sec:
             type_ = in_out.__class__.__name__
-            assert type_ in ("Code", "Text", "Fig"), f"{type_}, {in_out}"
+            assert type_ in (
+                "Code",
+                "Text",
+                "Fig",
+                "Paragraph",
+                "BlockDirective",
+                "BlockVerbatim",
+                "DefListItem",
+                "Example",
+            ), f"{type_}, {in_out}"
             if type_ == "Text":
                 pass
                 # !!! MOVE This To GEN ?
@@ -186,6 +202,7 @@ class IngestedBlobs(DocBlob):
                 #            "Directive",
                 #            "Math",
                 #        }, f"{p[0]}, {qa}"
+                new_sec.append(in_out)
             else:
                 new_sec.append(in_out)
         instance.example_section_data = new_sec
@@ -194,30 +211,38 @@ class IngestedBlobs(DocBlob):
         # instance in the Parsed Data.
         for i, in_out in enumerate(instance.example_section_data):
             type_ = in_out.__class__.__name__
-            assert type_ in ("Text", "Code", "Fig"), in_out
+            assert type_ in (
+                "Text",
+                "Code",
+                "Fig",
+                "Paragraph",
+                "BlockDirective",
+                "BlockVerbatim",
+                "DefListItem",
+                "Example",
+            ), in_out
             if type_ == "Text":
-                assert not in_out.value
                 assert in_out, in_out
 
-                assert isinstance(in_out, list), repr(in_out)
+                # todo parse text to paragraphs....
                 # assert len(in_out) == 1, f"{len(in_out)}"
-                new = []
-                for value in in_out[0]:
-                    tt = type(value)
-                    assert False
-                    assert tt in {
-                        "Word",
-                        "Verbatim",
-                        "Directive",
-                        "Math",
-                        "Link",
-                    }, f"{tt}, {value}"
-                    constr = getattr(take2, tt)
-                    nval = constr.from_json(value)
-                    new.append(nval)
+                # new = []
+                # for value in in_out[0]:
+                #     tt = type(value)
+                #     assert False
+                #     assert tt in {
+                #         "Word",
+                #         "Verbatim",
+                #         "Directive",
+                #         "Math",
+                #         "Link",
+                #     }, f"{tt}, {value}"
+                #     constr = getattr(take2, tt)
+                #     nval = constr.from_json(value)
+                #     new.append(nval)
 
-                # in_out is a paragraph.
-                instance.example_section_data[i][1] = [new]
+                # # in_out is a paragraph.
+                # instance.example_section_data[i][1] = [new]
 
         sections_ = [
             "Parameters",
@@ -385,6 +410,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
             #            "Directive",
             #            "Math",
             #        }, f"{p[0]}, {qa}"
+            new_sec.append(in_out)
         else:
             new_sec.append(in_out)
     blob.example_section_data = new_sec
