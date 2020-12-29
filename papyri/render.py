@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from there import print
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, select_autoescape, StrictUndefined
 from quart_trio import QuartTrio
 
 from .config import html_dir, ingest_dir
@@ -74,6 +74,7 @@ def root():
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
+        undefined=StrictUndefined,
     )
     env.globals["isstr"] = lambda x: isinstance(x, str)
     env.globals["len"] = len
@@ -111,6 +112,7 @@ async def gallery(module, store):
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
+        undefined=StrictUndefined,
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
@@ -202,6 +204,7 @@ async def _route(ref, store):
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
+        undefined=StrictUndefined,
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
@@ -412,6 +415,7 @@ def _ascci_env():
         loader=CleanLoader(os.path.dirname(__file__)),
         lstrip_blocks=True,
         trim_blocks=True,
+        undefined=StrictUndefined,
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
@@ -507,8 +511,22 @@ class TreeReplacer:
 
 
 class DirectiveVisiter(TreeReplacer):
+    def __init__(self, qa, known_refs, local_refs):
+        assert isinstance(qa, str), qa
+        assert isinstance(known_refs, (list, set, frozenset)), known_refs
+        self.known_refs = known_refs
+        self.local_refs = local_refs
+        self.qa = qa
+
     def replace_Directive(self, directive):
-        return [Link("span.text", "ref", "exists", 'exists != "missing"')]
+        ref, exists = resolve_(
+            self.qa, self.known_refs, self.local_refs, directive.text
+        )
+        if exists != "missing":
+            print("Link", directive)
+            return [Link(directive.text, ref, exists, exists != "missing")]
+        print("Skip", directive)
+        return [directive]
 
 
 def prepare_doc(doc_blob, qa, known_refs):
@@ -546,20 +564,8 @@ def prepare_doc(doc_blob, qa, known_refs):
     for section in ["Extended Summary", "Summary", "Notes"]:
         if section in doc_blob.content:
             data = doc_blob.content[section]
-            res = DirectiveVisiter().generic_visit(data)[0]
+            res = DirectiveVisiter(qa, known_refs, local_refs).generic_visit(data)[0]
             assert isinstance(res, Section)
-            # res = Section()
-            # for it in data:
-            #     if it.__class__.__name__ == "Paragraph":
-            #         it.children = [
-            #             do_span(c, known_refs, local_refs, qa) for c in it.children
-            #         ]
-            #     if it.__class__.__name__ == "BlockDirective" and it.inner:
-            #         it.inner.children = [
-            #             do_span(c, known_refs, local_refs, qa)
-            #             for c in it.inner.children
-            #         ]
-            #     res.append(it)
             doc_blob.content[section] = res
 
     for d in doc_blob.see_also:
@@ -621,6 +627,7 @@ async def main():
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
+        undefined=StrictUndefined,
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph

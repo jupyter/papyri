@@ -304,21 +304,13 @@ user-select: none;
     {%- if type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
-        {%- if obj.exists=='local' -%}
-            {#{unreachable(obj.__dict__)}#}
-            <code><a href="#{{obj.ref}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
-        {%- elif obj.exists in ('exists', 'missing') -%}
-            <code><a href="{{obj.ref}}{{ext}}" class='{{obj.exists}}'>{{obj.text}}</a></code>
-        {% else %}
-            <code>:{{obj.domain}}:{{obj.role}}:`{{obj.text}}`</code>
-            {#{unreachable(obj.__dict__)}#}
-        {%- endif -%}
+        <code>:{{obj.domain}}:{{obj.role}}:`{{obj.text}}`</code>
     {%- elif type_ == 'Link' -%}
         {# Links have : value, reference, kind exists#}
         {%- if obj.kind=='local' -%}
             <code><a link href="#{{obj.reference}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
         {%- elif obj.kind in ('exists', ) -%}
-            <code><a link href="{{obj.ref}}{{ext}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
+            <code><a link href="{{obj.reference}}{{ext}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
         {% else %}
             {{unreachable(obj.__dict__)}}
         {%- endif -%}
