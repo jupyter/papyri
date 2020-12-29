@@ -110,14 +110,6 @@ class Base:
         return instance
 
 
-def hashable(v):
-    try:
-        hash(v)
-        return True
-    except TypeError:
-        assert False
-        return False
-
 
 def serialize(instance, annotation):
     # print("will serialise", type(instance), "as", annotation)
@@ -175,15 +167,12 @@ def serialize(instance, annotation):
 
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
 def deserialize(type_, annotation, data):
+    assert type_ is annotation
     if data != 0:
         assert data != {}
     assert annotation != {}
     assert annotation is not dict
-    if (
-        hashable(annotation)
-        and (annotation in base_types)
-        and (isinstance(data, annotation))
-    ):
+    if (annotation in base_types) and (isinstance(data, annotation)):
         return data
     if getattr(annotation, "__origin__", None) is tuple and isinstance(data, list):
         inner_annotation = annotation.__args__
@@ -201,25 +190,21 @@ def deserialize(type_, annotation, data):
         assert len(real_type) == 1
         real_type = real_type[0]
         return deserialize(real_type, real_type, data["data"])
-    elif (
-        issubclass(type_, Base)
-        and (type_.__name__ == getattr(annotation, "_name", None))
-        or type(data) is dict
-    ):
+    elif issubclass(annotation, Base) or type(data) is dict:
         loc = {}
-        new_ann = get_type_hints(type_).items()
+        new_ann = get_type_hints(annotation).items()
         assert new_ann
         for k, v in new_ann:
             assert k in data.keys(), f"{data}, {k}"
             if data[k] != 0:
-                assert data[k] != {}, f"{data}, {k}, {type_}"
+                assert data[k] != {}, f"{data}, {k}"
             intermediate = deserialize(v, v, data[k])
             assert intermediate != {}, f"{v}, {data}, {k}"
             loc[k] = intermediate
-        return type_._deserialise(**loc)
+        return annotation._deserialise(**loc)
 
     else:
-        assert False, f"{type_}, {annotation!r}, {data}"
+        assert False, f"{annotation!r}, {data}"
 
 
 class Node(Base):
