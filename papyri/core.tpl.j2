@@ -356,7 +356,9 @@ user-select: none;
 {% macro block_directive(dve) -%}
 <div class='block_directive'>
     <div class='head'>.. {{dve.directive_name}}:: {{dve.args0}}</div>
-    {{block_paragraph(dve.inner)}}
+    {% if dve.inner %}
+        {{block_paragraph(dve.inner)}}
+    {% endif %}
 </div>
 {% endmacro %}
 
@@ -388,7 +390,7 @@ user-select: none;
        {% elif type == 'Verbatim' %}
            {{unreachable()}}
        {% elif type == 'Paragraph' %}
-           {{block_paragraph(obj)}}
+        {{block_paragraph(obj)}}
        {% elif type == 'BlockVerbatim' %}
             <pre>
            {%- for l in obj.lines -%}
@@ -407,7 +409,7 @@ user-select: none;
            {% endfor %}
        {% else %}
            <code>Some A {{type}} Not implemented yet</code>
-           {#{{unreachable(type, obj)}}#}
+           {{unreachable(type, obj)}}
            {%- for l in obj.lines -%}
 {{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
            {%- endfor -%}</pre><pre>

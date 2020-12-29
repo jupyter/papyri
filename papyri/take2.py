@@ -983,7 +983,9 @@ class BlockDirective(Block):
     @property
     def children(self):
         if self.inner is not None:
-            yield self.inner
+            return [self.inner]
+        else:
+            return []
 
     @children.setter
     def children(self, value):

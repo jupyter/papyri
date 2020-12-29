@@ -289,7 +289,7 @@ async def _route(ref, store):
             sub["__link__"] = f
 
         error = env.get_template("404.tpl.j2")
-        return error.render(backrefs=list(set(br)), tree=tree, ref=ref)
+        return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
 
 
 def img(subpath):
@@ -461,6 +461,7 @@ async def ascii_render(name, store=None):
 
 
 def processed_example_data_nonlocal(example_section_data, known_refs, qa):
+    assert isinstance(example_section_data, Section)
     new_example_section_data = Section()
     for i, in_out in enumerate(example_section_data):
         type_ = in_out.__class__.__name__
@@ -493,21 +494,36 @@ def do_span(span, known_refs, local_refs, qa):
 
 class TreeReplacer:
     def generic_visit(self, node) -> List[Node]:
-        name = node.__class__.__name__
-        if method := getattr(self, "replace_" + name, None):
-            new_nodes = method(node)
-        elif name in ["Word", "Verbatim", "Example", "DefListItem", "BlockVerbatim"]:
-            return [node]
-        else:
-            new_children = []
-            for c in node.children:
-                replacement = self.generic_visit(c)
-                assert isinstance(replacement, list)
-                new_children.extend(replacement)
-            node.children = new_children
-            new_nodes = [node]
-        assert isinstance(new_nodes, list)
-        return new_nodes
+        assert node is not None
+        try:
+            name = node.__class__.__name__
+            if method := getattr(self, "replace_" + name, None):
+                new_nodes = method(node)
+            elif name in [
+                "Word",
+                "Verbatim",
+                "Example",
+                "DefListItem",
+                "BlockVerbatim",
+                "Math",
+                "Link",
+                "Code",
+                "Fig",
+            ]:
+                return [node]
+            else:
+                new_children = []
+                for c in node.children:
+                    assert c is not None, f"{node=} has a None child"
+                    replacement = self.generic_visit(c)
+                    assert isinstance(replacement, list)
+                    new_children.extend(replacement)
+                node.children = new_children
+                new_nodes = [node]
+            assert isinstance(new_nodes, list)
+            return new_nodes
+        except Exception as e:
+            raise type(e)(f"{node=}")
 
 
 class DirectiveVisiter(TreeReplacer):
@@ -519,13 +535,13 @@ class DirectiveVisiter(TreeReplacer):
         self.qa = qa
 
     def replace_Directive(self, directive):
+        if (directive.domain is not None) or (directive.role is not None):
+            return [directive]
         ref, exists = resolve_(
             self.qa, self.known_refs, self.local_refs, directive.text
         )
         if exists != "missing":
-            print("Link", directive)
             return [Link(directive.text, ref, exists, exists != "missing")]
-        print("Skip", directive)
         return [directive]
 
 
@@ -540,21 +556,30 @@ def prepare_doc(doc_blob, qa, known_refs):
         "Other Parameters",
         "Warns",
     ]
+
+    local_refs = []
+    for s in sections_:
+        local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
+
     ### dive into the example data, reconstruct the initial code, parse it with pygments,
     # and append the highlighting class as the third element
     # I'm thinking the linking strides should be stored separately as the code
     # it might be simpler, and more compact.
     # TODO : move this to ingest.
-    doc_blob.example_section_data = processed_example_data_nonlocal(
-        doc_blob.example_section_data, known_refs, qa=qa
-    )
+    visitor = DirectiveVisiter(qa, known_refs, local_refs)
+
+    res = visitor.generic_visit(doc_blob.example_section_data)
+    assert len(res) == 1
+    res = res[0]
+    assert isinstance(res, Section)
+    doc_blob.example_section_data = res
+
+    # doc_blob.example_section_data = processed_example_data_nonlocal(
+    #    doc_blob.example_section_data, known_refs, qa=qa
+    # )
 
     # partial lift of paragraph parsing....
     # TODO: Move this higher in the ingest
-
-    local_refs = []
-    for s in sections_:
-        local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
 
     doc_blob.refs = [
         (resolve_(qa, known_refs, local_refs, x), x) for x in doc_blob.refs
@@ -564,36 +589,33 @@ def prepare_doc(doc_blob, qa, known_refs):
     for section in ["Extended Summary", "Summary", "Notes"]:
         if section in doc_blob.content:
             data = doc_blob.content[section]
-            res = DirectiveVisiter(qa, known_refs, local_refs).generic_visit(data)[0]
+            res = visitor.generic_visit(data)
+            assert len(res) == 1
+            res = res[0]
             assert isinstance(res, Section)
             doc_blob.content[section] = res
 
     for d in doc_blob.see_also:
         assert isinstance(d.descriptions, list), qa
-        d.descriptions = paragraphs(d.descriptions)
-        for dsc in d.descriptions:
-            assert isinstance(
-                dsc,
-                (
-                    Paragraph,
-                    BlockDirective,
-                    BlockVerbatim,
-                    DefListItem,
-                    Example,
-                ),
-            )
-            for it in dsc.children:
-                if it.__class__.__name__ == 'Directive':
-                    it.ref, it.exists = resolve_(qa, known_refs, local_refs, it.text)
+
+        tree = paragraphs(d.descriptions)
+        new_desc = []
+        for dsc in tree:
+            res = visitor.generic_visit(dsc)
+            assert len(res) == 1
+            res = res[0]
+            new_desc.append(res)
+        d.descriptions = new_desc
     for s in sections_:
         if s in doc_blob.content:
             assert isinstance(doc_blob.content[s], list)
             new_content = []
             for param, type_, desc in doc_blob.content[s]:
                 assert isinstance(desc, list)
+                blocks = []
                 if desc:
-                    blocks = P2(desc)
-                    for block in blocks:
+                    items = P2(desc)
+                    for block in items:
 
                         assert isinstance(
                             block,
@@ -605,17 +627,14 @@ def prepare_doc(doc_blob, qa, known_refs):
                                 Example,
                             ),
                         ), block
-                        if not isinstance(block, Paragraph):
-                            continue
 
-                        for it in block.children:
-                            assert not isinstance(it, str)
-                            if it.__class__.__name__ == "Directive":
-                                it.ref, it.exists = resolve_(
-                                    qa, known_refs, local_refs, it.text
-                                )
+                        res = visitor.generic_visit(block)
+                        assert len(res) == 1
+                        res = res[0]
+                        blocks.append(res)
+
                 else:
-                    blocks = []
+                    pass
                 new_content.append((param, type_, blocks))
             doc_blob.content[s] = new_content
 

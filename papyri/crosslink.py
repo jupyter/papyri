@@ -428,9 +428,12 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                 instance.content[section] = Section(P2(data))
                 for d in instance.content[section]:
                     assert isinstance(d, take2.Node), f"{d}, {type(d)}"
+            else:
+                instance.content[section] = Section()
+
     blob.refs = list(sorted(set(blob.refs)))
     for section in ["Extended Summary", "Summary", "Notes"]:
-        if (data := _blob.content.get(section, None)) is not None:
+        if (data := blob.content.get(section, None)) is not None:
             assert isinstance(data, Section), data
 
     return blob
