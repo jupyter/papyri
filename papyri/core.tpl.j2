@@ -338,20 +338,22 @@ user-select: none;
 {%- endmacro %}
 
 
-{% macro lines(self) -%}
-    {%- for x in self %}
-        {{-x.text}}
-    {% endfor -%}
-{% endmacro %}
+{%- macro lines(self) -%}{%- for x in self %}
+{{x.text}}
+{%- endfor -%}
+{%- endmacro %}
 
 
 
 {% macro block(self) -%}
-{{lines(self.lines)}}
+{{-lines(self.lines)}}
+{%- if self.wh -%}
 {{lines(self.wh)}}
-{{lines(self.ind)}}
-    <br/>
-{% endmacro %}
+{%- endif -%}
+{%- if self.ind -%}
+    {{-lines(self.ind)-}}
+{%- endif -%}
+{%- endmacro %}
 
 {% macro block_directive(dve) -%}
 <div class='block_directive'>
@@ -402,7 +404,7 @@ user-select: none;
        {% elif type == 'DefListItem' %}
            {{block(obj)}}
        {% elif type == 'Example' %}
-           {{block(obj)}}
+           <pre>{{block(obj)-}}</pre>
        {% elif type == 'Section' %}
            {% for item in obj %}
                {{ render_II(item) }}
@@ -432,8 +434,8 @@ user-select: none;
 
 {% for section in doc.content.keys() if doc.content[section] %}
 
-    {% if section not in ['Extended Summary','Signature', 'Summary'] and doc.content[section] %}
-        <h3 id="section-{{section}}">{{section}}</h3>
+    {% if (section not in ['Extended Summary','Signature', 'Summary']) and not doc.content[section].empty()%}
+        <h3 id="section-{{section}}">{{section}} {{doc.content[section] == True}}</h3>
     {% endif %}
     {% if section in ['Extended Summary', 'Summary',  'Notes'] %}
         <!-- rendering {{section}} -->
@@ -475,7 +477,7 @@ user-select: none;
          {% for (ref, exists), r in doc.refs %}
             <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
          {% endfor %}
-   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] %}
+   {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] and doc.content[section] == True %}
 
        <dl>
            {% for p in doc.content[section] %}
@@ -495,7 +497,7 @@ user-select: none;
 
    </pre>
    {% else %}
-       {% if doc.content[section] %}
+       {% if doc.content[section] == True %}
         <pre>
        {{doc.content[section]}}
        </pre>

@@ -477,6 +477,12 @@ class Section(Node):
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.children}>"
 
+    def empty(self):
+        return len(self.children) == 0
+
+    def __bool__(self):
+        return len(self.children) >= 0
+
 
 class Param(Node):
     param: str
