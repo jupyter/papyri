@@ -3,3 +3,4 @@ IPython.core.display.Video.__init__: Block Verbatim in params ?
 IPython.core.interactiveshell.InteractiveShell.complete: DefListItem
 matplotlib.transforms.Bbox: parsing of example is completely incorrect.
 matplotlib.axes._axes.Axes.text: misparse example as well.
+IPython.core.completer.Completion: item list

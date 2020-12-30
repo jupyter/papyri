@@ -798,6 +798,7 @@ class Gen:
         self.version = version
 
         # clean out previous doc bundle
+
         collector = DFSCollector(modules[0], modules[1:])
         collected: Dict[str, Any] = collector.items()
 

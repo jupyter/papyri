@@ -59,7 +59,7 @@ from __future__ import annotations
 import sys
 from typing import List, Tuple, Optional, Union
 
-from papyri.gen import dedent_but_first
+from papyri.utils import dedent_but_first
 from there import print
 
 ex = """
@@ -187,7 +187,7 @@ def deserialize(type_, annotation, data):
     elif getattr(annotation, "__origin__", None) is Union:
         inner_annotation = annotation.__args__
         real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
-        assert len(real_type) == 1
+        assert len(real_type) == 1, real_type
         real_type = real_type[0]
         return deserialize(real_type, real_type, data["data"])
     elif issubclass(annotation, Base) or type(data) is dict:
@@ -446,6 +446,7 @@ class Section(Node):
             Text,
             Fig,
             Paragraph,
+            DefList,
             DefListItem,
             BlockDirective,
             Example,
@@ -483,6 +484,9 @@ class Section(Node):
     def __bool__(self):
         return len(self.children) >= 0
 
+    def __len__(self):
+        return len(self.children)
+
 
 class Param(Node):
     param: str
@@ -494,6 +498,7 @@ class Param(Node):
             Fig,
             Paragraph,
             DefListItem,
+            DefList,
             BlockDirective,
             Example,
             BlockVerbatim,
@@ -562,6 +567,7 @@ class Paragraph(Node):
 
     @classmethod
     def parse_lines(cls, lines):
+        assert isinstance(lines, list), lines
         assert lines
         tokens = list(lex(lines))
 
@@ -870,7 +876,7 @@ class Line(Node):
 
     @property
     def text(self):
-        return self._line.rstrip()
+        return self._line.rstrip()[self._offset :]
 
     @property
     def blank(self):
@@ -932,7 +938,13 @@ class Lines(Node):
         return rep
 
     def dedented(self):
-        pass
+        d = min([l.indent for l in self._lines if l.indent is not None])
+
+        new_lines = []
+        for l in self._lines:
+            nl = Line(l._line, l._number, l._offset + d)
+            new_lines.append(nl)
+        return Lines(new_lines)
 
     def __len__(self):
         return len(self._lines)
@@ -1090,15 +1102,47 @@ class BlockVerbatim(Block):
     def to_json(self):
         return serialize(self, type(self))
 
+
+class DefList(Block):
+    children: List[DefListItem]
+
+    def __init__(self, children=None):
+        self.children = children
+
+    def __repr__(self):
+        return type(self).COLOR(
+            f"<{self.__class__.__name__} '{len(self.children)}'> with\n"
+            + indent("\n".join([str(l) for l in self.children]), "    ")
+        )
+
+
 class DefListItem(Block):
     lines: Lines
     wh: Lines
     ind: Lines
+    dt: Paragraph
+    dd: Paragraph
 
-    def __init__(self, lines=None, wh=None, ind=None):
+    @property
+    def children(self):
+        return [self.dt, self.dd]
+
+    @children.setter
+    def children(self, value):
+        self.dt, self.dd = value
+
+    def __init__(self, lines=None, wh=None, ind=None, dl=None, dd=None):
         self.lines = lines
         self.wh = wh
         self.ind = ind
+        self.dt = dl
+        self.dd = dd
+
+    @classmethod
+    def parse(cls, lines, wh, ind):
+        dl = Paragraph.parse_lines([x._line for x in lines])
+        dd = Paragraph.parse_lines([x._line for x in ind.dedented()])
+        return cls(lines, wh, ind, dl, dd)
 
     COLOR = BLUE
 
@@ -1180,7 +1224,26 @@ def example_pass(block):
     return [block]
 
 
+def deflist_pass(blocks):
+    acc = []
+    deflist = []
+    for block in blocks:
+        if len(block.lines) == 1 and (not block.wh) and block.ind:
+            deflist.append(
+                DefListItem.parse(block.lines.dedented(), block.wh, block.ind)
+            )
+        else:
+            if deflist:
+                acc.append(DefList(deflist))
+                deflist = []
+            acc.append(block)
+    if deflist:
+        acc.append(DefList(deflist))
+    return acc
+
+
 def deflist_item_pass(block):
+    assert False
     if not type(block) == Block:
         return [block]
     if len(block.lines) == 1 and (not block.wh) and block.ind:
@@ -1208,12 +1271,13 @@ def paragraphs_pass(block):
                 return [BlockError.from_block(block)]
             if lines[-1]._line.endswith("::"):
                 return [Paragraph.parse_lines([l._line for l in block.lines])] + [
-                    BlockVerbatim(block.ind)
+                    BlockVerbatim(block.ind.dedented())
                 ]
             else:
-                return [Paragraph.parse_lines([l._line for l in block.lines])] + [
-                    Paragraph.parse_lines([l._line for l in block.ind])
-                ]
+                sub = [Block(*b) for b in make_block_3(block.ind.dedented())]
+                sub = deflist_pass(sub)
+                sub = [x for pairs in sub for x in paragraphs_pass(pairs)]
+                return [Paragraph.parse_lines([l._line for l in block.lines])] + sub
         else:
             return [Paragraph.parse_lines([l._line for l in block.lines])]
 
@@ -1250,6 +1314,7 @@ def get_object(qual):
 def assert_block_lines(blocks):
     for b in blocks:
         assert b.lines
+
 def main(text):
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
@@ -1258,8 +1323,9 @@ def main(text):
     doc = header_level_pass(doc)
     doc = [x for pairs in doc for x in example_pass(pairs)]
     doc = [x for pairs in doc for x in block_directive_pass(pairs)]
-    doc = [x for pairs in doc for x in deflist_item_pass(pairs)]
+    doc = deflist_pass(doc)
     doc = [x for pairs in doc for x in paragraphs_pass(pairs)]
+
     # TODO: third pass to set the header level for each header.
     # TODO: forth pass to make sections.
 

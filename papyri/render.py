@@ -511,10 +511,15 @@ def prepare_doc(doc_blob, qa, known_refs):
         new_desc = []
         for dsc in tree:
             new_desc.append(visitor.visit(dsc))
-            if visitor.local or visitor.total:
-                print(f"{visitor.local} / {visitor.total}")
-            visitor.local = 0
-            visitor.total = 0
+            if len(visitor.local) or len(visitor.total):
+                print(qa)
+            for v in visitor.local:
+                print("    Local:", v)
+            for v, r in visitor.total:
+                print("    Global:", v, "->", r)
+            visitor.local = []
+            visitor.total = []
+
         d.descriptions = new_desc
 
 

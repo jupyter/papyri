@@ -232,7 +232,24 @@ user-select: none;
         
         
         <brand><i class="fab fa-python"></i><a href='/'>Home</a></brand>
-        <nav> <a href='/' >/ p</a>  / <a href={{module}}>{{module}}</a> / <a>{{version}}</a> / <a>api</a>&nbsp;/&nbsp;
+        <nav> <a href='/' >/ p</a>  / 
+                <div class="dropdown">
+                <a href={{module}}>{{module}}</a>&nbsp;/&nbsp;
+                    <div class="dropdown-content">
+                            {% for link,name in parts[module] -%}
+                                <a href="{{link}}{{ext}}">{{name}}</a>
+                            {% endfor %}
+                     </div>
+                </div>
+                <div class="dropdown">
+                <a href={{module}}>{{version}}</a>&nbsp;/&nbsp;
+                    <div class="dropdown-content">
+                            {% for v in [version] -%}
+                                <a href="{{module}}{{ext}}">{{version}}</a>
+                            {% endfor %}
+                     </div>
+                </div>
+                <a>api</a>&nbsp;/&nbsp;
             {% for p,links in parts.items() %}
                 {% if links %}
                     <div class="dropdown">
@@ -241,11 +258,13 @@ user-select: none;
                         {% else %}
                             <a class="dropbtn" href='{{parts_links[p]}}{{ext}}'>{{p}}</a>{% if not loop.last %}.{% endif %}
                         {% endif %}
-                        <div class="dropdown-content">
-                        {% for link,name in links -%}
-                            <a href="{{link}}{{ext}}">{{name}}</a>
-                        {% endfor %}
-                        </div>
+                        {% if not loop.first %}
+                            <div class="dropdown-content">
+                            {% for link,name in links -%}
+                                <a href="{{link}}{{ext}}">{{name}}</a>
+                            {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 {% endif -%}
             {% endfor -%}
@@ -395,14 +414,23 @@ user-select: none;
         {{block_paragraph(obj)}}
        {% elif type == 'BlockVerbatim' %}
             <pre>
-           {%- for l in obj.lines -%}
-{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
+           {%- for l in obj.lines.dedented() -%}
+{{-l.text}}{% if not loop.last %}{{-'\n'-}}{%- endif -%}
            {%- endfor -%}</pre>
        {% elif type == 'Block' %}
            {{block(obj)}}
            {{unreachable(obj)}}
+       {% elif type == 'DefList' %}
+           <dl>
+               {% for item in obj.children %}
+               <dt>{{render_II(item.dt)}}<dt>
+               <dd>{{render_II(item.dd)}}<dd>
+               {%endfor %}  
+           </dl>
        {% elif type == 'DefListItem' %}
-           {{block(obj)}}
+           <pre>DEFLIST ITEM
+           {{-block(obj)-}}
+           </pre>
        {% elif type == 'Example' %}
            <pre>{{block(obj)-}}</pre>
        {% elif type == 'Section' %}
@@ -428,14 +456,14 @@ user-select: none;
     {% else %}
                 <b class='missing'>{{r.name}}</b>
     {% endif %}
-    {%- endmacro %}
+{%- endmacro %}
 
 
 
 {% for section in doc.content.keys() if doc.content[section] %}
 
-    {% if (section not in ['Extended Summary','Signature', 'Summary']) and not doc.content[section].empty()%}
-        <h3 id="section-{{section}}">{{section}} {{doc.content[section] == True}}</h3>
+    {% if (section not in ['Extended Summary','Signature', 'Summary']) and len(doc.content[section]) > 0 %}
+        <h3 id="section-{{section}}">{{section}}</h3>
     {% endif %}
     {% if section in ['Extended Summary', 'Summary',  'Notes'] %}
         <!-- rendering {{section}} -->
@@ -444,7 +472,7 @@ user-select: none;
        <code class='signature'>{{doc.content[section]}}</code>
     {% elif section in ['See Also'] %}
         {% for sa in doc.see_also %}
-            <dl>
+            <dl>{{sa}}
                 <dt><a>{{ref(sa.name)}}</a></dt>
                 <dd>{{render_paragraph(sa.descriptions)}}</dd>
             </dl>
@@ -509,7 +537,7 @@ user-select: none;
     <p>The following pages refer to to this document either explicitly or contain code examples using this.</p>
     {% if backrefs[0] is not none %}
     {% for r in backrefs[0] %}
-        <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>
+        <a class='exists' heef='{{r}}{{ext}}'>{{r}}</a>
     {% endfor %}
     {% endif%}
     {% if backrefs[1] is not none %}

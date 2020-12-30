@@ -59,8 +59,8 @@ def P2(lines) -> List[Node]:
     blocks_data = t2main("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    # for block in blocks_data:
-    #    print(block)
+    for block in blocks_data:
+        assert not block.__class__.__name__ == "Block"
     return blocks_data
 
 
@@ -342,8 +342,8 @@ class IngestedBlobs(DocBlob):
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             assert section in instance.content
             instance.content[section] = visitor.visit(instance.content[section])
-        if visitor.local or visitor.total:
-            print(f"{visitor.local} / {visitor.total}")
+        if len(visitor.local) or len(visitor.total):
+            print(f"{len(visitor.local)} / {len(visitor.total)}")
 
         return instance
 
@@ -411,6 +411,9 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     instance = DocBlob.from_json(data)
 
     blob = IngestedBlobs()
+    # TODO: here or maybe somewhere else:
+    # see also 3rd item description is improperly deserialised as now it can be a paragraph.
+    # Make see Also an auto deserialised object in take2.
     blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
     for d in blob.see_also:
         assert isinstance(d.descriptions, list), qa
@@ -491,15 +494,13 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
         if section in instance.content:
             if data := instance.content[section]:
                 instance.content[section] = Section(P2(data))
-                for d in instance.content[section]:
-                    assert isinstance(d, take2.Node), f"{d}, {type(d)}"
             else:
                 instance.content[section] = Section()
 
     blob.refs = list(sorted(set(blob.refs)))
     for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
         if (data := blob.content.get(section, None)) is not None:
-            assert isinstance(data, Section), data
+            assert isinstance(data, Section), f"{data} {section}"
 
     sections_ = [
         "Parameters",
@@ -540,8 +541,8 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
         assert section in instance.content
         instance.content[section] = visitor.visit(instance.content[section])
-    if visitor.local or visitor.total:
-        print(f"{visitor.local} / {visitor.total}")
+    if len(visitor.local) or len(visitor.total):
+        print(f"{len(visitor.local)} / {len(visitor.total)}")
 
     return blob
 
@@ -563,7 +564,6 @@ class TreeReplacer:
                 "Word",
                 "Verbatim",
                 "Example",
-                "DefListItem",
                 "BlockVerbatim",
                 "Math",
                 "Link",
@@ -593,19 +593,20 @@ class DirectiveVisiter(TreeReplacer):
         self.known_refs = known_refs
         self.local_refs = local_refs
         self.qa = qa
-        self.local = 0
-        self.total = 0
+        self.local = []
+        self.total = []
 
     def replace_Directive(self, directive):
-        if (directive.domain is not None) or (directive.role is not None):
+        if (directive.domain is not None) or (directive.role not in (None, "mod")):
             return [directive]
         ref, exists = resolve_(
             self.qa, self.known_refs, self.local_refs, directive.text
         )
         if exists != "missing":
             if exists == "local":
-                self.local += 1
-            self.total += 1
+                self.local.append(directive.text)
+            else:
+                self.total.append((directive.text, ref))
             return [Link(directive.text, ref, exists, exists != "missing")]
         return [directive]
 
