@@ -247,7 +247,7 @@ user-select: none;
                             {% for v in [version] -%}
                                 <a href="{{module}}{{ext}}">{{version}}</a>
                             {% endfor %}
-                     </div>
+                    </div>
                 </div>
                 <a>api</a>&nbsp;/&nbsp;
             {% for p,links in parts.items() %}
@@ -291,7 +291,7 @@ user-select: none;
     <hr/>
     <a>Narrative Docs</a>
     <hr/>
-    {%- for section in doc.content.keys() if doc.content[section] -%}
+    {%- for section in doc.content.keys() if len(doc.content[section]) -%}
     {%- if section not in ['Extended Summary','Signature', 'Summary'] -%}
     <a href="#section-{{section}}">{{section}}</a>
 
@@ -472,7 +472,7 @@ user-select: none;
        <code class='signature'>{{doc.content[section]}}</code>
     {% elif section in ['See Also'] %}
         {% for sa in doc.see_also %}
-            <dl>{{sa}}
+            <dl>
                 <dt><a>{{ref(sa.name)}}</a></dt>
                 <dd>{{render_paragraph(sa.descriptions)}}</dd>
             </dl>
