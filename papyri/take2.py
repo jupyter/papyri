@@ -158,10 +158,10 @@ def serialize(instance, annotation):
         else:
             assert (
                 False
-            ), f"Error serializing {instance}, expected  {annotation}, got {type(instance)}"
+            ), f"Error serializing {instance}, of type {type(instance)} expected  {annotation}, got {type(instance)}"
     except Exception as e:
         raise type(e)(
-            f"Error serialising {instance}, expecting {annotation}, got {type(instance)}"
+            f"Error serialising {instance}, of type {type(instance)} expecting {annotation}, got {type(instance)}"
         ) from e
 
 
@@ -303,11 +303,14 @@ class Link(Node):
     kind: str
     exists: bool
 
-    def __init__(self, value, reference, kind, exists):
+    def __init__(self, value=None, reference=None, kind=None, exists=None):
         self.value = value
         self.reference = reference
         self.kind = kind
         self.exists = exists
+
+    def __len__(self):
+        return len(self.value)
 
 class Directive(Node):
 
@@ -538,7 +541,7 @@ class Paragraph(Node):
 
     __slots__ = ["children", "width"]
 
-    children: List[Union[Paragraph, Word, Directive, Verbatim]]
+    children: List[Union[Paragraph, Word, Directive, Verbatim, Link]]
 
     def __init__(self, children, width=80):
         self.children = children

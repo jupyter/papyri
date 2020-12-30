@@ -460,64 +460,7 @@ async def ascii_render(name, store=None):
     print(await _ascii_render(name, store))
 
 
-class TreeReplacer:
-    def visit(self, node):
-        assert not isinstance(node, list)
-        res = self.generic_visit(node)
-        assert len(res) == 1
-        return res[0]
-
-    def generic_visit(self, node) -> List[Node]:
-        assert node is not None
-        try:
-            name = node.__class__.__name__
-            if method := getattr(self, "replace_" + name, None):
-                new_nodes = method(node)
-            elif name in [
-                "Word",
-                "Verbatim",
-                "Example",
-                "DefListItem",
-                "BlockVerbatim",
-                "Math",
-                "Link",
-                "Code",
-                "Fig",
-            ]:
-                return [node]
-            else:
-                new_children = []
-                for c in node.children:
-                    assert c is not None, f"{node=} has a None child"
-                    replacement = self.generic_visit(c)
-                    assert isinstance(replacement, list)
-                    new_children.extend(replacement)
-                node.children = new_children
-                new_nodes = [node]
-            assert isinstance(new_nodes, list)
-            return new_nodes
-        except Exception as e:
-            raise type(e)(f"{node=}")
-
-
-class DirectiveVisiter(TreeReplacer):
-    def __init__(self, qa, known_refs, local_refs):
-        assert isinstance(qa, str), qa
-        assert isinstance(known_refs, (list, set, frozenset)), known_refs
-        self.known_refs = known_refs
-        self.local_refs = local_refs
-        self.qa = qa
-
-    def replace_Directive(self, directive):
-        if (directive.domain is not None) or (directive.role is not None):
-            return [directive]
-        ref, exists = resolve_(
-            self.qa, self.known_refs, self.local_refs, directive.text
-        )
-        if exists != "missing":
-            return [Link(directive.text, ref, exists, exists != "missing")]
-        return [directive]
-
+from .crosslink import TreeReplacer, DirectiveVisiter
 
 def prepare_doc(doc_blob, qa, known_refs):
     assert hash(known_refs)
@@ -558,6 +501,8 @@ def prepare_doc(doc_blob, qa, known_refs):
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
         if section in doc_blob.content:
             doc_blob.content[section] = visitor.visit(doc_blob.content[section])
+        else:
+            assert False
 
     for d in doc_blob.see_also:
         assert isinstance(d.descriptions, list), qa
@@ -566,6 +511,10 @@ def prepare_doc(doc_blob, qa, known_refs):
         new_desc = []
         for dsc in tree:
             new_desc.append(visitor.visit(dsc))
+            if visitor.local or visitor.total:
+                print(f"{visitor.local} / {visitor.total}")
+            visitor.local = 0
+            visitor.total = 0
         d.descriptions = new_desc
 
 

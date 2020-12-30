@@ -331,6 +331,20 @@ class IngestedBlobs(DocBlob):
             if (data := instance.content.get(section, None)) is not None:
                 assert isinstance(data, Section), data
 
+        local_refs = []
+        for s in sections_:
+            from .take2 import Param
+
+            local_refs = local_refs + [
+                x[0] for x in instance.content[s] if isinstance(x, Param)
+            ]
+        visitor = DirectiveVisiter(qa, frozenset(), local_refs)
+        for section in ["Extended Summary", "Summary", "Notes"] + sections_:
+            assert section in instance.content
+            instance.content[section] = visitor.visit(instance.content[section])
+        if visitor.local or visitor.total:
+            print(f"{visitor.local} / {visitor.total}")
+
         return instance
 
 @lru_cache
@@ -515,7 +529,85 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                 new_content.append(Param(param, type_, items))
             blob.content[s] = new_content
 
+    local_refs = []
+    for s in sections_:
+        from .take2 import Param
+
+        local_refs = local_refs + [
+            x[0] for x in instance.content[s] if isinstance(x, Param)
+        ]
+    visitor = DirectiveVisiter(qa, frozenset(), local_refs)
+    for section in ["Extended Summary", "Summary", "Notes"] + sections_:
+        assert section in instance.content
+        instance.content[section] = visitor.visit(instance.content[section])
+    if visitor.local or visitor.total:
+        print(f"{visitor.local} / {visitor.total}")
+
     return blob
+
+
+class TreeReplacer:
+    def visit(self, node):
+        assert not isinstance(node, list)
+        res = self.generic_visit(node)
+        assert len(res) == 1
+        return res[0]
+
+    def generic_visit(self, node) -> List[Node]:
+        assert node is not None
+        try:
+            name = node.__class__.__name__
+            if method := getattr(self, "replace_" + name, None):
+                new_nodes = method(node)
+            elif name in [
+                "Word",
+                "Verbatim",
+                "Example",
+                "DefListItem",
+                "BlockVerbatim",
+                "Math",
+                "Link",
+                "Code",
+                "Fig",
+            ]:
+                return [node]
+            else:
+                new_children = []
+                for c in node.children:
+                    assert c is not None, f"{node=} has a None child"
+                    replacement = self.generic_visit(c)
+                    assert isinstance(replacement, list)
+                    new_children.extend(replacement)
+                node.children = new_children
+                new_nodes = [node]
+            assert isinstance(new_nodes, list)
+            return new_nodes
+        except Exception as e:
+            raise type(e)(f"{node=}")
+
+
+class DirectiveVisiter(TreeReplacer):
+    def __init__(self, qa, known_refs, local_refs):
+        assert isinstance(qa, str), qa
+        assert isinstance(known_refs, (list, set, frozenset)), known_refs
+        self.known_refs = known_refs
+        self.local_refs = local_refs
+        self.qa = qa
+        self.local = 0
+        self.total = 0
+
+    def replace_Directive(self, directive):
+        if (directive.domain is not None) or (directive.role is not None):
+            return [directive]
+        ref, exists = resolve_(
+            self.qa, self.known_refs, self.local_refs, directive.text
+        )
+        if exists != "missing":
+            if exists == "local":
+                self.local += 1
+            self.total += 1
+            return [Link(directive.text, ref, exists, exists != "missing")]
+        return [directive]
 
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
