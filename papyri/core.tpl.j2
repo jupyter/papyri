@@ -474,6 +474,7 @@ user-select: none;
         {% for sa in doc.see_also %}
             <dl>
                 <dt><a>{{ref(sa.name)}}</a></dt>
+                <!-- This See also will be incorrect as the SeeAlsoItems are improperly deserialised. -->
                 <dd>{{render_paragraph(sa.descriptions)}}</dd>
             </dl>
         {% endfor %}
