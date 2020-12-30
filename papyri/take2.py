@@ -338,7 +338,12 @@ class Directive(Node):
         acc = []
         consume_start = None
         domain, role = None, None
-        if tokens[0] == "`" and tokens[1] != "`" and tokens[1].strip():
+        if (
+            (len(tokens) > 2)
+            and tokens[0] == "`"
+            and tokens[1] != "`"
+            and tokens[1].strip()
+        ):
             consume_start = 1
         elif (len(tokens) >= 4) and (tokens[0], tokens[2], tokens[3]) == (
             ":",
@@ -410,7 +415,7 @@ class Word(Node):
 
 def lex(lines):
     acc = ""
-    for l in lines:
+    for i, l in enumerate(lines):
         assert isinstance(l, str), l
         for c in l:
             if c in " `*_:":
@@ -423,7 +428,8 @@ def lex(lines):
         if acc:
             yield acc
             acc = ""
-        yield " "
+        if i != len(lines) - 1:
+            yield " "
 
 
 class FirstCombinator:
@@ -1120,7 +1126,7 @@ class DefListItem(Block):
     lines: Lines
     wh: Lines
     ind: Lines
-    dt: Paragraph
+    dt: Paragraph  # TODO: this is technically incorrect and should be a single term, (word, directive or link is my guess).
     dd: Paragraph
 
     @property
@@ -1140,7 +1146,7 @@ class DefListItem(Block):
 
     @classmethod
     def parse(cls, lines, wh, ind):
-        dl = Paragraph.parse_lines([x._line for x in lines])
+        dl = Paragraph.parse_lines([l.text.strip() for l in lines])
         dd = Paragraph.parse_lines([x._line for x in ind.dedented()])
         return cls(lines, wh, ind, dl, dd)
 
@@ -1228,7 +1234,14 @@ def deflist_pass(blocks):
     acc = []
     deflist = []
     for block in blocks:
-        if len(block.lines) == 1 and (not block.wh) and block.ind:
+        if len(block.lines) == 1:
+            p = Paragraph.parse_lines([l.text.strip() for l in block.lines])
+        if (
+            len(block.lines) == 1
+            and (not block.wh)
+            and block.ind
+            # and len(p.children) == 1
+        ):
             deflist.append(
                 DefListItem.parse(block.lines.dedented(), block.wh, block.ind)
             )

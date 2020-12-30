@@ -291,7 +291,7 @@ user-select: none;
     <hr/>
     <a>Narrative Docs</a>
     <hr/>
-    {%- for section in doc.content.keys() if len(doc.content[section]) -%}
+    {%- for section in doc.content.keys() if doc.content[section] and len(doc.content[section]) -%}
     {%- if section not in ['Extended Summary','Signature', 'Summary'] -%}
     <a href="#section-{{section}}">{{section}}</a>
 
@@ -421,6 +421,7 @@ user-select: none;
            {{block(obj)}}
            {{unreachable(obj)}}
        {% elif type == 'DefList' %}
+          <!-- deflist -->
            <dl>
                {% for item in obj.children %}
                <dt>{{render_II(item.dt)}}<dt>

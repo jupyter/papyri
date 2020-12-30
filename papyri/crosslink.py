@@ -211,8 +211,8 @@ class IngestedBlobs(DocBlob):
         new_sec = Section()
 
         for in_out in sec:
-            type_ = in_out.__class__.__name__
-            assert type_ in (
+            type_name = in_out.__class__.__name__
+            assert type_name in (
                 "Code",
                 "Text",
                 "Fig",
@@ -220,9 +220,10 @@ class IngestedBlobs(DocBlob):
                 "BlockDirective",
                 "BlockVerbatim",
                 "DefListItem",
+                "DefList",
                 "Example",
-            ), f"{type_}, {in_out}"
-            if type_ == "Text":
+            ), f"found {type_name=}, {in_out=}, not in expected list of types "
+            if type_name == "Text":
                 pass
                 # !!! MOVE This To GEN ?
                 # assert isinstance(in_out, str), repr(in_out)
@@ -253,6 +254,7 @@ class IngestedBlobs(DocBlob):
                 "BlockDirective",
                 "BlockVerbatim",
                 "DefListItem",
+                "DefList",
                 "Example",
             ), in_out
             if type_ == "Text":
