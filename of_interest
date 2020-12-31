@@ -5,3 +5,5 @@ matplotlib.transforms.Bbox: parsing of example is completely incorrect.
 matplotlib.axes._axes.Axes.text: misparse example as well.
 IPython.core.completer.Completion: item list
 matplotlib.figure.Figure.add_subplot: custom double dot example.
+matplotlib.colors: unnumbered list with indent.
+matplotlib.colors: reference via `.. _palettable: value` and autolink `paletable_`

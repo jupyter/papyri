@@ -1147,6 +1147,7 @@ class DefListItem(Block):
     @classmethod
     def parse(cls, lines, wh, ind):
         dl = Paragraph.parse_lines([l.text.strip() for l in lines])
+        assert len(dl.children) == 1
         dd = Paragraph.parse_lines([x._line for x in ind.dedented()])
         return cls(lines, wh, ind, dl, dd)
 
@@ -1240,7 +1241,7 @@ def deflist_pass(blocks):
             len(block.lines) == 1
             and (not block.wh)
             and block.ind
-            # and len(p.children) == 1
+            and len(p.children) == 1
         ):
             deflist.append(
                 DefListItem.parse(block.lines.dedented(), block.wh, block.ind)
