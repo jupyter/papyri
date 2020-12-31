@@ -796,8 +796,16 @@ class Gen:
         print("Configuration:", json.dumps(module_conf, indent=2))
         self.root = root
         self.version = version
+        subs = module_conf.get("submodules", [])
+        extra_from_conf = [root + "." + s for s in subs]
+        for name in extra_from_conf:
+            x, *r = name.split(".")
+            n0 = __import__(name)
+            for sub in r:
+                n0 = getattr(n0, sub)
+            modules.append(n0)
 
-        # clean out previous doc bundle
+        print(modules)
 
         collector = DFSCollector(modules[0], modules[1:])
         collected: Dict[str, Any] = collector.items()

@@ -362,7 +362,10 @@ def resolve_(qa: str, known_refs, local_ref, ref):
         return ref, "missing"
     if ref in {"None", "False", "True"}:
         return ref, "missing"
-
+    # here is sphinx logic.
+    # https://www.sphinx-doc.org/en/master/_modules/sphinx/domains/python.html?highlight=tilde
+    # tilda ~ hide the module name/class name
+    # dot . search more specific first.
     if ref.startswith("~"):
         ref = ref[1:]
     if ref in local_ref:
@@ -374,6 +377,17 @@ def resolve_(qa: str, known_refs, local_ref, ref):
             if (found := qa + ref) in known_refs:
                 return found, "exists"
             else:
+                root = qa.split(".")[0]
+                subset = [
+                    r for r in known_refs if r.startswith(root) and r.endswith(ref)
+                ]
+                if len(subset) == 1:
+                    return subset[0], "exists"
+                else:
+                    if len(subset) > 1:
+                        print("subset", subset, ref, root)
+
+                # print(f"did not resolve {qa} + {ref}")
                 return ref, "missing"
 
         parts = qa.split(".")

@@ -17,7 +17,14 @@ logo = 'scipy_logo.png'
 [matplotlib]
 logo = 'matplotlib_logo.png'
 wait_for_plt_show = false
-
+submodules = [
+ "image", 
+ "pyplot",
+ "axes",
+ "axes._base",
+ "dviread",
+ "image"
+]
 [papyri]
 logo = 'papyri-logo.png'
 
