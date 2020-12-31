@@ -543,8 +543,6 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
         assert section in instance.content
         instance.content[section] = visitor.visit(instance.content[section])
-    if len(visitor.local) or len(visitor.total):
-        print(f"{len(visitor.local)} / {len(visitor.total)}")
 
     return blob
 

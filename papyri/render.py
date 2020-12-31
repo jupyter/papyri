@@ -160,7 +160,6 @@ def compute_siblings(ref, family):
         cpath += part + "."
     if not siblings["+"]:
         del siblings["+"]
-    print(siblings.keys())
     return siblings
 
 
@@ -511,12 +510,6 @@ def prepare_doc(doc_blob, qa, known_refs):
         new_desc = []
         for dsc in tree:
             new_desc.append(visitor.visit(dsc))
-            if len(visitor.local) or len(visitor.total):
-                print(qa)
-            for v in visitor.local:
-                print("    Local:", v)
-            for v, r in visitor.total:
-                print("    Global:", v, "->", r)
             visitor.local = []
             visitor.total = []
 
