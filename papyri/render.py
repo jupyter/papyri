@@ -483,8 +483,7 @@ def prepare_doc(doc_blob, qa, known_refs):
     # TODO : move this to ingest.
     visitor = DirectiveVisiter(qa, known_refs, local_refs)
 
-    res = visitor.visit(doc_blob.example_section_data)
-    doc_blob.example_section_data = res
+    doc_blob.example_section_data = = visitor.visit(doc_blob.example_section_data)
 
     # doc_blob.example_section_data = processed_example_data_nonlocal(
     #    doc_blob.example_section_data, known_refs, qa=qa
@@ -504,11 +503,8 @@ def prepare_doc(doc_blob, qa, known_refs):
             assert False
 
     for d in doc_blob.see_also:
-        assert isinstance(d.descriptions, list), qa
-
-        tree = paragraphs(d.descriptions)
         new_desc = []
-        for dsc in tree:
+        for dsc in d.descriptions:
             new_desc.append(visitor.visit(dsc))
             visitor.local = []
             visitor.total = []
@@ -553,7 +549,7 @@ async def loc(document, *, store, tree, known_refs):
         raise type(e)(f"Error in {qa}") from e
 
 
-async def main():
+async def main(ascii, html):
     store = Store(ingest_dir)
     files = store.glob("*/module/*.json")
     css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
@@ -586,24 +582,28 @@ async def main():
             or document.name.endswith("__papyri__.json")
         ):
             assert False, document.name
-        doc_blob, qa, siblings, parts_links = await loc(
-            document,
-            store=store,
-            tree=tree,
-            known_refs=known_refs,
-        )
-        data = render_one(
-            template=template,
-            doc=doc_blob,
-            qa=qa,
-            ext=".html",
-            parts=siblings,
-            parts_links=parts_links,
-            backrefs=doc_blob.backrefs,
-            pygment_css=css_data,
-        )
-        with (html_dir / f"{qa}.html").open("w") as f:
-            f.write(data)
+        if ascii:
+            qa = document.name[:-5]
+            await _ascii_render(qa, store, known_refs)
+        if html:
+            doc_blob, qa, siblings, parts_links = await loc(
+                document,
+                store=store,
+                tree=tree,
+                known_refs=known_refs,
+            )
+            data = render_one(
+                template=template,
+                doc=doc_blob,
+                qa=qa,
+                ext=".html",
+                parts=siblings,
+                parts_links=parts_links,
+                backrefs=doc_blob.backrefs,
+                pygment_css=css_data,
+            )
+            with (html_dir / f"{qa}.html").open("w") as f:
+                f.write(data)
 
     assets = store.glob("*/assets/*")
     for asset in assets:

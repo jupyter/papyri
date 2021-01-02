@@ -9,15 +9,32 @@
     {%- endfor-%}
 {%- endmacro %}
 
+
+{%- macro lines(self) -%}{%- for x in self %}
+{{x.text}}
+{%- endfor -%}
+{%- endmacro %}
+
+{% macro block(self) -%}
+{{-lines(self.lines)}}
+{%- if self.wh -%}
+{{lines(self.wh)}}
+{%- endif -%}
+{%- if self.ind -%}
+    {{-lines(self.ind)-}}
+{%- endif -%}
+{%- endmacro %}
+
+
 {% macro render_inner(type, obj) -%}
    |{%- if type == 'Word' -%}
    |   |{{- obj.value -}}
-   |{%- elif type == 'Directive' %}
-   |   |{% if obj.exists=='local' %}
-   |   |    {{-green(obj.text)-}}
-   |   |{% elif obj.exists=='exists' %}
-   |   |    {{-blue(obj.text)-}}
-   |   |{% elif obj.exists=='missing' %}
+   |{%- elif type == 'Link' %}
+   |   |{% if obj.kind=='local' %}
+   |   |    {{-green(obj.value)-}}
+   |   |{% elif obj.kind=='exists' %}
+   |   |    {{-blue(obj.value)-}}
+   |   |{% elif obj.kind=='missing' %}
    |   |    {{-unreachable(obj)}}
    |   |{% else %}
    |   |{% endif %}
@@ -40,16 +57,18 @@
 
 {% macro block_directive(dve) -%}
 {{blue("..")}}{{blue(dve.directive_name)}}{{blue("::")}} {{dve.args0}}
+    {% if dve.inner %}
     |{{block_paragraph(dve.inner)}}
+    {% endif %}
 {% endmacro %}
 
-{% macro render_II(prgs) -%}
-   |{% for obj in prgs.children %}
+{% macro render_II(obj) -%}
+   |{% if obj.__class__.__name__ == 'Paragraph' %}
+   |   |{{block_paragraph(obj)}}
+   |{% else %}
    |{%- set type = obj.__class__.__name__ -%}
-   |   |{%- if type == 'Directive' -%}
-   |   |   |{{obj}}
-   |   |{% elif type == 'Math' %}
-   |   |   |{{obj}}
+   |   |{%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim') -%}
+   |   |   |{{unreachable()}}
    |   |{% elif type == 'BlockDirective' %}
    |   |   |{{'\n'}}{{block_directive(obj)}}
    |   |{% elif type == 'Verbatim' %}
@@ -61,17 +80,25 @@
    |   |   |   |{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
    |   |   |{%- endfor -%}
    |   |{% elif type == 'Block' %}
-   |   |   |{{block(obj)}}
+   |   |   |   |   |{{unreachable()}}
+   |   |{% elif type == 'DefList' %}
+   |   |   |    {% for item in obj.children %}
+   |   |   |    {{render_II(item.dt)}}
+   |   |   |        {{render_II(item.dd)}}
+   |   |   |    {%endfor %}  
+   |   |{% elif type == 'DefListItem' %}
+   |   |    {{-block(obj)-}}
+   |   |{% elif type == 'Example' %}
+   |   |   |   |{{block(obj)}}
+   |   |{% elif type == 'Section' %}
+   |   |   {% for item in obj %}
+   |   |       {{ render_II(item) }}
+   |   |   {% endfor %}
    |   |{% else %}
    |   |   |Some {{type}} Not implemented yet
-   |   |   |{%- for l in obj.lines -%}
-   |   |   |   |{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
-   |   |   |{%- endfor -%}
-   |   |   |{%- for l in obj.ind -%}
-   |   |   |   |{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
-   |   |   |{%- endfor -%}
+   |   |    {{unreachable(obj)}}
    |   |{%- endif -%}
-   |{%- endfor %}
+   |{%- endif -%}
 {%- endmacro %}
 
 
@@ -82,31 +109,9 @@
    |{{ unreachable('Not a list') }}
    |{% endif %}
    |{% for prg in prgs %}
-   |   |{% if prg.__class__.__name__ ==  'Paragraph' %}
    |   |   |{%- for obj in prg.children -%}
-   |   |   |   |{%- if type == 'Word' -%}
-   |   |   |   |    {{- obj.value -}}
-   |   |   |   |{%- elif type == 'Directive' %}
-   |   |   |   |    {% if obj.exists=='local' %}
-   |   |   |   |        {{-green(obj.text)-}}
-   |   |   |   |    {% elif obj.exists=='exists' %}
-   |   |   |   |        {{-blue(obj.text)-}}
-   |   |   |   |    {% else %}
-   |   |   |   |        {{-unreachable()-}}
-   |   |   |   |        {{-red(obj.text)-}}
-   |   |   |   |    {% endif %}
-   |   |   |   |{% elif obj.__class__.__name__ == 'Math' %}
-   |   |   |   |    ${{obj.text}}$
-   |   |   |   |{% elif obj.__class__.__name__ == 'Verbatim' %}
-   |   |   |   |    {{-yellow(obj.text)-}}
-   |   |   |   |{% else %}
-   |   |   |   |    Some {{obj.__class__.__name__}}
-   |   |   |   |{%- endif -%}
+   |   |   |    {{- render_inner(obj.__class__.__name__, obj) -}} 
    |   |   |{%- endfor -%}
-   |   |{% elif  prg.__class__.__name__ in  ('BlockDirective',)  %}
-   |   |{% else %}
-   |   |   |{{ unreachable('Not a Paragraph', prg) }}
-   |   |{% endif %}
    |{%- endfor -%}
 {%- endmacro %}
 
@@ -153,21 +158,24 @@
    |{% elif section in ['See Also'] %}
    |   |{% for sa in doc.see_also %}
    |   |     {{bold(ref(sa.name))}}
-   |   |         {{render_II(sa.descriptions) | wordwrap | indent(width=8)}}
+   |   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
    |   |{% endfor %}
    |{% elif section in ['Examples'] %}
-   |   |{% for type,data in doc.example_section_data %}
-   |   |   |{% if type=='text' %}
+   |   |{% for data in doc.example_section_data %}
+   |   |   |{%- set type = data.__class__.__name__ -%}
+   |   |   |{% if type=='Text' %}
    |   |   |
    |   |   |    {{render_paragraph(data)}}
    |   |   |
-   |   |   |{% elif type=='fig' %}
+   |   |   |{% elif type=='Fig' %}
    |   |   |        {{yellow("┌────────────────────┐")}}
    |   |   |        {{yellow("│ Image not included │")}}
    |   |   |        {{yellow("└────────────────────┘")}}
-   |   |   |{% else %}
-   |   |   |    {{ example(data[0]) }}
-   |   |   |    {{ data[1]}}
+   |   |   |{% elif type=="Code" %}
+   |   |   |    {{ example(data.entries) }}
+   |   |   |    {{ data.out}}
+   |   |   |{% else%}
+   |   |   |    {{render_II(data)}}
    |   |   |{% endif -%}
    |   |{%- endfor %}
    |   |    {{underline("See:")}}
@@ -182,7 +190,9 @@
    |   |   |{% else %}
    |   |   |    {{green(p[1])}}
    |   |   |{% endif %}
-   |   |   |       {{render_II(p[2]) | wordwrap | indent(width=8) }}
+   |   |   |   {% for item in p[2] %}
+   |   |   |       {{render_II(item)| wordwrap | indent(width=8)}}
+   |   |   |   {% endfor %}
    |   |{% endfor %}
    |{% else %}
    |    {% if doc.content[section] %}

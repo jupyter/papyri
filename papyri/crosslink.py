@@ -199,6 +199,8 @@ class IngestedBlobs(DocBlob):
         ]
         for d in instance.see_also:
             assert isinstance(d.descriptions, list), qa
+            d.descriptions = paragraphs(d.descriptions)
+
 
         # Todo: remove this; hopefully the logic from load_one_uningested
         # load a DocBlob instaead of un IngestedDocBlob
