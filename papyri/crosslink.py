@@ -17,6 +17,8 @@ from .take2 import (
     Link,
     Node,
     Section,
+    SeeAlsoItem,
+    Ref,
 )
 from . import take2 as take2
 from .utils import progress

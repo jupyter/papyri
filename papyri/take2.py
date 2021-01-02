@@ -1154,6 +1154,44 @@ class DefListItem(Block):
     COLOR = BLUE
 
 
+from dataclasses import dataclass
+
+
+class Ref(Node):
+    name: str
+    ref: Optional[str]
+    exists: Optional[bool]
+
+    def __init__(self, name=None, ref = None, exists=None)
+        self.name = name
+        self.ref = ref
+        self.exists = exists
+
+    def __hash__(self):
+        return hash((self.name, self.ref, self.exists))
+
+
+class SeeAlsoItem(Node):
+    name: Ref
+    descriptions: List[Paragraph]
+    # there are a few case when the lhs is `:func:something`... in scipy.
+    type: str
+
+    def __init__(self, name=None, descriptions=None, type_=None)
+        self.name = name
+        self.descriptions= descriptions
+        self.type = type_
+
+    # @classmethod
+    # def from_json(cls, name, descriptions, type):
+    #    assert isinstance(descriptions, list)
+    #    return cls(Ref(**name), descriptions, type)
+    #    assert isinstance(self.descriptions, list)
+
+    def __hash__(self):
+        return hash((self.name, tuple(self.descriptions)))
+
+
 class Example(Block):
     lines: Lines
     wh: Lines
