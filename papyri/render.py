@@ -516,6 +516,53 @@ def prepare_doc(doc_blob, qa, known_refs):
         d.descriptions = new_desc
 
 
+async def loc(document, *, store, tree, known_refs, css_data, template):
+    qa = document.name[:-5]
+    # help to keep ascii bug free.
+    # await _ascii_render(qa, store, known_refs=known_refs)
+    root = qa.split(".")[0]
+    try:
+        bytes_ = await document.read_text()
+        brpath = store / root / "module" / f"{qa}.br"
+        if await brpath.exists():
+            br = await brpath.read_text()
+        else:
+            br = None
+        doc_blob: IngestedBlobs = load_one(bytes_, br, qa=qa)
+
+    except Exception as e:
+        raise RuntimeError(f"error with {document}") from e
+
+    siblings = cs2(qa, tree)
+
+    parts_links = {}
+    acc = ""
+    for k in siblings.keys():
+        acc += k
+        parts_links[k] = acc
+        acc += "."
+    try:
+        for in_out in doc_blob.example_section_data:
+            if in_out.__class__.__name__ == "text":
+                for it in in_out[0]:
+                    assert not isinstance(it, tuple), it
+
+        prepare_doc(doc_blob, qa, known_refs)
+        data = render_one(
+            template=template,
+            doc=doc_blob,
+            qa=qa,
+            ext=".html",
+            parts=siblings,
+            parts_links=parts_links,
+            backrefs=doc_blob.backrefs,
+            pygment_css=css_data,
+        )
+        return data, qa
+    except Exception as e:
+        raise type(e)(f"Error in {qa}") from e
+
+
 async def main():
     store = Store(ingest_dir)
     files = store.glob("*/module/*.json")
@@ -540,6 +587,7 @@ async def main():
     family = known_refs
 
     tree = make_tree(known_refs)
+    env.globals["unreachable"] = unreachable
 
     for p, document in progress(files, description="Rendering..."):
         if (
@@ -548,52 +596,9 @@ async def main():
             or document.name.endswith("__papyri__.json")
         ):
             assert False, document.name
-        qa = document.name[:-5]
-        # help to keep ascii bug free.
-        # await _ascii_render(qa, store, known_refs=known_refs)
-        root = qa.split(".")[0]
-        try:
-            bytes_ = await document.read_text()
-            brpath = store / root / "module" / f"{qa}.br"
-            if await brpath.exists():
-                br = await brpath.read_text()
-            else:
-                br = None
-            doc_blob: IngestedBlobs = load_one(bytes_, br, qa=qa)
-
-        except Exception as e:
-            raise RuntimeError(f"error with {document}") from e
-
-        siblings = cs2(qa, tree)
-
-        env.globals["unreachable"] = unreachable
-        parts_links = {}
-        acc = ""
-        for k in siblings.keys():
-            acc += k
-            parts_links[k] = acc
-            acc += "."
-        try:
-            for in_out in doc_blob.example_section_data:
-                if in_out.__class__.__name__ == "text":
-                    for it in in_out[0]:
-                        assert not isinstance(it, tuple), it
-
-            prepare_doc(doc_blob, qa, known_refs)
-            data = render_one(
-                template=template,
-                doc=doc_blob,
-                qa=qa,
-                ext=".html",
-                parts=siblings,
-                parts_links=parts_links,
-                backrefs=doc_blob.backrefs,
-                pygment_css=css_data,
-            )
-            with (html_dir / f"{qa}.html").open("w") as f:
-                f.write(data)
-        except Exception as e:
-            raise type(e)(f"Error in {qa}") from e
+        data, qa = await loc(document, store, tree, known_refs, css_data, template)
+        with (html_dir / f"{qa}.html").open("w") as f:
+            f.write(data)
 
     assets = store.glob("*/assets/*")
     for asset in assets:
