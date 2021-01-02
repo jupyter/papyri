@@ -516,7 +516,7 @@ def prepare_doc(doc_blob, qa, known_refs):
         d.descriptions = new_desc
 
 
-async def loc(document, *, store, tree, known_refs, css_data, template):
+async def loc(document, *, store, tree, known_refs):
     qa = document.name[:-5]
     # help to keep ascii bug free.
     # await _ascii_render(qa, store, known_refs=known_refs)
@@ -548,17 +548,7 @@ async def loc(document, *, store, tree, known_refs, css_data, template):
                     assert not isinstance(it, tuple), it
 
         prepare_doc(doc_blob, qa, known_refs)
-        data = render_one(
-            template=template,
-            doc=doc_blob,
-            qa=qa,
-            ext=".html",
-            parts=siblings,
-            parts_links=parts_links,
-            backrefs=doc_blob.backrefs,
-            pygment_css=css_data,
-        )
-        return data, qa
+        return doc_blob, qa, siblings, parts_links
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
 
@@ -596,7 +586,22 @@ async def main():
             or document.name.endswith("__papyri__.json")
         ):
             assert False, document.name
-        data, qa = await loc(document, store, tree, known_refs, css_data, template)
+        doc_blob, qa, siblings, parts_links = await loc(
+            document,
+            store=store,
+            tree=tree,
+            known_refs=known_refs,
+        )
+        data = render_one(
+            template=template,
+            doc=doc_blob,
+            qa=qa,
+            ext=".html",
+            parts=siblings,
+            parts_links=parts_links,
+            backrefs=doc_blob.backrefs,
+            pygment_css=css_data,
+        )
         with (html_dir / f"{qa}.html").open("w") as f:
             f.write(data)
 
