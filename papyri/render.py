@@ -241,7 +241,7 @@ async def _route(ref, store, version=None):
 
     # End computing siblings.
     if version is not None:
-        files = [store / root / "module" / f"{ref}.json"]
+        files = [store / root / version / "module" / f"{ref}.json"]
     else:
         from glob import escape as ge
 
@@ -344,7 +344,7 @@ def serve():
         return await img(subpath)
 
     async def full(package, version, sub, ref):
-        return await _route(ref, Store(str(ingest_dir)))
+        return await _route(ref, Store(str(ingest_dir)), version)
 
     async def g(module):
         return await gallery(module, Store(str(ingest_dir)))
