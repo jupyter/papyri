@@ -197,17 +197,6 @@ def compute_siblings_II(ref, family):
         sib = list(sorted(set(candidates), key=operator.attrgetter("path")))
         print("SIB for i", i, cpath, ":", [s.path for s in sib[:20]])
 
-        # sib = list(
-        #    sorted(
-        #        set(
-        #            [
-        #                ".".join(s.split(".")[: i + 1])
-        #                for s in family
-        #                if s.startswith(cpath) and "." in s
-        #            ]
-        #        )
-        #    )
-        # )
         siblings[part] = [(c, c.path.split(".")[-1]) for c in sib]
         cpath += part + "."
     if not siblings["+"]:
@@ -215,20 +204,22 @@ def compute_siblings_II(ref, family):
     return siblings
 
 
+from collections import defaultdict, OrderedDict
+
 def make_tree(names):
-    from collections import defaultdict, OrderedDict
 
     rd = lambda: defaultdict(rd)
     tree = defaultdict(rd)
 
     for n in names:
-        parts = n.split('.')
+        parts = n.split(".")
         branch = tree
         for p in parts:
             branch = branch[p]
     return tree
 
-def cs2(ref, tree):
+
+def cs2(ref, tree, ref_map):
     parts = ref.split('.')+["+"]
     siblings = OrderedDict()
     cpath = ""
@@ -236,7 +227,9 @@ def cs2(ref, tree):
     for p in parts:
         res = list(sorted([(f"{cpath}{k}",k) for k in branch.keys() if k != '+']))
         if res:
-            siblings[p] = res
+            siblings[p] = [
+                (ref_map.get(c, RefInfo("?", "?", "?", c)), c) for c, k in res
+            ]
         else:
             break
         
@@ -590,7 +583,7 @@ def prepare_doc(doc_blob, qa, known_refs):
         d.descriptions = new_desc
 
 
-async def loc(document, *, store, tree, known_refs):
+async def loc(document, *, store, tree, known_refs, ref_map):
     qa = document.name[:-5]
     # help to keep ascii bug free.
     # await _ascii_render(qa, store, known_refs=known_refs)
@@ -607,7 +600,7 @@ async def loc(document, *, store, tree, known_refs):
     except Exception as e:
         raise RuntimeError(f"error with {document}") from e
 
-    siblings = cs2(qa, tree)
+    siblings = cs2(qa, tree, ref_map)
 
     parts_links = {}
     acc = ""
@@ -629,7 +622,7 @@ async def loc(document, *, store, tree, known_refs):
 
 async def main(ascii, html):
     store = Store(ingest_dir)
-    files = store.glob("*/module/*.json")
+    files = store.glob("*/*/module/*.json")
     css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -638,6 +631,8 @@ async def main(ascii, html):
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
+    env.globals["unreachable"] = unreachable
+    env.globals["url"] = url
     template = env.get_template("core.tpl.j2")
 
     known_refs = frozenset({x.name[:-5] for x in store.glob("*/*/module/*.json")})
@@ -645,13 +640,23 @@ async def main(ascii, html):
 
     html_dir.mkdir(exist_ok=True)
     document: Store
-    family = sorted(list(store.glob("*/*/module/*.json")))
-    family = [str(f.name)[:-5] for f in family]
+    o_family = sorted(list(store.glob("*/*/module/*.json")))
+    family = [str(f.name)[:-5] for f in o_family]
     assert set(family) == set(known_refs)
     family = known_refs
 
+    ref_family = []
+    for item in o_family:
+        module, v = item.path.parts[-4:-2]
+        ref_family.append(RefInfo(module, v, "api", item.name[:-5]))
+
     tree = make_tree(known_refs)
-    env.globals["unreachable"] = unreachable
+
+    ref_info_map = {}
+    for r in ref_family:
+        assert r.path not in ref_info_map
+        ref_info_map[r.path] = r
+
 
     for p, document in progress(files, description="Rendering..."):
         if (
@@ -669,6 +674,7 @@ async def main(ascii, html):
                 store=store,
                 tree=tree,
                 known_refs=known_refs,
+                ref_map=ref_info_map,
             )
             data = render_one(
                 template=template,
@@ -680,12 +686,15 @@ async def main(ascii, html):
                 backrefs=doc_blob.backrefs,
                 pygment_css=css_data,
             )
-            with (html_dir / f"{qa}.html").open("w") as f:
+            module, v = document.path.parts[-4:-2]
+            (html_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
+            with (html_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                 f.write(data)
 
-    assets = store.glob("*/assets/*")
+    assets = store.glob("*/*/assets/*")
     for asset in assets:
-        b = html_dir / "img" / asset.parts[-3] / asset.parts[-2]
+        module, version, _, name = asset.parts[-4:]
+        b = html_dir / module / version / "img"
         b.mkdir(parents=True, exist_ok=True)
         import shutil
 
