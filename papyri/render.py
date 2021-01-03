@@ -85,7 +85,7 @@ def until_ruler(doc):
 
 def root():
     store = Store(ingest_dir)
-    files = store.glob("*/module/*.json")
+    files = store.glob("*/*/module/*.json")
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -118,7 +118,7 @@ async def gallery(module, store):
     from papyri.crosslink import IngestedBlobs
 
     figmap = []
-    for p in store.glob(f"{module}/module/*.json"):
+    for p in store.glob(f"{module}/*/module/*.json"):
         data = json.loads(await p.read_text())
         i = IngestedBlobs.from_json(data)
 
@@ -210,7 +210,7 @@ def cs2(ref, tree):
 from pygments.formatters import HtmlFormatter
 
 
-async def _route(ref, store):
+async def _route(ref, store, version=None):
     assert isinstance(store, BaseStore)
     assert ref != "favicon.ico"
     assert not ref.endswith(".html")
@@ -228,20 +228,25 @@ async def _route(ref, store):
 
     root = ref.split(".")[0]
 
-    papp_files = store.glob(f"{root}/papyri.json")
+    papp_files = store.glob(f"{root}/*/papyri.json")
+    # TODO: deal with versions
     for p in papp_files:
         aliases = json.loads(await p.read_text())
 
 
-    family = sorted(list(store.glob("*/module/*.json")))
+    family = sorted(list(store.glob("*/*/module/*.json")))
     family = [str(f.name)[:-5] for f in family]
 
     siblings = compute_siblings(ref, family)
 
     # End computing siblings.
+    if version is not None:
+        files = [store / root / "module" / f"{ref}.json"]
+    else:
+        from glob import escape as ge
 
-    file_ = store / root / "module" / f"{ref}.json"
-    if await file_.exists():
+        files = list((store / root).glob(f"*/module/{ge(ref)}.json"))
+    if files and await (file_ := files[0]).exists():
         # The reference we are trying to view exists;
         # we will now just render it.
         bytes_ = await file_.read_text()
@@ -251,7 +256,7 @@ async def _route(ref, store):
         else:
             br = None
         all_known_refs = frozenset(
-            {str(x.name)[:-5] for x in store.glob("*/module/*.json")}
+            {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
         )
         env.globals["unreachable"] = unreachable
         # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
@@ -281,7 +286,7 @@ async def _route(ref, store):
         # it migt be a page, or a module we do not have documentation about.
         r = ref.split(".")[0]
         this_module_known_refs = [
-            str(s.name)[:-5] for s in store.glob(f"{r}/module/{ref}*.json")
+            str(s.name)[:-5] for s in store.glob(f"{r}/*/module/{ref}*.json")
         ]
         brpath = store / "__phantom__" / f"{ref}.json"
         if await brpath.exists():
@@ -586,7 +591,7 @@ async def main(ascii, html):
     env.globals["paragraph"] = paragraph
     template = env.get_template("core.tpl.j2")
 
-    known_refs = frozenset({x.name[:-5] for x in store.glob("*/module/*.json")})
+    known_refs = frozenset({x.name[:-5] for x in store.glob("*/*/module/*.json")})
     assert len(known_refs) >= 1
 
     html_dir.mkdir(exist_ok=True)

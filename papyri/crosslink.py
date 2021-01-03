@@ -399,7 +399,9 @@ def resolve_(qa: str, known_refs, local_ref, ref):
                     return subset[0], "exists"
                 else:
                     if len(subset) > 1:
-                        print("subset", subset, ref, root)
+                        # ambiguous ref
+                        # print("subset", subset, ref, root)
+                        pass
 
                 # print(f"did not resolve {qa} + {ref}")
                 return ref, "missing"
@@ -685,10 +687,11 @@ class Ingester:
 
     def ingest(self, path: Path, check: bool):
         nvisited_items = {}
+        other_backrefs = {}
         versions: Dict[Any, Any] = {}
         root = None
         meta_path = path / "papyri.json"
-        print(f"{path=}")
+        print(f"INngesting.... {path=}")
         with meta_path.open() as f:
             data = json.loads(f.read())
             version = data["version"]
@@ -725,7 +728,8 @@ class Ingester:
         del f1
 
         (self.ingest_dir / root).mkdir(exist_ok=True)
-        (self.ingest_dir / root / "module").mkdir(exist_ok=True)
+        (self.ingest_dir / root / version).mkdir(exist_ok=True)
+        (self.ingest_dir / root / version / "module").mkdir(exist_ok=True)
         known_refs = frozenset(nvisited_items.keys())
     
         for p, (qa, doc_blob) in progress(
@@ -744,26 +748,42 @@ class Ingester:
                     ref_root = ref.split(".")[0]
                     if ref_root == root:
                         continue
-                    existing_location = (
-                        self.ingest_dir / ref_root / "module" / (resolved + ".json")
+                    if ref_root == "builtins":
+                        continue
+                    from glob import escape as ge
+
+                    existing_locations = list(
+                        (self.ingest_dir / ref_root).glob(
+                            f"*/module/{ge(resolved)}.json"
+                        )
                     )
+                    if ref == "numpy.arange":
+                        print("Finding numpy arange ?, ", existing_locations)
+                    assert len(existing_locations) <= 1
+                    if not existing_locations:
+                        # print("Could not find", resolved, ref, f"({qa})")
+                        continue
+                    existing_location = existing_locations[0]
+                    # existing_location = (
+                    #    self.ingest_dir / ref_root / "module" / (resolved + ".json")
+                    # )
                     if existing_location.exists():
                         brpath = Path(str(existing_location)[:-5] + ".br")
                         if brpath.exists():
                             br = brpath.read_text()
                         else:
                             br = None
-                        print(existing_location)
                         try:
-                            nvisited_items[resolved] = load_one(
+                            other_backrefs[resolved] = load_one(
                                 existing_location.read_bytes(),
                                 br,
                                 qa=resolved,
                             )
                         except Exception as e:
                             raise type(e)(f"Error in {qa} {existing_location}")
-                        nvisited_items[resolved].backrefs.append(qa)
+                        other_backrefs[resolved].backrefs.append(qa)
                     elif "/" not in resolved:
+                        # TODO figure out this one.
                         phantom_dir = (
                             self.ingest_dir / ref_root / "module" / "__phantom__"
                         )
@@ -784,11 +804,13 @@ class Ingester:
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
-        (self.ingest_dir / root / "assets").mkdir(exist_ok=True)
+        (self.ingest_dir / root / version / "assets").mkdir(exist_ok=True)
         for px, f2 in progress(
             (path / "assets").glob("*"), description=f"Reading {path} image files ...",
         ):
-            (self.ingest_dir / root / "assets" / f2.name).write_bytes(f2.read_bytes())
+            (self.ingest_dir / root / version / "assets" / f2.name).write_bytes(
+                f2.read_bytes()
+            )
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cleaning double references"
@@ -796,7 +818,7 @@ class Ingester:
             # TODO: load backrref from either:
             # 1) previsous version fo the file
             # 2) phantom file if first import (and remove the phantom file?)
-            phantom_dir = self.ingest_dir / root / "module" / "__phantom__"
+            phantom_dir = self.ingest_dir / root / version / "module" / "__phantom__"
             ph = phantom_dir / (qa + ".json")
             if ph.exists():
                 ph_data = json.loads(ph.read_text())
@@ -805,12 +827,12 @@ class Ingester:
 
             doc_blob.backrefs = list(sorted(set(doc_blob.backrefs + ph_data)))
         for console, path in progress(
-            (self.ingest_dir / root / "module").glob("*.json"),
+            (self.ingest_dir / root / version / "module").glob("*.json"),
             description="cleanig previsous files ....",
         ):
             path.unlink()
 
-        with open(self.ingest_dir / root / "papyri.json", "w") as f:
+        with open(self.ingest_dir / root / version / "papyri.json", "w") as f:
             f.write(json.dumps(aliases))
 
 
@@ -819,13 +841,48 @@ class Ingester:
         ):
             # we might update other modules with backrefs
             mod_root = qa.split(".")[0]
+            assert mod_root == root
+            # TODO : this is wrong, we get version of module we are currently ingesting
             doc_blob.version = version
             js = doc_blob.to_json()
             br = js.pop("backrefs", [])
             try:
-                path = self.ingest_dir / mod_root / "module" / f"{qa}.json"
-                path_br = self.ingest_dir / mod_root / "module" / f"{qa}.br"
+                path = self.ingest_dir / mod_root / version / "module" / f"{qa}.json"
+                path_br = self.ingest_dir / mod_root / version / "module" / f"{qa}.br"
 
+                with path.open("w") as f:
+                    f.write(json.dumps(js, cls=EnhancedJSONEncoder, indent=2))
+                if path_br.exists():
+                    bb = json.loads(path_br.read_text())
+                else:
+                    bb = []
+                path_br.write_text(json.dumps(list(sorted(set(br + bb)))))
+            except Exception as e:
+                raise RuntimeError(f"error writing to {path}") from e
+
+        for p, (qa, doc_blob) in progress(
+            other_backrefs.items(), description="Updating other crossrefs..."
+        ):
+            # we might update other modules with backrefs
+            mod_root = qa.split(".")[0]
+            assert mod_root != root
+            js = doc_blob.to_json()
+            br = js.pop("backrefs", [])
+            try:
+                path = (
+                    self.ingest_dir
+                    / mod_root
+                    / doc_blob.version
+                    / "module"
+                    / f"{qa}.json"
+                )
+                path_br = (
+                    self.ingest_dir
+                    / mod_root
+                    / doc_blob.version
+                    / "module"
+                    / f"{qa}.br"
+                )
                 with path.open("w") as f:
                     f.write(json.dumps(js, cls=EnhancedJSONEncoder, indent=2))
                 if path_br.exists():
