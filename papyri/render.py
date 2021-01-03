@@ -188,14 +188,12 @@ def compute_siblings_II(ref, family):
     # TODO: move this at ingestion time for all the non-top-level.
     for i, part in enumerate(parts):
         candidates = [c for c in family if c.path.startswith(cpath) and "." in c.path]
-        print("CANDS for i", i, cpath, ":", [s.path for s in candidates[:20]])
         # trm down to the right length
         candidates = [
             RefInfo(c.module, c.version, "api", ".".join(c.path.split(".")[: i + 1]))
             for c in candidates
         ]
         sib = list(sorted(set(candidates), key=operator.attrgetter("path")))
-        print("SIB for i", i, cpath, ":", [s.path for s in sib[:20]])
 
         siblings[part] = [(c, c.path.split(".")[-1]) for c in sib]
         cpath += part + "."
@@ -228,7 +226,8 @@ def cs2(ref, tree, ref_map):
         res = list(sorted([(f"{cpath}{k}",k) for k in branch.keys() if k != '+']))
         if res:
             siblings[p] = [
-                (ref_map.get(c, RefInfo("?", "?", "?", c)), c) for c, k in res
+                (ref_map.get(c, RefInfo("?", "?", "?", c)), c.split(".")[-1])
+                for c, k in res
             ]
         else:
             break
@@ -289,10 +288,12 @@ async def _route(ref, store, version=None, env=None, template=None):
         # The reference we are trying to view exists;
         # we will now just render it.
         bytes_ = await file_.read_text()
-        brpath = store / root / "module" / f"{ref}.br"
+        brpath = store / root / version / "module" / f"{ref}.br"
+        print(brpath)
         if await brpath.exists():
             br = await brpath.read_text()
         else:
+            assert False
             br = None
         all_known_refs = frozenset(
             {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
@@ -308,8 +309,7 @@ async def _route(ref, store, version=None, env=None, template=None):
             parts_links[k] = acc
             acc += "."
         prepare_doc(doc_blob, ref, all_known_refs)
-        if css_data is None:
-            css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
+        css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
         return render_one(
             template=template,
             doc=doc_blob,
@@ -352,8 +352,8 @@ async def _route(ref, store, version=None, env=None, template=None):
         return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
 
 
-async def img(subpath):
-    with open(ingest_dir / subpath, "rb") as f:
+async def img(module, version, subpath):
+    with open(ingest_dir / module / version / "assets" / subpath, "rb") as f:
         return f.read()
 
 
@@ -381,8 +381,9 @@ def serve():
     async def r(ref):
         return await _route(ref, Store(str(ingest_dir)))
 
-    async def full_img(package, version, sub, subpath):
-        return await img(subpath)
+    async def full_img(package, version, subpath):
+        print(">>> IMG", subpath)
+        return await img(package, version, subpath)
 
     async def full(package, version, sub, ref):
         print(">>>>", package, ">", version, "<", sub, ref)
@@ -399,7 +400,7 @@ def serve():
     app.route("/logo.png")(logo)
     app.route("/favicon.ico")(static("favicon.ico"))
     # sub here is likely incorrect
-    app.route("/p/<package>/<version>/<sub>/img/<path:subpath>")(full_img)
+    app.route("/p/<package>/<version>/img/<path:subpath>")(full_img)
     app.route("/p/<package>/<version>/<sub>/<ref>")(full)
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
@@ -637,8 +638,8 @@ async def main(ascii, html):
 
     known_refs = frozenset({x.name[:-5] for x in store.glob("*/*/module/*.json")})
     assert len(known_refs) >= 1
-
-    html_dir.mkdir(exist_ok=True)
+    outout_dir = html_dir / "p"
+    outout_dir.mkdir(exist_ok=True)
     document: Store
     o_family = sorted(list(store.glob("*/*/module/*.json")))
     family = [str(f.name)[:-5] for f in o_family]
@@ -687,8 +688,8 @@ async def main(ascii, html):
                 pygment_css=css_data,
             )
             module, v = document.path.parts[-4:-2]
-            (html_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
-            with (html_dir / module / v / "api" / f"{qa}.html").open("w") as f:
+            (outout_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
+            with (outout_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                 f.write(data)
 
     assets = store.glob("*/*/assets/*")

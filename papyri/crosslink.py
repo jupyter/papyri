@@ -868,6 +868,8 @@ class Ingester:
             assert mod_root != root
             js = doc_blob.to_json()
             br = js.pop("backrefs", [])
+            if br:
+                print(f"have backref for {qa}: {len(br)}")
             try:
                 path = (
                     self.ingest_dir
