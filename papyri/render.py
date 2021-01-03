@@ -586,12 +586,13 @@ def prepare_doc(doc_blob, qa, known_refs):
 
 async def loc(document, *, store, tree, known_refs, ref_map):
     qa = document.name[:-5]
+    version = document.path.parts[-3]
     # help to keep ascii bug free.
     # await _ascii_render(qa, store, known_refs=known_refs)
     root = qa.split(".")[0]
     try:
         bytes_ = await document.read_text()
-        brpath = store / root / "module" / f"{qa}.br"
+        brpath = store / root / version / "module" / f"{qa}.br"
         if await brpath.exists():
             br = await brpath.read_text()
         else:
