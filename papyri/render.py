@@ -38,7 +38,7 @@ from typing import List
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class RefInfo:
     module: str
     version: str
@@ -168,9 +168,10 @@ def compute_siblings(ref, family):
                         for s in family
                         if s.startswith(cpath) and "." in s
                     ]
-                )
+                ),
             )
         )
+        print("SIBN for i", i, cpath, ":", sib[:20])
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
         cpath += part + "."
     if not siblings["+"]:
@@ -178,8 +179,45 @@ def compute_siblings(ref, family):
     return siblings
 
 
-def make_tree(names):    
+def compute_siblings_II(ref, family):
+    parts = ref.split(".") + ["+"]
+    siblings = OrderedDict()
+    cpath = ""
+    import operator
+
+    # TODO: move this at ingestion time for all the non-top-level.
+    for i, part in enumerate(parts):
+        candidates = [c for c in family if c.path.startswith(cpath) and "." in c.path]
+        print("CANDS for i", i, cpath, ":", [s.path for s in candidates[:20]])
+        # trm down to the right length
+        candidates = [
+            RefInfo(c.module, c.version, "api", ".".join(c.path.split(".")[: i + 1]))
+            for c in candidates
+        ]
+        sib = list(sorted(set(candidates), key=operator.attrgetter("path")))
+        print("SIB for i", i, cpath, ":", [s.path for s in sib[:20]])
+
+        # sib = list(
+        #    sorted(
+        #        set(
+        #            [
+        #                ".".join(s.split(".")[: i + 1])
+        #                for s in family
+        #                if s.startswith(cpath) and "." in s
+        #            ]
+        #        )
+        #    )
+        # )
+        siblings[part] = [(c, c.path.split(".")[-1]) for c in sib]
+        cpath += part + "."
+    if not siblings["+"]:
+        del siblings["+"]
+    return siblings
+
+
+def make_tree(names):
     from collections import defaultdict, OrderedDict
+
     rd = lambda: defaultdict(rd)
     tree = defaultdict(rd)
 
@@ -210,21 +248,21 @@ def cs2(ref, tree):
 from pygments.formatters import HtmlFormatter
 
 
-async def _route(ref, store, version=None):
+async def _route(ref, store, version=None, env=None, template=None):
     assert isinstance(store, BaseStore)
     assert ref != "favicon.ico"
     assert not ref.endswith(".html")
-
-    env = Environment(
-        loader=FileSystemLoader(os.path.dirname(__file__)),
-        autoescape=select_autoescape(["html", "tpl.j2"]),
-        undefined=StrictUndefined,
-    )
-    env.globals["paragraph"] = paragraph
-    env.globals["len"] = len
-    env.globals["url"] = url
-
-    template = env.get_template("core.tpl.j2")
+    if env is None:
+        env = Environment(
+            loader=FileSystemLoader(os.path.dirname(__file__)),
+            autoescape=select_autoescape(["html", "tpl.j2"]),
+            undefined=StrictUndefined,
+        )
+        env.globals["paragraph"] = paragraph
+        env.globals["len"] = len
+        env.globals["url"] = url
+    if template is None:
+        template = env.get_template("core.tpl.j2")
 
     root = ref.split(".")[0]
 
@@ -234,10 +272,16 @@ async def _route(ref, store, version=None):
         aliases = json.loads(await p.read_text())
 
 
-    family = sorted(list(store.glob("*/*/module/*.json")))
-    family = [str(f.name)[:-5] for f in family]
+    o_family = sorted(list(store.glob("*/*/module/*.json")))
+    family = [str(f.name)[:-5] for f in o_family]
 
-    siblings = compute_siblings(ref, family)
+    ref_family = []
+    for item in o_family:
+        module, v = item.path.parts[-4:-2]
+        ref_family.append(RefInfo(module, v, "api", item.name[:-5]))
+
+    siblings = compute_siblings_II(ref, ref_family)
+    # print(siblings)
 
     # End computing siblings.
     if version is not None:
@@ -246,6 +290,8 @@ async def _route(ref, store, version=None):
         from glob import escape as ge
 
         files = list((store / root).glob(f"*/module/{ge(ref)}.json"))
+    print("FILES", files)
+    print("version", version)
     if files and await (file_ := files[0]).exists():
         # The reference we are trying to view exists;
         # we will now just render it.
@@ -269,6 +315,8 @@ async def _route(ref, store, version=None):
             parts_links[k] = acc
             acc += "."
         prepare_doc(doc_blob, ref, all_known_refs)
+        if css_data is None:
+            css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
         return render_one(
             template=template,
             doc=doc_blob,
@@ -277,7 +325,7 @@ async def _route(ref, store, version=None):
             parts=siblings,
             parts_links=parts_links,
             backrefs=doc_blob.backrefs,
-            pygment_css=HtmlFormatter(style="pastie").get_style_defs(".highlight"),
+            pygment_css=css_data,
         )
     else:
         # The reference we are trying to render does not exists
@@ -344,6 +392,7 @@ def serve():
         return await img(subpath)
 
     async def full(package, version, sub, ref):
+        print(">>>>", package, ">", version, "<", sub, ref)
         return await _route(ref, Store(str(ingest_dir)), version)
 
     async def g(module):
@@ -596,7 +645,7 @@ async def main(ascii, html):
 
     html_dir.mkdir(exist_ok=True)
     document: Store
-    family = sorted(list(store.glob("*/module/*.json")))
+    family = sorted(list(store.glob("*/*/module/*.json")))
     family = [str(f.name)[:-5] for f in family]
     assert set(family) == set(known_refs)
     family = known_refs

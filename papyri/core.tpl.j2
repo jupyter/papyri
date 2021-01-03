@@ -237,7 +237,7 @@ user-select: none;
                 <a href={{module}}>{{module}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
                             {% for link,name in parts[module] -%}
-                                <a href="{{link}}{{ext}}">{{name}}</a>
+                                <a href="{{url(link)}}{{ext}}">{{link.path}}</a>
                             {% endfor %}
                      </div>
                 </div>
@@ -261,7 +261,7 @@ user-select: none;
                         {% if not loop.first %}
                             <div class="dropdown-content">
                             {% for link,name in links -%}
-                                <a href="{{link}}{{ext}}">{{name}}</a>
+                                <a href="{{url(link)}}{{ext}}">{{name}}</a>
                             {% endfor %}
                             </div>
                         {% endif %}
