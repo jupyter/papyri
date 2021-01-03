@@ -1223,8 +1223,9 @@ class SeeAlsoItem(Node):
 
     def __init__(self, name=None, descriptions=None, type_=None):
         self.name = name
-        for d in descriptions:
-            assert isinstance(d, Paragraph), repr(d)
+        if descriptions is not None:
+            for d in descriptions:
+                assert isinstance(d, Paragraph), repr(d)
         self.descriptions= descriptions
         self.type = type_
 
