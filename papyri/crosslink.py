@@ -107,7 +107,6 @@ def processed_example_data(example_section_data, local_refs, qa):
                 in_out.entries = new_in
             new_example_section_data.append(in_out)
         elif type_ == "Text":
-            # assert len(in_out) == 1, len(in_out)
             blocks = P2(in_out.value.split("\n"))
             # assert False, "Todo, need to implement parsing this to paragraaphs."
             # new_io = []
@@ -185,15 +184,7 @@ class IngestedBlobs(DocBlob):
             "Attributes",
             "Methods",
         ):
-            assert it in instance._content
-            if it not in instance._content:
-                assert False
-                instance._content[it] = []
-        for it in ("index",):
-            assert "index" in instance._content
-            if it not in instance._content:
-                assert False
-                instance._content[it] = {}
+            pass
 
         instance.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
 
@@ -204,7 +195,6 @@ class IngestedBlobs(DocBlob):
         assert isinstance(instance.example_section_data, dict), type(
             instance.example_section_data
         )
-        assert qa is not None
         sec = Section.from_json(instance.example_section_data)
         new_sec = Section()
 
@@ -320,8 +310,6 @@ class IngestedBlobs(DocBlob):
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if (data := instance.content.get(section, None)) is not None:
                 assert isinstance(data, (list, dict)), f"{section} {data}"
-                if isinstance(data, list) and data:
-                    assert False, f"{section} {data}"
                 if data == []:
                     instance.content[section] = Section()
                 else:
@@ -354,10 +342,7 @@ class IngestedBlobs(DocBlob):
             for k in self.slots()
             if k not in {"example_section_data", "see_also"}
         }
-        assert hasattr(self, "see_also")
         res["example_section_data"] = self.example_section_data.to_json()
-        for s in self.see_also:
-            assert isinstance(s, SeeAlsoItem)
         res["see_also"] = [s.to_json() for s in self.see_also]
 
         return res
@@ -369,7 +354,6 @@ def _at_in(q0, known_refs):
 
 
 def resolve_(qa: str, known_refs, local_ref, ref):
-    assert isinstance(ref, str), type(ref)
     if ref.startswith("builtins."):
         return ref, "missing"
     if ref.startswith("str."):
@@ -446,7 +430,6 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     # TODO: here or maybe somewhere else:
     # see also 3rd item description is improperly deserialised as now it can be a paragraph.
     # Make see Also an auto deserialised object in take2.
-    assert "see_also" not in data
     blob.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
 
     for k in instance.slots():

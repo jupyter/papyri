@@ -241,8 +241,6 @@ from pygments.formatters import HtmlFormatter
 
 
 async def _route(ref, store, version=None, env=None, template=None):
-    assert isinstance(store, BaseStore)
-    assert ref != "favicon.ico"
     assert not ref.endswith(".html")
     if env is None:
         env = Environment(
@@ -293,7 +291,6 @@ async def _route(ref, store, version=None, env=None, template=None):
         if await brpath.exists():
             br = await brpath.read_text()
         else:
-            assert False
             br = None
         all_known_refs = frozenset(
             {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
@@ -569,10 +566,8 @@ def prepare_doc(doc_blob, qa, known_refs):
     ]
 
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-        if section in doc_blob.content:
-            doc_blob.content[section] = visitor.visit(doc_blob.content[section])
-        else:
-            assert False
+        assert section in doc_blob.content
+        doc_blob.content[section] = visitor.visit(doc_blob.content[section])
 
     for d in doc_blob.see_also:
         new_desc = []
@@ -611,11 +606,6 @@ async def loc(document, *, store, tree, known_refs, ref_map):
         parts_links[k] = acc
         acc += "."
     try:
-        for in_out in doc_blob.example_section_data:
-            if in_out.__class__.__name__ == "text":
-                for it in in_out[0]:
-                    assert not isinstance(it, tuple), it
-
         prepare_doc(doc_blob, qa, known_refs)
         return doc_blob, qa, siblings, parts_links
     except Exception as e:
@@ -637,45 +627,34 @@ async def main(ascii, html):
     env.globals["url"] = url
     template = env.get_template("core.tpl.j2")
 
-    known_refs = frozenset({x.name[:-5] for x in store.glob("*/*/module/*.json")})
-    assert len(known_refs) >= 1
     outout_dir = html_dir / "p"
     outout_dir.mkdir(exist_ok=True)
     document: Store
     o_family = sorted(list(store.glob("*/*/module/*.json")))
     family = [str(f.name)[:-5] for f in o_family]
-    assert set(family) == set(known_refs)
-    family = known_refs
 
     ref_family = []
     for item in o_family:
         module, v = item.path.parts[-4:-2]
         ref_family.append(RefInfo(module, v, "api", item.name[:-5]))
 
-    tree = make_tree(known_refs)
+    tree = make_tree(family)
 
     ref_info_map = {}
     for r in ref_family:
-        assert r.path not in ref_info_map
         ref_info_map[r.path] = r
 
 
     for p, document in progress(files, description="Rendering..."):
-        if (
-            document.name.startswith("__")
-            or not document.name.endswith(".json")
-            or document.name.endswith("__papyri__.json")
-        ):
-            assert False, document.name
         if ascii:
             qa = document.name[:-5]
-            await _ascii_render(qa, store, known_refs)
+            await _ascii_render(qa, store, family)
         if html:
             doc_blob, qa, siblings, parts_links = await loc(
                 document,
                 store=store,
                 tree=tree,
-                known_refs=known_refs,
+                known_refs=family,
                 ref_map=ref_info_map,
             )
             data = render_one(
