@@ -35,6 +35,22 @@ from collections import OrderedDict
 from typing import List
 
 
+from dataclasses import dataclass
+
+
+@dataclass
+class RefInfo:
+    module: str
+    version: str
+    kind: str
+    path: str
+
+
+def url(info):
+    assert isinstance(info, RefInfo)
+    return f"/p/{info.module}/{info.version}/api/{info.path}"
+
+
 def unreachable(*obj):
     assert False, f"Unreachable: {obj=}"
 
@@ -116,7 +132,6 @@ async def gallery(module, store):
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
-    env.globals["len"] = len
 
     return env.get_template("gallery.tpl.j2").render(figmap=figmap)
 
@@ -205,9 +220,9 @@ async def _route(ref, store):
         autoescape=select_autoescape(["html", "tpl.j2"]),
         undefined=StrictUndefined,
     )
-    env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["len"] = len
+    env.globals["url"] = url
 
     template = env.get_template("core.tpl.j2")
 
@@ -291,7 +306,7 @@ async def _route(ref, store):
         return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
 
 
-def img(subpath):
+async def img(subpath):
     with open(ingest_dir / subpath, "rb") as f:
         return f.read()
 
@@ -320,6 +335,12 @@ def serve():
     async def r(ref):
         return await _route(ref, Store(str(ingest_dir)))
 
+    async def full_img(package, version, sub, subpath):
+        return await img(subpath)
+
+    async def full(package, version, sub, ref):
+        return await _route(ref, Store(str(ingest_dir)))
+
     async def g(module):
         return await gallery(module, Store(str(ingest_dir)))
 
@@ -330,6 +351,9 @@ def serve():
 
     app.route("/logo.png")(logo)
     app.route("/favicon.ico")(static("favicon.ico"))
+    # sub here is likely incorrect
+    app.route("/p/<package>/<version>/<sub>/img/<path:subpath>")(full_img)
+    app.route("/p/<package>/<version>/<sub>/<ref>")(full)
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
     app.route("/gallery/")(gr)
@@ -483,7 +507,7 @@ def prepare_doc(doc_blob, qa, known_refs):
     # TODO : move this to ingest.
     visitor = DirectiveVisiter(qa, known_refs, local_refs)
 
-    doc_blob.example_section_data = = visitor.visit(doc_blob.example_section_data)
+    doc_blob.example_section_data = visitor.visit(doc_blob.example_section_data)
 
     # doc_blob.example_section_data = processed_example_data_nonlocal(
     #    doc_blob.example_section_data, known_refs, qa=qa
