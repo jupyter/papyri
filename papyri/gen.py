@@ -585,6 +585,7 @@ class DocBlob:
             for k in self.slots()
             if k not in {"example_section_data"}
         }
+        assert not hasattr(self, "see_also")
         res["example_section_data"] = self.example_section_data.to_json()
 
         return res

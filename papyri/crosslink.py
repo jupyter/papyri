@@ -24,7 +24,6 @@ from . import take2 as take2
 from .utils import progress
 
 from there import print
-from .core import Ref, SeeAlsoItem
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -196,12 +195,7 @@ class IngestedBlobs(DocBlob):
                 assert False
                 instance._content[it] = {}
 
-        instance.see_also = [
-            SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])
-        ]
-        for d in instance.see_also:
-            assert isinstance(d.descriptions, list), qa
-            d.descriptions = paragraphs(d.descriptions)
+        instance.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
 
 
         # Todo: remove this; hopefully the logic from load_one_uningested
@@ -353,6 +347,22 @@ class IngestedBlobs(DocBlob):
 
         return instance
 
+    def to_json(self):
+
+        res = {
+            k: getattr(self, k, "")
+            for k in self.slots()
+            if k not in {"example_section_data", "see_also"}
+        }
+        assert hasattr(self, "see_also")
+        res["example_section_data"] = self.example_section_data.to_json()
+        for s in self.see_also:
+            assert isinstance(s, SeeAlsoItem)
+        res["see_also"] = [s.to_json() for s in self.see_also]
+
+        return res
+
+
 @lru_cache
 def _at_in(q0, known_refs):
     return [q for q in known_refs if q.startswith(q0)]
@@ -434,9 +444,8 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     # TODO: here or maybe somewhere else:
     # see also 3rd item description is improperly deserialised as now it can be a paragraph.
     # Make see Also an auto deserialised object in take2.
-    blob.see_also = [SeeAlsoItem.from_json(**x) for x in data.pop("see_also", [])]
-    for d in blob.see_also:
-        assert isinstance(d.descriptions, list), qa
+    assert "see_also" not in data
+    blob.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
 
     for k in instance.slots():
         setattr(blob, k, getattr(instance, k))
@@ -453,18 +462,32 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     blob.backrefs = backrefs
     blob.version = data.pop("version", "")
 
-    try:
-        if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
-            for nts, d in see_also:
-                for (n, t) in nts:
-                    if t and not d:
-                        d, t = t, None
-                    if not isinstance(d, list):
-                        d = [d]
-                    sai = SeeAlsoItem(Ref(n, None, None), d, t)
+    if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
+        for nts, d0 in see_also:
+            try:
+                d = d0
+                for (name, type_or_description) in nts:
+                    if type_or_description and not d:
+                        desc = type_or_description
+                        if isinstance(desc, str):
+                            desc = [desc]
+                        assert isinstance(desc, list)
+                        desc = paragraphs(desc)
+                        type_ = None
+                    else:
+                        desc = d0
+                        type_ = type_or_description
+                        assert isinstance(desc, list)
+                        desc = paragraphs(desc)
+
+                    sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
                     blob.see_also.append(sai)
-    except Exception as e:
-        raise ValueError(f"Error {qa}: {see_also} | {nts}") from e
+                    del desc
+                    del type_
+            except Exception as e:
+                raise ValueError(
+                    f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
+                ) from e
 
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:

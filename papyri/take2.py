@@ -149,7 +149,10 @@ def serialize(instance, annotation):
         ):
             data = {}
             for k, v in get_type_hints(type(instance)).items():
-                data[k] = serialize(getattr(instance, k), v)
+                try:
+                    data[k] = serialize(getattr(instance, k), v)
+                except Exception as e:
+                    raise type(e)(f"Error serializing field {k!r}")
             assert (
                 data
             ), f"Error serializing {instance=}, of type {type(instance)}, no data found. Did you type annotate?"
@@ -158,10 +161,10 @@ def serialize(instance, annotation):
         else:
             assert (
                 False
-            ), f"Error serializing {instance}, of type {type(instance)} expected  {annotation}, got {type(instance)}"
+            ), f"Error serializing {instance!r}, of type {type(instance)!r} expected  {annotation}, got {type(instance)}"
     except Exception as e:
         raise type(e)(
-            f"Error serialising {instance}, of type {type(instance)} expecting {annotation}, got {type(instance)}"
+            f"Error serialising {instance!r}, of type {type(instance)} expecting {annotation}, got {type(instance)}"
         ) from e
 
 
@@ -212,7 +215,16 @@ class Node(Base):
         self.value = value
 
     def __eq__(self, other):
-        return (type(self) == type(other)) and (self.value == other.value)
+        if not (type(self) == type(other)):
+            return False
+
+        tt = get_type_hints(type(self))
+        for attr in tt:
+            if not getattr(self, attr) == getattr(other, attr):
+                return False
+
+        return True
+
 
     @classmethod
     def _instance(cls):
@@ -251,6 +263,9 @@ class Node(Base):
 class Verbatim(Node):
     value: List[str]
 
+    def __hash__(self):
+        return hash(tuple(self.value))
+
     def __init__(self, value=None):
         self.value = value
 
@@ -276,6 +291,9 @@ class Verbatim(Node):
 
     def __repr__(self):
         return RED("``" + "".join(self.value) + "``")
+
+    def __hash__(self):
+        return hash(tuple(self.value))
 
 
 class Link(Node):
@@ -312,11 +330,16 @@ class Link(Node):
     def __len__(self):
         return len(self.value)
 
+    def __hash__(self):
+        return hash((iself.value, self.reference, self.kind, self.exists))
 class Directive(Node):
 
     value: List[str]
     domain: Union[str, None]
     role: Union[str, None]
+
+    def __hash__(self):
+        return hash((tuple(self.value), self.domain, self.role))
 
     def __init__(self, value, domain, role):
         self.value = value
@@ -394,9 +417,14 @@ class Directive(Node):
 
 
 class Math(Node):
+    value: List[str]
+
     @property
     def text(self):
         return "".join(self.value)
+
+    def __hash__(self):
+        return hash(tuple(self.value))
 
 
 class Word(Node):
@@ -411,6 +439,9 @@ class Word(Node):
 
     def __len__(self):
         return len(self.value)
+
+    def __hash__(self):
+        return hash(self.value)
 
 
 def lex(lines):
@@ -508,6 +539,7 @@ class Param(Node):
             BlockDirective,
             Example,
             BlockVerbatim,
+            Math,
         ]
     ]
 
@@ -532,6 +564,8 @@ class Param(Node):
             f"<{self.__class__.__name__}: {self.param=}, {self.type_=}, {self.desc=}>"
         )
 
+    def __hash__(self):
+        return hash((self.param, self.type_, sefl.desc))
 
 class Code(Node):
     entries: List[Tuple[Optional[str]]]
@@ -558,11 +592,14 @@ class Paragraph(Node):
 
     __slots__ = ["children", "width"]
 
-    children: List[Union[Paragraph, Word, Directive, Verbatim, Link]]
+    children: List[Union[Paragraph, Word, Directive, Verbatim, Link, Math]]
 
     def __init__(self, children, width=80):
         self.children = children
         self.width = width
+
+    def __hash__(self):
+        return hash((tuple(self.children), self.width))
 
     def __eq__(self, other):
         return (type(self) == type(other)) and (self.children == other.children)
@@ -606,7 +643,11 @@ class Paragraph(Node):
         acc = [[]]
         clen = 0
         for t in tokens:
-            if clen + (ll := len(t)) > max_len:
+            try:
+                lent = len(t)
+            except TypeError:
+                lent = 0
+            if clen + lent > max_len:
                 # remove whitespace at EOL
                 while acc and acc[-1][-1].is_whitespace():
                     acc[-1].pop()
@@ -617,7 +658,7 @@ class Paragraph(Node):
             if clen == 0 and t.is_whitespace():
                 continue
             acc[-1].append(t)
-            clen += ll
+            clen += lent
         # remove whitespace at EOF
         try:
             while acc and acc[-1][-1].is_whitespace():
@@ -1162,7 +1203,7 @@ class Ref(Node):
     ref: Optional[str]
     exists: Optional[bool]
 
-    def __init__(self, name=None, ref = None, exists=None)
+    def __init__(self, name=None, ref=None, exists=None):
         self.name = name
         self.ref = ref
         self.exists = exists
@@ -1170,15 +1211,20 @@ class Ref(Node):
     def __hash__(self):
         return hash((self.name, self.ref, self.exists))
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.name} {self.ref} {self.exists}>"
+
 
 class SeeAlsoItem(Node):
     name: Ref
     descriptions: List[Paragraph]
     # there are a few case when the lhs is `:func:something`... in scipy.
-    type: str
+    type: Optional[str]
 
-    def __init__(self, name=None, descriptions=None, type_=None)
+    def __init__(self, name=None, descriptions=None, type_=None):
         self.name = name
+        for d in descriptions:
+            assert isinstance(d, Paragraph), repr(d)
         self.descriptions= descriptions
         self.type = type_
 
@@ -1190,6 +1236,11 @@ class SeeAlsoItem(Node):
 
     def __hash__(self):
         return hash((self.name, tuple(self.descriptions)))
+
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__}: {self.name} {self.type} {self.descriptions}>"
+        )
 
 
 class Example(Block):
