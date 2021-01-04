@@ -195,40 +195,8 @@ class IngestedBlobs(DocBlob):
         assert isinstance(instance.example_section_data, dict), type(
             instance.example_section_data
         )
-        sec = Section.from_json(instance.example_section_data)
-        new_sec = Section()
 
-        for in_out in sec:
-            type_name = in_out.__class__.__name__
-            assert type_name in (
-                "Code",
-                "Text",
-                "Fig",
-                "Paragraph",
-                "BlockDirective",
-                "BlockVerbatim",
-                "DefListItem",
-                "DefList",
-                "Example",
-            ), f"found {type_name=}, {in_out=}, not in expected list of types "
-            if type_name == "Text":
-                pass
-                # !!! MOVE This To GEN ?
-                # assert isinstance(in_out, str), repr(in_out)
-                # ps = paragraphs(in_out.split("\n"))
-                # blob.example_section_data[i][1] = ps
-                # for ps in in_out:
-                #    for p in ps:
-                #        assert p.__class__.__name__ in {
-                #            "Word",
-                #            "Verbatim",
-                #            "Directive",
-                #            "Math",
-                #        }, f"{p[0]}, {qa}"
-                new_sec.append(in_out)
-            else:
-                new_sec.append(in_out)
-        instance.example_section_data = new_sec
+        instance.example_section_data = Section.from_json(instance.example_section_data)
         # rehydrate in the example section paragraphs into their actual
         # instances. This likely should be moved into a specific type of
         # instance in the Parsed Data.
