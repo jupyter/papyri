@@ -64,7 +64,6 @@ from there import print
 
 from papyri.utils import dedent_but_first
 
-
 # 3x -> 9x for bright
 WHAT = lambda x: "\033[36m" + x + "\033[0m"
 HEADER = lambda x: "\033[35m" + x + "\033[0m"

@@ -3,8 +3,8 @@ Papyri – in progress
 """
 
 
-from typing import List
 from pathlib import Path
+from typing import List
 
 import typer
 
@@ -61,8 +61,6 @@ def _intro():
 
 def main():
     app()
-
-
 
 
 @app.command()

@@ -9,13 +9,13 @@ from there import print
 
 from .config import html_dir, ingest_dir
 from .crosslink import (
+    DirectiveVisiter,
     IngestedBlobs,
     RefInfo,
     load_one,
     paragraph,
     resolve_,
 )
-from .crosslink import DirectiveVisiter
 from .stores import Store
 from .utils import progress
 
@@ -525,7 +525,6 @@ async def ascii_render(name, store=None):
     import builtins
 
     builtins.print(await _ascii_render(name, store))
-
 
 
 def prepare_doc(doc_blob, qa, known_refs):

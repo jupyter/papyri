@@ -1,9 +1,14 @@
 import dataclasses
 import json
 import warnings
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Any, List, Optional, Tuple
 
+from pygments import lex
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import PythonLexer
 from there import print
 
 from .config import ingest_dir
@@ -12,14 +17,6 @@ from .take2 import Lines, Link, Math, Node, Paragraph, Ref, Section, SeeAlsoItem
 from .take2 import main as t2main
 from .take2 import make_block_3
 from .utils import progress
-
-from pygments import lex
-from pygments.formatters import HtmlFormatter
-from pygments.lexers import PythonLexer
-
-
-from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -106,7 +103,6 @@ def processed_example_data(example_section_data, qa):
         new_example_section_data.append(in_out)
 
     return new_example_section_data
-
 
 
 def get_classes(code):
