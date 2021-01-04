@@ -133,7 +133,12 @@ def serialize(instance, annotation):
 
             inner_annotation = annotation.__args__
             if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
+                assert inner_annotation[0] != None
                 # here we are optional; we _likely_ can avoid doing the union trick and store just the type, or null
+                if instance is None:
+                    return None
+                else:
+                    return serialize(instance, inner_annotation[0])
                 pass
             assert (
                 type(instance) in inner_annotation
@@ -169,7 +174,6 @@ def serialize(instance, annotation):
 
 
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
-@profile
 def deserialize(type_, annotation, data):
     assert type_ is annotation
     assert annotation != {}
@@ -200,6 +204,12 @@ def deserialize(type_, annotation, data):
             ]
         elif orig is Union:
             inner_annotation = annotation.__args__
+            if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
+                assert inner_annotation[0] != None
+                if data is None:
+                    return None
+                else:
+                    return deserialize(inner_annotation[0], inner_annotation[0], data)
             real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
             assert len(real_type) == 1, real_type
             real_type = real_type[0]
