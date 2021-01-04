@@ -7,6 +7,8 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoes
 from quart_trio import QuartTrio
 from there import print
 
+from papyri.crosslink import IngestedBlobs
+
 from .config import html_dir, ingest_dir
 from .crosslink import (
     DirectiveVisiter,
@@ -18,9 +20,6 @@ from .crosslink import (
 )
 from .stores import Store
 from .utils import progress
-import json
-
-from papyri.crosslink import IngestedBlobs
 
 
 def url(info):
@@ -91,7 +90,6 @@ def root():
 
 
 async def gallery(module, store):
-
 
     figmap = []
     for p in store.glob(f"{module}/*/module/*.json"):

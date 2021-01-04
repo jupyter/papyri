@@ -20,17 +20,15 @@ from .take2 import (
     Node,
     Paragraph,
     Ref,
+    RefInfo,
     Section,
     SeeAlsoItem,
-    RefInfo,
 )
 from .take2 import main as t2main
 from .take2 import make_block_3
 from .utils import progress
 
 warnings.simplefilter("ignore", UserWarning)
-
-
 
 
 def paragraph(lines) -> List[Tuple[str, Any]]:

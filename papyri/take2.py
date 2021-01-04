@@ -58,12 +58,12 @@ Unless your use case is widely adopted it is likely not worse the complexity
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 from there import print
 
 from papyri.utils import dedent_but_first
-from dataclasses import dataclass
 
 # 3x -> 9x for bright
 WHAT = lambda x: "\033[36m" + x + "\033[0m"
