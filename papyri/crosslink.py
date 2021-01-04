@@ -674,7 +674,6 @@ class Ingester:
         versions: Dict[Any, Any] = {}
         root = None
         meta_path = path / "papyri.json"
-        print(f"INngesting.... {path=}")
         with meta_path.open() as f:
             data = json.loads(f.read())
             version = data["version"]
@@ -740,8 +739,6 @@ class Ingester:
                             f"*/module/{ge(resolved)}.json"
                         )
                     )
-                    if ref == "numpy.arange":
-                        print("Finding numpy arange ?, ", existing_locations)
                     assert len(existing_locations) <= 1
                     if not existing_locations:
                         # print("Could not find", resolved, ref, f"({qa})")
@@ -851,8 +848,6 @@ class Ingester:
             assert mod_root != root
             js = doc_blob.to_json()
             br = js.pop("backrefs", [])
-            if br:
-                print(f"have backref for {qa}: {len(br)}")
             try:
                 path = (
                     self.ingest_dir

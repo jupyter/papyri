@@ -631,7 +631,7 @@ async def main(ascii, html):
     outout_dir.mkdir(exist_ok=True)
     document: Store
     o_family = sorted(list(store.glob("*/*/module/*.json")))
-    family = [str(f.name)[:-5] for f in o_family]
+    family = frozenset([str(f.name)[:-5] for f in o_family])
 
     ref_family = []
     for item in o_family:
