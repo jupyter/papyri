@@ -1,2 +1,20 @@
 [flake8]
-ignore = D203,E741,E731,E501,W503,W291,E203,E302,E266,E303
+# References:
+# https://flake8.readthedocs.io/en/latest/user/configuration.html
+# https://flake8.readthedocs.io/en/latest/user/error-codes.html
+# https://pycodestyle.pycqa.org/en/latest/intro.html#error-codes
+exclude = __init__.py,versioneer.py
+ignore =
+    E20,   # Extra space in brackets
+    E231,E241,  # Multiple spaces around ","
+    E26,   # Comments
+    E303,  # too many black lines
+    E4,    # Import formatting
+    E721,  # Comparing types instead of isinstance
+    E731,  # Assigning lambda expression
+    E741,  # Ambiguous variable names
+    W503,  # line break before binary operator
+    W504,  # line break after binary operator
+    F811,  # redefinition of unused 'loop' from line 10
+max-line-length = 120
+

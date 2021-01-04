@@ -4,32 +4,24 @@ import warnings
 from functools import lru_cache
 from pathlib import Path
 
-
-from .config import ingest_dir
-from .gen import normalise_ref, DocBlob
-from .take2 import (
-    Lines,
-    Paragraph,
-    make_block_3,
-    Math,
-    main as t2main,
-    Line,
-    Link,
-    Node,
-    Section,
-    SeeAlsoItem,
-    Ref,
-)
-from . import take2 as take2
-from .utils import progress
-
 from there import print
 
-warnings.simplefilter("ignore", UserWarning)
+from .config import ingest_dir
+from .gen import DocBlob, normalise_ref
+from .take2 import Lines, Link, Math, Node, Paragraph, Ref, Section, SeeAlsoItem
+from .take2 import main as t2main
+from .take2 import make_block_3
+from .utils import progress
+
+from pygments import lex
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import PythonLexer
 
 
-from typing import Optional, List, Tuple, Any, Dict
 from dataclasses import dataclass
+from typing import Any, List, Optional, Tuple
+
+warnings.simplefilter("ignore", UserWarning)
 
 
 @dataclass(frozen=True)
@@ -38,6 +30,7 @@ class RefInfo:
     version: str
     kind: str
     path: str
+
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
     """
@@ -115,10 +108,6 @@ def processed_example_data(example_section_data, qa):
     return new_example_section_data
 
 
-from pygments import lex
-from pygments.lexers import PythonLexer
-from pygments.formatters import HtmlFormatter
-
 
 def get_classes(code):
     list(lex(code, PythonLexer()))
@@ -174,7 +163,6 @@ class IngestedBlobs(DocBlob):
 
         instance.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
 
-
         # Todo: remove this; hopefully the logic from load_one_uningested
         # load a DocBlob instaead of un IngestedDocBlob
         # or more likely the paragraph parsing is made in Gen.
@@ -183,7 +171,6 @@ class IngestedBlobs(DocBlob):
         )
 
         instance.example_section_data = Section.from_json(instance.example_section_data)
-
 
         sections_ = [
             "Parameters",
@@ -263,10 +250,12 @@ class IngestedBlobs(DocBlob):
 
 @lru_cache
 def _at_in(q0, known_refs):
-    return [q for q in known_refs if q.startswith(q0)]
+    return [q.path for q in known_refs if q.path.startswith(q0)]
 
 
 def resolve_(qa: str, known_refs, local_ref, ref):
+    for k in known_refs:
+        assert isinstance(k, RefInfo)
     if ref.startswith("builtins."):
         return ref, "missing"
     if ref.startswith("str."):
@@ -290,7 +279,9 @@ def resolve_(qa: str, known_refs, local_ref, ref):
             else:
                 root = qa.split(".")[0]
                 subset = [
-                    r for r in known_refs if r.startswith(root) and r.endswith(ref)
+                    r.path
+                    for r in known_refs
+                    if r.path.startswith(root) and r.path.endswith(ref)
                 ]
                 if len(subset) == 1:
                     return subset[0], "exists"
@@ -427,7 +418,6 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
 
     blob.example_section_data = new_sec
 
-
     try:
         notes = blob.content["Notes"]
         if notes:
@@ -476,7 +466,6 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
 
     local_refs = []
     for s in sections_:
-        from .take2 import Param
 
         local_refs = local_refs + [
             x[0] for x in instance.content[s] if isinstance(x, Param)
@@ -588,7 +577,6 @@ class Ingester:
     def ingest(self, path: Path, check: bool):
         nvisited_items = {}
         other_backrefs = {}
-        versions: Dict[Any, Any] = {}
         root = None
         meta_path = path / "papyri.json"
         with meta_path.open() as f:
@@ -630,7 +618,12 @@ class Ingester:
         (self.ingest_dir / root / version).mkdir(exist_ok=True)
         (self.ingest_dir / root / version / "module").mkdir(exist_ok=True)
         known_refs = frozenset(nvisited_items.keys())
-    
+
+        # TODO :in progress, crosslink needs version information.
+        known_ref_info = frozenset(
+            RefInfo(root, version, "api", qa) for qa in known_refs
+        )
+
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
         ):
@@ -639,7 +632,7 @@ class Ingester:
             ]
             doc_blob.logo = logo
             for ref in doc_blob.refs:
-                resolved, exists = resolve_(qa, known_refs, local_ref, ref)
+                resolved, exists = resolve_(qa, known_ref_info, local_ref, ref)
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
                     nvisited_items[resolved].backrefs.append(qa)
@@ -697,13 +690,14 @@ class Ingester:
                         print(resolved, "not valid reference, skipping.")
 
             for sa in doc_blob.see_also:
-                resolved, exists = resolve_(qa, known_refs, [], sa.name.name)
+                resolved, exists = resolve_(qa, known_ref_info, [], sa.name.name)
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
         (self.ingest_dir / root / version / "assets").mkdir(exist_ok=True)
         for px, f2 in progress(
-            (path / "assets").glob("*"), description=f"Reading {path} image files ...",
+            (path / "assets").glob("*"),
+            description=f"Reading {path} image files ...",
         ):
             (self.ingest_dir / root / version / "assets" / f2.name).write_bytes(
                 f2.read_bytes()
@@ -731,7 +725,6 @@ class Ingester:
 
         with open(self.ingest_dir / root / version / "papyri.json", "w") as f:
             f.write(json.dumps(aliases))
-
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."

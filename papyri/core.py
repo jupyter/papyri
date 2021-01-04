@@ -1,5 +1,5 @@
 """
-Core Papyri data structures. 
+Core Papyri data structures.
 
 This should likely be the most stable part of Papyri as it is what handles and validate the intermediate
 representation(s)
@@ -10,7 +10,6 @@ and minimal installs.
 from __future__ import annotations
 
 import json
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
 
@@ -24,5 +23,3 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
     def decode(self, s):
         json.loads(s, object_hook=self.hook)
-
-

@@ -56,11 +56,13 @@ Unless your use case is widely adopted it is likely not worse the complexity
 """
 
 from __future__ import annotations
+
 import sys
-from typing import List, Tuple, Optional, Union
+from typing import List, Optional, Tuple, Union
+
+from there import print
 
 from papyri.utils import dedent_but_first
-from there import print
 
 ex = """
 For the most part, direct use of the object-oriented library is encouraged when
@@ -84,14 +86,15 @@ UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 base_types = {int, str, bool, type(None)}
 
+from functools import lru_cache
 from typing import List, Union
 from typing import get_type_hints as gth
-from functools import lru_cache
 
 
 @lru_cache
 def get_type_hints(type):
     return gth(type)
+
 
 class Base:
     @classmethod
@@ -108,7 +111,6 @@ class Base:
         for k, v in kwargs.items():
             setattr(instance, k, v)
         return instance
-
 
 
 def serialize(instance, annotation):
@@ -247,7 +249,6 @@ class Node(Base):
 
         return True
 
-
     @classmethod
     def _instance(cls):
         return cls()
@@ -255,12 +256,12 @@ class Node(Base):
     @classmethod
     def parse(cls, tokens):
         """
-        Try to parse current `tokens` stream from current position. 
+        Try to parse current `tokens` stream from current position.
 
         Returns
         -------
         Tuple with the following items:
-            - Node to insert at current position in the token tree; 
+            - Node to insert at current position in the token tree;
             - None if could not parse.
 
         """
@@ -354,6 +355,8 @@ class Link(Node):
 
     def __hash__(self):
         return hash((iself.value, self.reference, self.kind, self.exists))
+
+
 class Directive(Node):
 
     value: List[str]
@@ -610,6 +613,7 @@ class Param(Node):
 
     def __hash__(self):
         return hash((self.param, self.type_, sefl.desc))
+
 
 class Code(Node):
     entries: List[Tuple[Optional[str]]]
@@ -1302,7 +1306,7 @@ class SeeAlsoItem(Node):
         if descriptions is not None:
             for d in descriptions:
                 assert isinstance(d, Paragraph), repr(d)
-        self.descriptions= descriptions
+        self.descriptions = descriptions
         self.type = type_
 
     # @classmethod
@@ -1494,6 +1498,7 @@ def get_object(qual):
 def assert_block_lines(blocks):
     for b in blocks:
         assert b.lines
+
 
 def main(text):
 

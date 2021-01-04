@@ -1,35 +1,30 @@
 from __future__ import annotations
+
 import inspect
 import io
 import json
 import time
-from contextlib import contextmanager, nullcontext
 from collections import defaultdict
+from contextlib import contextmanager, nullcontext
 from functools import lru_cache
+from pathlib import Path
 
 # from numpydoc.docscrape import NumpyDocString
 from types import FunctionType, ModuleType
-from typing import List, Dict, Any, Tuple, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import jedi
+from numpydoc.docscrape import Parameter
 from pygments.lexers import PythonLexer
-from rich.progress import (
-    BarColumn,
-    Progress,
-    ProgressColumn,
-    Text as RichText,
-    TextColumn,
-)
+from rich.progress import BarColumn, Progress, ProgressColumn
+from rich.progress import Text as RichText
+from rich.progress import TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
+
+from .take2 import Code, Fig, Section, Text
+from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
-from numpydoc.docscrape import Parameter
-
-from .utils import pos_to_nl, dedent_but_first, progress
-
-from pathlib import Path
-
-from .take2 import Section, Code, Text, Fig, Node
 
 
 def parse_script(script, ns=None, infer=None, prev=""):
@@ -101,7 +96,6 @@ def parse_script(script, ns=None, infer=None, prev=""):
     warnings.simplefilter("default", UserWarning)
 
 
-
 def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None):
     """Extract example section data from a NumpyDocstring
 
@@ -164,7 +158,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                                 ce_status = "execed"
                             except Exception:
                                 ce_status = "exception_in_exec"
-                                raise 
+                                raise
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         assert (len(fig_managers)) in (0, 1)
                         if fig_managers and (
@@ -188,7 +182,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                             plt.close("all")
                             raise_in_fig = False
 
-                    except Exception as e:
+                    except Exception:
                         print(f"exception executing... {qa}")
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         if len(fig_managers) == 1:
@@ -688,7 +682,6 @@ class Gen:
         if config is None:
             config = {}
         blob = DocBlob()
-        import copy
 
         blob.content = {k: v for k, v in ndoc._parsed_data.items()}
         item_file = None
@@ -897,10 +890,10 @@ class Gen:
                         not_found.append((k, v))
 
             if logo := module_conf.get("logo", None):
-                self.put_raw(f"logo.png", Path(logo).read_bytes())
+                self.put_raw("logo.png", Path(logo).read_bytes())
             self.metadata = {
                 "version": version,
-                "logo": f"logo.png",
+                "logo": "logo.png",
                 "aliases": found,
                 "module": root,
             }

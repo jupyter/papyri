@@ -1,42 +1,22 @@
 import json
 import os
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from pathlib import Path
-from there import print
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape, StrictUndefined
+from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from quart_trio import QuartTrio
+from there import print
 
 from .config import html_dir, ingest_dir
 from .crosslink import (
-    load_one,
-    resolve_,
     IngestedBlobs,
+    RefInfo,
+    load_one,
     paragraph,
-    paragraphs,
-    P2,
+    resolve_,
 )
-from .stores import BaseStore, GHStore, Store
-from .take2 import (
-    Lines,
-    Paragraph,
-    make_block_3,
-    Link,
-    Node,
-    Section,
-    BlockDirective,
-    DefListItem,
-    Example,
-    BlockVerbatim,
-)
+from .stores import Store
 from .utils import progress
-from collections import OrderedDict
-
-from typing import List
-
-
-from dataclasses import dataclass
-from .crosslink import RefInfo
 
 
 def url(info):
@@ -46,6 +26,7 @@ def url(info):
 
 def unreachable(*obj):
     assert False, f"Unreachable: {obj=}"
+
 
 class CleanLoader(FileSystemLoader):
     """
@@ -72,8 +53,6 @@ def until_ruler(doc):
             l = l.lstrip()[1:]
         new.append(l)
     return "\n".join(new)
-
-
 
 
 def root():
@@ -105,7 +84,6 @@ def root():
 
 async def gallery(module, store):
 
-    from pathlib import Path
     import json
 
     from papyri.crosslink import IngestedBlobs
@@ -146,6 +124,7 @@ async def gallery(module, store):
 # though that would need loading the files and looking at the types of
 # things. likely want to store that in a tree somewhere But I thing this is
 # doable after purely as frontend thing.
+
 
 def compute_siblings(ref, family):
     parts = ref.split(".") + ["+"]
@@ -195,7 +174,8 @@ def compute_siblings_II(ref, family):
     return siblings
 
 
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
+
 
 def make_tree(names):
 
@@ -211,12 +191,12 @@ def make_tree(names):
 
 
 def cs2(ref, tree, ref_map):
-    parts = ref.split('.')+["+"]
+    parts = ref.split(".") + ["+"]
     siblings = OrderedDict()
     cpath = ""
     branch = tree
     for p in parts:
-        res = list(sorted([(f"{cpath}{k}",k) for k in branch.keys() if k != '+']))
+        res = list(sorted([(f"{cpath}{k}", k) for k in branch.keys() if k != "+"]))
         if res:
             siblings[p] = [
                 (ref_map.get(c, RefInfo("?", "?", "?", c)), c.split(".")[-1])
@@ -224,12 +204,12 @@ def cs2(ref, tree, ref_map):
             ]
         else:
             break
-        
+
         branch = branch[p]
         cpath += p + "."
     return siblings
 
-        
+
 from pygments.formatters import HtmlFormatter
 
 
@@ -253,7 +233,6 @@ async def _route(ref, store, version=None, env=None, template=None):
     # TODO: deal with versions
     for p in papp_files:
         aliases = json.loads(await p.read_text())
-
 
     o_family = sorted(list(store.glob("*/*/module/*.json")))
     family = [str(f.name)[:-5] for f in o_family]
@@ -452,7 +431,6 @@ def render_one(
     else:
         backrefs = (backrefs, None)
 
-
     try:
         return template.render(
             doc=doc,
@@ -549,7 +527,8 @@ async def ascii_render(name, store=None):
     builtins.print(await _ascii_render(name, store))
 
 
-from .crosslink import TreeReplacer, DirectiveVisiter
+from .crosslink import DirectiveVisiter, TreeReplacer
+
 
 def prepare_doc(doc_blob, qa, known_refs):
     assert hash(known_refs)

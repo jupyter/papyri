@@ -1,11 +1,10 @@
 import time
 from datetime import timedelta
-
-from rich.progress import BarColumn, Progress, ProgressColumn, TextColumn, track, Task
-from rich.text import Text
-
-from typing import Tuple
 from textwrap import dedent
+from typing import Tuple
+
+from rich.progress import BarColumn, Progress, ProgressColumn, Task, TextColumn, track
+from rich.text import Text
 
 
 class TimeElapsedColumn(ProgressColumn):

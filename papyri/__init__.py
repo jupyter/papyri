@@ -1,28 +1,31 @@
 """
 Papyri – in progress
 """
+
+
+from typing import List
+from pathlib import Path
+
+import typer
+
 __version__ = "0.0.2"
 
 logo = r"""
-  ___                    _ 
+  ___                    _
  | _ \__ _ _ __ _  _ _ _(_)
  |  _/ _` | '_ \ || | '_| |
  |_| \__,_| .__/\_, |_| |_|
-          |_|   |__/       
+          |_|   |__/
 """
-
-
-import typer
-from typing import List
 
 app = typer.Typer(
     help="""
 
-Generate Rich documentation for IPython, Jupyter, and publish online. 
+Generate Rich documentation for IPython, Jupyter, and publish online.
 
 Generating Docs:
 
-    To generate documentation IR for publishing. 
+    To generate documentation IR for publishing.
 
     $ papyri gen numpy
 
@@ -39,7 +42,7 @@ Generating standalone HTML for all the kown docs
     $ papyri render
 
 To start a server that generate html on the fly
-    
+
     $ papyri serve
 
 View w given function docs in text with ansi coloring
@@ -60,7 +63,6 @@ def main():
     app()
 
 
-from pathlib import Path
 
 
 @app.command()
@@ -137,6 +139,7 @@ def open(qualname: str):
         sys.exit("No doc for " + qualname + f" ({path})")
     print("opening", str(path))
     webbrowser.get().open("file://" + str(path), new=1)
+
 
 if __name__ == "__main__":
     main()

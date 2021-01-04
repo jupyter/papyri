@@ -1,17 +1,17 @@
 import os
 import re
+from functools import lru_cache
 from pathlib import Path
+from typing import List
 
 import requests
 
-from typing import List
-
-from functools import lru_cache
 
 # LRU caching this prevent discovering new folders ingested
-#@lru_cache
+# @lru_cache
 def glob_cache(path, arg):
     return list(path.glob(arg))
+
 
 class BaseStore:
     def __init__(self, path):
