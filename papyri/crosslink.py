@@ -95,23 +95,13 @@ def processed_example_data(example_section_data, qa):
     new_example_section_data = Section()
     for in_out in example_section_data:
         type_ = in_out.__class__.__name__
+        # color examples with pygments classes
         if type_ == "Code":
-
             in_ = in_out.entries
-            new_in = []
             if len(in_[0]) == 2:
                 classes = get_classes("".join([x for x, y in in_]))
-                for ii, cc in zip(in_, classes):
-                    new_in.append(ii + (cc,))
-                in_out.entries = new_in
-            new_example_section_data.append(in_out)
-        elif type_ == "Text":
-            blocks = P2(in_out.value.split("\n"))
-            for b in blocks:
-                new_example_section_data.append(b)
-
-        else:
-            new_example_section_data.append(in_out)
+                in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
+        new_example_section_data.append(in_out)
 
     return new_example_section_data
 
@@ -420,9 +410,12 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
             #            "Directive",
             #            "Math",
             #        }, f"{p[0]}, {qa}"
-            new_sec.append(in_out)
+            blocks = P2(in_out.value.split("\n"))
+            for b in blocks:
+                new_sec.append(b)
         else:
             new_sec.append(in_out)
+
     blob.example_section_data = new_sec
 
 
