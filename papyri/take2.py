@@ -625,6 +625,15 @@ class Code(Node):
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
+    @classmethod
+    def _deserialise(cls, *args, **kwargs):
+        inst = super()._deserialise(*args, **kwargs)
+        for e in inst.entries:
+            assert isinstance(e, tuple)
+            for t in e:
+                assert type(t) in (str, type(None)), inst.entries
+        return inst
+
 
 class Text(Node):
     value: str
@@ -713,8 +722,11 @@ class Paragraph(Node):
                 lent = 0
             if clen + lent > max_len:
                 # remove whitespace at EOL
-                while acc and acc[-1][-1].is_whitespace():
-                    acc[-1].pop()
+                try:
+                    while acc and acc[-1][-1].is_whitespace():
+                        acc[-1].pop()
+                except IndexError:
+                    pass
                 acc.append([])
                 clen = 0
 
@@ -725,8 +737,9 @@ class Paragraph(Node):
             clen += lent
         # remove whitespace at EOF
         try:
-            while acc and acc[-1][-1].is_whitespace():
-                acc[-1].pop()
+            pass
+            # while acc and acc[-1][-1].is_whitespace():
+            #    acc[-1].pop()
         except IndexError:
             pass
         return acc
