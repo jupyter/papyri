@@ -36,14 +36,7 @@ from typing import List
 
 
 from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class RefInfo:
-    module: str
-    version: str
-    kind: str
-    path: str
+from .crosslink import RefInfo
 
 
 def url(info):
@@ -619,7 +612,7 @@ async def loc(document, *, store, tree, known_refs, ref_map):
         raise type(e)(f"Error in {qa}") from e
 
 
-async def main(ascii, html):
+async def main(ascii, html, dry_run):
     store = Store(ingest_dir)
     files = store.glob("*/*/module/*.json")
     css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
@@ -633,9 +626,11 @@ async def main(ascii, html):
     env.globals["unreachable"] = unreachable
     env.globals["url"] = url
     template = env.get_template("core.tpl.j2")
-
-    outout_dir = html_dir / "p"
-    outout_dir.mkdir(exist_ok=True)
+    if dry_run:
+        out_dir = None
+    else:
+        outout_dir = html_dir / "p"
+        outout_dir.mkdir(exist_ok=True)
     document: Store
     o_family = sorted(list(store.glob("*/*/module/*.json")))
     family = frozenset([str(f.name)[:-5] for f in o_family])
@@ -677,15 +672,17 @@ async def main(ascii, html):
                 backrefs=doc_blob.backrefs,
                 pygment_css=css_data,
             )
-            (outout_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
-            with (outout_dir / module / v / "api" / f"{qa}.html").open("w") as f:
-                f.write(data)
+            if not dry_run:
+                (outout_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
+                with (outout_dir / module / v / "api" / f"{qa}.html").open("w") as f:
+                    f.write(data)
 
-    assets = store.glob("*/*/assets/*")
-    for asset in assets:
-        module, version, _, name = asset.parts[-4:]
-        b = html_dir / "p" / module / version / "img"
-        b.mkdir(parents=True, exist_ok=True)
-        import shutil
+    if not dry_run:
+        assets = store.glob("*/*/assets/*")
+        for asset in assets:
+            module, version, _, name = asset.parts[-4:]
+            b = html_dir / "p" / module / version / "img"
+            b.mkdir(parents=True, exist_ok=True)
+            import shutil
 
-        shutil.copy(asset.path, b / asset.name)
+            shutil.copy(asset.path, b / asset.name)

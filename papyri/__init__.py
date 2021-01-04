@@ -96,13 +96,13 @@ def gen(
 
 
 @app.command()
-def render(ascii: bool = False, html: bool = True):
+def render(ascii: bool = False, html: bool = True, dry_run: bool = False):
     _intro()
     import trio
 
     from .render import main as m2
 
-    trio.run(m2, ascii, html)
+    trio.run(m2, ascii, html, dry_run)
 
 
 @app.command()

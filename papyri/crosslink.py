@@ -29,7 +29,15 @@ warnings.simplefilter("ignore", UserWarning)
 
 
 from typing import Optional, List, Tuple, Any, Dict
+from dataclasses import dataclass
 
+
+@dataclass(frozen=True)
+class RefInfo:
+    module: str
+    version: str
+    kind: str
+    path: str
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
     """

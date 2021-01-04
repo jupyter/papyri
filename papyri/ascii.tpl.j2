@@ -96,7 +96,7 @@
    |   |   {% endfor %}
    |   |{% else %}
    |   |   |Some B {{type}} Not implemented yet
-   |   |    {{unreachable(obj)}}
+   |   |    {#{{unreachable(obj)}}#}
    |   |{%- endif -%}
    |{%- endif -%}
 {%- endmacro %}
@@ -180,7 +180,7 @@
    |   |{%- for (ref, exists), r in doc.refs -%}
    |   |   |{% if exists=="exists" %}{{ blue(r) }},{% else %}{{ red(r) }},{% endif %}
    |   |{% endfor %}
-   |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Warnings', 'Receives', 'Warns', 'Other Parameters']  %}
+   |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes',  'Warns', 'Other Parameters']  %}
    |   |{% if doc.content[section] %}
    |   |{% for p in doc.content[section] %}
    |   |   |{% if p[0] %}
@@ -195,7 +195,7 @@
    |   |{% endif %}
    |{% else %}
    |    {% if doc.content[section] %}
-   |        {{doc.content[section]}}
+   |        {{render_II(doc.content[section])}}
    |    {% endif %}
    |{% endif %}
 {% endfor%}
