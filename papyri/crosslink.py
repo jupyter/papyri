@@ -197,44 +197,7 @@ class IngestedBlobs(DocBlob):
         )
 
         instance.example_section_data = Section.from_json(instance.example_section_data)
-        # rehydrate in the example section paragraphs into their actual
-        # instances. This likely should be moved into a specific type of
-        # instance in the Parsed Data.
-        for i, in_out in enumerate(instance.example_section_data):
-            type_ = in_out.__class__.__name__
-            assert type_ in (
-                "Text",
-                "Code",
-                "Fig",
-                "Paragraph",
-                "BlockDirective",
-                "BlockVerbatim",
-                "DefListItem",
-                "DefList",
-                "Example",
-            ), in_out
-            if type_ == "Text":
-                assert in_out, in_out
 
-                # todo parse text to paragraphs....
-                # assert len(in_out) == 1, f"{len(in_out)}"
-                # new = []
-                # for value in in_out[0]:
-                #     tt = type(value)
-                #     assert False
-                #     assert tt in {
-                #         "Word",
-                #         "Verbatim",
-                #         "Directive",
-                #         "Math",
-                #         "Link",
-                #     }, f"{tt}, {value}"
-                #     constr = getattr(take2, tt)
-                #     nval = constr.from_json(value)
-                #     new.append(nval)
-
-                # # in_out is a paragraph.
-                # instance.example_section_data[i][1] = [new]
 
         sections_ = [
             "Parameters",
