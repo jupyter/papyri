@@ -307,9 +307,6 @@ class Verbatim(Node):
     def __repr__(self):
         return RED("``" + "".join(self.value) + "``")
 
-    def __hash__(self):
-        return hash(tuple(self.value))
-
 
 class Link(Node):
     """

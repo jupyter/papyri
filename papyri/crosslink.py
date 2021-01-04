@@ -456,7 +456,7 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                 new_content.append(Param(param, type_, items))
             blob.content[s] = new_content
 
-    local_refs = []
+    local_refs: List[str] = []
     for s in sections_:
 
         local_refs = local_refs + [
