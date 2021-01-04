@@ -178,9 +178,8 @@ def deserialize(type_, annotation, data):
     assert type_ is annotation
     assert annotation != {}
     assert annotation is not dict
+    assert annotation is not None, "None is handled by nullable types"
     if annotation is str:
-        return data
-    if annotation is type(None):
         return data
     if annotation is int:
         return data

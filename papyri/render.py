@@ -286,6 +286,8 @@ async def _route(ref, store, version=None, env=None, template=None):
         # The reference we are trying to view exists;
         # we will now just render it.
         bytes_ = await file_.read_text()
+        assert root is not None
+        assert version is not None
         brpath = store / root / version / "module" / f"{ref}.br"
         print(brpath)
         if await brpath.exists():
