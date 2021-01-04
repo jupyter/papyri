@@ -644,7 +644,9 @@ async def main(ascii, html):
     for r in ref_family:
         ref_info_map[r.path] = r
 
+    import random
 
+    random.shuffle(files)
     for p, document in progress(files, description="Rendering..."):
         if ascii:
             qa = document.name[:-5]

@@ -169,30 +169,43 @@ def serialize(instance, annotation):
 
 
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
+@profile
 def deserialize(type_, annotation, data):
     assert type_ is annotation
-    if data != 0:
-        assert data != {}
     assert annotation != {}
     assert annotation is not dict
-    if (annotation in base_types) and (isinstance(data, annotation)):
+    if annotation is str:
         return data
-    if getattr(annotation, "__origin__", None) is tuple and isinstance(data, list):
-        inner_annotation = annotation.__args__
-        assert len(inner_annotation) == 1, inner_annotation
-        return tuple(
-            [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
-        )
-    elif getattr(annotation, "__origin__", None) is list and isinstance(data, list):
-        inner_annotation = annotation.__args__
-        assert len(inner_annotation) == 1, inner_annotation
-        return [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
-    elif getattr(annotation, "__origin__", None) is Union:
-        inner_annotation = annotation.__args__
-        real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
-        assert len(real_type) == 1, real_type
-        real_type = real_type[0]
-        return deserialize(real_type, real_type, data["data"])
+    if annotation is type(None):
+        return data
+    if annotation is int:
+        return data
+    if annotation is bool:
+        return data
+    orig = getattr(annotation, "__origin__", None)
+    if orig:
+        if orig is tuple:
+            assert isinstance(data, list)
+            inner_annotation = annotation.__args__
+            assert len(inner_annotation) == 1, inner_annotation
+            return tuple(
+                [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
+            )
+        elif orig is list:
+            assert isinstance(data, list)
+            inner_annotation = annotation.__args__
+            assert len(inner_annotation) == 1, inner_annotation
+            return [
+                deserialize(inner_annotation[0], inner_annotation[0], x) for x in data
+            ]
+        elif orig is Union:
+            inner_annotation = annotation.__args__
+            real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
+            assert len(real_type) == 1, real_type
+            real_type = real_type[0]
+            return deserialize(real_type, real_type, data["data"])
+        else:
+            assert False
     elif issubclass(annotation, Base) or type(data) is dict:
         loc = {}
         new_ann = get_type_hints(annotation).items()
@@ -444,6 +457,28 @@ class Word(Node):
         return hash(self.value)
 
 
+class Words(Node):
+    """A sequence of words that does not start not ends with spaces"""
+
+    value: str
+
+    def __init__(self, value=None):
+        self.value = value
+
+    @classmethod
+    def _instance(cls):
+        return cls("")
+
+    def __repr__(self):
+        return UNDERLINE(self.value)
+
+    def __len__(self):
+        return len(self.value)
+
+    def __hash__(self):
+        return hash(self.value)
+
+
 def lex(lines):
     acc = ""
     for i, l in enumerate(lines):
@@ -588,11 +623,30 @@ class Text(Node):
 class Fig(Node):
     value: str
 
+
+def compress_word(stream):
+    i = len(stream)
+    acc = []
+    wds = ""
+    assert isinstance(stream, list)
+    for item in stream:
+        if isinstance(item, Word):
+            wds += item.value
+        else:
+            if wds:
+                acc.append(Words(wds))
+                wds = ""
+            acc.append(item)
+    if wds:
+        acc.append(Words(wds))
+    return acc
+
+
 class Paragraph(Node):
 
     __slots__ = ["children", "width"]
 
-    children: List[Union[Paragraph, Word, Directive, Verbatim, Link, Math]]
+    children: List[Union[Paragraph, Word, Words, Directive, Verbatim, Link, Math]]
 
     def __init__(self, children, width=80):
         self.children = children
@@ -621,7 +675,7 @@ class Paragraph(Node):
             parsed, rest = parser.parse(rest)
             acc.append(parsed)
 
-        return cls(acc)
+        return cls(compress_word(acc))
 
     @property
     def references(self):

@@ -320,7 +320,9 @@ user-select: none;
 
 
 {% macro render_inner(type_, obj) -%}
-    {%- if type_ == 'Word' -%}
+    {%- if type_ == 'Words' -%}
+        {{-obj.value-}}
+    {%- elif type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
         <code>:{{obj.domain}}:{{obj.role}}:`{{obj.text}}`</code>
@@ -400,7 +402,7 @@ user-select: none;
         {{block_paragraph(obj)}}
     {% else %}
        {%- set type = obj.__class__.__name__ -%}
-       {%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim') -%}
+       {%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim','Words') -%}
             {{unreachable()}}
        {%- elif type == 'Directive' -%}
            {{unreachable()}}

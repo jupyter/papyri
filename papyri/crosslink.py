@@ -99,7 +99,8 @@ def processed_example_data(example_section_data, qa):
         if type_ == "Code":
             in_ = in_out.entries
             if len(in_[0]) == 2:
-                classes = get_classes("".join([x for x, y in in_]))
+                text = "".join([x for x, y in in_])
+                classes = get_classes(text)
                 in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
         new_example_section_data.append(in_out)
 
@@ -502,6 +503,7 @@ class TreeReplacer:
                 "Link",
                 "Code",
                 "Fig",
+                "Words",
             ]:
                 return [node]
             else:
