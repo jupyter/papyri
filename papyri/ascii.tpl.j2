@@ -8,8 +8,7 @@
        {%- endif -%}
     {%- endfor-%}
 {%- endmacro %}
-
-
+{#--#}
 {%- macro lines(self) -%}{%- for x in self %}
 {{x.text}}
 {%- endfor -%}
@@ -24,11 +23,14 @@
     {{-lines(self.ind)-}}
 {%- endif -%}
 {%- endmacro %}
-
-
+{#--#}
 {% macro render_inner(type, obj) -%}
-   |{%- if type == 'Word' -%}
+   |{%- if type == 'Words' -%}
    |   |{{- obj.value -}}
+   |{%- elif type == 'Word' -%}
+   |   |{{- obj.value -}}
+   |{%- elif type == 'Directive' -%}
+   |   |:{{blue(obj.domain)}}:{{blue(obj.role)}}:`{{blue(obj.text)}}`
    |{%- elif type == 'Link' %}
    |   |{% if obj.kind=='local' %}
    |   |    {{-green(obj.value)-}}
@@ -43,7 +45,7 @@
    |{% elif type == 'Verbatim' %}
    |    {{-yellow(obj.text)-}}
    |{% else %}
-   |    Some {{type}}
+   |   |Some A {{type}}
    |{%- endif -%}
 {%- endmacro %}
 
@@ -52,8 +54,6 @@
    |    |{{-render_inner(c.__class__.__name__, c)-}}
    |{%- endfor -%}
 {% endmacro %}
-
-
 
 {% macro block_directive(dve) -%}
 {{blue("..")}}{{blue(dve.directive_name)}}{{blue("::")}} {{dve.args0}}
@@ -95,14 +95,11 @@
    |   |       {{ render_II(item) }}
    |   |   {% endfor %}
    |   |{% else %}
-   |   |   |Some {{type}} Not implemented yet
+   |   |   |Some B {{type}} Not implemented yet
    |   |    {{unreachable(obj)}}
    |   |{%- endif -%}
    |{%- endif -%}
 {%- endmacro %}
-
-
-
 
 {%- macro render_paragraph(prgs) -%}
    |{% if not prgs.__class__.__name__ ==  'list' %}
@@ -143,7 +140,7 @@
 {{-green("green")}} refer to items within the same document, {{blue("blue")}} external {{underline("known")}} entities, {{red("red")}} entities we were not able to find and {{yellow("yellow")}} for code, and other "raw" items, typically between double backticks.
 
 {% for section in doc.sections if doc.content[section] %}
-   |{% if section not in ['Extended Summary','Signature', 'Summary'] %}
+   |{% if section not in ['Extended Summary','Signature', 'Summary'] and len(doc.content[section]) > 0 %}
    | 
    |{{bold(section)}}
    | 
@@ -183,10 +180,11 @@
    |   |{%- for (ref, exists), r in doc.refs -%}
    |   |   |{% if exists=="exists" %}{{ blue(r) }},{% else %}{{ red(r) }},{% endif %}
    |   |{% endfor %}
-   |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes'] %}
+   |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Warnings', 'Receives', 'Warns', 'Other Parameters']  %}
+   |   |{% if doc.content[section] %}
    |   |{% for p in doc.content[section] %}
    |   |   |{% if p[0] %}
-   |   |   |    {{bold(green(p[0]))}} : {{p[1]}}
+   |   |   |    {{bold(green(p[0]))}} : {{cyan(p[1])}}
    |   |   |{% else %}
    |   |   |    {{green(p[1])}}
    |   |   |{% endif %}
@@ -194,6 +192,7 @@
    |   |   |       {{render_II(item)| wordwrap | indent(width=8)}}
    |   |   |   {% endfor %}
    |   |{% endfor %}
+   |   |{% endif %}
    |{% else %}
    |    {% if doc.content[section] %}
    |        {{doc.content[section]}}

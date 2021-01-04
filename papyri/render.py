@@ -494,17 +494,20 @@ def _ascci_env():
     return env, template
 
 
-async def _ascii_render(name, store, known_refs=None, template=None):
+async def _ascii_render(name, store, known_refs=None, template=None, version=None):
     if store is None:
         store = Store(ingest_dir)
     ref = name
     root = name.split(".")[0]
 
+    if not version:
+        version = list((store / root).path.iterdir())[-1].name
+
     env, template = _ascci_env()
     if known_refs is None:
         known_refs = frozenset({x.name[:-5] for x in store.glob("*/module/*.json")})
-    bytes_ = await (store / root / "module" / f"{ref}.json").read_text()
-    brpath = store / root / "module" / f"{ref}.br"
+    bytes_ = await (store / root / version / "module" / f"{ref}.json").read_text()
+    brpath = store / root / version / "module" / f"{ref}.br"
     if await brpath.exists():
         br = await brpath.read_text()
     else:
@@ -527,7 +530,9 @@ async def _ascii_render(name, store, known_refs=None, template=None):
 
 
 async def ascii_render(name, store=None):
-    print(await _ascii_render(name, store))
+    import builtins
+
+    builtins.print(await _ascii_render(name, store))
 
 
 from .crosslink import TreeReplacer, DirectiveVisiter
@@ -650,9 +655,10 @@ async def main(ascii, html):
 
     random.shuffle(files)
     for p, document in progress(files, description="Rendering..."):
+        module, v = document.path.parts[-4:-2]
         if ascii:
             qa = document.name[:-5]
-            await _ascii_render(qa, store, family)
+            await _ascii_render(qa, store, family, version=v)
         if html:
             doc_blob, qa, siblings, parts_links = await loc(
                 document,
@@ -671,7 +677,6 @@ async def main(ascii, html):
                 backrefs=doc_blob.backrefs,
                 pygment_css=css_data,
             )
-            module, v = document.path.parts[-4:-2]
             (outout_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
             with (outout_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                 f.write(data)
@@ -679,7 +684,7 @@ async def main(ascii, html):
     assets = store.glob("*/*/assets/*")
     for asset in assets:
         module, version, _, name = asset.parts[-4:]
-        b = html_dir / module / version / "img"
+        b = html_dir / "p" / module / version / "img"
         b.mkdir(parents=True, exist_ok=True)
         import shutil
 
