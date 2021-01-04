@@ -13,7 +13,17 @@ from there import print
 
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
-from .take2 import Lines, Link, Math, Node, Paragraph, Ref, Section, SeeAlsoItem
+from .take2 import (
+    Lines,
+    Link,
+    Math,
+    Node,
+    Paragraph,
+    Ref,
+    Section,
+    SeeAlsoItem,
+    RefInfo,
+)
 from .take2 import main as t2main
 from .take2 import make_block_3
 from .utils import progress
@@ -21,12 +31,6 @@ from .utils import progress
 warnings.simplefilter("ignore", UserWarning)
 
 
-@dataclass(frozen=True)
-class RefInfo:
-    module: str
-    version: str
-    kind: str
-    path: str
 
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
@@ -529,8 +533,10 @@ class DirectiveVisiter(TreeReplacer):
         if exists != "missing":
             if exists == "local":
                 self.local.append(directive.text)
+                ref = RefInfo(module=None, version=None, kind="local", path=ref)
             else:
                 self.total.append((directive.text, ref))
+                ref = RefInfo(module=None, version=None, kind="api", path=ref)
             return [Link(directive.text, ref, exists, exists != "missing")]
         return [directive]
 

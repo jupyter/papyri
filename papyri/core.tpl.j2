@@ -328,10 +328,10 @@ user-select: none;
         <code>:{{obj.domain}}:{{obj.role}}:`{{obj.text}}`</code>
     {%- elif type_ == 'Link' -%}
         {# Links have : value, reference, kind exists#}
-        {%- if obj.kind=='local' -%}
-            <code><a link href="#{{obj.reference}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
+        {%- if obj.reference.kind=='local' -%}
+            <code><a link href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
         {%- elif obj.kind in ('exists', ) -%}
-            <code><a link href="{{obj.reference}}{{ext}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
+            <code><a link href="{{url(obj.reference)}}{{ext}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
         {% else %}
             {{unreachable(obj.__dict__)}}
         {%- endif -%}

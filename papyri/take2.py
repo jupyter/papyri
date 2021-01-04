@@ -63,6 +63,7 @@ from typing import List, Optional, Tuple, Union
 from there import print
 
 from papyri.utils import dedent_but_first
+from dataclasses import dataclass
 
 # 3x -> 9x for bright
 WHAT = lambda x: "\033[36m" + x + "\033[0m"
@@ -278,6 +279,24 @@ class Node(Base):
         return deserialize(cls, cls, data)
 
 
+@dataclass(frozen=True)
+class RefInfo(Node):
+    module: Optional[str]
+    version: Optional[str]
+    kind: str
+    path: str
+
+    #    def __init__(module=None, version=None, kind=None, path=None):
+    #        self.module = module
+    #        self.version = version
+    #        self.kind = kind
+    #        self.path = path
+
+    @classmethod
+    def _deserialise(cls, *args, **kwargs):
+        return cls(**kwargs)
+
+
 class Verbatim(Node):
     value: List[str]
 
@@ -332,13 +351,15 @@ class Link(Node):
     """
 
     value: str
-    reference: str
+    reference: RefInfo
     kind: str
     exists: bool
 
     def __init__(self, value=None, reference=None, kind=None, exists=None):
         self.value = value
         self.reference = reference
+        if reference is not None:
+            assert isinstance(reference, RefInfo), f"{reference}, {value}"
         self.kind = kind
         self.exists = exists
 

@@ -18,10 +18,17 @@ from .crosslink import (
 )
 from .stores import Store
 from .utils import progress
+import json
+
+from papyri.crosslink import IngestedBlobs
 
 
 def url(info):
     assert isinstance(info, RefInfo)
+    # assume same package/version for now.
+    if info.module is None:
+        assert info.version is None
+        return info.path
     return f"/p/{info.module}/{info.version}/api/{info.path}"
 
 
@@ -85,9 +92,6 @@ def root():
 
 async def gallery(module, store):
 
-    import json
-
-    from papyri.crosslink import IngestedBlobs
 
     figmap = []
     for p in store.glob(f"{module}/*/module/*.json"):
