@@ -1,6 +1,5 @@
 import os
 import re
-from functools import lru_cache
 from pathlib import Path
 from typing import List
 
@@ -8,7 +7,6 @@ import requests
 
 
 # LRU caching this prevent discovering new folders ingested
-# @lru_cache
 def glob_cache(path, arg):
     return list(path.glob(arg))
 

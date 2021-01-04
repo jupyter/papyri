@@ -64,13 +64,6 @@ from there import print
 
 from papyri.utils import dedent_but_first
 
-ex = """
-For the most part, direct use of the object-oriented library is encouraged when
-programming; pyplot is primarily for working interactively. The exceptions are
-the pyplot functions :dummy:`.pyplot.figure`, :domain:role:`.pyplot.subplot`, :also:dir:`.pyplot.subplots`,
-and `.pyplot.savefig`, which `` can greatly simplify scripting. An example of verbatim code would be ``1+1 = 2`` but it is
-not valid Python assign:: 
-"""
 
 # 3x -> 9x for bright
 WHAT = lambda x: "\033[36m" + x + "\033[0m"
@@ -135,7 +128,7 @@ def serialize(instance, annotation):
 
             inner_annotation = annotation.__args__
             if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
-                assert inner_annotation[0] != None
+                assert inner_annotation[0] is not None
                 # here we are optional; we _likely_ can avoid doing the union trick and store just the type, or null
                 if instance is None:
                     return None
@@ -206,7 +199,7 @@ def deserialize(type_, annotation, data):
         elif orig is Union:
             inner_annotation = annotation.__args__
             if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
-                assert inner_annotation[0] != None
+                assert inner_annotation[0] is not None
                 if data is None:
                     return None
                 else:
@@ -354,7 +347,8 @@ class Link(Node):
         return len(self.value)
 
     def __hash__(self):
-        return hash((iself.value, self.reference, self.kind, self.exists))
+        assert False
+        return hash((self.value, self.reference, self.kind, self.exists))
 
 
 class Directive(Node):
@@ -612,7 +606,8 @@ class Param(Node):
         )
 
     def __hash__(self):
-        return hash((self.param, self.type_, sefl.desc))
+        assert False
+        return hash((self.param, self.type_, self.desc))
 
 
 class Code(Node):
@@ -647,7 +642,6 @@ class Fig(Node):
 
 
 def compress_word(stream):
-    i = len(stream)
     acc = []
     wds = ""
     assert isinstance(stream, list)
@@ -1275,9 +1269,6 @@ class DefListItem(Block):
     COLOR = BLUE
 
 
-from dataclasses import dataclass
-
-
 class Ref(Node):
     name: str
     ref: Optional[str]
@@ -1469,9 +1460,9 @@ def paragraphs_pass(block):
 def empty_pass(doc):
     ret = []
     for b in doc:
-        if not block.lines:
-            assert not block.wh
-            assert not block.ind
+        if not b.lines:
+            assert not b.wh
+            assert not b.ind
             continue
         ret.append(b)
     return ret

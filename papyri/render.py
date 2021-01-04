@@ -15,6 +15,7 @@ from .crosslink import (
     paragraph,
     resolve_,
 )
+from .crosslink import DirectiveVisiter
 from .stores import Store
 from .utils import progress
 
@@ -235,7 +236,6 @@ async def _route(ref, store, version=None, env=None, template=None):
         aliases = json.loads(await p.read_text())
 
     o_family = sorted(list(store.glob("*/*/module/*.json")))
-    family = [str(f.name)[:-5] for f in o_family]
 
     ref_family = []
     for item in o_family:
@@ -527,8 +527,6 @@ async def ascii_render(name, store=None):
     builtins.print(await _ascii_render(name, store))
 
 
-from .crosslink import DirectiveVisiter, TreeReplacer
-
 
 def prepare_doc(doc_blob, qa, known_refs):
     assert hash(known_refs)
@@ -627,10 +625,10 @@ async def main(ascii, html, dry_run):
     env.globals["url"] = url
     template = env.get_template("core.tpl.j2")
     if dry_run:
-        out_dir = None
+        output_dir = None
     else:
-        outout_dir = html_dir / "p"
-        outout_dir.mkdir(exist_ok=True)
+        output_dir = html_dir / "p"
+        output_dir.mkdir(exist_ok=True)
     document: Store
     o_family = sorted(list(store.glob("*/*/module/*.json")))
     family = frozenset([str(f.name)[:-5] for f in o_family])
@@ -673,8 +671,8 @@ async def main(ascii, html, dry_run):
                 pygment_css=css_data,
             )
             if not dry_run:
-                (outout_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
-                with (outout_dir / module / v / "api" / f"{qa}.html").open("w") as f:
+                (output_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
+                with (output_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                     f.write(data)
 
     if not dry_run:

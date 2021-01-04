@@ -1,7 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from ..crosslink import IngestedBlobs, Ingester, load_one
+from ..crosslink import Ingester, load_one
 from ..gen import Gen
 from ..render import Store, _ascii_render, _route
 

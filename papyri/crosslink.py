@@ -693,7 +693,7 @@ class Ingester:
         (self.ingest_dir / root / version / "assets").mkdir(exist_ok=True)
         for px, f2 in progress(
             (path / "assets").glob("*"),
-            description=f"Reading {path} image files ...",
+            description=f"Reading {path.name} image files ...",
         ):
             (self.ingest_dir / root / version / "assets" / f2.name).write_bytes(
                 f2.read_bytes()

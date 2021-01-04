@@ -3,7 +3,7 @@ from datetime import timedelta
 from textwrap import dedent
 from typing import Tuple
 
-from rich.progress import BarColumn, Progress, ProgressColumn, Task, TextColumn, track
+from rich.progress import BarColumn, Progress, ProgressColumn, Task, TextColumn
 from rich.text import Text
 
 
