@@ -586,7 +586,7 @@ class Ingester:
 
         for p, f1 in progress(
             (path / "module").glob("*.json"),
-            description=f"Reading {path} doc bundle files ...",
+            description=f"Reading {path.name} doc bundle files ...",
         ):
             qa = f1.name[:-5]
             if check or True:
