@@ -230,12 +230,8 @@ class IngestedBlobs(DocBlob):
         # I'm thinking the linking strides should be stored separately as the code
         # it might be simpler, and more compact.
         # TODO : move this to ingest.
-        assert qa is not None
-        local_refs = []
-        for s in sections_:
-            local_refs = local_refs + [x[0] for x in instance.content[s] if x[0]]
         instance.example_section_data = processed_example_data(
-            instance.example_section_data, local_refs, qa
+            instance.example_section_data, [], qa
         )
 
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
