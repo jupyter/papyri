@@ -174,10 +174,13 @@ def deserialize(type_, annotation, data):
     assert annotation is not dict
     assert annotation is not None, "None is handled by nullable types"
     if annotation is str:
+        assert isinstance(data, str)
         return data
     if annotation is int:
+        assert isinstance(data, int)
         return data
     if annotation is bool:
+        assert isinstance(data, bool)
         return data
     orig = getattr(annotation, "__origin__", None)
     if orig:
