@@ -93,7 +93,7 @@ def paragraphs(lines) -> List[Any]:
 
 def processed_example_data(example_section_data, qa):
     new_example_section_data = Section()
-    for i, in_out in enumerate(example_section_data):
+    for in_out in example_section_data:
         type_ = in_out.__class__.__name__
         if type_ == "Code":
 
@@ -102,24 +102,11 @@ def processed_example_data(example_section_data, qa):
             if len(in_[0]) == 2:
                 classes = get_classes("".join([x for x, y in in_]))
                 for ii, cc in zip(in_, classes):
-                    # TODO: Warning here we mutate objects.
                     new_in.append(ii + (cc,))
                 in_out.entries = new_in
             new_example_section_data.append(in_out)
         elif type_ == "Text":
             blocks = P2(in_out.value.split("\n"))
-            # assert False, "Todo, need to implement parsing this to paragraaphs."
-            # new_io = []
-            # for it in in_out[0]:
-            #    if it.__class__.__name__ == "Directive" and it.domain is None:
-            #        if it.domain is None and it.role is None:
-            #            ref, exists = resolve_(qa, frozenset(), local_refs, it.text)
-            #            if exists != "missing":
-            #                it = Link(it.text, ref, exists, exists != "missing")
-            #        else:
-            #            print(f"unhandled {it.domain=}, {it.role=}, {it.text}")
-            #    new_io.append(it)
-            # in_out = [new_io]
             for b in blocks:
                 new_example_section_data.append(b)
 
