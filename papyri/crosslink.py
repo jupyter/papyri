@@ -91,13 +91,13 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def processed_example_data(example_section_data, local_refs, qa):
+def processed_example_data(example_section_data, qa):
     new_example_section_data = Section()
     for i, in_out in enumerate(example_section_data):
         type_ = in_out.__class__.__name__
         if type_ == "Code":
 
-            in_, out, ce_status = in_out.entries, in_out.out, in_out.ce_status
+            in_ = in_out.entries
             new_in = []
             if len(in_[0]) == 2:
                 classes = get_classes("".join([x for x, y in in_]))
@@ -231,7 +231,7 @@ class IngestedBlobs(DocBlob):
         # it might be simpler, and more compact.
         # TODO : move this to ingest.
         instance.example_section_data = processed_example_data(
-            instance.example_section_data, [], qa
+            instance.example_section_data, qa
         )
 
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
