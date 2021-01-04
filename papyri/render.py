@@ -483,6 +483,27 @@ def _ascci_env():
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
     env.globals["unreachable"] = unreachable
+    try:
+        from flatlatex import converter
+
+        c = converter()
+
+        def math(s):
+            assert isinstance(s, list)
+            for x in s:
+                assert isinstance(x, str)
+            res = [c.convert(_) for _ in s]
+            print(res)
+            return res
+
+        env.globals["math"] = math
+    except ImportError:
+
+        def math(s):
+            return s + "($pip install flatlatex for unicode math)"
+
+        env.globals["math"] = math
+
     template = env.get_template("ascii.tpl.j2")
     return env, template
 
