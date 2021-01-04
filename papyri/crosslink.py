@@ -250,12 +250,10 @@ class IngestedBlobs(DocBlob):
 
 @lru_cache
 def _at_in(q0, known_refs):
-    return [q.path for q in known_refs if q.path.startswith(q0)]
+    return [q for q in known_refs if q.startswith(q0)]
 
 
 def resolve_(qa: str, known_refs, local_ref, ref):
-    for k in known_refs:
-        assert isinstance(k, RefInfo)
     if ref.startswith("builtins."):
         return ref, "missing"
     if ref.startswith("str."):
@@ -279,9 +277,7 @@ def resolve_(qa: str, known_refs, local_ref, ref):
             else:
                 root = qa.split(".")[0]
                 subset = [
-                    r.path
-                    for r in known_refs
-                    if r.path.startswith(root) and r.path.endswith(ref)
+                    r for r in known_refs if r.startswith(root) and r.endswith(ref)
                 ]
                 if len(subset) == 1:
                     return subset[0], "exists"
@@ -632,7 +628,7 @@ class Ingester:
             ]
             doc_blob.logo = logo
             for ref in doc_blob.refs:
-                resolved, exists = resolve_(qa, known_ref_info, local_ref, ref)
+                resolved, exists = resolve_(qa, known_refs, local_ref, ref)
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
                     nvisited_items[resolved].backrefs.append(qa)
@@ -690,7 +686,7 @@ class Ingester:
                         print(resolved, "not valid reference, skipping.")
 
             for sa in doc_blob.see_also:
-                resolved, exists = resolve_(qa, known_ref_info, [], sa.name.name)
+                resolved, exists = resolve_(qa, known_refs, [], sa.name.name)
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
