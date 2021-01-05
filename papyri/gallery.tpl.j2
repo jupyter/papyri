@@ -199,21 +199,20 @@ img {
 </style>
 </head>
 <body>
-
     <header>
-        
-        
         <brand><i class="fab fa-python"></i><a href='/'>Home</a></brand>
-        <nav> <a href='/' >/ p</a>/Gallery  </a> </nav>
+        <nav> <a href='/' >/ p</a>/Gallery </a>/ {{module}} </nav>
     </header>
     <div class='container'>
-        {% for module, filename, link in figmap %}
-            {% if loop.changed(link) %}
-                <h3><a href='/{{link}}'>{{link}}</a></h3>
-            {% endif %}
-            <img async=on src='/img/{{module}}/assets/{{filename}}'/>
+        {% for m,figs in figmap.items() %}
+            <h2>{{m}}</h2>
+            {% for impath, link, name in figs %}
+                {% if loop.changed(link) %}
+                    <h3><a href='{{link}}'>{{name}}</a></h3>
+                {% endif %}
+                <img async=on src='{{impath}}'/>
+            {%endfor%}
         {%endfor%}
-
-</div>
+    </div>
 </body>
 </html>

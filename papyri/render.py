@@ -89,15 +89,28 @@ def root():
     return template.render(tree=tree)
 
 
-async def gallery(module, store):
+async def gallery(module, store, version=None):
+    if version is None:
+        version = "*"
 
     figmap = []
-    for p in store.glob(f"{module}/*/module/*.json"):
+    m = defaultdict(lambda: [])
+    print("Gallery will glob:")
+    for p in store.glob(f"{module}/{version}/module/*.json"):
         data = json.loads(await p.read_text())
-        i = IngestedBlobs.from_json(data)
+        i = IngestedBlobs.from_json(data, qa=p.name[:-5])
 
-        for k in {u[1] for u in i.example_section_data if u[0] == "fig"}:
-            figmap.append((p.parts[-3], k, p.name[:-5]))
+        for k in [
+            u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
+        ]:
+            module, version, _, path = p.path.parts[-4:]
+
+            # module, filename, link
+            impath = f"/p/{module}/{version}/img/{k}"
+            link = f"/p/module/{version}/api/{p.name[:-5]}"
+            name = p.name[:-5]
+            # figmap.append((impath, link, name)
+            m[module].append((impath, link, name))
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -107,7 +120,9 @@ async def gallery(module, store):
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
 
-    return env.get_template("gallery.tpl.j2").render(figmap=figmap)
+    return env.get_template("gallery.tpl.j2").render(
+        figmap=m, pygment_css="", module=module
+    )
 
 
 # here we compute the siblings at each level; as well as one level down
@@ -325,7 +340,7 @@ async def _route(ref, store, version=None, env=None, template=None):
         return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
 
 
-async def img(module, version, subpath):
+async def img(module, version, subpath=None):
     with open(ingest_dir / module / version / "assets" / subpath, "rb") as f:
         return f.read()
 
@@ -359,8 +374,10 @@ def serve():
         return await img(package, version, subpath)
 
     async def full(package, version, sub, ref):
-        print(">>>>", package, ">", version, "<", sub, ref)
         return await _route(ref, Store(str(ingest_dir)), version)
+
+    async def full_gallery(module, version):
+        return await gallery(module, Store(str(ingest_dir)), version)
 
     async def g(module):
         return await gallery(module, Store(str(ingest_dir)))
@@ -374,6 +391,7 @@ def serve():
     app.route("/favicon.ico")(static("favicon.ico"))
     # sub here is likely incorrect
     app.route("/p/<package>/<version>/img/<path:subpath>")(full_img)
+    app.route("/p/<module>/<version>/gallery")(full_gallery)
     app.route("/p/<package>/<version>/<sub>/<ref>")(full)
     app.route("/<ref>")(r)
     app.route("/img/<path:subpath>")(img)
