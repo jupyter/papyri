@@ -103,11 +103,11 @@ async def gallery(module, store, version=None):
         for k in [
             u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
         ]:
-            module, version, _, path = p.path.parts[-4:]
+            module, v, _, path = p.path.parts[-4:]
 
             # module, filename, link
-            impath = f"/p/{module}/{version}/img/{k}"
-            link = f"/p/module/{version}/api/{p.name[:-5]}"
+            impath = f"/p/{module}/{v}/img/{k}"
+            link = f"/p/module/{v}/api/{p.name[:-5]}"
             name = p.name[:-5]
             # figmap.append((impath, link, name)
             m[module].append((impath, link, name))
@@ -119,9 +119,30 @@ async def gallery(module, store, version=None):
     )
     env.globals["len"] = len
     env.globals["paragraph"] = paragraph
+    env.globals["url"] = url
+
+    class D:
+        pass
+
+    doc = D()
+    doc.logo = "logo.png"
+
+    pap_files = store.glob("*/*/papyri.json")
+    parts = {module: []}
+    for pp in pap_files:
+        mod, ver = pp.path.parts[-3:-1]
+        print(await pp.read_text())
+        parts[module].append((RefInfo(mod, ver, "api", mod), mod))
 
     return env.get_template("gallery.tpl.j2").render(
-        figmap=m, pygment_css="", module=module
+        figmap=m,
+        pygment_css="",
+        module=module,
+        parts=parts,
+        ext="",
+        version=version,
+        parts_links=defaultdict(lambda: ""),
+        doc=doc,
     )
 
 
