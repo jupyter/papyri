@@ -131,7 +131,6 @@ async def gallery(module, store, version=None):
     parts = {module: []}
     for pp in pap_files:
         mod, ver = pp.path.parts[-3:-1]
-        print(await pp.read_text())
         parts[module].append((RefInfo(mod, ver, "api", mod), mod))
 
     return env.get_template("gallery.tpl.j2").render(
@@ -297,7 +296,7 @@ async def _route(ref, store, version=None, env=None, template=None):
         # we will now just render it.
         bytes_ = await file_.read_text()
         assert root is not None
-        assert version is not None
+        # assert version is not None
         brpath = store / root / version / "module" / f"{ref}.br"
         print(brpath)
         if await brpath.exists():
@@ -361,8 +360,9 @@ async def _route(ref, store, version=None, env=None, template=None):
         return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
 
 
-async def img(module, version, subpath=None):
-    with open(ingest_dir / module / version / "assets" / subpath, "rb") as f:
+async def img(package, version, subpath=None):
+    print("img")
+    with open(ingest_dir / package / version / "assets" / subpath, "rb") as f:
         return f.read()
 
 
@@ -390,10 +390,6 @@ def serve():
     async def r(ref):
         return await _route(ref, Store(str(ingest_dir)))
 
-    async def full_img(package, version, subpath):
-        print(">>> IMG", subpath)
-        return await img(package, version, subpath)
-
     async def full(package, version, sub, ref):
         return await _route(ref, Store(str(ingest_dir)), version)
 
@@ -411,11 +407,10 @@ def serve():
     app.route("/logo.png")(logo)
     app.route("/favicon.ico")(static("favicon.ico"))
     # sub here is likely incorrect
-    app.route("/p/<package>/<version>/img/<path:subpath>")(full_img)
+    app.route("/p/<package>/<version>/img/<path:subpath>")(img)
     app.route("/p/<module>/<version>/gallery")(full_gallery)
     app.route("/p/<package>/<version>/<sub>/<ref>")(full)
     app.route("/<ref>")(r)
-    app.route("/img/<path:subpath>")(img)
     app.route("/gallery/")(gr)
     app.route("/gallery/<module>")(g)
     app.route("/")(root)
