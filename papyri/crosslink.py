@@ -248,7 +248,28 @@ def _at_in(q0, known_refs):
     return [q for q in known_refs if q.startswith(q0)]
 
 
+@lru_cache
+def _into(known_refs):
+    ## TODO, remove that once all caller have been updated.
+    ## and enforce RefInfo.
+    ks = []
+    for k in known_refs:
+        if not isinstance(k, RefInfo):
+            assert isinstance(k, str)
+            ks.append(RefInfo(None, None, "api", k))
+        else:
+            ks.append(k)
+    known_refs = set(ks)
+
+    k_path_map = frozenset({k.path for k in known_refs})
+
+    return known_refs, k_path_map
+
+
 def resolve_(qa: str, known_refs, local_ref, ref):
+
+    known_refs, k_path_map = _into(known_refs)
+
     if ref.startswith("builtins."):
         return ref, "missing"
     if ref.startswith("str."):
@@ -263,16 +284,16 @@ def resolve_(qa: str, known_refs, local_ref, ref):
         ref = ref[1:]
     if ref in local_ref:
         return ref, "local"
-    if ref in known_refs:
+    if ref in k_path_map:
         return ref, "exists"
     else:
         if ref.startswith("."):
-            if (found := qa + ref) in known_refs:
+            if (found := qa + ref) in k_path_map:
                 return found, "exists"
             else:
                 root = qa.split(".")[0]
                 subset = [
-                    r for r in known_refs if r.startswith(root) and r.endswith(ref)
+                    r for r in k_path_map if r.startswith(root) and r.endswith(ref)
                 ]
                 if len(subset) == 1:
                     return subset[0], "exists"
@@ -288,11 +309,11 @@ def resolve_(qa: str, known_refs, local_ref, ref):
         parts = qa.split(".")
         for i in range(len(parts)):
             attempt = ".".join(parts[:i]) + "." + ref
-            if attempt in known_refs:
+            if attempt in k_path_map:
                 return attempt, "exists"
 
     q0 = qa.split(".")[0]
-    attempts = [q for q in _at_in(q0, known_refs) if (ref in q)]
+    attempts = [q for q in _at_in(q0, k_path_map) if (ref in q)]
     if len(attempts) == 1:
         return attempts[0], "exists"
     return ref, "missing"

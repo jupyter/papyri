@@ -361,7 +361,6 @@ async def _route(ref, store, version=None, env=None, template=None):
 
 
 async def img(package, version, subpath=None):
-    print("img")
     with open(ingest_dir / package / version / "assets" / subpath, "rb") as f:
         return f.read()
 
