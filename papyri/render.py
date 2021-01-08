@@ -621,10 +621,8 @@ async def loc(document, *, store, tree, known_refs, ref_map):
     try:
         bytes_ = await document.read_text()
         brpath = store / root / version / "module" / f"{qa}.br"
-        if await brpath.exists():
-            br = await brpath.read_text()
-        else:
-            br = None
+        assert brpath.exists()
+        br = await brpath.read_text()
         doc_blob: IngestedBlobs = load_one(bytes_, br, qa=qa)
 
     except Exception as e:
