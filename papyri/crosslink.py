@@ -134,8 +134,7 @@ class IngestedBlobs(DocBlob):
         instance = cls()
         for k, v in data.items():
             setattr(instance, k, v)
-        if instance._content is None:
-            instance._content = {}
+        assert instance._content is not None
 
         # instance._content["Parameters"] = [
         #    Parameter(a, b, c) for (a, b, c) in instance._content.get("Parameters", [])
@@ -208,10 +207,8 @@ class IngestedBlobs(DocBlob):
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if (data := instance.content.get(section, None)) is not None:
                 assert isinstance(data, (list, dict)), f"{section} {data}"
-                if data == []:
-                    instance.content[section] = Section()
-                else:
-                    instance.content[section] = Section.from_json(data)
+                assert data != []
+                instance.content[section] = Section.from_json(data)
 
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if (data := instance.content.get(section, None)) is not None:
@@ -308,12 +305,6 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         if hasattr(o, "to_json"):
             return o.to_json()
         return super().default(o)
-
-
-def assert_normalized(ref):
-    # nref = normalise_ref(ref)
-    # assert nref == ref, f"{nref} != {ref}"
-    return ref
 
 
 def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:

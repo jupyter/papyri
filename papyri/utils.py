@@ -38,13 +38,14 @@ class TimeElapsedColumn(ProgressColumn):
         )
 
 
-def progress(iterable, *, description="Progress"):
+def progress(iterable, *, description="Progress", transient=True):
     items = list(iterable)
     p = Progress(
         TextColumn("[progress.description]{task.description:15}", justify="left"),
         BarColumn(bar_width=None),
         "[progress.percentage]{task.completed}/{task.total}",
         TimeElapsedColumn(),
+        transient=transient,
     )
     p.start()
     task = p.add_task(description, total=len(items), ee=0)
