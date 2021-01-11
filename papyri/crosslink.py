@@ -399,6 +399,11 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
     # we replace it by an empty section for now to still find the key in templates, and insert the see_also attribute
     # content.
     blob.content["See Also"] = Section([])
+    assert blob.content["index"] == {}
+
+    # here as well, we remove index which is not the same structure as other values, and make serialisation more
+    # complicated in strongly typed languages.
+    del blob.content["index"]
 
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:
