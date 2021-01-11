@@ -92,10 +92,15 @@ def paragraphs(lines) -> List[Any]:
 
 
 def processed_example_data(example_section_data, qa):
+    """this should be no-op on already ingested"""
     new_example_section_data = Section()
     for in_out in example_section_data:
         type_ = in_out.__class__.__name__
         # color examples with pygments classes
+        if type_ == "Text":
+            blocks = P2(in_out.value.split("\n"))
+            for b in blocks:
+                new_example_section_data.append(b)
         if type_ == "Code":
             in_ = in_out.entries
             if len(in_[0]) == 2:
@@ -240,6 +245,10 @@ class IngestedBlobs(DocBlob):
         res["example_section_data"] = self.example_section_data.to_json()
         res["see_also"] = [s.to_json() for s in self.see_also]
 
+        if "index" in res:
+            assert res["index"] == ""
+            del res["index"]
+
         return res
 
 
@@ -249,17 +258,19 @@ def _at_in(q0, known_refs):
 
 
 @lru_cache
-def _into(known_refs):
+def _into(known_refs, check=False):
     ## TODO, remove that once all caller have been updated.
     ## and enforce RefInfo.
     ks = []
     for k in known_refs:
         if not isinstance(k, RefInfo):
             assert isinstance(k, str)
+            if check:
+                assert False, k
             ks.append(RefInfo(None, None, "api", k))
         else:
             ks.append(k)
-    known_refs = set(ks)
+    known_refs = frozenset(ks)
 
     k_path_map = frozenset({k.path for k in known_refs})
 
@@ -268,7 +279,7 @@ def _into(known_refs):
 
 def resolve_(qa: str, known_refs, local_ref, ref):
 
-    known_refs, k_path_map = _into(known_refs)
+    known_refs, k_path_map = _into(known_refs, check=True)
 
     if ref.startswith("builtins."):
         return ref, "missing"
@@ -328,7 +339,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
+def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
     """
     Load the json from a DocBlob and make it an ingested blob.
     """
@@ -384,6 +395,11 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
                     f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
                 ) from e
 
+    # see also is one of the few section that is weird, and is now stores in the see_also attribute
+    # we replace it by an empty section for now to still find the key in templates, and insert the see_also attribute
+    # content.
+    blob.content["See Also"] = Section([])
+
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:
         assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
@@ -394,9 +410,9 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     # at ingestion time.
     # we also need to move this step at generation time,as we (likely), want to
     # do some local pre-processing of the references to already do some resolutions.
-    from .gen import Section
 
     sec = Section.from_json(blob.example_section_data)
+
     new_sec = Section()
 
     for in_out in sec:
@@ -422,6 +438,8 @@ def load_one_uningested(bytes_, bytes2_, qa=None) -> IngestedBlobs:
         else:
             new_sec.append(in_out)
 
+    assert qa is not None
+    new_sec = processed_example_data(new_sec, qa)
     blob.example_section_data = new_sec
 
     try:
@@ -640,7 +658,7 @@ class Ingester:
             ]
             doc_blob.logo = logo
             for ref in doc_blob.refs:
-                resolved, exists = resolve_(qa, known_refs, local_ref, ref)
+                resolved, exists = resolve_(qa, known_ref_info, local_ref, ref)
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
                     nvisited_items[resolved].backrefs.append(qa)
@@ -698,7 +716,7 @@ class Ingester:
                         print(resolved, "not valid reference, skipping.")
 
             for sa in doc_blob.see_also:
-                resolved, exists = resolve_(qa, known_refs, [], sa.name.name)
+                resolved, exists = resolve_(qa, known_ref_info, [], sa.name.name)
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
@@ -793,5 +811,5 @@ class Ingester:
 
 
 def main(path, check):
-    print(path)
+    print("Ingesting ", path)
     Ingester().ingest(path, check)

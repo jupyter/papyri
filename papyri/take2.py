@@ -147,6 +147,8 @@ def serialize(instance, annotation):
             and (instance.__class__.__name__ == getattr(annotation, "_name", None))
             or type(instance) == annotation
         ):
+            if hasattr(instance, "_validate"):
+                instance._validate()
             data = {}
             for k, v in get_type_hints(type(instance)).items():
                 try:
@@ -374,8 +376,8 @@ class Link(Node):
 class Directive(Node):
 
     value: List[str]
-    domain: Union[str, None]
-    role: Union[str, None]
+    domain: Optional[str]
+    role: Optional[str]
 
     def __hash__(self):
         return hash((tuple(self.value), self.domain, self.role))
@@ -456,7 +458,7 @@ class Directive(Node):
 
 
 class Math(Node):
-    value: List[str]
+    value: List[str]  # list of tokens not list of lines.
 
     @property
     def text(self):
@@ -464,6 +466,11 @@ class Math(Node):
 
     def __hash__(self):
         return hash(tuple(self.value))
+
+    def _validate(self):
+        pass
+        # assert len(self.value) == 1, self.value
+        # pass
 
 
 class Word(Node):
@@ -642,6 +649,10 @@ class Code(Node):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
+
+    def _validate(self):
+        for e in self.entries:
+            assert len(e) == 3
 
     @classmethod
     def _deserialise(cls, *args, **kwargs):

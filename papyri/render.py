@@ -289,8 +289,6 @@ async def _route(ref, store, version=None, env=None, template=None):
         from glob import escape as ge
 
         files = list((store / root).glob(f"*/module/{ge(ref)}.json"))
-    print("FILES", files)
-    print("version", version)
     if files and await (file_ := files[0]).exists():
         # The reference we are trying to view exists;
         # we will now just render it.
@@ -543,7 +541,9 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
     ## TODO : move this to ingest.
     doc_blob = load_one(bytes_, br, qa=name)
     try:
-        prepare_doc(doc_blob, ref, known_refs)
+        from .crosslink import _into
+
+        prepare_doc(doc_blob, ref, _into(known_refs)[0])
     except Exception as e:
         raise type(e)(f"Error preparing ASCII {name}")
     return render_one(
@@ -574,6 +574,9 @@ def prepare_doc(doc_blob, qa, known_refs):
     ]
 
     local_refs = []
+    from .crosslink import _into
+
+    known_refs = _into(known_refs, check=True)[0]
     for s in sections_:
         local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
 
@@ -592,7 +595,6 @@ def prepare_doc(doc_blob, qa, known_refs):
 
     # partial lift of paragraph parsing....
     # TODO: Move this higher in the ingest
-
     doc_blob.refs = [
         (resolve_(qa, known_refs, local_refs, x), x) for x in doc_blob.refs
     ]
@@ -620,7 +622,7 @@ async def loc(document, *, store, tree, known_refs, ref_map):
     try:
         bytes_ = await document.read_text()
         brpath = store / root / version / "module" / f"{qa}.br"
-        assert brpath.exists()
+        assert await brpath.exists()
         br = await brpath.read_text()
         doc_blob: IngestedBlobs = load_one(bytes_, br, qa=qa)
 
@@ -685,11 +687,12 @@ async def main(ascii, html, dry_run):
             qa = document.name[:-5]
             await _ascii_render(qa, store, family, version=v)
         if html:
+            from .crosslink import _into
             doc_blob, qa, siblings, parts_links = await loc(
                 document,
                 store=store,
                 tree=tree,
-                known_refs=family,
+                known_refs=_into(family)[0],
                 ref_map=ref_info_map,
             )
             data = render_one(
