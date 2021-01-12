@@ -91,19 +91,23 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def processed_example_data(example_section_data, qa):
+def processed_example_data(example_section_data, qa, check=False):
     """this should be no-op on already ingested"""
     new_example_section_data = Section()
     for in_out in example_section_data:
         type_ = in_out.__class__.__name__
         # color examples with pygments classes
         if type_ == "Text":
+            if check:
+                assert False
             blocks = P2(in_out.value.split("\n"))
             for b in blocks:
                 new_example_section_data.append(b)
         if type_ == "Code":
             in_ = in_out.entries
             if len(in_[0]) == 2:
+                if check:
+                    assert False
                 text = "".join([x for x, y in in_])
                 classes = get_classes(text)
                 in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
@@ -120,19 +124,79 @@ def get_classes(code):
     return classes
 
 
-class IngestedBlobs(DocBlob):
+from .take2 import Node
+
+
+@dataclass
+class IngestedBlobs(Node):
 
     __slots__ = ("backrefs", "see_also", "version", "logo")
 
+    _content: dict
+    refs: list
+    ordered_sections: list
+    item_file: Optional[str]
+    item_line: Optional[int]
+    item_type: Optional[str]
+    aliases: dict
+    example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
     version: str
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.backrefs = []
+        self._content = None
+        self.example_section_data = None
+        self.refs = None
+        self.ordered_sections = None
+        self.item_file = None
+        self.item_line = None
+        self.item_type = None
+        self.aliases = []
+
+    @property
+    def content(self):
+        """
+        List of sections in the doc blob docstrings
+
+        """
+        return self._content
+
+    @content.setter
+    def content(self, new):
+        assert not new.keys() - {
+            "Signature",
+            "Summary",
+            "Extended Summary",
+            "Parameters",
+            "Returns",
+            "Yields",
+            "Receives",
+            "Raises",
+            "Warns",
+            "Other Parameters",
+            "Attributes",
+            "Methods",
+            "See Also",
+            "Notes",
+            "Warnings",
+            "References",
+            "Examples",
+            "index",
+        }
+        self._content = new
 
     def slots(self):
-        return super().slots() + ["backrefs", "see_also", "version", "logo"]
+        return [
+            "_content",
+            "example_section_data",
+            "refs",
+            "ordered_sections",
+            "item_file",
+            "item_line",
+            "item_type",
+            "aliases",
+        ] + ["backrefs", "see_also", "version", "logo"]
 
     @classmethod
     def from_json(cls, data, qa=None):
@@ -205,9 +269,6 @@ class IngestedBlobs(DocBlob):
         # I'm thinking the linking strides should be stored separately as the code
         # it might be simpler, and more compact.
         # TODO : move this to ingest.
-        instance.example_section_data = processed_example_data(
-            instance.example_section_data, qa
-        )
 
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if (data := instance.content.get(section, None)) is not None:
@@ -219,21 +280,47 @@ class IngestedBlobs(DocBlob):
             if (data := instance.content.get(section, None)) is not None:
                 assert isinstance(data, Section), data
 
+        return instance
+
+    def process(self, qa):
+        self.example_section_data = processed_example_data(
+            self.example_section_data, qa, check=True
+        )
         local_refs = []
+        sections_ = [
+            "Parameters",
+            "Returns",
+            "Raises",
+            "Yields",
+            "Attributes",
+            "Other Parameters",
+            "Warns",
+            ##
+            "Warnings",
+            "Methods",
+            # "Summary",
+            "Receives",
+            # "Notes",
+            # "Signature",
+            #'Extended Summary',
+            #'References'
+            #'See Also'
+            #'Examples'
+        ]
         for s in sections_:
             from .take2 import Param
 
             local_refs = local_refs + [
-                x[0] for x in instance.content[s] if isinstance(x, Param)
+                x[0] for x in self.content[s] if isinstance(x, Param)
             ]
+
         visitor = DirectiveVisiter(qa, frozenset(), local_refs)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-            assert section in instance.content
-            instance.content[section] = visitor.visit(instance.content[section])
+            assert section in self.content
+            self.content[section] = visitor.visit(self.content[section])
         if len(visitor.local) or len(visitor.total):
             print(f"{len(visitor.local)} / {len(visitor.total)}")
 
-        return instance
 
     def to_json(self):
 
@@ -408,7 +495,7 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:
         assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
-    blob.see_also = list(set(blob.see_also))
+    blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.name))
 
     # here we parse the example_section_data text paragraph into their
     # detailed representation of tokens this will simplify finding references
@@ -504,6 +591,14 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
         assert section in instance.content
         instance.content[section] = visitor.visit(instance.content[section])
 
+    for k, v in instance.content.items():
+        if k in ["References"]:
+            if v:
+                pass
+        if k in ["Signature", "References", "Examples"]:
+            continue
+        assert isinstance(v, Section), f"{k} is of type {type(v)}"
+
     return blob
 
 
@@ -576,7 +671,8 @@ class DirectiveVisiter(TreeReplacer):
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data = json.loads(bytes_)
-    blob = IngestedBlobs.from_json(data, qa=qa)
+    blob = IngestedBlobs.from_json(data)
+    blob.process(qa)
 
     # blob._parsed_data = data.pop("_parsed_data")
     data.pop("_parsed_data", None)

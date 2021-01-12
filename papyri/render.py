@@ -576,7 +576,8 @@ def prepare_doc(doc_blob, qa, known_refs):
     local_refs = []
     from .crosslink import _into
 
-    known_refs = _into(known_refs, check=True)[0]
+    # TODO:
+    known_refs = _into(known_refs, check=False)[0]
     for s in sections_:
         local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
 

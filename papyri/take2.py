@@ -281,6 +281,12 @@ class Node(Base):
         return deserialize(cls, cls, data)
 
 
+@dataclass()
+class Document(Node):
+    content: Dict[str, Section]
+    see_also: List[SeeAlsoItem]
+    example_section_data: Section
+
 @dataclass(frozen=True)
 class RefInfo(Node):
     module: Optional[str]
