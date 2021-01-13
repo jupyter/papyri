@@ -508,6 +508,7 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
     # here as well, we remove index which is not the same structure as other values, and make serialisation more
     # complicated in strongly typed languages.
     del blob.content["index"]
+    del blob.content["Examples"]
 
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:
