@@ -149,7 +149,8 @@ def serialize(instance, annotation):
             ann_ = ma[0]
             return {"type": ann_.__name__, "data": serialize(instance, ann_)}
         elif (
-            isinstance(instance, Base)
+            (type(annotation) is type)
+            and type.__module__ not in ("builtins", "typing")
             and (instance.__class__.__name__ == getattr(annotation, "_name", None))
             or type(instance) == annotation
         ):
@@ -228,7 +229,10 @@ def deserialize(type_, annotation, data):
             return deserialize(real_type, real_type, data["data"])
         else:
             assert False
-    elif issubclass(annotation, Base):
+    elif (type(annotation) is type) and annotation.__module__ not in (
+        "builtins",
+        "typing",
+    ):
         loc = {}
         new_ann = get_type_hints(annotation).items()
         assert new_ann
@@ -242,6 +246,7 @@ def deserialize(type_, annotation, data):
         return annotation._deserialise(**loc)
 
     else:
+        assert not issubclass(annotation, Base), f"{annoation} {annotation.__module__}"
         assert False, f"{annotation!r}, {data}"
 
 
