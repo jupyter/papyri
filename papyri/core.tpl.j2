@@ -194,33 +194,6 @@
             </dl>
         {% endfor %}
 
-    {% elif section in ['Examples'] %}
-        {% for data in doc.example_section_data %}
-            {%- set type = data.__class__.__name__ -%}
-            {% if type=='Text' %}
-                {{render_paragraph(data)}}
-            {% elif type == 'Fig' %}
-                <div><img src="img/{{module}}/assets/{{data.value}}"/></div>
-            {% elif type == 'Code' %}
-                {% if data.ce_status == 'syntax_error' -%}
-                    <span class='warning'>This example raised an error at execution time but compiled correctly</span>
-                {%-elif data.ce_status == 'exception_in_exec' -%}
-                    <span class='warning'>This example is valid syntax, but raise an exception at execution</span>
-                {%-elif data.ce_status == 'compiled' -%}
-                    <span class='note'>This example is valid syntax, but we were not able to check execution</span>
-                {%-endif-%}
-            <pre class='highlight {{data.ce_status}}'>{{example(data.entries) -}}
-
-             {{- data.out}}</pre>
-            {% else %}
-                {{render_II(data)}}
-            {% endif %}
-            
-         {% endfor %}
-         See :
-         {% for (ref, exists), r in doc.refs %}
-            <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
-         {% endfor %}
    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] and doc.content[section] == True %}
 
        <dl>
@@ -273,6 +246,35 @@
         {% endif %}
     {% endfor %}
     {% endif%}
+{% endif %}
+{% if doc.example_section_data %}
+    <h3 id="section-Examples">Examples</h3>
+        {% for data in doc.example_section_data %}
+            {%- set type = data.__class__.__name__ -%}
+            {% if type=='Text' %}
+                {{render_paragraph(data)}}
+            {% elif type == 'Fig' %}
+                <div><img src="img/{{module}}/assets/{{data.value}}"/></div>
+            {% elif type == 'Code' %}
+                {% if data.ce_status == 'syntax_error' -%}
+                    <span class='warning'>This example raised an error at execution time but compiled correctly</span>
+                {%-elif data.ce_status == 'exception_in_exec' -%}
+                    <span class='warning'>This example is valid syntax, but raise an exception at execution</span>
+                {%-elif data.ce_status == 'compiled' -%}
+                    <span class='note'>This example is valid syntax, but we were not able to check execution</span>
+                {%-endif-%}
+            <pre class='highlight {{data.ce_status}}'>{{example(data.entries) -}}
+
+             {{- data.out}}</pre>
+            {% else %}
+                {{render_II(data)}}
+            {% endif %}
+            
+         {% endfor %}
+         See :
+         {% for (ref, exists), r in doc.refs %}
+            <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
+         {% endfor %}
 {% endif %}
 
 <hr>

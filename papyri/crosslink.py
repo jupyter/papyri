@@ -626,7 +626,6 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
         else:
             blob.references = list(blob.references)
 
-    del blob.content["Examples"]
     del blob.content["See Also"]
 
     for k, v in blob.content.items():
