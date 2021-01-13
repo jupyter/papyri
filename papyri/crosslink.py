@@ -131,7 +131,21 @@ from typing import Dict
 @dataclass
 class IngestedBlobs(Node):
 
-    __slots__ = ("backrefs", "see_also", "version", "logo")
+    __slots__ = ("backrefs",) + (
+        "_content",
+        "refs",
+        "ordered_sections",
+        "item_file",
+        "item_line",
+        "item_type",
+        "aliases",
+        "example_section_data",
+        "see_also",
+        "version",
+        "signature",
+        "references",
+        "logo",
+    )
 
     _content: Dict[str, Section]
     refs: List[str]
@@ -145,6 +159,7 @@ class IngestedBlobs(Node):
     version: str
     signature: Optional[str]
     references: Optional[List[str]]
+    logo: Optional[str]
 
     def __init__(self, *args, **kwargs):
         self.backrefs = []
@@ -201,89 +216,89 @@ class IngestedBlobs(Node):
             "aliases",
         ] + ["backrefs", "see_also", "version", "logo"]
 
-    @classmethod
-    def from_json(cls, data, qa=None):
-        instance = cls()
-        for k, v in data.items():
-            setattr(instance, k, v)
-        assert instance._content is not None
+    # @classmethod
+    # def from_json(cls, data):
+    #    instance = cls()
+    #    for k, v in data.items():
+    #        setattr(instance, k, v)
+    #    assert instance._content is not None
 
-        # instance._content["Parameters"] = [
-        #    Parameter(a, b, c) for (a, b, c) in instance._content.get("Parameters", [])
-        # ]
+    #    # instance._content["Parameters"] = [
+    #    #    Parameter(a, b, c) for (a, b, c) in instance._content.get("Parameters", [])
+    #    # ]
 
-        for it in (
-            "Returns",
-            "Yields",
-            "Extended Summary",
-            "Receives",
-            "Other Parameters",
-            "Raises",
-            "Warns",
-            "Warnings",
-            "See Also",
-            "Notes",
-            "References",
-            "Examples",
-            "Attributes",
-            "Methods",
-        ):
-            pass
+    #    for it in (
+    #        "Returns",
+    #        "Yields",
+    #        "Extended Summary",
+    #        "Receives",
+    #        "Other Parameters",
+    #        "Raises",
+    #        "Warns",
+    #        "Warnings",
+    #        "See Also",
+    #        "Notes",
+    #        "References",
+    #        "Examples",
+    #        "Attributes",
+    #        "Methods",
+    #    ):
+    #        pass
 
-        instance.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
+    #    instance.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
 
-        # Todo: remove this; hopefully the logic from load_one_uningested
-        # load a DocBlob instaead of un IngestedDocBlob
-        # or more likely the paragraph parsing is made in Gen.
-        assert isinstance(instance.example_section_data, dict), type(
-            instance.example_section_data
-        )
+    #    # Todo: remove this; hopefully the logic from load_one_uningested
+    #    # load a DocBlob instaead of un IngestedDocBlob
+    #    # or more likely the paragraph parsing is made in Gen.
+    #    assert isinstance(instance.example_section_data, dict), type(
+    #        instance.example_section_data
+    #    )
 
-        instance.example_section_data = Section.from_json(instance.example_section_data)
+    #    instance.example_section_data = Section.from_json(instance.example_section_data)
 
-        sections_ = [
-            "Parameters",
-            "Returns",
-            "Raises",
-            "Yields",
-            "Attributes",
-            "Other Parameters",
-            "Warns",
-            ##
-            "Warnings",
-            "Methods",
-            # "Summary",
-            "Receives",
-            # "Notes",
-            # "Signature",
-            #'Extended Summary',
-            #'References'
-            #'See Also'
-            #'Examples'
-        ]
-        # print(set(instance.content.keys()) - set(sections_))
-        # for s in sections_:
-        #    #for i, p in enumerate(instance.content[s]):
-        #    #    if p[2]:
-        #    #        instance.content[s][i] = (p[0], p[1], paragraphs(p[2]))
+    #    sections_ = [
+    #        "Parameters",
+    #        "Returns",
+    #        "Raises",
+    #        "Yields",
+    #        "Attributes",
+    #        "Other Parameters",
+    #        "Warns",
+    #        ##
+    #        "Warnings",
+    #        "Methods",
+    #        # "Summary",
+    #        "Receives",
+    #        # "Notes",
+    #        # "Signature",
+    #        #'Extended Summary',
+    #        #'References'
+    #        #'See Also'
+    #        #'Examples'
+    #    ]
+    #    # print(set(instance.content.keys()) - set(sections_))
+    #    # for s in sections_:
+    #    #    #for i, p in enumerate(instance.content[s]):
+    #    #    #    if p[2]:
+    #    #    #        instance.content[s][i] = (p[0], p[1], paragraphs(p[2]))
 
-        ### dive into the example data, reconstruct the initial code, parse it with pygments,
-        # and append the highlighting class as the third element
-        # I'm thinking the linking strides should be stored separately as the code
-        # it might be simpler, and more compact.
-        # TODO : move this to ingest.
+    #    ### dive into the example data, reconstruct the initial code, parse it with pygments,
+    #    # and append the highlighting class as the third element
+    #    # I'm thinking the linking strides should be stored separately as the code
+    #    # it might be simpler, and more compact.
+    #    # TODO : move this to ingest.
 
-        for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-            if (data := instance.content.get(section, None)) is not None:
-                assert isinstance(data, (list, dict)), f"{section} {data}"
-                assert data != []
-                instance.content[section] = Section.from_json(data)
+    #    for section in ["Extended Summary", "Summary", "Notes"] + sections_:
+    #        if (data := instance.content.get(section, None)) is not None:
+    #            assert isinstance(data, (list, dict)), f"{section} {data}"
+    #            assert data != []
+    #            instance.content[section] = Section.from_json(data)
 
-        for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-            if (data := instance.content.get(section, None)) is not None:
-                assert isinstance(data, Section), data
+    #    for section in ["Extended Summary", "Summary", "Notes"] + sections_:
+    #        if (data := instance.content.get(section, None)) is not None:
+    #            assert isinstance(data, Section), data
 
-        return instance
+    #    return instance
 
     def process(self, qa):
         self.example_section_data = processed_example_data(

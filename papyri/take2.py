@@ -207,6 +207,13 @@ def deserialize(type_, annotation, data):
             return [
                 deserialize(inner_annotation[0], inner_annotation[0], x) for x in data
             ]
+        elif orig is dict:
+            assert isinstance(data, dict)
+            key_annotation, value_annotation = annotation.__args__
+            return {
+                k: deserialize(value_annotation, value_annotation, x)
+                for k, x in data.items()
+            }
         elif orig is Union:
             inner_annotation = annotation.__args__
             if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
@@ -221,7 +228,7 @@ def deserialize(type_, annotation, data):
             return deserialize(real_type, real_type, data["data"])
         else:
             assert False
-    elif issubclass(annotation, Base) or type(data) is dict:
+    elif issubclass(annotation, Base):
         loc = {}
         new_ann = get_type_hints(annotation).items()
         assert new_ann

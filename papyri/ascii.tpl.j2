@@ -139,7 +139,11 @@
 
 {{-green("green")}} refer to items within the same document, {{blue("blue")}} external {{underline("known")}} entities, {{red("red")}} entities we were not able to find and {{yellow("yellow")}} for code, and other "raw" items, typically between double backticks.
 
-{% for section in doc.sections if doc.content[section] %}
+{% if doc.signature %}
+   |{{ bold(underline(doc.signature))}}
+{% endif %}
+
+{% for section in doc.content if doc.content[section] %}
    |{% if section not in ['Extended Summary','Signature', 'Summary'] and len(doc.content[section]) > 0 %}
    | 
    |{{bold(section)}}
@@ -150,13 +154,7 @@
    |     |{{render_II(doc.content[section]) | wordwrap}}
    |
    |{% elif section in ['Signature'] %}
-   |   |{{ bold(underline(doc.content[section]))}}
-   |
-   |{% elif section in ['See Also'] %}
-   |   |{% for sa in doc.see_also %}
-   |   |     {{bold(ref(sa.name))}}
-   |   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
-   |   |{% endfor %}
+   |{{unreachable()}}
    |{% elif section in ['Examples'] %}
    |   |{% for data in doc.example_section_data %}
    |   |   |{%- set type = data.__class__.__name__ -%}
@@ -183,6 +181,9 @@
    |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes',  'Warns', 'Other Parameters']  %}
    |   |{% if doc.content[section] %}
    |   |{% for p in doc.content[section] %}
+   |   |   |{% if p.__class__.__name__ != 'Param' %}
+   |   |   |    {{unreachable()}}
+   |   |   |{% endif %}
    |   |   |{% if p[0] %}
    |   |   |    {{bold(green(p[0]))}} : {{cyan(p[1])}}
    |   |   |{% else %}
@@ -190,15 +191,22 @@
    |   |   |{% endif %}
    |   |   |   {% for item in p[2] %}
    |   |   |       {{render_II(item)| wordwrap | indent(width=8)}}
-   |   |   |   {% endfor %}
-   |   |{% endfor %}
-   |   |{% endif %}
+   |   |   |   {% endfor -%}
+   |   |{%- endfor -%}
+   |   |{%- endif -%}
    |{% else %}
    |    {% if doc.content[section] %}
    |        {{render_II(doc.content[section])}}
-   |    {% endif %}
-   |{% endif %}
+   |    {% endif -%}
+   |{% endif -%}
 {% endfor%}
+{% if doc.see_also %}
+   |{{bold("See Also")}}
+   |{% for sa in doc.see_also %}
+   |     {{bold(ref(sa.name))}}
+   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
+   |{% endfor %}
+{% endif %}
 {% if backrefs[0] or backrefs[1] %}
 {{"\n"}}
 {{underline(bold("Back References"))}}
