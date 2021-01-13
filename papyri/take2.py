@@ -124,6 +124,12 @@ def serialize(instance, annotation):
             inner_annotation = annotation.__args__
             assert len(inner_annotation) == 1, inner_annotation
             return [serialize(x, inner_annotation[0]) for x in instance]
+        elif getattr(annotation, "__origin__", None) is dict:
+            assert type(instance) == dict
+            key_annotation, value_annotation = annotation.__args__
+            assert key_annotation == str, key_annotation
+            return {k: serialize(v, value_annotation) for k, v in instance.items()}
+
         elif getattr(annotation, "__origin__", None) is Union:
 
             inner_annotation = annotation.__args__

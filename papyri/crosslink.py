@@ -125,6 +125,7 @@ def get_classes(code):
 
 
 from .take2 import Node
+from typing import Dict
 
 
 @dataclass
@@ -132,16 +133,18 @@ class IngestedBlobs(Node):
 
     __slots__ = ("backrefs", "see_also", "version", "logo")
 
-    _content: dict
-    refs: list
-    ordered_sections: list
+    _content: Dict[str, Section]
+    refs: List[str]
+    ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
     item_type: Optional[str]
-    aliases: dict
+    aliases: List[str]
     example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
     version: str
+    signature: Optional[str]
+    references: Optional[List[str]]
 
     def __init__(self, *args, **kwargs):
         self.backrefs = []
@@ -321,22 +324,21 @@ class IngestedBlobs(Node):
         if len(visitor.local) or len(visitor.total):
             print(f"{len(visitor.local)} / {len(visitor.total)}")
 
+    # def to_json(self):
 
-    def to_json(self):
+    #    res = {
+    #        k: getattr(self, k, "")
+    #        for k in self.slots()
+    #        if k not in {"example_section_data", "see_also"}
+    #    }
+    #    res["example_section_data"] = self.example_section_data.to_json()
+    #    res["see_also"] = [s.to_json() for s in self.see_also]
 
-        res = {
-            k: getattr(self, k, "")
-            for k in self.slots()
-            if k not in {"example_section_data", "see_also"}
-        }
-        res["example_section_data"] = self.example_section_data.to_json()
-        res["see_also"] = [s.to_json() for s in self.see_also]
+    #    if "index" in res:
+    #        assert res["index"] == ""
+    #        del res["index"]
 
-        if "index" in res:
-            assert res["index"] == ""
-            del res["index"]
-
-        return res
+    #    return res
 
 
 @lru_cache
@@ -599,6 +601,22 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
             continue
         assert isinstance(v, Section), f"{k} is of type {type(v)}"
 
+    blob.signature = blob.content.pop("Signature")
+    blob.references = blob.content.pop("References")
+    if not isinstance(blob.references, list) and blob.references:
+        print(blob.references)
+    if isinstance(blob.references, str):
+        if blob.references == "":
+            blob.references = None
+        else:
+            blob.references = list(blob.references)
+
+    del blob.content["Examples"]
+    del blob.content["See Also"]
+
+    for k, v in blob.content.items():
+        assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
+
     return blob
 
 
@@ -754,6 +772,8 @@ class Ingester:
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
         ):
+            for k, v in doc_blob.content.items():
+                assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
             local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
                 x[0] for x in doc_blob.content["Returns"] if x[0]
             ]
@@ -857,6 +877,8 @@ class Ingester:
             nvisited_items.items(), description="Writing..."
         ):
             # we might update other modules with backrefs
+            for k, v in doc_blob.content.items():
+                assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
             mod_root = qa.split(".")[0]
             assert mod_root == root
             # TODO : this is wrong, we get version of module we are currently ingesting
@@ -881,6 +903,8 @@ class Ingester:
             other_backrefs.items(), description="Updating other crossrefs..."
         ):
             # we might update other modules with backrefs
+            for k, v in doc_blob.content.items():
+                assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
             mod_root = qa.split(".")[0]
             assert mod_root != root
             js = doc_blob.to_json()
