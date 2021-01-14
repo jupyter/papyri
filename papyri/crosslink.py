@@ -105,9 +105,9 @@ def processed_example_data(example_section_data, qa, check=False):
                 new_example_section_data.append(b)
         if type_ == "Code":
             in_ = in_out.entries
+            if check:
+                assert len(in_[0]) == 3
             if len(in_[0]) == 2:
-                if check:
-                    assert False
                 text = "".join([x for x, y in in_])
                 classes = get_classes(text)
                 in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
@@ -217,9 +217,6 @@ class IngestedBlobs(Node):
 
 
     def process(self, qa):
-        self.example_section_data = processed_example_data(
-            self.example_section_data, qa, check=True
-        )
         local_refs = []
         sections_ = [
             "Parameters",
@@ -611,31 +608,10 @@ class DirectiveVisiter(TreeReplacer):
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data = json.loads(bytes_)
     assert "backrefs" not in data
-    # TODO: mutate data, maybe copy ?
+    # OK to mutate we are the only owners and don't return it.
     data["backrefs"] = json.loads(bytes2_) if bytes2_ else []
     blob = IngestedBlobs.from_json(data)
-    assert blob is not None, IngestedBlobs.from_json
     blob.process(qa)
-
-    # blob._parsed_data = data.pop("_parsed_data")
-    assert "_parsed_data" not in data
-
-    assert hasattr(blob, "version")
-    # blob.version = data.pop("version", "")
-
-    assert hasattr(blob, "refs")
-    # blob.refs = data.pop("refs", [])
-
-    ## verification:
-
-    # for i, (type_, (in_out)) in enumerate(blob.example_section_data):
-    #        if type_ == "code":
-    #            assert len(in_out) == 2
-    #        if type_ == "text":
-    #            for type_,word in in_out:
-    #                assert isinstance(type_, str)
-    #                assert isinstance(word, str)
-
     return blob
 
 

@@ -150,19 +150,13 @@ def deserialize(type_, annotation, data):
     assert annotation is not None, "None is handled by nullable types"
     if annotation is str:
         assert isinstance(data, str)
-        res = data
-        assert res is not None
-        return res
+        return data
     if annotation is int:
         assert isinstance(data, int)
-        res = data
-        assert res is not None
-        return res
+        return data
     if annotation is bool:
         assert isinstance(data, bool)
-        res = data
-        assert res is not None
-        return res
+        return data
     orig = getattr(annotation, "__origin__", None)
     if orig:
         if orig is tuple:
@@ -182,12 +176,10 @@ def deserialize(type_, annotation, data):
         elif orig is dict:
             assert isinstance(data, dict)
             _, value_annotation = annotation.__args__
-            res = {
+            return {
                 k: deserialize(value_annotation, value_annotation, x)
                 for k, x in data.items()
             }
-            assert res is not None
-            return res
         elif orig is Union:
             inner_annotation = annotation.__args__
             if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
@@ -195,15 +187,11 @@ def deserialize(type_, annotation, data):
                 if data is None:
                     return None
                 else:
-                    res = deserialize(inner_annotation[0], inner_annotation[0], data)
-                    assert res is not None
-                    return res
+                    return deserialize(inner_annotation[0], inner_annotation[0], data)
             real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
             assert len(real_type) == 1, real_type
             real_type = real_type[0]
-            res = deserialize(real_type, real_type, data["data"])
-            assert res is not None
-            return res
+            return deserialize(real_type, real_type, data["data"])
         else:
             assert False
     elif (type(annotation) is type) and annotation.__module__ not in (
@@ -221,13 +209,9 @@ def deserialize(type_, annotation, data):
             assert intermediate != {}, f"{v}, {data}, {k}"
             loc[k] = intermediate
         if hasattr(annotation, "_deserialise"):
-            res = annotation._deserialise(**loc)
-            assert res is not None
-            return res
+            return annotation._deserialise(**loc)
         else:
-            res = annotation(**loc)
-            assert res is not None
-            return res
+            return annotation(**loc)
 
     else:
         assert False, f"{annotation!r}, {data}"
