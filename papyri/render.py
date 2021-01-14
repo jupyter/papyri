@@ -582,6 +582,8 @@ def prepare_doc(doc_blob, qa, known_refs):
     for s in sections_:
         local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
 
+    local_refs = frozenset(local_refs)
+
     ### dive into the example data, reconstruct the initial code, parse it with pygments,
     # and append the highlighting class as the third element
     # I'm thinking the linking strides should be stored separately as the code
@@ -601,9 +603,8 @@ def prepare_doc(doc_blob, qa, known_refs):
         (resolve_(qa, known_refs, local_refs, x), x) for x in doc_blob.refs
     ]
 
-    for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-        assert section in doc_blob.content
-        doc_blob.content[section] = visitor.visit(doc_blob.content[section])
+    for k, section in doc_blob.content.items():
+        doc_blob.content[k] = visitor.visit(section)
 
     for d in doc_blob.see_also:
         new_desc = []

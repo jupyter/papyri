@@ -8,3 +8,5 @@ matplotlib.figure.Figure.add_subplot: custom double dot example.
 matplotlib.colors: unnumbered list with indent.
 matplotlib.colors: reference via `.. _palettable: value` and autolink `paletable_`
 numpy.npv: hase warning sections.
+scipy.signal.ltisys.bode: multiple figure
+scipy.signal.barthann: multiple figures

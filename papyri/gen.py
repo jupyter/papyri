@@ -149,9 +149,11 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                 except SyntaxError:
                     ce_status = "syntax_error"
                     pass
-                raise_in_fig = False
+                raise_in_fig = "?"
+                did_except = False
                 if exec_:
                     try:
+                        assert len(fig_managers) == 0
                         with cbook._setattr_cm(
                             FigureManagerBase, show=lambda self: None
                         ):
@@ -162,45 +164,46 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                                 ce_status = "exception_in_exec"
                                 raise
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                        assert (len(fig_managers)) in (0, 1)
+                        assert (len(fig_managers)) in (0, 1, 2), fig_managers
                         if fig_managers and (
                             ("plt.show" in script)
                             or not config.get("wait_for_plt_show", True)
                         ):
                             raise_in_fig = True
+                            for figman in fig_managers:
+                                counter += 1
 
-                            counter += 1
-                            figman = next(iter(fig_managers))
-
-                            if not qa:
-                                qa = obj.__name__
-                            figname = f"fig-{qa}-{counter}.png"
-                            buf = io.BytesIO()
-                            figman.canvas.figure.savefig(
-                                buf, dpi=300  # , bbox_inches="tight"
-                            )
-                            buf.seek(0)
-                            figs.append((figname, buf.read()))
+                                if not qa:
+                                    qa = obj.__name__
+                                figname = f"fig-{qa}-{counter}.png"
+                                buf = io.BytesIO()
+                                figman.canvas.figure.savefig(
+                                    buf, dpi=300  # , bbox_inches="tight"
+                                )
+                                buf.seek(0)
+                                figs.append((figname, buf.read()))
                             plt.close("all")
                             raise_in_fig = False
 
                     except Exception:
+                        did_except = True
                         print(f"exception executing... {qa}")
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                        if len(fig_managers) == 1:
-                            figman = next(iter(fig_managers))
-                            plt.close("all")
-                        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                        assert len(fig_managers) == 0
                         if ("2d" in qa) or (raise_in_fig):
                             raise
-
-                        pass
+                    finally:
+                        if fig_managers:
+                            plt.close("all")
+                        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         # import traceback
                         # traceback.print_exc()
                         # print(script)
                         # print(e)
                         # raise
+                        assert len(fig_managers) == 0, fig_managers + [
+                            did_except,
+                        ]
+
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
                 example_section_data.append(

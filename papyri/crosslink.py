@@ -259,10 +259,6 @@ class IngestedBlobs(Node):
         return inst
 
 
-@lru_cache
-def _at_in(q0, known_refs):
-    return [q for q in known_refs if q.startswith(q0)]
-
 
 @lru_cache
 def _into(known_refs, check=False):
@@ -284,7 +280,22 @@ def _into(known_refs, check=False):
     return known_refs, k_path_map
 
 
+from functools import lru_cache
+
+
+@lru_cache
+def root_start(root, refs):
+    return frozenset(r for r in refs if r.startswith(root))
+
+
+@lru_cache(10000)
+def endswith(end, refs):
+    return frozenset(r for r in refs if r.endswith(end))
+
+
 def resolve_(qa: str, known_refs, local_ref, ref):
+    hash(known_refs)
+    hash(local_ref)
 
     known_refs, k_path_map = _into(known_refs, check=True)
 
@@ -310,15 +321,14 @@ def resolve_(qa: str, known_refs, local_ref, ref):
                 return found, "exists"
             else:
                 root = qa.split(".")[0]
-                subset = [
-                    r for r in k_path_map if r.startswith(root) and r.endswith(ref)
-                ]
+                sub1 = root_start(root, k_path_map)
+                subset = endswith(ref, sub1)
                 if len(subset) == 1:
-                    return subset[0], "exists"
+                    return next(iter(subset)), "exists"
                 else:
                     if len(subset) > 1:
                         # ambiguous ref
-                        # print("subset", subset, ref, root)
+                        # print("subset:", ref)
                         pass
 
                 # print(f"did not resolve {qa} + {ref}")
@@ -331,7 +341,8 @@ def resolve_(qa: str, known_refs, local_ref, ref):
                 return attempt, "exists"
 
     q0 = qa.split(".")[0]
-    attempts = [q for q in _at_in(q0, k_path_map) if (ref in q)]
+    rs = root_start(q0, k_path_map)
+    attempts = [q for q in rs if (ref in q)]
     if len(attempts) == 1:
         return attempts[0], "exists"
     return ref, "missing"
@@ -582,8 +593,8 @@ class DirectiveVisiter(TreeReplacer):
     def __init__(self, qa, known_refs, local_refs):
         assert isinstance(qa, str), qa
         assert isinstance(known_refs, (list, set, frozenset)), known_refs
-        self.known_refs = known_refs
-        self.local_refs = local_refs
+        self.known_refs = frozenset(known_refs)
+        self.local_refs = frozenset(local_refs)
         self.qa = qa
         self.local = []
         self.total = []
@@ -677,8 +688,11 @@ class Ingester:
             local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
                 x[0] for x in doc_blob.content["Returns"] if x[0]
             ]
+            local_ref = frozenset(local_ref)
             doc_blob.logo = logo
             for ref in doc_blob.refs:
+                hash(known_ref_info)
+                hash(local_ref)
                 resolved, exists = resolve_(qa, known_ref_info, local_ref, ref)
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
@@ -739,7 +753,9 @@ class Ingester:
                         print(resolved, "not valid reference, skipping.")
 
             for sa in doc_blob.see_also:
-                resolved, exists = resolve_(qa, known_ref_info, [], sa.name.name)
+                resolved, exists = resolve_(
+                    qa, known_ref_info, frozenset(), sa.name.name
+                )
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved

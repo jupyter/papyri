@@ -1079,7 +1079,11 @@ class BlockDirective(Block):
         if l.startswith("..version"):
             lines[0]._line = ".. " + l[2:]
         # end numpy doc bug
-        assert lines[0].startswith(".. ")
+        # scipy bug....
+        if lines[0].startswith("..Deprecated"):
+            lines[0]._line = ".. deprecated:: 1.5.0"
+        # end scipy bug.
+        assert lines[0].startswith(".. "), lines
         l0 = lines[0]
         pred, *postd = l0.split("::")
         assert pred.startswith(".. ")
