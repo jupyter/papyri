@@ -98,7 +98,8 @@ async def gallery(module, store, version=None):
     print("Gallery will glob:")
     for p in store.glob(f"{module}/{version}/module/*.json"):
         data = json.loads(await p.read_text())
-        i = IngestedBlobs.from_json(data, qa=p.name[:-5])
+        i = IngestedBlobs.from_json(data)
+        i.process(qa=p.name[:-5])
 
         for k in [
             u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
