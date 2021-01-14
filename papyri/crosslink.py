@@ -160,6 +160,9 @@ class IngestedBlobs(Node):
     signature: Optional[str]
     references: Optional[List[str]]
     logo: Optional[str]
+    backrefs: List[str]
+
+    __isfrozen = False
 
     def __init__(self, *args, **kwargs):
         self.backrefs = []
@@ -171,6 +174,14 @@ class IngestedBlobs(Node):
         self.item_line = None
         self.item_type = None
         self.aliases = []
+
+    def __setattr__(self, key, value):
+        if self.__isfrozen and not hasattr(self, key):
+            raise TypeError("%r is a frozen class" % self)
+        object.__setattr__(self, key, value)
+
+    def _freeze(self):
+        self.__isfrozen = True
 
     @property
     def content(self):
@@ -204,101 +215,6 @@ class IngestedBlobs(Node):
         }
         self._content = new
 
-    def slots(self):
-        return [
-            "_content",
-            "example_section_data",
-            "refs",
-            "ordered_sections",
-            "item_file",
-            "item_line",
-            "item_type",
-            "aliases",
-        ] + ["backrefs", "see_also", "version", "logo"]
-
-    # @classmethod
-    # def from_json(cls, data):
-    #    instance = cls()
-    #    for k, v in data.items():
-    #        setattr(instance, k, v)
-    #    assert instance._content is not None
-
-    #    # instance._content["Parameters"] = [
-    #    #    Parameter(a, b, c) for (a, b, c) in instance._content.get("Parameters", [])
-    #    # ]
-
-    #    for it in (
-    #        "Returns",
-    #        "Yields",
-    #        "Extended Summary",
-    #        "Receives",
-    #        "Other Parameters",
-    #        "Raises",
-    #        "Warns",
-    #        "Warnings",
-    #        "See Also",
-    #        "Notes",
-    #        "References",
-    #        "Examples",
-    #        "Attributes",
-    #        "Methods",
-    #    ):
-    #        pass
-
-    #    instance.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
-
-    #    # Todo: remove this; hopefully the logic from load_one_uningested
-    #    # load a DocBlob instaead of un IngestedDocBlob
-    #    # or more likely the paragraph parsing is made in Gen.
-    #    assert isinstance(instance.example_section_data, dict), type(
-    #        instance.example_section_data
-    #    )
-
-    #    instance.example_section_data = Section.from_json(instance.example_section_data)
-
-    #    sections_ = [
-    #        "Parameters",
-    #        "Returns",
-    #        "Raises",
-    #        "Yields",
-    #        "Attributes",
-    #        "Other Parameters",
-    #        "Warns",
-    #        ##
-    #        "Warnings",
-    #        "Methods",
-    #        # "Summary",
-    #        "Receives",
-    #        # "Notes",
-    #        # "Signature",
-    #        #'Extended Summary',
-    #        #'References'
-    #        #'See Also'
-    #        #'Examples'
-    #    ]
-    #    # print(set(instance.content.keys()) - set(sections_))
-    #    # for s in sections_:
-    #    #    #for i, p in enumerate(instance.content[s]):
-    #    #    #    if p[2]:
-    #    #    #        instance.content[s][i] = (p[0], p[1], paragraphs(p[2]))
-
-    #    ### dive into the example data, reconstruct the initial code, parse it with pygments,
-    #    # and append the highlighting class as the third element
-    #    # I'm thinking the linking strides should be stored separately as the code
-    #    # it might be simpler, and more compact.
-    #    # TODO : move this to ingest.
-
-    #    for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-    #        if (data := instance.content.get(section, None)) is not None:
-    #            assert isinstance(data, (list, dict)), f"{section} {data}"
-    #            assert data != []
-    #            instance.content[section] = Section.from_json(data)
-
-    #    for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-    #        if (data := instance.content.get(section, None)) is not None:
-    #            assert isinstance(data, Section), data
-
-    #    return instance
 
     def process(self, qa):
         self.example_section_data = processed_example_data(
@@ -339,21 +255,10 @@ class IngestedBlobs(Node):
         if len(visitor.local) or len(visitor.total):
             print(f"{len(visitor.local)} / {len(visitor.total)}")
 
-    # def to_json(self):
-
-    #    res = {
-    #        k: getattr(self, k, "")
-    #        for k in self.slots()
-    #        if k not in {"example_section_data", "see_also"}
-    #    }
-    #    res["example_section_data"] = self.example_section_data.to_json()
-    #    res["see_also"] = [s.to_json() for s in self.see_also]
-
-    #    if "index" in res:
-    #        assert res["index"] == ""
-    #        del res["index"]
-
-    #    return res
+    @classmethod
+    def from_json(cls, data):
+        inst = super().from_json(data)
+        inst._freeze()
 
 
 @lru_cache
