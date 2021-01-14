@@ -143,9 +143,7 @@ class Node(Base):
 
     @classmethod
     def from_json(cls, data):
-        res = deserialize(cls, cls, data)
-        assert res is not None
-        return res
+        return deserialize(cls, cls, data)
 
 
 @dataclass(frozen=True)
