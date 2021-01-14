@@ -59,7 +59,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict
 
 from there import print
 
@@ -298,12 +298,6 @@ class Node(Base):
     def from_json(cls, data):
         return deserialize(cls, cls, data)
 
-
-@dataclass()
-class Document(Node):
-    content: Dict[str, Section]
-    see_also: List[SeeAlsoItem]
-    example_section_data: Section
 
 @dataclass(frozen=True)
 class RefInfo(Node):
@@ -1131,25 +1125,20 @@ class Lines(Node):
         return Lines(self._lines + other._lines)
 
 
-class Document:
-    def __init__(self, lines):
-        self.lines = lines
-
-    @property
-    def sections(self):
-        indices = header_lines(self.lines)
-        return [Section(l) for l in separate(self.lines, indices)]
-
-    def __repr__(self):
-        acc = ""
-        for i, s in enumerate(self.sections[0:]):
-            acc += "\n" + repr(s)
-        return "<Document > with" + indent(acc)
-
-
-# d = Document(lines[:])
-# for i, l in with_indentation(repr(d).split("\n")):
-#    print(i, l)
+# class Document:
+#    def __init__(self, lines):
+#        self.lines = lines
+#
+#    @property
+#    def sections(self):
+#        indices = header_lines(self.lines)
+#        return [Section(l) for l in separate(self.lines, indices)]
+#
+#    def __repr__(self):
+#        acc = ""
+#        for i, s in enumerate(self.sections[0:]):
+#            acc += "\n" + repr(s)
+#        return "<Document > with" + indent(acc)
 
 
 def is_at_header(lines) -> bool:
