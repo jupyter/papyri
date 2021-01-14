@@ -895,7 +895,7 @@ class Ingester:
             for k, v in doc_blob.content.items():
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
             mod_root = qa.split(".")[0]
-            assert mod_root == root
+            assert mod_root == root, f"{mod_root}, {root}"
             # TODO : this is wrong, we get version of module we are currently ingesting
             doc_blob.version = version
             js = doc_blob.to_json()
