@@ -1,3 +1,65 @@
+"""
+
+A mini-implementation of an automatic serialiser-deserialiser for nested
+dataclass like class based on type annotations.
+
+Example:
+
+
+In [14]: from dataclasses import dataclass
+    ...: from typing import Optional, Union, List
+    ...:
+
+Note that Author and Reviewer are isomorphic even if totally unrelated.
+
+In [15]: @dataclass
+    ...: class Author:
+    ...:     first: Optional[str]
+    ...:     last: str
+    ...:
+    ...: @dataclass
+    ...: class Reviewer:
+    ...:     first: Optional[str]
+    ...:     last: str
+    ...:
+
+Here, items can be heterogenous, or of ambiguous type based only on its fields values.
+
+In [16]: @dataclass
+    ...: class Book:
+    ...:     author: List[Union[Author, Reviewer]]
+    ...:     title: str
+    ...:
+
+
+In [17]: obj = Book([Author("Matthias", "B"), Reviewer("Tony", "Fast")], "pyshs")
+    ...:
+    ...: data = serialize(obj , Book)
+    ...:
+    ...: deserialize(Book, Book, data)
+
+Out[17]: Book(author=[Author(first='Matthias', last='B'), Reviewer(first='Tony', last='Fast')], title='pyshs')
+
+                      ^...................................^
+                                        .
+                                        .Note the conserved types.
+
+
+
+Unlike other similar libraries that automatically serialise/deserialise it has the following properties:
+
+    - object do not need to have a give baseclass, they need to have an __init__ or _deserialise class method that takes
+      each parameter as kwargs.
+    - Subclass or isomorphic classes are kept in the de-serialisation, in particular in Union and List of Unions. That is
+      to say it will properly de-serialise and heterogenous list or dict, as long as those respect the type annotation.
+
+Both Pydantic and Jetblack-serialize would have erased the types and returned either 2 Authors or 2 Reviewers.
+
+    - it is also compatible with Rust Serde with adjacently tagged Unions (not critical but nice to have)
+
+"""
+
+
 from functools import lru_cache
 from typing import Union
 from typing import get_type_hints as gth
@@ -146,7 +208,10 @@ def deserialize(type_, annotation, data):
             intermediate = deserialize(v, v, data[k])
             assert intermediate != {}, f"{v}, {data}, {k}"
             loc[k] = intermediate
-        return annotation._deserialise(**loc)
+        if hasattr(annotation, "_deserialize"):
+            return annotation._deserialise(**loc)
+        else:
+            return annotation(**loc)
 
     else:
         assert False, f"{annotation!r}, {data}"
