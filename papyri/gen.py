@@ -84,8 +84,10 @@ def parse_script(script, ns=None, infer=None, prev=""):
                             #    ref = ''
                     else:
                         ref = ""
-                except (AttributeError, TypeError, Exception):
-                    # raise
+                except (AttributeError, TypeError, Exception) as e:
+                    raise type(e)(
+                        f"{contextscript}, {line_n}, {col_n}, {prev}, {jed}"
+                    ) from e
                     failed = "(jedi failed inference)"
                     print("failed inference on ", script, ns, jed, col_n, line_n + 1)
                 break

@@ -143,7 +143,9 @@ class Node(Base):
 
     @classmethod
     def from_json(cls, data):
-        return deserialize(cls, cls, data)
+        res = deserialize(cls, cls, data)
+        assert res is not None
+        return res
 
 
 @dataclass(frozen=True)
@@ -874,12 +876,12 @@ class Line(Node):
     _number: int
     _offset: int
 
-    def __init__(self, line, number, offset=0):
-        assert isinstance(line, str)
-        assert "\n" not in line, line
-        self._line = line
-        self._number = number
-        self._offset = offset
+    def __init__(self, _line, _number, _offset=0):
+        assert isinstance(_line, str)
+        assert "\n" not in _line, _line
+        self._line = _line
+        self._number = _number
+        self._offset = _offset
 
     def __eq__(self, other):
         for attr in ["_line", "_number", "_offset"]:
@@ -917,11 +919,11 @@ class Lines(Node):
 
     _lines: List[Line]
 
-    def __init__(self, lines=None):
-        if lines is None:
-            lines = []
-        assert isinstance(lines, (list, Lines))
-        for l in lines:
+    def __init__(self, _lines=None):
+        if _lines is None:
+            _lines = []
+        assert isinstance(_lines, (list, Lines))
+        for l in _lines:
             assert isinstance(l, (str, Line)), f"got {l}"
             if isinstance(l, str):
                 assert "\n" not in l
@@ -929,7 +931,7 @@ class Lines(Node):
                 assert "\n" not in l._line
 
         self._lines = [
-            l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(lines)
+            l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(_lines)
         ]
 
     def __eq__(self, other):
@@ -1159,6 +1161,13 @@ class DefListItem(Block):
         return cls(lines, wh, ind, dl, dd)
 
     COLOR = BLUE
+
+    @classmethod
+    def _deserialise(cls, **kwargs):
+        inst = cls()
+        for k, v in kwargs.items():
+            setattr(inst, k, v)
+        return inst
 
 
 class Ref(Node):

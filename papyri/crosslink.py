@@ -259,6 +259,7 @@ class IngestedBlobs(Node):
     def from_json(cls, data):
         inst = super().from_json(data)
         inst._freeze()
+        return inst
 
 
 @lru_cache
@@ -609,18 +610,21 @@ class DirectiveVisiter(TreeReplacer):
 
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data = json.loads(bytes_)
+    assert "backrefs" not in data
+    # TODO: mutate data, maybe copy ?
+    data["backrefs"] = json.loads(bytes2_) if bytes2_ else []
     blob = IngestedBlobs.from_json(data)
+    assert blob is not None, IngestedBlobs.from_json
     blob.process(qa)
 
     # blob._parsed_data = data.pop("_parsed_data")
-    data.pop("_parsed_data", None)
-    data.pop("example_section_data", None)
-    # blob._parsed_data["Parameters"] = [
-    #    Parameter(a, b, c) for (a, b, c) in blob._parsed_data["Parameters"]
-    # ]
-    blob.backrefs = json.loads(bytes2_) if bytes2_ else []
-    blob.version = data.pop("version", "")
-    blob.refs = data.pop("refs", [])
+    assert "_parsed_data" not in data
+
+    assert hasattr(blob, "version")
+    # blob.version = data.pop("version", "")
+
+    assert hasattr(blob, "refs")
+    # blob.refs = data.pop("refs", [])
 
     ## verification:
 
@@ -716,7 +720,9 @@ class Ingester:
                             f"*/module/{ge(resolved)}.json"
                         )
                     )
-                    assert len(existing_locations) <= 1
+                    # TODO: get the latest, if there are many versions.
+                    # assert len(existing_locations) <= 1, existing_locations
+                    # pass
                     if not existing_locations:
                         # print("Could not find", resolved, ref, f"({qa})")
                         continue
