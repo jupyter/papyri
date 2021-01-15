@@ -649,7 +649,7 @@ class Ingester:
             description=f"Reading {path.name} doc bundle files ...",
         ):
             qa = f1.name[:-5]
-            if check or True:
+            if check:
                 rqa = normalise_ref(qa)
                 if rqa != qa:
                     # numpy weird thing

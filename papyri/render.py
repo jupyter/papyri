@@ -98,6 +98,7 @@ async def gallery(module, store, version=None):
     print("Gallery will glob:")
     for p in store.glob(f"{module}/{version}/module/*.json"):
         data = json.loads(await p.read_text())
+        data["backrefs"] = []
         i = IngestedBlobs.from_json(data)
         i.process(qa=p.name[:-5])
 
