@@ -17,6 +17,9 @@ submodules = [
  "signal", 
 ]
 
+execute_exclude_patterns = []
+exec_failure = 'fallback'
+
 [matplotlib]
 logo = 'matplotlib_logo.png'
 wait_for_plt_show = false

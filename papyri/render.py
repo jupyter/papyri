@@ -96,21 +96,21 @@ async def gallery(module, store, version=None):
     figmap = []
     m = defaultdict(lambda: [])
     print("Gallery will glob:")
-    for p in store.glob(f"{module}/{version}/module/*.json"):
-        data = json.loads(await p.read_text())
+    for target_path in store.glob(f"{module}/{version}/module/*.json"):
+        data = json.loads(await target_path.read_text())
         data["backrefs"] = []
         i = IngestedBlobs.from_json(data)
-        i.process(qa=p.name[:-5])
+        i.process(qa=target_path.name[:-5])
 
         for k in [
             u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
         ]:
-            module, v, _, path = p.path.parts[-4:]
+            module, v, _, path = target_path.path.parts[-4:]
 
             # module, filename, link
             impath = f"/p/{module}/{v}/img/{k}"
-            link = f"/p/module/{v}/api/{p.name[:-5]}"
-            name = p.name[:-5]
+            link = f"/p/{module}/{v}/api/{target_path.name[:-5]}"
+            name = target_path.name[:-5]
             # figmap.append((impath, link, name)
             m[module].append((impath, link, name))
 

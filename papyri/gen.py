@@ -162,7 +162,8 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                                 ce_status = "execed"
                             except Exception:
                                 ce_status = "exception_in_exec"
-                                raise
+                                if config.get("exec_failure", "") != "fallback":
+                                    raise
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         assert (len(fig_managers)) in (0, 1, 2), fig_managers
                         if fig_managers and (
