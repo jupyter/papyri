@@ -21,6 +21,7 @@ from .crosslink import (
 from .stores import Store
 from .utils import progress
 from .crosslink import _into
+from .take2 import Link, RefInfo 
 
 
 def url(info):
@@ -587,24 +588,13 @@ def prepare_doc(doc_blob, qa, known_refs):
 
     doc_blob.example_section_data = visitor.visit(doc_blob.example_section_data)
 
-
-    # partial lift of paragraph parsing....
-    # TODO: Move this higher in the ingest
-    #new_refs = [
-    #    (resolve_(qa, known_refs, frozenset(), x), x) for x in doc_blob.refs
-    #]
-
-    #assert new_refs == doc_blob.refs, f"{new_refs} ||||||| {doc_blob.refs}"
-
     module = '??'
     version = '??'
     kind = 'exists'
-    from .take2 import Link, RefInfo 
     new_refs = []
     for value in doc_blob.refs:
-        path, exists = resolve_(qa, known_refs, frozenset(), value)
-        new_refs.append(Link(value, RefInfo(module, version, kind, path), kind, exists))
-
+        r = resolve_(qa, known_refs, frozenset(), value)
+        new_refs.append(Link(value, r, kind, r.kind!='missing'))
 
     doc_blob.refs = new_refs
 

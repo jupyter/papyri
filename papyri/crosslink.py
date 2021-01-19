@@ -295,18 +295,19 @@ def endswith(end, refs):
     return frozenset(r for r in refs if r.endswith(end))
 
 
-def resolve_(qa: str, known_refs, local_ref, ref):
+def resolve_(qa: str, known_refs, local_ref, ref) -> RefInfo:
+    # RefInfo(module, version, kind, path)
     hash(known_refs)
     hash(local_ref)
 
     known_refs, k_path_map = _into(known_refs, check=True)
 
     if ref.startswith("builtins."):
-        return ref, "missing"
+        return RefInfo(None, None, 'missing', ref)
     if ref.startswith("str."):
-        return ref, "missing"
+        return RefInfo(None, None, 'missing', ref)
     if ref in {"None", "False", "True"}:
-        return ref, "missing"
+        return RefInfo(None, None, 'missing', ref)
     # here is sphinx logic.
     # https://www.sphinx-doc.org/en/master/_modules/sphinx/domains/python.html?highlight=tilde
     # tilda ~ hide the module name/class name
@@ -314,19 +315,19 @@ def resolve_(qa: str, known_refs, local_ref, ref):
     if ref.startswith("~"):
         ref = ref[1:]
     if ref in local_ref:
-        return ref, "local"
+        return RefInfo(None, None, 'local', ref)
     if ref in k_path_map:
-        return ref, "exists"
+        return RefInfo(None, None, 'exists', ref)
     else:
         if ref.startswith("."):
             if (found := qa + ref) in k_path_map:
-                return found, "exists"
+                return RefInfo(None, None, 'exists', found)
             else:
                 root = qa.split(".")[0]
                 sub1 = root_start(root, k_path_map)
                 subset = endswith(ref, sub1)
                 if len(subset) == 1:
-                    return next(iter(subset)), "exists"
+                    return RefInfo(None, None, 'exists', next(iter(subset)))
                 else:
                     if len(subset) > 1:
                         # ambiguous ref
@@ -334,21 +335,21 @@ def resolve_(qa: str, known_refs, local_ref, ref):
                         pass
 
                 # print(f"did not resolve {qa} + {ref}")
-                return ref, "missing"
+                return RefInfo(None, None, 'missing', ref)
 
         parts = qa.split(".")
         for i in range(len(parts)):
             attempt = ".".join(parts[:i]) + "." + ref
             if attempt in k_path_map:
                 #assert False, f"{ref=}, {attempt=}"
-                return attempt, "exists"
+                return RefInfo(None, None, 'exists', attempt)
 
     q0 = qa.split(".")[0]
     rs = root_start(q0, k_path_map)
     attempts = [q for q in rs if (ref in q)]
     if len(attempts) == 1:
-        return attempts[0], "exists"
-    return ref, "missing"
+        return RefInfo(None, None, 'exists', attempts[0])
+    return RefInfo(None, None, 'missing', ref)
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -605,17 +606,17 @@ class DirectiveVisiter(TreeReplacer):
     def replace_Directive(self, directive):
         if (directive.domain is not None) or (directive.role not in (None, "mod")):
             return [directive]
-        ref, exists = resolve_(
+        r = resolve_(
             self.qa, self.known_refs, self.local_refs, directive.text
         )
+        # this is now likely incorrect as Ref kind shoudl nto be exists, but things like "local", "api", "gallery..."
+        ref, exists = r.path, r.kind
         if exists != "missing":
             if exists == "local":
                 self.local.append(directive.text)
-                ref = RefInfo(module=None, version=None, kind="local", path=ref)
             else:
                 self.total.append((directive.text, ref))
-                ref = RefInfo(module=None, version=None, kind="api", path=ref)
-            return [Link(directive.text, ref, exists, exists != "missing")]
+            return [Link(directive.text, r, exists, exists != "missing")]
         return [directive]
 
 
@@ -696,7 +697,8 @@ class Ingester:
             for ref in doc_blob.refs:
                 hash(known_ref_info)
                 hash(local_ref)
-                resolved, exists = resolve_(qa, known_ref_info, local_ref, ref)
+                r = resolve_(qa, known_ref_info, local_ref, ref)
+                resolved, exists = r.path, r.kind
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
                     nvisited_items[resolved].backrefs.append(qa)
@@ -756,9 +758,8 @@ class Ingester:
                         print(resolved, "not valid reference, skipping.")
 
             for sa in doc_blob.see_also:
-                resolved, exists = resolve_(
-                    qa, known_ref_info, frozenset(), sa.name.name
-                )
+                r = resolve_(qa, known_ref_info, frozenset(), sa.name.name)
+                resolved, exists = r.path, r.kind
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
