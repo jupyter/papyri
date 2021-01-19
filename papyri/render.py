@@ -20,6 +20,7 @@ from .crosslink import (
 )
 from .stores import Store
 from .utils import progress
+from .crosslink import _into
 
 
 def url(info):
@@ -316,6 +317,8 @@ async def _route(ref, store, version=None, env=None, template=None):
             acc += k
             parts_links[k] = acc
             acc += "."
+
+        all_known_refs = _into(all_known_refs, check=False)[0]
         prepare_doc(doc_blob, ref, all_known_refs)
         css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
         return render_one(
@@ -543,7 +546,6 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
     ## TODO : move this to ingest.
     doc_blob = load_one(bytes_, br, qa=name)
     try:
-        from .crosslink import _into
 
         prepare_doc(doc_blob, ref, _into(known_refs)[0])
     except Exception as e:
@@ -564,6 +566,7 @@ async def ascii_render(name, store=None):
     builtins.print(await _ascii_render(name, store))
 
 
+
 def prepare_doc(doc_blob, qa, known_refs):
     assert hash(known_refs)
     sections_ = [
@@ -575,34 +578,35 @@ def prepare_doc(doc_blob, qa, known_refs):
         "Other Parameters",
     ]
 
-    local_refs = []
-    from .crosslink import _into
-
-    # TODO:
-    known_refs = _into(known_refs, check=False)[0]
-    for s in sections_:
-        local_refs = local_refs + [x[0] for x in doc_blob.content[s] if x[0]]
-
-    local_refs = frozenset(local_refs)
-
     ### dive into the example data, reconstruct the initial code, parse it with pygments,
     # and append the highlighting class as the third element
     # I'm thinking the linking strides should be stored separately as the code
     # it might be simpler, and more compact.
     # TODO : move this to ingest.
-    visitor = DirectiveVisiter(qa, known_refs, local_refs)
+    visitor = DirectiveVisiter(qa, known_refs, frozenset())
 
     doc_blob.example_section_data = visitor.visit(doc_blob.example_section_data)
 
-    # doc_blob.example_section_data = processed_example_data_nonlocal(
-    #    doc_blob.example_section_data, known_refs, qa=qa
-    # )
 
     # partial lift of paragraph parsing....
     # TODO: Move this higher in the ingest
-    doc_blob.refs = [
-        (resolve_(qa, known_refs, local_refs, x), x) for x in doc_blob.refs
-    ]
+    #new_refs = [
+    #    (resolve_(qa, known_refs, frozenset(), x), x) for x in doc_blob.refs
+    #]
+
+    #assert new_refs == doc_blob.refs, f"{new_refs} ||||||| {doc_blob.refs}"
+
+    module = '??'
+    version = '??'
+    kind = 'exists'
+    from .take2 import Link, RefInfo 
+    new_refs = []
+    for value in doc_blob.refs:
+        path, exists = resolve_(qa, known_refs, frozenset(), value)
+        new_refs.append(Link(value, RefInfo(module, version, kind, path), kind, exists))
+
+
+    doc_blob.refs = new_refs
 
     for k, section in doc_blob.content.items():
         doc_blob.content[k] = visitor.visit(section)

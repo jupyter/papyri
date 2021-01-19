@@ -273,8 +273,8 @@
             
          {% endfor %}
          See :
-         {% for (ref, exists), r in doc.refs %}
-            <a class='{{exists}}' href='{{ref}}{{ext}}'>{{r}}</a>,
+         {% for r in doc.refs %}
+             {{render_inner('Link', r)}}}
          {% endfor %}
 {% endif %}
 

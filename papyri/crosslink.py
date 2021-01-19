@@ -251,6 +251,8 @@ class IngestedBlobs(Node):
             self.content[section] = visitor.visit(self.content[section])
         if len(visitor.local) or len(visitor.total):
             print(f"{len(visitor.local)} / {len(visitor.total)}")
+        self.example_section_data = visitor.visit(self.example_section_data)
+
 
     @classmethod
     def from_json(cls, data):
@@ -258,10 +260,10 @@ class IngestedBlobs(Node):
         inst._freeze()
         return inst
 
-
+from typing import Union
 
 @lru_cache
-def _into(known_refs, check=False):
+def _into(known_refs: List[Union[RefInfo, str]], check=False)-> Tuple[List[RefInfo], Dict]:
     ## TODO, remove that once all caller have been updated.
     ## and enforce RefInfo.
     ks = []
@@ -338,6 +340,7 @@ def resolve_(qa: str, known_refs, local_ref, ref):
         for i in range(len(parts)):
             attempt = ".".join(parts[:i]) + "." + ref
             if attempt in k_path_map:
+                #assert False, f"{ref=}, {attempt=}"
                 return attempt, "exists"
 
     q0 = qa.split(".")[0]
