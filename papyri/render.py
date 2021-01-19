@@ -548,7 +548,7 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
     doc_blob = load_one(bytes_, br, qa=name)
     try:
 
-        prepare_doc(doc_blob, ref, _into(known_refs)[0])
+        prepare_doc(doc_blob, ref, frozenset(RefInfo(None, None, "api", k) for k in known_refs))
     except Exception as e:
         raise type(e)(f"Error preparing ASCII {name}")
     return render_one(
@@ -568,7 +568,7 @@ async def ascii_render(name, store=None):
 
 
 
-def prepare_doc(doc_blob, qa, known_refs):
+def prepare_doc(doc_blob, qa:str, known_refs):
     assert hash(known_refs)
     sections_ = [
         "Parameters",
@@ -641,7 +641,6 @@ async def loc(document, *, store, tree, known_refs, ref_map):
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
 
-
 async def main(ascii, html, dry_run):
     store = Store(ingest_dir)
     files = store.glob("*/*/module/*.json")
@@ -677,7 +676,7 @@ async def main(ascii, html, dry_run):
         ref_info_map[r.path] = r
 
     import random
-
+    kr = frozenset(RefInfo(None, None, "api", k) for k in family)
     random.shuffle(files)
     for p, document in progress(files, description="Rendering..."):
         module, v = document.path.parts[-4:-2]
@@ -685,12 +684,11 @@ async def main(ascii, html, dry_run):
             qa = document.name[:-5]
             await _ascii_render(qa, store, family, version=v)
         if html:
-            from .crosslink import _into
             doc_blob, qa, siblings, parts_links = await loc(
                 document,
                 store=store,
                 tree=tree,
-                known_refs=_into(family)[0],
+                known_refs=kr,
                 ref_map=ref_info_map,
             )
             data = render_one(

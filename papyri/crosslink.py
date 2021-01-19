@@ -216,7 +216,7 @@ class IngestedBlobs(Node):
         self._content = new
 
 
-    def process(self, qa):
+    def process(self, qa, known_refs):
         local_refs = []
         sections_ = [
             "Parameters",
@@ -245,7 +245,9 @@ class IngestedBlobs(Node):
                 x[0] for x in self.content[s] if isinstance(x, Param)
             ]
 
-        visitor = DirectiveVisiter(qa, frozenset(), local_refs)
+        assert isinstance(known_refs, frozenset)
+
+        visitor = DirectiveVisiter(qa, known_refs, local_refs)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
@@ -260,26 +262,13 @@ class IngestedBlobs(Node):
         inst._freeze()
         return inst
 
-from typing import Union
+from typing import Union, FrozenSet
 
 @lru_cache
-def _into(known_refs: List[Union[RefInfo, str]], check=False)-> Tuple[List[RefInfo], Dict]:
-    ## TODO, remove that once all caller have been updated.
-    ## and enforce RefInfo.
-    ks = []
-    for k in known_refs:
-        if not isinstance(k, RefInfo):
-            assert isinstance(k, str)
-            if check:
-                assert False, k
-            ks.append(RefInfo(None, None, "api", k))
-        else:
-            ks.append(k)
-    known_refs = frozenset(ks)
-
+def _into(known_refs: List[Union[RefInfo, str]])-> Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
+    assert isinstance(known_refs, frozenset)
     k_path_map = frozenset({k.path for k in known_refs})
-
-    return known_refs, k_path_map
+    return k_path_map
 
 
 from functools import lru_cache
@@ -300,7 +289,7 @@ def resolve_(qa: str, known_refs, local_ref, ref) -> RefInfo:
     hash(known_refs)
     hash(local_ref)
 
-    known_refs, k_path_map = _into(known_refs, check=True)
+    k_path_map = _into(known_refs)
 
     if ref.startswith("builtins."):
         return RefInfo(None, None, 'missing', ref)
@@ -369,7 +358,7 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
 
     instance = DocBlob.from_json(data)
 
-    blob = IngestedBlobs()
+    bilob = IngestedBlobs()
     # TODO: here or maybe somewhere else:
     # see also 3rd item description is improperly deserialised as now it can be a paragraph.
     # Make see Also an auto deserialised object in take2.
@@ -619,21 +608,21 @@ class DirectiveVisiter(TreeReplacer):
             return [Link(directive.text, r, exists, exists != "missing")]
         return [directive]
 
-
 def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data = json.loads(bytes_)
     assert "backrefs" not in data
     # OK to mutate we are the only owners and don't return it.
     data["backrefs"] = json.loads(bytes2_) if bytes2_ else []
     blob = IngestedBlobs.from_json(data)
-    blob.process(qa)
+    # TODO move that one up.
+    blob.process(qa, knowrefs=frozenset())
     return blob
 
 
 class Ingester:
     def __init__(self):
         self.ingest_dir = ingest_dir
-
+    
     def ingest(self, path: Path, check: bool):
         nvisited_items = {}
         other_backrefs = {}
@@ -689,10 +678,9 @@ class Ingester:
         ):
             for k, v in doc_blob.content.items():
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
-            local_ref = [x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
+            local_ref = frozenset([x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
                 x[0] for x in doc_blob.content["Returns"] if x[0]
-            ]
-            local_ref = frozenset(local_ref)
+            ])
             doc_blob.logo = logo
             for ref in doc_blob.refs:
                 hash(known_ref_info)
