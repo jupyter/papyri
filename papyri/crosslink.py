@@ -349,23 +349,22 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return o.to_json()
         return super().default(o)
 
-
 def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
     """
     Load the json from a DocBlob and make it an ingested blob.
     """
     data = json.loads(bytes_)
 
-    instance = DocBlob.from_json(data)
+    old_data = DocBlob.from_json(data)
 
-    bilob = IngestedBlobs()
+    blob = IngestedBlobs()
     # TODO: here or maybe somewhere else:
     # see also 3rd item description is improperly deserialised as now it can be a paragraph.
     # Make see Also an auto deserialised object in take2.
     blob.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
 
-    for k in instance.slots():
-        setattr(blob, k, getattr(instance, k))
+    for k in old_data.slots():
+        setattr(blob, k, getattr(old_data, k))
 
     # blob = IngestedBlobs.from_json(data, rehydrate=False)
     # blob._parsed_data = data.pop("_parsed_data")
@@ -466,11 +465,11 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
     except KeyError:
         pass
     for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
-        if section in instance.content:
-            if data := instance.content[section]:
-                instance.content[section] = Section(P2(data))
+        if section in blob.content:
+            if data := blob.content[section]:
+                blob.content[section] = Section(P2(data))
             else:
-                instance.content[section] = Section()
+                blob.content[section] = Section()
 
     blob.refs = list(sorted(set(blob.refs)))
     for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
@@ -509,14 +508,14 @@ def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
     for s in sections_:
 
         local_refs = local_refs + [
-            x[0] for x in instance.content[s] if isinstance(x, Param)
+            x[0] for x in blob.content[s] if isinstance(x, Param)
         ]
     visitor = DirectiveVisiter(qa, frozenset(), local_refs)
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-        assert section in instance.content
-        instance.content[section] = visitor.visit(instance.content[section])
+        assert section in blob.content
+        blob.content[section] = visitor.visit(blob.content[section])
 
-    for k, v in instance.content.items():
+    for k, v in blob.content.items():
         if k in ["References"]:
             if v:
                 pass
@@ -615,7 +614,7 @@ def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
     data["backrefs"] = json.loads(bytes2_) if bytes2_ else []
     blob = IngestedBlobs.from_json(data)
     # TODO move that one up.
-    blob.process(qa, knowrefs=frozenset())
+    blob.process(qa, known_refs=frozenset())
     return blob
 
 
