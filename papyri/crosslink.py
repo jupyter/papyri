@@ -93,15 +93,14 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def processed_example_data(example_section_data, qa, check=False):
+def processed_example_data(example_section_data, qa):
     """this should be no-op on already ingested"""
     new_example_section_data = Section()
     for in_out in example_section_data:
         type_ = in_out.__class__.__name__
         # color examples with pygments classes
         if type_ == "Text":
-            if check:
-                assert False
+            assert False
             blocks = P2(in_out.value.split("\n"))
             for b in blocks:
                 new_example_section_data.append(b)
@@ -332,7 +331,6 @@ def resolve_(qa: str, known_refs, local_ref, ref) -> RefInfo:
         for i in range(len(parts)):
             attempt = ".".join(parts[:i]) + "." + ref
             if attempt in k_path_map:
-                #assert False, f"{ref=}, {attempt=}"
                 return RefInfo(None, None, 'exists', attempt)
 
     q0 = qa.split(".")[0]
