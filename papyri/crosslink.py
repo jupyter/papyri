@@ -1,3 +1,4 @@
+from __future__ import annotations
 import dataclasses
 import json
 import warnings
@@ -23,6 +24,7 @@ from .take2 import (
     RefInfo,
     Section,
     SeeAlsoItem,
+    Directive,
 )
 from .take2 import main as t2main
 from .take2 import make_block_3
@@ -349,7 +351,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return o.to_json()
         return super().default(o)
 
-def load_one_uningested(bytes_, bytes2_, qa) -> IngestedBlobs:
+def load_one_uningested(bytes_:bytes, bytes2_:Optional[bytes], qa) -> IngestedBlobs:
     """
     Load the json from a DocBlob and make it an ingested blob.
     """
@@ -591,7 +593,7 @@ class DirectiveVisiter(TreeReplacer):
         self.local = []
         self.total = []
 
-    def replace_Directive(self, directive):
+    def replace_Directive(self, directive:Directive):
         if (directive.domain is not None) or (directive.role not in (None, "mod")):
             return [directive]
         r = resolve_(
@@ -607,7 +609,7 @@ class DirectiveVisiter(TreeReplacer):
             return [Link(directive.text, r, exists, exists != "missing")]
         return [directive]
 
-def load_one(bytes_, bytes2_, qa=None) -> IngestedBlobs:
+def load_one(bytes_:bytes, bytes2_:bytes, qa:str) -> IngestedBlobs:
     data = json.loads(bytes_)
     assert "backrefs" not in data
     # OK to mutate we are the only owners and don't return it.
@@ -651,9 +653,9 @@ class Ingester:
             try:
                 with f1.open() as fff:
                     brpath = Path(str(f1)[:-5] + "br")
-                    br: Optional[str]
+                    br: Optional[bytes]
                     if brpath.exists():
-                        br = brpath.read_text()
+                        br = brpath.read_bytes()
                     else:
                         br = None
                     blob = load_one_uningested(fff.read(), br, qa=qa)
@@ -714,14 +716,16 @@ class Ingester:
                     # )
                     if existing_location.exists():
                         brpath = Path(str(existing_location)[:-5] + ".br")
+                        brdata: Optional[bytes]
                         if brpath.exists():
-                            br = brpath.read_text()
+                            brdata = brpath.read_bytes()
                         else:
-                            br = None
+                            assert False
+                            brdata = None
                         try:
                             other_backrefs[resolved] = load_one(
                                 existing_location.read_bytes(),
-                                br,
+                                brdata,
                                 qa=resolved,
                             )
                         except Exception as e:
