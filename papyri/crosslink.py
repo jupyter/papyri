@@ -364,15 +364,6 @@ def resolve_(qa: str, known_refs:FrozenSet[RefInfo], local_ref:FrozenSet[str], r
     return RefInfo(None, None, 'missing', ref)
 
 
-class EnhancedJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if dataclasses.is_dataclass(o):
-            return dataclasses.asdict(o)
-        if hasattr(o, "to_json"):
-            return o.to_json()
-        return super().default(o)
-
-
 def load_one_uningested(
     bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs
 ) -> IngestedBlobs:
@@ -836,7 +827,7 @@ class Ingester:
                 path_br = self.ingest_dir / mod_root / version / "module" / f"{qa}.br"
 
                 with path.open("w") as f:
-                    f.write(json.dumps(js, cls=EnhancedJSONEncoder, indent=2))
+                    f.write(json.dumps(js, indent=2))
                 if path_br.exists():
                     bb = json.loads(path_br.read_text())
                 else:
@@ -871,7 +862,7 @@ class Ingester:
                     / f"{qa}.br"
                 )
                 with path.open("w") as f:
-                    f.write(json.dumps(js, cls=EnhancedJSONEncoder, indent=2))
+                    f.write(json.dumps(js, indent=2))
                 if path_br.exists():
                     bb = json.loads(path_br.read_text())
                 else:
