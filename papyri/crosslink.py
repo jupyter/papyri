@@ -216,7 +216,6 @@ class IngestedBlobs(Node):
         }
         self._content = new
 
-
     def process(self, qa, known_refs):
         local_refs = []
         sections_ = [
@@ -292,11 +291,12 @@ def endswith(end, refs):
     return frozenset(r for r in refs if r.endswith(end))
 
 
-def resolve_(qa: str, known_refs, local_ref, ref) -> RefInfo:
+def resolve_(qa: str, known_refs:FrozenSet[RefInfo], local_ref:FrozenSet[str], ref:str) -> RefInfo:
     # RefInfo(module, version, kind, path)
     hash(known_refs)
     hash(local_ref)
 
+    assert isinstance(ref, str)
     k_path_map = _into(known_refs)
 
     if ref.startswith("builtins."):
@@ -589,7 +589,7 @@ class TreeReplacer:
 
 
 class DirectiveVisiter(TreeReplacer):
-    def __init__(self, qa, known_refs, local_refs):
+    def __init__(self, qa, known_refs:FrozenSet[RefInfo], local_refs):
         assert isinstance(qa, str), qa
         assert isinstance(known_refs, (list, set, frozenset)), known_refs
         self.known_refs = frozenset(known_refs)
@@ -614,7 +614,7 @@ class DirectiveVisiter(TreeReplacer):
             return [Link(directive.text, r, exists, exists != "missing")]
         return [directive]
 
-def load_one(bytes_:bytes, bytes2_:bytes, qa:str, known_refs=None) -> IngestedBlobs:
+def load_one(bytes_:bytes, bytes2_:bytes, qa:str, known_refs:FrozenSet[RefInfo]=None) -> IngestedBlobs:
     data = json.loads(bytes_)
     assert "backrefs" not in data
     # OK to mutate we are the only owners and don't return it.

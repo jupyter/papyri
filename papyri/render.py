@@ -304,13 +304,14 @@ async def _route(ref, store, version=None, env=None, template=None):
         aliases = json.loads(await p.read_text())
 
     o_family = sorted(list(store.glob("*/*/module/*.json")))
+    known_refs, ref_map = find_all_refs(store)
 
-    ref_family = []
-    for item in o_family:
-        module, v = item.path.parts[-4:-2]
-        ref_family.append(RefInfo(module, v, "api", item.name[:-5]))
+    #known_refs = []
+    #for item in o_family:
+    #    module, v = item.path.parts[-4:-2]
+    #    known_refs.append(RefInfo(module, v, "api", item.name[:-5]))
 
-    siblings = compute_siblings_II(ref, ref_family)
+    siblings = compute_siblings_II(ref, known_refs)
     # print(siblings)
 
     # End computing siblings.
@@ -332,10 +333,9 @@ async def _route(ref, store, version=None, env=None, template=None):
             br = await brpath.read_text()
         else:
             br = None
-        known_refs = frozenset(
-            {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
-        )
-        known_refs = _into(known_refs, check=False)[0]
+        #known_refs = frozenset(
+        #    {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
+        #)
         env.globals["unreachable"] = unreachable
         # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
@@ -347,7 +347,7 @@ async def _route(ref, store, version=None, env=None, template=None):
             parts_links[k] = acc
             acc += "."
 
-        prepare_doc(doc_blob, ref, all_known_refs)
+        prepare_doc(doc_blob, ref, known_refs)
         css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
         return render_one(
             template=template,
@@ -690,6 +690,22 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
 
+def find_all_refs(store):
+    o_family = sorted(list(store.glob("*/*/module/*.json")))
+
+    # TODO
+    # here we can't computejust the dictionary and use frozenset(....values())
+    # as we may have multiple version of libraries; this is something that will
+    # need to be fixed in the long run
+    known_refs = []
+    ref_map = {}
+    for item in o_family:
+        module, v = item.path.parts[-4:-2]
+        r = RefInfo(module, v, "api", item.name[:-5])
+        known_refs.append(r)
+        ref_map[r.path] = r
+    return frozenset(known_refs), ref_map
+
 async def main(ascii, html, dry_run):
     store = Store(ingest_dir)
     files = store.glob("*/*/module/*.json")
@@ -710,21 +726,14 @@ async def main(ascii, html, dry_run):
         output_dir = html_dir / "p"
         output_dir.mkdir(exist_ok=True)
     document: Store
-    o_family = sorted(list(store.glob("*/*/module/*.json")))
-    family = frozenset([str(f.name)[:-5] for f in o_family])
 
-    ref_family = []
-    for item in o_family:
-        module, v = item.path.parts[-4:-2]
-        ref_family.append(RefInfo(module, v, "api", item.name[:-5]))
+    known_refs , ref_map= find_all_refs(store)
+    # end
+    
+    family = frozenset(_.path for _ in known_refs)
 
     tree = make_tree(family)
 
-    ref_map = {}
-    for r in ref_family:
-        ref_map[r.path] = r
-
-    known_refs = frozenset(ref_family)
     random.shuffle(files)
     for p, document in progress(files, description="Rendering..."):
         module, v = document.path.parts[-4:-2]
