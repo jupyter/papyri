@@ -253,8 +253,15 @@ class IngestedBlobs(Node):
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
         if len(visitor.local) or len(visitor.total):
-            print(f"{len(visitor.local)} / {len(visitor.total)}")
+            assert len(visitor.local) == 0
+            #print(f"{len(visitor.local)} / {len(visitor.total)}")
         self.example_section_data = visitor.visit(self.example_section_data)
+        
+        for d in self.see_also:
+            new_desc = []
+            for dsc in d.descriptions:
+                new_desc.append(visitor.visit(dsc))
+            d.descriptions = new_desc
 
 
     @classmethod
@@ -607,21 +614,22 @@ class DirectiveVisiter(TreeReplacer):
             return [Link(directive.text, r, exists, exists != "missing")]
         return [directive]
 
-def load_one(bytes_:bytes, bytes2_:bytes, qa:str) -> IngestedBlobs:
+def load_one(bytes_:bytes, bytes2_:bytes, qa:str, known_refs=None) -> IngestedBlobs:
     data = json.loads(bytes_)
     assert "backrefs" not in data
     # OK to mutate we are the only owners and don't return it.
     data["backrefs"] = json.loads(bytes2_) if bytes2_ else []
     blob = IngestedBlobs.from_json(data)
     # TODO move that one up.
-    blob.process(qa, known_refs=frozenset())
+    if known_refs is None:
+        known_refs = frozenset()
+    blob.process(qa, known_refs=known_refs)
     return blob
 
 
 class Ingester:
     def __init__(self):
         self.ingest_dir = ingest_dir
-    
     def ingest(self, path: Path, check: bool):
         nvisited_items = {}
         other_backrefs = {}

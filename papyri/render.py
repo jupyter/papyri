@@ -308,10 +308,11 @@ async def _route(ref, store, version=None, env=None, template=None):
         all_known_refs = frozenset(
             {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
         )
+        all_known_refs = _into(all_known_refs, check=False)[0]
         env.globals["unreachable"] = unreachable
         # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
-        doc_blob = load_one(bytes_, br, qa=ref)
+        doc_blob = load_one(bytes_, br, qa=ref, known_refs=known_refs)
         parts_links = {}
         acc = ""
         for k in siblings.keys():
@@ -319,7 +320,6 @@ async def _route(ref, store, version=None, env=None, template=None):
             parts_links[k] = acc
             acc += "."
 
-        all_known_refs = _into(all_known_refs, check=False)[0]
         prepare_doc(doc_blob, ref, all_known_refs)
         css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
         return render_one(
@@ -567,7 +567,7 @@ async def ascii_render(name, store=None):
     builtins.print(await _ascii_render(name, store))
 
 
-
+@profile
 def prepare_doc(doc_blob, qa:str, known_refs):
     assert hash(known_refs)
     sections_ = [
@@ -579,14 +579,6 @@ def prepare_doc(doc_blob, qa:str, known_refs):
         "Other Parameters",
     ]
 
-    ### dive into the example data, reconstruct the initial code, parse it with pygments,
-    # and append the highlighting class as the third element
-    # I'm thinking the linking strides should be stored separately as the code
-    # it might be simpler, and more compact.
-    # TODO : move this to ingest.
-    visitor = DirectiveVisiter(qa, known_refs, frozenset())
-
-    doc_blob.example_section_data = visitor.visit(doc_blob.example_section_data)
 
     module = '??'
     version = '??'
@@ -598,6 +590,19 @@ def prepare_doc(doc_blob, qa:str, known_refs):
 
     doc_blob.refs = new_refs
 
+
+    # TODO : all of the below is _likely_ useless now.
+    ### dive into the example data, reconstruct the initial code, parse it with pygments,
+    # and append the highlighting class as the third element
+    # I'm thinking the linking strides should be stored separately as the code
+    # it might be simpler, and more compact.
+    # TODO : move this to ingest.
+    visitor = DirectiveVisiter(qa, known_refs, frozenset())
+
+    visitor.local = []
+    visitor.total = []
+
+    doc_blob.example_section_data = visitor.visit(doc_blob.example_section_data)
     for k, section in doc_blob.content.items():
         doc_blob.content[k] = visitor.visit(section)
 
@@ -605,10 +610,14 @@ def prepare_doc(doc_blob, qa:str, known_refs):
         new_desc = []
         for dsc in d.descriptions:
             new_desc.append(visitor.visit(dsc))
-            visitor.local = []
-            visitor.total = []
-
         d.descriptions = new_desc
+    assert len(visitor.local) == 0
+    assert len(visitor.total) == 0
+    if len(visitor.local+visitor.total):
+        print('--------')
+        print(qa)
+        print('    ',visitor.local)
+        print('    ',visitor.total)
 
 
 async def loc(document, *, store, tree, known_refs, ref_map):
@@ -622,7 +631,7 @@ async def loc(document, *, store, tree, known_refs, ref_map):
         brpath = store / root / version / "module" / f"{qa}.br"
         assert await brpath.exists()
         br = await brpath.read_text()
-        doc_blob: IngestedBlobs = load_one(bytes_, br, qa=qa)
+        doc_blob: IngestedBlobs = load_one(bytes_, br, qa=qa, known_refs=known_refs)
 
     except Exception as e:
         raise RuntimeError(f"error with {document}") from e
