@@ -1,4 +1,5 @@
 import json
+import random
 import os
 from collections import OrderedDict, defaultdict
 from pathlib import Path
@@ -305,10 +306,10 @@ async def _route(ref, store, version=None, env=None, template=None):
             br = await brpath.read_text()
         else:
             br = None
-        all_known_refs = frozenset(
+        known_refs = frozenset(
             {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
         )
-        all_known_refs = _into(all_known_refs, check=False)[0]
+        known_refs = _into(known_refs, check=False)[0]
         env.globals["unreachable"] = unreachable
         # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
@@ -568,7 +569,7 @@ async def ascii_render(name, store=None):
 
 
 def prepare_doc(doc_blob, qa:str, known_refs):
-    assert hash(known_refs)
+    assert isinstance(known_refs, frozenset)
     sections_ = [
         "Parameters",
         "Returns",
@@ -590,7 +591,50 @@ def prepare_doc(doc_blob, qa:str, known_refs):
     doc_blob.refs = new_refs
 
 
-async def loc(document, *, store, tree, known_refs, ref_map):
+async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
+    """
+    return data for rendering in the templates 
+
+    Parameters
+    ----------
+    document: Store
+        Path the document we need to read and prepare for rendering
+    store: Store
+
+        Store into which the document is stored (abstraciton layer over local
+        filesystem or a remote store like github, thoug right now only local
+        file system works)
+    tree: 
+        tree of object we know about; this will be useful to compute siblings
+        for the navigation menu at the top that allow to either drill down the
+        hierarchy.
+    known_refs: List[RefInfo]
+        list of all the reference info for targets, so that we can resolve links
+        later on; this is here for now, but shoudl be moved to ingestion at some
+        point.
+    ref_map: ??
+        helper to compute the siblings for agiven hierarchy,
+
+    Returns
+    -------
+    doc_blob: IngestedBlobs
+        document that will be rendered
+    qa: str
+        fully qualified name of the object we will render
+    siblings:
+        information to render the navigation dropdown at the top.
+    parts_links:
+        information to render breadcrumbs with links to parents.
+        
+
+    Notes
+    -----
+
+    Note that most of the current logic assume we only have the documentation
+    for a single version of a package; when we have multiple version some of
+    these heuristics break down. 
+
+    """
     qa = document.name[:-5]
     version = document.path.parts[-3]
     # help to keep ascii bug free.
@@ -654,8 +698,7 @@ async def main(ascii, html, dry_run):
     for r in ref_family:
         ref_info_map[r.path] = r
 
-    import random
-    kr = frozenset(RefInfo(None, None, "api", k) for k in family)
+    known_refs = frozenset(ref_family)
     random.shuffle(files)
     for p, document in progress(files, description="Rendering..."):
         module, v = document.path.parts[-4:-2]
@@ -667,7 +710,7 @@ async def main(ascii, html, dry_run):
                 document,
                 store=store,
                 tree=tree,
-                known_refs=kr,
+                known_refs=known_refs,
                 ref_map=ref_info_map,
             )
             data = render_one(
