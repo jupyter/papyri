@@ -70,6 +70,7 @@ def ingest(paths: List[Path], check: bool = False):
 
     for p in paths:
         cr.main(Path(p), check)
+    cr.relink()
 
 
 @app.command()

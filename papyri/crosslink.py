@@ -873,5 +873,21 @@ class Ingester:
 
 
 def main(path, check):
-    print("Ingesting ", path)
+    print("Ingesting ", path.name)
     Ingester().ingest(path, check)
+
+
+def relink():
+    store = Store(ingest_dir)
+    known_refs, _ = find_all_refs(store)
+    for p, item in progress(
+        store.glob("*/*/module/*.json"), description="Relinking..."
+    ):
+        data = json.loads(item.path.read_text())
+        qa = item.path.name[:-5]
+        data["backrefs"] = []
+        doc_blob = IngestedBlobs.from_json(data)
+        doc_blob.process(qa, known_refs)
+        data = doc_blob.to_json()
+        data.pop("backrefs")
+        item.path.write_text(json.dumps(data, indent=2))
