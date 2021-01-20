@@ -21,7 +21,7 @@ from .crosslink import (
 )
 from .stores import Store
 from .utils import progress
-from .crosslink import _into
+from .crosslink import _into, find_all_refs
 from .take2 import Link, RefInfo 
 
 
@@ -689,22 +689,6 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
         return doc_blob, qa, siblings, parts_links
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
-
-def find_all_refs(store):
-    o_family = sorted(list(store.glob("*/*/module/*.json")))
-
-    # TODO
-    # here we can't computejust the dictionary and use frozenset(....values())
-    # as we may have multiple version of libraries; this is something that will
-    # need to be fixed in the long run
-    known_refs = []
-    ref_map = {}
-    for item in o_family:
-        module, v = item.path.parts[-4:-2]
-        r = RefInfo(module, v, "api", item.name[:-5])
-        known_refs.append(r)
-        ref_map[r.path] = r
-    return frozenset(known_refs), ref_map
 
 async def main(ascii, html, dry_run):
     store = Store(ingest_dir)

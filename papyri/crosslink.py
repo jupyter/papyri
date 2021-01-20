@@ -33,6 +33,22 @@ from .utils import progress
 warnings.simplefilter("ignore", UserWarning)
 
 
+def find_all_refs(store):
+    o_family = sorted(list(store.glob("*/*/module/*.json")))
+
+    # TODO
+    # here we can't computejust the dictionary and use frozenset(....values())
+    # as we may have multiple version of libraries; this is something that will
+    # need to be fixed in the long run
+    known_refs = []
+    ref_map = {}
+    for item in o_family:
+        module, v = item.path.parts[-4:-2]
+        r = RefInfo(module, v, "api", item.name[:-5])
+        known_refs.append(r)
+        ref_map[r.path] = r
+    return frozenset(known_refs), ref_map
+
 def paragraph(lines) -> List[Tuple[str, Any]]:
     """
     return container of (type, obj)
