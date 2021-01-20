@@ -12,6 +12,7 @@ from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 from there import print
 
+from .stores import Store
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .take2 import (
@@ -122,8 +123,7 @@ def processed_example_data(example_section_data, qa):
                 new_example_section_data.append(b)
         if type_ == "Code":
             in_ = in_out.entries
-            if check:
-                assert len(in_[0]) == 3
+            # assert len(in_[0]) == 3, len(in_[0])
             if len(in_[0]) == 2:
                 text = "".join([x for x, y in in_])
                 classes = get_classes(text)
@@ -372,7 +372,10 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return o.to_json()
         return super().default(o)
 
-def load_one_uningested(bytes_:bytes, bytes2_:Optional[bytes], qa) -> IngestedBlobs:
+
+def load_one_uningested(
+    bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs
+) -> IngestedBlobs:
     """
     Load the json from a DocBlob and make it an ingested blob.
     """
@@ -561,6 +564,8 @@ def load_one_uningested(bytes_:bytes, bytes2_:Optional[bytes], qa) -> IngestedBl
     for k, v in blob.content.items():
         assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
 
+    blob.process(qa, known_refs=known_refs)
+
     return blob
 
 
@@ -647,6 +652,10 @@ class Ingester:
     def __init__(self):
         self.ingest_dir = ingest_dir
     def ingest(self, path: Path, check: bool):
+
+        store = Store(self.ingest_dir)
+        known_refs, _ = find_all_refs(store)
+
         nvisited_items = {}
         other_backrefs = {}
         root = None
@@ -680,7 +689,9 @@ class Ingester:
                         br = brpath.read_bytes()
                     else:
                         br = None
-                    blob = load_one_uningested(fff.read(), br, qa=qa)
+                    blob = load_one_uningested(
+                        fff.read(), br, qa=qa, known_refs=known_refs
+                    )
                     nvisited_items[qa] = blob
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f1}") from e
@@ -689,12 +700,13 @@ class Ingester:
         (self.ingest_dir / root).mkdir(exist_ok=True)
         (self.ingest_dir / root / version).mkdir(exist_ok=True)
         (self.ingest_dir / root / version / "module").mkdir(exist_ok=True)
-        known_refs = frozenset(nvisited_items.keys())
+        known_refs_II = frozenset(nvisited_items.keys())
 
         # TODO :in progress, crosslink needs version information.
         known_ref_info = frozenset(
-            RefInfo(root, version, "api", qa) for qa in known_refs
+            RefInfo(root, version, "api", qa) for qa in known_refs_II
         )
+
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
