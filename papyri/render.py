@@ -238,11 +238,37 @@ def cs2(ref, tree, ref_map):
     siblings = OrderedDict()
     cpath = ""
     branch = tree
+
+    def GET(ref_map, key, cpath):
+        if key in ref_map:
+            return ref_map[key]
+        else:
+            # this is a tiny bit weird; and will need a workaround at some
+            # point. 
+            # this happends when one object in the hierarchy has not docs
+            # (typically a class which is documented only in __init__)
+            # or when a object does not match its qualified name (typically in
+            # numpy, and __init__ with:
+            #  from .foo import foo
+            # leading to xxx.foo meaning being context dependant.
+            # for now we return a dummy object.
+            #print(f"{key=} seem to be a sibling with")
+            #print(f"     {cpath=}, but was not ")
+            #print(f"     found when trying to compute navigation for")
+            #print(f"     {ref=}")
+            #print(f"     Here are possible causes:")
+            #print(f"        - it is a class and only __init__ has docstrings")
+            #print(f"        - it is stored with the wrong qualname          ")
+            #print(f"                                             ")
+
+            return RefInfo("?", "?", "?", key)
+
     for p in parts:
         res = list(sorted([(f"{cpath}{k}", k) for k in branch.keys() if k != "+"]))
         if res:
             siblings[p] = [
-                (ref_map.get(c, RefInfo("?", "?", "?", c)), c.split(".")[-1])
+                ##(ref_map.get(c, RINFO("?", "?", "?", c)), c.split(".")[-1])
+                (GET(ref_map, c, cpath), c.split(".")[-1])
                 for c, k in res
             ]
         else:
@@ -694,9 +720,9 @@ async def main(ascii, html, dry_run):
 
     tree = make_tree(family)
 
-    ref_info_map = {}
+    ref_map = {}
     for r in ref_family:
-        ref_info_map[r.path] = r
+        ref_map[r.path] = r
 
     known_refs = frozenset(ref_family)
     random.shuffle(files)
@@ -711,7 +737,7 @@ async def main(ascii, html, dry_run):
                 store=store,
                 tree=tree,
                 known_refs=known_refs,
-                ref_map=ref_info_map,
+                ref_map=ref_map,
             )
             data = render_one(
                 template=template,
