@@ -567,7 +567,6 @@ async def ascii_render(name, store=None):
     builtins.print(await _ascii_render(name, store))
 
 
-@profile
 def prepare_doc(doc_blob, qa:str, known_refs):
     assert hash(known_refs)
     sections_ = [
@@ -589,35 +588,6 @@ def prepare_doc(doc_blob, qa:str, known_refs):
         new_refs.append(Link(value, r, kind, r.kind!='missing'))
 
     doc_blob.refs = new_refs
-
-
-    # TODO : all of the below is _likely_ useless now.
-    ### dive into the example data, reconstruct the initial code, parse it with pygments,
-    # and append the highlighting class as the third element
-    # I'm thinking the linking strides should be stored separately as the code
-    # it might be simpler, and more compact.
-    # TODO : move this to ingest.
-    visitor = DirectiveVisiter(qa, known_refs, frozenset())
-
-    visitor.local = []
-    visitor.total = []
-
-    doc_blob.example_section_data = visitor.visit(doc_blob.example_section_data)
-    for k, section in doc_blob.content.items():
-        doc_blob.content[k] = visitor.visit(section)
-
-    for d in doc_blob.see_also:
-        new_desc = []
-        for dsc in d.descriptions:
-            new_desc.append(visitor.visit(dsc))
-        d.descriptions = new_desc
-    assert len(visitor.local) == 0
-    assert len(visitor.total) == 0
-    if len(visitor.local+visitor.total):
-        print('--------')
-        print(qa)
-        print('    ',visitor.local)
-        print('    ',visitor.total)
 
 
 async def loc(document, *, store, tree, known_refs, ref_map):
