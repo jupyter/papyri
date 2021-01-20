@@ -232,7 +232,7 @@ class IngestedBlobs(Node):
         }
         self._content = new
 
-    def process(self, qa, known_refs):
+    def process(self, qa, known_refs, verbose=True):
         local_refs = []
         sections_ = [
             "Parameters",
@@ -267,9 +267,9 @@ class IngestedBlobs(Node):
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
-        if len(visitor.local) or len(visitor.total):
+        if (len(visitor.local) or len(visitor.total)) and verbose:
             assert len(visitor.local) == 0
-            #print(f"{len(visitor.local)} / {len(visitor.total)}")
+            print(f"{len(visitor.total)}, {qa}, {visitor.total}")
         self.example_section_data = visitor.visit(self.example_section_data)
         
         for d in self.see_also:
@@ -564,7 +564,7 @@ def load_one_uningested(
     for k, v in blob.content.items():
         assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
 
-    blob.process(qa, known_refs=known_refs)
+    blob.process(qa, known_refs=known_refs, verbose=False)
 
     return blob
 
@@ -689,10 +689,9 @@ class Ingester:
                         br = brpath.read_bytes()
                     else:
                         br = None
-                    blob = load_one_uningested(
+                    nvisited_items[qa] = load_one_uningested(
                         fff.read(), br, qa=qa, known_refs=known_refs
                     )
-                    nvisited_items[qa] = blob
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f1}") from e
         del f1
@@ -705,8 +704,7 @@ class Ingester:
         # TODO :in progress, crosslink needs version information.
         known_ref_info = frozenset(
             RefInfo(root, version, "api", qa) for qa in known_refs_II
-        )
-
+        ).union(known_refs)
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
@@ -716,6 +714,7 @@ class Ingester:
             local_ref = frozenset([x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
                 x[0] for x in doc_blob.content["Returns"] if x[0]
             ])
+            doc_blob.process(qa, known_ref_info, verbose=False)
             doc_blob.logo = logo
             for ref in doc_blob.refs:
                 hash(known_ref_info)
