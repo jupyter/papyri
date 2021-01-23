@@ -612,8 +612,8 @@ class DirectiveVisiter(TreeReplacer):
         self.known_refs = frozenset(known_refs)
         self.local_refs = frozenset(local_refs)
         self.qa = qa
-        self.local = []
-        self.total = []
+        self.local: List[str] = []
+        self.total: List[Tuple[Any, str]] = []
 
     def replace_Directive(self, directive: Directive):
         if (directive.domain is not None) or (directive.role not in (None, "mod")):
