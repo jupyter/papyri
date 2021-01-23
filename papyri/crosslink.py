@@ -165,7 +165,7 @@ class IngestedBlobs(Node):
     )
 
     _content: Dict[str, Section]
-    refs: List[str]
+    refs: List[Link]
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
@@ -317,7 +317,7 @@ def resolve_(
     hash(known_refs)
     hash(local_ref)
 
-    assert isinstance(ref, str)
+    assert isinstance(ref, str), ref
     k_path_map = _into(known_refs)
 
     if ref.startswith("builtins."):
@@ -562,6 +562,14 @@ def load_one_uningested(
 
     blob.process(qa, known_refs=known_refs, verbose=False)
 
+    if blob.refs:
+        new_refs = []
+        kind = "exists"
+        for value in blob.refs:
+            r = resolve_(qa, known_refs, frozenset(), value)
+            new_refs.append(Link(value, r, kind, r.kind != "missing"))
+
+        blob.refs = new_refs
     return blob
 
 
@@ -719,13 +727,14 @@ class Ingester:
             for ref in doc_blob.refs:
                 hash(known_ref_info)
                 hash(local_ref)
-                r = resolve_(qa, known_ref_info, local_ref, ref)
-                resolved, exists = r.path, r.kind
+                # r = resolve_(qa, known_ref_info, local_ref, ref)
+                resolved, exists = ref.reference.path, ref.reference.kind
                 # here need to check and load the new files touched.
                 if resolved in nvisited_items and ref != qa:
                     nvisited_items[resolved].backrefs.append(qa)
-                elif ref != qa and exists == "missing":
-                    ref_root = ref.split(".")[0]
+                elif ref != qa and exists == "missing" and "." in ref.reference.path:
+                    assert ref.reference.module is None
+                    ref_root = ref.reference.path.split(".")[0]
                     if ref_root == root:
                         continue
                     if ref_root == "builtins":

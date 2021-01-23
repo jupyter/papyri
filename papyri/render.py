@@ -344,7 +344,6 @@ async def _route(ref, store, version=None, env=None, template=None):
             parts_links[k] = acc
             acc += "."
 
-        prepare_doc(doc_blob, ref, known_refs)
         css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
         return render_one(
             template=template,
@@ -570,13 +569,6 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
 
     ## TODO : move this to ingest.
     doc_blob = load_one(bytes_, br, qa=name)
-    try:
-
-        prepare_doc(
-            doc_blob, ref, frozenset(RefInfo(None, None, "api", k) for k in known_refs)
-        )
-    except Exception as e:
-        raise type(e)(f"Error preparing ASCII {name}")
     return render_one(
         template=template,
         doc=doc_blob,
@@ -591,18 +583,6 @@ async def ascii_render(name, store=None):
     import builtins
 
     builtins.print(await _ascii_render(name, store))
-
-
-def prepare_doc(doc_blob, qa: str, known_refs):
-    assert isinstance(known_refs, frozenset)
-
-    kind = "exists"
-    new_refs = []
-    for value in doc_blob.refs:
-        r = resolve_(qa, known_refs, frozenset(), value)
-        new_refs.append(Link(value, r, kind, r.kind != "missing"))
-
-    doc_blob.refs = new_refs
 
 
 async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
@@ -673,7 +653,6 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
         parts_links[k] = acc
         acc += "."
     try:
-        prepare_doc(doc_blob, qa, known_refs)
         return doc_blob, qa, siblings, parts_links
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
