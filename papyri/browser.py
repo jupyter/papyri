@@ -388,7 +388,7 @@ def main():
         for i in gen_content(blob, frame):
             walk.append(i)
 
-    load(file_path, walk, "numpy.geomspace")
+    load(file_path, walk, "numpy.arange")
 
     # header = urwid.AttrWrap(Text("numpy.geomspace"), "header")
 
