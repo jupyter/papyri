@@ -46,16 +46,21 @@ Out[17]: Book(author=[Author(first='Matthias', last='B'), Reviewer(first='Tony',
 
 
 
-Unlike other similar libraries that automatically serialise/deserialise it has the following properties:
+Unlike other similar libraries that automatically serialise/deserialise it has
+the following properties:
 
-    - object do not need to have a give baseclass, they need to have an __init__ or _deserialise class method that takes
-      each parameter as kwargs.
-    - Subclass or isomorphic classes are kept in the de-serialisation, in particular in Union and List of Unions. That is
-      to say it will properly de-serialise and heterogenous list or dict, as long as those respect the type annotation.
+    - object do not need to have a give baseclass, they need to have an __init__
+      or _deserialise class method that takes each parameter as kwargs.
+    - Subclass or isomorphic classes are kept in the de-serialisation, in
+      particular in Union and List of Unions. That is to say it will properly
+      de-serialise and heterogenous list or dict, as long as those respect the
+      type annotation.
 
-Both Pydantic and Jetblack-serialize would have erased the types and returned either 2 Authors or 2 Reviewers.
+Both Pydantic and Jetblack-serialize would have erased the types and returned
+either 2 Authors or 2 Reviewers.
 
-    - it is also compatible with Rust Serde with adjacently tagged Unions (not critical but nice to have)
+    - it is also compatible with Rust Serde with adjacently tagged Unions (not
+      critical but nice to have)
 
 """
 
@@ -127,18 +132,21 @@ def serialize(instance, annotation):
                     data[k] = serialize(getattr(instance, k), v)
                 except Exception as e:
                     raise type(e)(f"Error serializing field {k!r}")
-            assert (
-                data
-            ), f"Error serializing {instance=}, of type {type(instance)}, no data found. Did you type annotate?"
+            assert data, (
+                f"Error serializing {instance=}, of type {type(instance)}, "
+                "no data found. Did you type annotate?"
+            )
             return data
 
         else:
-            assert (
-                False
-            ), f"Error serializing {instance!r}, of type {type(instance)!r} expected  {annotation}, got {type(instance)}"
+            assert False, (
+                f"Error serializing {instance!r}, of type {type(instance)!r} "
+                f"expected  {annotation}, got {type(instance)}"
+            )
     except Exception as e:
         raise type(e)(
-            f"Error serialising {instance!r}, of type {type(instance)} expecting {annotation}, got {type(instance)}"
+            f"Error serialising {instance!r}, of type {type(instance)} "
+            "expecting {annotation}, got {type(instance)}"
         ) from e
 
 

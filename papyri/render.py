@@ -12,7 +12,6 @@ from papyri.crosslink import IngestedBlobs
 
 from .config import html_dir, ingest_dir
 from .crosslink import (
-    DirectiveVisiter,
     IngestedBlobs,
     RefInfo,
     load_one,
@@ -21,7 +20,7 @@ from .crosslink import (
 )
 from .stores import Store
 from .utils import progress
-from .crosslink import _into, find_all_refs
+from .crosslink import find_all_refs
 from .take2 import Link, RefInfo
 
 
@@ -96,7 +95,6 @@ async def gallery(module, store, version=None):
     if version is None:
         version = "*"
 
-    figmap = []
     m = defaultdict(lambda: [])
     print("Gallery will glob:")
     for target_path in store.glob(f"{module}/{version}/module/*.json"):
@@ -303,7 +301,6 @@ async def _route(ref, store, version=None, env=None, template=None):
     for p in papp_files:
         aliases = json.loads(await p.read_text())
 
-    o_family = sorted(list(store.glob("*/*/module/*.json")))
     known_refs, ref_map = find_all_refs(store)
 
     # known_refs = []
@@ -598,17 +595,7 @@ async def ascii_render(name, store=None):
 
 def prepare_doc(doc_blob, qa: str, known_refs):
     assert isinstance(known_refs, frozenset)
-    sections_ = [
-        "Parameters",
-        "Returns",
-        "Raises",
-        "Yields",
-        "Attributes",
-        "Other Parameters",
-    ]
 
-    module = "??"
-    version = "??"
     kind = "exists"
     new_refs = []
     for value in doc_blob.refs:

@@ -1137,7 +1137,8 @@ class DefListItem(Block):
     lines: Lines
     wh: Lines
     ind: Lines
-    dt: Paragraph  # TODO: this is technically incorrect and should be a single term, (word, directive or link is my guess).
+    dt: Paragraph  # TODO: this is technically incorrect and should
+    # be a single term, (word, directive or link is my guess).
     dd: Paragraph
 
     @property

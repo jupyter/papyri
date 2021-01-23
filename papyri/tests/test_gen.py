@@ -52,5 +52,5 @@ async def test_gen_numpy():
         linspace_bytes = linspace_file.read_text()
         import json
 
-        data = json.loads(linspace_bytes)
-        doc_blob = load_one(linspace_bytes, None)
+        json.loads(linspace_bytes)
+        load_one(linspace_bytes, None)
