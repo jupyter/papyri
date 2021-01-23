@@ -181,11 +181,22 @@ def main():
     # import json
     # data = json.loads(file_path.read_text())
     # data
-    blob = load_one(file_path.read_text(), "[]", qa="numpy.geomspace")
 
     blank = urwid.Divider()
 
     class Renderer:
+        def __init__(self, frame):
+            self.frame = frame
+
+        def cb(self, value):
+            self.frame.footer = urwid.AttrWrap(
+                urwid.Text(["Enter ?...: ", str(value)]), "header"
+            )
+            if value.__class__.__name__ == "RefInfo":
+                guess_load(value.path)
+            elif isinstance(value, str):
+                guess_load(value)
+
         def render(self, obj):
             name = obj.__class__.__name__
             method = getattr(self, "render_" + name, None)
@@ -200,7 +211,7 @@ def main():
         def render_Link(self, link):
             if link.reference.kind == "local":
                 return ("link", link.reference.path)
-            return Link("link", link.reference.path, lambda: None)
+            return Link("link", link.reference.path, lambda: self.cb(link.reference))
 
         def render_BlockDirective(self, directive):
             inn = [
@@ -217,7 +228,9 @@ def main():
         def render_SeeAlsoItem(self, sa):
             return urwid.Pile(
                 [
-                    TextWithLink([Link("link", sa.name.name, lambda: None)]),
+                    TextWithLink(
+                        [Link("link", sa.name.name, lambda: self.cb(sa.name.ref))]
+                    ),
                     urwid.Padding(
                         urwid.Pile([self.render(x) for x in sa.descriptions]), left=2
                     ),
@@ -260,7 +273,11 @@ def main():
             return TextWithLink(
                 [
                     ("", "Figure not available in terminal : "),
-                    Link("verbatim", "Open in os window", lambda: None),
+                    Link(
+                        "verbatim",
+                        "Open in os window",
+                        lambda: self.cb("Not Implemented"),
+                    ),
                 ]
             )
 
@@ -268,7 +285,11 @@ def main():
             # entries/out/ce_status
 
             def insert_prompt(entries):
-                yield Link("verbatim", ">>> ", lambda: None)
+                yield Link(
+                    "verbatim",
+                    ">>> ",
+                    lambda: self.cb("likely copy content to clipboard"),
+                )
                 for txt, ref, css in entries:
                     if txt == "\n":
                         yield (None, "\n")
@@ -293,8 +314,8 @@ def main():
                 [
                     TextWithLink(
                         [
-                            # Link("param", param.param, lambda: None),
-                            ("param", param.param),
+                            Link("param", param.param, lambda: None),
+                            # ("param", param.param),
                             " : ",
                             ("type", param.type_),
                         ]
@@ -305,40 +326,39 @@ def main():
                         right=2,
                         min_width=20,
                     ),
-                    # blank,
                 ]
             )
 
-    R = Renderer()
 
-    def gen_content(blob):
-        listbox_content_more = []
-        listbox_content_more.append(blank)
-        listbox_content_more.append(Text([("signature", blob.signature)]))
+    def gen_content(blob, frame):
+        R = Renderer(frame)
+        doc = []
+        doc.append(blank)
+        doc.append(Text([("signature", blob.signature)]))
 
         for k, v in blob.content.items():
             from papyri import take2
 
             if not v.empty():
                 if k not in ["Summary", "Extended Summary"]:
-                    listbox_content_more.append(Text(("section", k)))
-                listbox_content_more.append(blank)
-                listbox_content_more.append(R.render(v))
+                    doc.append(TextWithLink([Link("section", k, lambda: None)]))
+                doc.append(blank)
+                doc.append(R.render(v))
 
-        listbox_content_more.append(Text(("section", "See Also")))
-        listbox_content_more.append(blank)
+        doc.append(Text(("section", "See Also")))
+        doc.append(blank)
         for s in blob.see_also:
-            listbox_content_more.append(urwid.Padding(R.render(s), left=2))
-            listbox_content_more.append(blank)
+            doc.append(urwid.Padding(R.render(s), left=2))
+            doc.append(blank)
 
         if not blob.example_section_data.empty():
-            listbox_content_more.append(Text(("section", "See Also")))
-            listbox_content_more.append(blank)
-            listbox_content_more.append(R.render(blob.example_section_data))
+            doc.append(Text(("section", "Examples")))
+            doc.append(blank)
+            doc.append(R.render(blob.example_section_data))
 
-        listbox_content_more.append(blank)
-        listbox_content_more.append(blank)
-        listbox_content_more.append(blank)
+        doc.append(blank)
+        doc.append(blank)
+        doc.append(blank)
 
         def cb(value):
             def callback():
@@ -346,19 +366,31 @@ def main():
                 frame.footer = urwid.AttrWrap(
                     urwid.Text(["Enter ?...: ", value]), "header"
                 )
-                walk.append(listbox_content_more.pop(0))
-
             return callback
 
-        return listbox_content_more
+        return doc
+
+    def guess_load(rough):
+        from papyri.config import ingest_dir
+
+        candidates = list(ingest_dir.glob(f"*/*/module/{rough}.json"))
+        if candidates:
+            for q in range(len(walk)):
+                walk.pop()
+            load(candidates[0], walk, rough)
 
     walk = urwid.SimpleListWalker([])
-    for i in gen_content(blob):
-        walk.append(i)
-
-    # header = urwid.AttrWrap(Text("numpy.geomspace"), "header")
     listbox = urwid.ListBox(walk)
     frame = urwid.Frame(urwid.AttrWrap(listbox, "body"))  # , header=header)
+
+    def load(file_path, walk, qa):
+        blob = load_one(file_path.read_text(), "[]", qa=qa)
+        for i in gen_content(blob, frame):
+            walk.append(i)
+
+    load(file_path, walk, "numpy.geomspace")
+
+    # header = urwid.AttrWrap(Text("numpy.geomspace"), "header")
 
     palette = [
         ("body", "default", "default", "standout"),
