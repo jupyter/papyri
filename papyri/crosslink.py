@@ -619,7 +619,8 @@ class DirectiveVisiter(TreeReplacer):
         if (directive.domain is not None) or (directive.role not in (None, "mod")):
             return [directive]
         r = resolve_(self.qa, self.known_refs, self.local_refs, directive.text)
-        # this is now likely incorrect as Ref kind shoudl nto be exists, but things like "local", "api", "gallery..."
+        # this is now likely incorrect as Ref kind should not be exists,
+        # but things like "local", "api", "gallery..."
         ref, exists = r.path, r.kind
         if exists != "missing":
             if exists == "local":
