@@ -22,7 +22,7 @@ from .crosslink import (
 from .stores import Store
 from .utils import progress
 from .crosslink import _into, find_all_refs
-from .take2 import Link, RefInfo 
+from .take2 import Link, RefInfo
 
 
 def url(info):
@@ -244,7 +244,7 @@ def cs2(ref, tree, ref_map):
             return ref_map[key]
         else:
             # this is a tiny bit weird; and will need a workaround at some
-            # point. 
+            # point.
             # this happends when one object in the hierarchy has not docs
             # (typically a class which is documented only in __init__)
             # or when a object does not match its qualified name (typically in
@@ -252,14 +252,14 @@ def cs2(ref, tree, ref_map):
             #  from .foo import foo
             # leading to xxx.foo meaning being context dependant.
             # for now we return a dummy object.
-            #print(f"{key=} seem to be a sibling with")
-            #print(f"     {cpath=}, but was not ")
-            #print(f"     found when trying to compute navigation for")
-            #print(f"     {ref=}")
-            #print(f"     Here are possible causes:")
-            #print(f"        - it is a class and only __init__ has docstrings")
-            #print(f"        - it is stored with the wrong qualname          ")
-            #print(f"                                             ")
+            # print(f"{key=} seem to be a sibling with")
+            # print(f"     {cpath=}, but was not ")
+            # print(f"     found when trying to compute navigation for")
+            # print(f"     {ref=}")
+            # print(f"     Here are possible causes:")
+            # print(f"        - it is a class and only __init__ has docstrings")
+            # print(f"        - it is stored with the wrong qualname          ")
+            # print(f"                                             ")
 
             return RefInfo("?", "?", "?", key)
 
@@ -306,8 +306,8 @@ async def _route(ref, store, version=None, env=None, template=None):
     o_family = sorted(list(store.glob("*/*/module/*.json")))
     known_refs, ref_map = find_all_refs(store)
 
-    #known_refs = []
-    #for item in o_family:
+    # known_refs = []
+    # for item in o_family:
     #    module, v = item.path.parts[-4:-2]
     #    known_refs.append(RefInfo(module, v, "api", item.name[:-5]))
 
@@ -333,9 +333,9 @@ async def _route(ref, store, version=None, env=None, template=None):
             br = await brpath.read_text()
         else:
             br = None
-        #known_refs = frozenset(
+        # known_refs = frozenset(
         #    {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
-        #)
+        # )
         env.globals["unreachable"] = unreachable
         # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
@@ -575,7 +575,9 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
     doc_blob = load_one(bytes_, br, qa=name)
     try:
 
-        prepare_doc(doc_blob, ref, frozenset(RefInfo(None, None, "api", k) for k in known_refs))
+        prepare_doc(
+            doc_blob, ref, frozenset(RefInfo(None, None, "api", k) for k in known_refs)
+        )
     except Exception as e:
         raise type(e)(f"Error preparing ASCII {name}")
     return render_one(
@@ -594,7 +596,7 @@ async def ascii_render(name, store=None):
     builtins.print(await _ascii_render(name, store))
 
 
-def prepare_doc(doc_blob, qa:str, known_refs):
+def prepare_doc(doc_blob, qa: str, known_refs):
     assert isinstance(known_refs, frozenset)
     sections_ = [
         "Parameters",
@@ -605,21 +607,20 @@ def prepare_doc(doc_blob, qa:str, known_refs):
         "Other Parameters",
     ]
 
-
-    module = '??'
-    version = '??'
-    kind = 'exists'
+    module = "??"
+    version = "??"
+    kind = "exists"
     new_refs = []
     for value in doc_blob.refs:
         r = resolve_(qa, known_refs, frozenset(), value)
-        new_refs.append(Link(value, r, kind, r.kind!='missing'))
+        new_refs.append(Link(value, r, kind, r.kind != "missing"))
 
     doc_blob.refs = new_refs
 
 
 async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
     """
-    return data for rendering in the templates 
+    return data for rendering in the templates
 
     Parameters
     ----------
@@ -630,7 +631,7 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
         Store into which the document is stored (abstraciton layer over local
         filesystem or a remote store like github, thoug right now only local
         file system works)
-    tree: 
+    tree:
         tree of object we know about; this will be useful to compute siblings
         for the navigation menu at the top that allow to either drill down the
         hierarchy.
@@ -651,14 +652,14 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
         information to render the navigation dropdown at the top.
     parts_links:
         information to render breadcrumbs with links to parents.
-        
+
 
     Notes
     -----
 
     Note that most of the current logic assume we only have the documentation
     for a single version of a package; when we have multiple version some of
-    these heuristics break down. 
+    these heuristics break down.
 
     """
     qa = document.name[:-5]
@@ -690,6 +691,7 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
 
+
 async def main(ascii, html, dry_run):
     store = Store(ingest_dir)
     files = store.glob("*/*/module/*.json")
@@ -711,9 +713,9 @@ async def main(ascii, html, dry_run):
         output_dir.mkdir(exist_ok=True)
     document: Store
 
-    known_refs , ref_map= find_all_refs(store)
+    known_refs, ref_map = find_all_refs(store)
     # end
-    
+
     family = frozenset(_.path for _ in known_refs)
 
     tree = make_tree(family)

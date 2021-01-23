@@ -50,6 +50,7 @@ def find_all_refs(store):
         ref_map[r.path] = r
     return frozenset(known_refs), ref_map
 
+
 def paragraph(lines) -> List[Tuple[str, Any]]:
     """
     return container of (type, obj)
@@ -271,13 +272,12 @@ class IngestedBlobs(Node):
             assert len(visitor.local) == 0
             print(f"{len(visitor.total)}, {qa}, {visitor.total}")
         self.example_section_data = visitor.visit(self.example_section_data)
-        
+
         for d in self.see_also:
             new_desc = []
             for dsc in d.descriptions:
                 new_desc.append(visitor.visit(dsc))
             d.descriptions = new_desc
-
 
     @classmethod
     def from_json(cls, data):
@@ -285,10 +285,14 @@ class IngestedBlobs(Node):
         inst._freeze()
         return inst
 
+
 from typing import Union, FrozenSet
 
+
 @lru_cache
-def _into(known_refs: List[Union[RefInfo, str]])-> Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
+def _into(
+    known_refs: List[Union[RefInfo, str]]
+) -> Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
     assert isinstance(known_refs, frozenset)
     k_path_map = frozenset({k.path for k in known_refs})
     return k_path_map
@@ -307,7 +311,9 @@ def endswith(end, refs):
     return frozenset(r for r in refs if r.endswith(end))
 
 
-def resolve_(qa: str, known_refs:FrozenSet[RefInfo], local_ref:FrozenSet[str], ref:str) -> RefInfo:
+def resolve_(
+    qa: str, known_refs: FrozenSet[RefInfo], local_ref: FrozenSet[str], ref: str
+) -> RefInfo:
     # RefInfo(module, version, kind, path)
     hash(known_refs)
     hash(local_ref)
@@ -316,11 +322,11 @@ def resolve_(qa: str, known_refs:FrozenSet[RefInfo], local_ref:FrozenSet[str], r
     k_path_map = _into(known_refs)
 
     if ref.startswith("builtins."):
-        return RefInfo(None, None, 'missing', ref)
+        return RefInfo(None, None, "missing", ref)
     if ref.startswith("str."):
-        return RefInfo(None, None, 'missing', ref)
+        return RefInfo(None, None, "missing", ref)
     if ref in {"None", "False", "True"}:
-        return RefInfo(None, None, 'missing', ref)
+        return RefInfo(None, None, "missing", ref)
     # here is sphinx logic.
     # https://www.sphinx-doc.org/en/master/_modules/sphinx/domains/python.html?highlight=tilde
     # tilda ~ hide the module name/class name
@@ -328,19 +334,19 @@ def resolve_(qa: str, known_refs:FrozenSet[RefInfo], local_ref:FrozenSet[str], r
     if ref.startswith("~"):
         ref = ref[1:]
     if ref in local_ref:
-        return RefInfo(None, None, 'local', ref)
+        return RefInfo(None, None, "local", ref)
     if ref in k_path_map:
-        return RefInfo(None, None, 'exists', ref)
+        return RefInfo(None, None, "exists", ref)
     else:
         if ref.startswith("."):
             if (found := qa + ref) in k_path_map:
-                return RefInfo(None, None, 'exists', found)
+                return RefInfo(None, None, "exists", found)
             else:
                 root = qa.split(".")[0]
                 sub1 = root_start(root, k_path_map)
                 subset = endswith(ref, sub1)
                 if len(subset) == 1:
-                    return RefInfo(None, None, 'exists', next(iter(subset)))
+                    return RefInfo(None, None, "exists", next(iter(subset)))
                 else:
                     if len(subset) > 1:
                         # ambiguous ref
@@ -348,20 +354,20 @@ def resolve_(qa: str, known_refs:FrozenSet[RefInfo], local_ref:FrozenSet[str], r
                         pass
 
                 # print(f"did not resolve {qa} + {ref}")
-                return RefInfo(None, None, 'missing', ref)
+                return RefInfo(None, None, "missing", ref)
 
         parts = qa.split(".")
         for i in range(len(parts)):
             attempt = ".".join(parts[:i]) + "." + ref
             if attempt in k_path_map:
-                return RefInfo(None, None, 'exists', attempt)
+                return RefInfo(None, None, "exists", attempt)
 
     q0 = qa.split(".")[0]
     rs = root_start(q0, k_path_map)
     attempts = [q for q in rs if (ref in q)]
     if len(attempts) == 1:
-        return RefInfo(None, None, 'exists', attempts[0])
-    return RefInfo(None, None, 'missing', ref)
+        return RefInfo(None, None, "exists", attempts[0])
+    return RefInfo(None, None, "missing", ref)
 
 
 def load_one_uningested(
@@ -601,7 +607,7 @@ class TreeReplacer:
 
 
 class DirectiveVisiter(TreeReplacer):
-    def __init__(self, qa, known_refs:FrozenSet[RefInfo], local_refs):
+    def __init__(self, qa, known_refs: FrozenSet[RefInfo], local_refs):
         assert isinstance(qa, str), qa
         assert isinstance(known_refs, (list, set, frozenset)), known_refs
         self.known_refs = frozenset(known_refs)
@@ -610,12 +616,10 @@ class DirectiveVisiter(TreeReplacer):
         self.local = []
         self.total = []
 
-    def replace_Directive(self, directive:Directive):
+    def replace_Directive(self, directive: Directive):
         if (directive.domain is not None) or (directive.role not in (None, "mod")):
             return [directive]
-        r = resolve_(
-            self.qa, self.known_refs, self.local_refs, directive.text
-        )
+        r = resolve_(self.qa, self.known_refs, self.local_refs, directive.text)
         # this is now likely incorrect as Ref kind shoudl nto be exists, but things like "local", "api", "gallery..."
         ref, exists = r.path, r.kind
         if exists != "missing":
@@ -626,7 +630,10 @@ class DirectiveVisiter(TreeReplacer):
             return [Link(directive.text, r, exists, exists != "missing")]
         return [directive]
 
-def load_one(bytes_:bytes, bytes2_:bytes, qa:str, known_refs:FrozenSet[RefInfo]=None) -> IngestedBlobs:
+
+def load_one(
+    bytes_: bytes, bytes2_: bytes, qa: str, known_refs: FrozenSet[RefInfo] = None
+) -> IngestedBlobs:
     data = json.loads(bytes_)
     assert "backrefs" not in data
     # OK to mutate we are the only owners and don't return it.
@@ -642,6 +649,7 @@ def load_one(bytes_:bytes, bytes2_:bytes, qa:str, known_refs:FrozenSet[RefInfo]=
 class Ingester:
     def __init__(self):
         self.ingest_dir = ingest_dir
+
     def ingest(self, path: Path, check: bool):
 
         store = Store(self.ingest_dir)
@@ -702,9 +710,10 @@ class Ingester:
         ):
             for k, v in doc_blob.content.items():
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
-            local_ref = frozenset([x[0] for x in doc_blob.content["Parameters"] if x[0]] + [
-                x[0] for x in doc_blob.content["Returns"] if x[0]
-            ])
+            local_ref = frozenset(
+                [x[0] for x in doc_blob.content["Parameters"] if x[0]]
+                + [x[0] for x in doc_blob.content["Returns"] if x[0]]
+            )
             doc_blob.process(qa, known_ref_info, verbose=False)
             doc_blob.logo = logo
             for ref in doc_blob.refs:
