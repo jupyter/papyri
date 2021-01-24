@@ -243,12 +243,23 @@ def main(ex):
         def render_Verbatim(self, verb):
             return ("verbatim", verb.value)
 
+        def render_BlockVerbatim(self, verb):
+            acc = []
+            for line in verb.lines:
+                acc.append(Text(line._line))
+            return urwid.Pile(acc)
+
         def render_Paragraph(self, paragraph):
             return TextWithLink([self.render(o) for o in paragraph.children])
 
         def render_Section(self, section):
+            acc = []
+            for c in section.children:
+                acc.append(self.render(c))
+                acc.append(blank)
+
             return urwid.Padding(
-                urwid.Pile([self.render(o) for o in section.children] + [blank]),
+                urwid.Pile(acc),
                 left=2,
                 right=2,
             )
@@ -337,7 +348,8 @@ def main(ex):
         R = Renderer(frame)
         doc = []
         doc.append(blank)
-        doc.append(Text([("signature", blob.signature)]))
+        if blob.signature:
+            doc.append(Text([("signature", blob.signature)]))
 
         for k, v in blob.content.items():
             from papyri import take2
@@ -347,12 +359,12 @@ def main(ex):
                     doc.append(TextWithLink([Link("section", k, lambda: None)]))
                 doc.append(blank)
                 doc.append(R.render(v))
-
-        doc.append(Text(("section", "See Also")))
-        doc.append(blank)
-        for s in blob.see_also:
-            doc.append(urwid.Padding(R.render(s), left=2))
+        if blob.see_also:
+            doc.append(Text(("section", "See Also")))
             doc.append(blank)
+            for s in blob.see_also:
+                doc.append(urwid.Padding(R.render(s), left=2))
+                doc.append(blank)
 
         if not blob.example_section_data.empty():
             doc.append(Text(("section", "Examples")))
@@ -373,7 +385,10 @@ def main(ex):
 
         return doc
 
+    stack = []
+
     def guess_load(rough):
+        stack.append(rough)
         from papyri.config import ingest_dir
 
         candidates = list(ingest_dir.glob(f"*/*/module/{rough}.json"))
@@ -436,6 +451,11 @@ def main(ex):
     def unhandled(key):
         if key == "q":
             raise urwid.ExitMainLoop()
+        elif key == "backspace":
+            if len(stack) >= 2:
+                stack.pop()
+                old = stack.pop()
+                guess_load(old)
 
     urwid.MainLoop(frame, palette, screen, unhandled_input=unhandled).run()
 
@@ -445,8 +465,10 @@ def setup():
     # try to handle short web requests quickly
     if urwid.web_display.handle_short_request():
         return
+    import sys
 
-    main("numpy.arange")
+    target = sys.argv[1]
+    main(target)
 
 
 if "__main__" == __name__ or urwid.web_display.is_web_request():
