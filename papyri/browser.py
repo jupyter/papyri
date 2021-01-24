@@ -170,14 +170,13 @@ class TextWithLink(urwid.Text):
         return canv
 
 
-def main():
+def main(ex):
+    if not isinstance(ex, str):
+        ex = ex.__module__ + "." + ex.__qualname__
 
     import os.path
     from pathlib import Path
 
-    file_path = Path(
-        os.path.expanduser("~/.papyri/ingest/numpy/1.19.4/module/numpy.geomspace.json")
-    )
     # import json
     # data = json.loads(file_path.read_text())
     # data
@@ -204,6 +203,10 @@ def main():
                 return urwid.Text(("unknown", "<" + obj.__class__.__name__ + ">"))
 
             return method(obj)
+
+        def render_Directive(self, d):
+            cont = "".join(d.value)
+            return ("directive", f"{d.domain}:{d.role}:`{cont}`")
 
         def render_Words(self, words):
             return words.value
@@ -377,7 +380,10 @@ def main():
         if candidates:
             for q in range(len(walk)):
                 walk.pop()
-            load(candidates[0], walk, rough)
+            try:
+                load(candidates[0], walk, rough)
+            except Exception as e:
+                raise ValueError(str(candidates)) from e
 
     walk = urwid.SimpleListWalker([])
     listbox = urwid.ListBox(walk)
@@ -388,7 +394,7 @@ def main():
         for i in gen_content(blob, frame):
             walk.append(i)
 
-    load(file_path, walk, "numpy.arange")
+    guess_load(ex)
 
     # header = urwid.AttrWrap(Text("numpy.geomspace"), "header")
 
@@ -413,6 +419,7 @@ def main():
         ("param", "dark blue", "", "bold"),
         ("section", "dark magenta,bold", "", "bold"),
         ("unknown", "white", "dark red", "bold"),
+        ("directive", "white", "dark red", "bold"),
         # pygments
         ("pyg-o", "dark blue", "", "bold"),
         ("pyg-mi", "dark red", "", "bold"),
@@ -427,7 +434,7 @@ def main():
         screen = urwid.raw_display.Screen()
 
     def unhandled(key):
-        if key == "f8":
+        if key == "q":
             raise urwid.ExitMainLoop()
 
     urwid.MainLoop(frame, palette, screen, unhandled_input=unhandled).run()
@@ -439,7 +446,7 @@ def setup():
     if urwid.web_display.handle_short_request():
         return
 
-    main()
+    main("numpy.arange")
 
 
 if "__main__" == __name__ or urwid.web_display.is_web_request():
