@@ -1,5 +1,47 @@
 """
 Papyri – in progress
+
+Here are a couple of documents, or docstrings that are of interest to see how
+papyri works, generally because they crashed papyri at some point during the
+developement, and/or do not work yet.:: 
+
+
+`dask.delayed.delayed`
+    one of the parameter of the docstring has multiple paragraphs.
+
+`IPython.core.display.Video.__init__`
+    Block Verbatim in params ?
+
+`IPython.core.interactiveshell.InteractiveShell.complete`
+    contain a `DefListItem`
+
+`matplotlib.transforms.Bbox`
+    parsing of example is completely incorrect.
+
+`matplotlib.axes._axes.Axes.text`
+    misparse example as well.
+
+`IPython.core.completer.Completion`
+    item list
+
+`matplotlib.figure.Figure.add_subplot` 
+    custom double dot example
+
+`matplotlib.colors`
+    unnumbered list with indent.
+
+`matplotlib.colors`: 
+    contain a reference via ``.. _palettable: value`` and autolink ``paletable_``.
+
+`numpy.npv`:
+    hase warning sections.
+
+`scipy.signal.ltisys.bode`:
+    contains multiple figure
+
+`scipy.signal.barthann`:
+    multiple figures
+
 """
 
 
@@ -122,6 +164,14 @@ def serve():
     from .render import serve
 
     serve()
+
+
+@app.command()
+def browse(qualname: str):
+
+    from papyri.browser import main
+
+    main(qualname)
 
 
 @app.command()

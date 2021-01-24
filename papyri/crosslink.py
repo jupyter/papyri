@@ -898,6 +898,12 @@ def main(path, check):
 def relink():
     store = Store(ingest_dir)
     known_refs, _ = find_all_refs(store)
+    import builtins
+
+    builtins.print(
+        "Relinking is safe to cancel, but some back references may be broken...."
+    )
+    builtins.print("Press Ctrl-C to abort...")
     for p, item in progress(
         store.glob("*/*/module/*.json"), description="Relinking..."
     ):

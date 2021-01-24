@@ -188,9 +188,9 @@ def main(ex):
             self.frame = frame
 
         def cb(self, value):
-            self.frame.footer = urwid.AttrWrap(
-                urwid.Text(["Enter ?...: ", str(value)]), "header"
-            )
+            # self.frame.footer = urwid.AttrWrap(
+            #    urwid.Text(["Enter ?...: ", str(value)]), "header"
+            # )
             if value.__class__.__name__ == "RefInfo":
                 guess_load(value.path)
             elif isinstance(value, str):
@@ -256,10 +256,11 @@ def main(ex):
             acc = []
             for c in section.children:
                 acc.append(self.render(c))
+                # acc.append(Text("<Section Blank>"))
                 acc.append(blank)
 
             return urwid.Padding(
-                urwid.Pile(acc),
+                urwid.Pile(dedup(acc)),
                 left=2,
                 right=2,
             )
@@ -313,14 +314,10 @@ def main(ex):
 
             return urwid.Padding(
                 urwid.Pile(
-                    [
-                        blank,
-                        TextWithLink([x for x in insert_prompt(code.entries)]),
-                        Text(code.out),
-                        blank,
-                    ]
+                    [TextWithLink([x for x in insert_prompt(code.entries)])]
+                    + ([Text(code.out + "??")] if code.out else []),
                 ),
-                left=4,
+                left=2,
             )
 
         def render_Param(self, param):
@@ -343,6 +340,21 @@ def main(ex):
                 ]
             )
 
+    def dedup(l):
+        acc = []
+        bk = False
+        for item in l:
+            if item is blank:
+                if bk is not True:
+                    acc.append(item)
+                else:
+                    acc.append(Text("<...>"))
+
+                bk = True
+            else:
+                bk = False
+                acc.append(item)
+        return acc
 
     def gen_content(blob, frame):
         R = Renderer(frame)
@@ -357,6 +369,7 @@ def main(ex):
             if not v.empty():
                 if k not in ["Summary", "Extended Summary"]:
                     doc.append(TextWithLink([Link("section", k, lambda: None)]))
+                # doc.append(Text("<Blank InnerSec>"))
                 doc.append(blank)
                 doc.append(R.render(v))
         if blob.see_also:
@@ -370,6 +383,8 @@ def main(ex):
             doc.append(Text(("section", "Examples")))
             doc.append(blank)
             doc.append(R.render(blob.example_section_data))
+
+        doc = dedup(doc)
 
         doc.append(blank)
         doc.append(blank)
