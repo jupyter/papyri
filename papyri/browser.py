@@ -315,7 +315,7 @@ def main(ex):
             return urwid.Padding(
                 urwid.Pile(
                     [TextWithLink([x for x in insert_prompt(code.entries)])]
-                    + ([Text(code.out + "??")] if code.out else []),
+                    + ([Text(code.out)] if code.out else []),
                 ),
                 left=2,
             )
@@ -384,6 +384,15 @@ def main(ex):
             doc.append(blank)
             doc.append(R.render(blob.example_section_data))
 
+        if blob.backrefs:
+            doc.append(Text(("section", "Back References")))
+            for b in blob.backrefs:
+                doc.append(
+                    urwid.Padding(
+                        TextWithLink([Link("param", b, lambda: R.cb(b))]), left=2
+                    )
+                )
+
         doc = dedup(doc)
 
         doc.append(blank)
@@ -420,7 +429,9 @@ def main(ex):
     frame = urwid.Frame(urwid.AttrWrap(listbox, "body"))  # , header=header)
 
     def load(file_path, walk, qa):
-        blob = load_one(file_path.read_text(), "[]", qa=qa)
+        p = file_path
+        br = p.parent / (p.stem + ".br")
+        blob = load_one(file_path.read_text(), br.read_text(), qa=qa)
         for i in gen_content(blob, frame):
             walk.append(i)
 

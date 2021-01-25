@@ -42,6 +42,11 @@ developement, and/or do not work yet.::
 `scipy.signal.barthann`:
     multiple figures
 
+`numpy.where`:
+    The Parameter section have a pair of parameter separated with the coma in
+    the name field; and those parameter should be properly detected as local
+    references in the rest of the docstrings.
+
 """
 
 

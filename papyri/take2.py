@@ -1083,10 +1083,10 @@ class BlockDirective(Block):
         if lines[0].startswith("..Deprecated"):
             lines[0]._line = ".. deprecated:: 1.5.0"
         # end scipy bug.
-        assert lines[0].startswith(".. "), lines
+        # assert lines[0].startswith(".. "), lines
         l0 = lines[0]
         pred, *postd = l0.split("::")
-        assert pred.startswith(".. ")
+        # assert pred.startswith(".. ")
         self.directive_name = pred[3:]
         self.args0 = postd
         if self.ind:

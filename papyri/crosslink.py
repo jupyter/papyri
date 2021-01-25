@@ -258,8 +258,15 @@ class IngestedBlobs(Node):
             from .take2 import Param
 
             local_refs = local_refs + [
-                x[0] for x in self.content[s] if isinstance(x, Param)
+                [u.strip() for u in x[0].split(",")]
+                for x in self.content[s]
+                if isinstance(x, Param)
             ]
+
+        def flat(l):
+            return [y for x in l for y in x]
+
+        local_refs = frozenset(flat(local_refs))
 
         assert isinstance(known_refs, frozenset)
 
@@ -268,7 +275,7 @@ class IngestedBlobs(Node):
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
-            assert len(visitor.local) == 0
+            assert len(visitor.local) == 0, f"{visitor.local} | {qa}"
             print(f"{len(visitor.total)}, {qa}, {visitor.total}")
         self.example_section_data = visitor.visit(self.example_section_data)
 
@@ -527,11 +534,21 @@ def load_one_uningested(
             blob.content[s] = new_content
 
     local_refs: List[str] = []
+
     for s in sections_:
+        from .take2 import Param
 
         local_refs = local_refs + [
-            x[0] for x in blob.content[s] if isinstance(x, Param)
+            [u.strip() for u in x[0].split(",")]
+            for x in blob.content[s]
+            if isinstance(x, Param)
         ]
+
+    def flat(l):
+        return [y for x in l for y in x]
+
+    local_refs = frozenset(flat(local_refs))
+
     visitor = DirectiveVisiter(qa, frozenset(), local_refs)
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
         assert section in blob.content
@@ -624,7 +641,22 @@ class DirectiveVisiter(TreeReplacer):
         self.total: List[Tuple[Any, str]] = []
 
     def replace_Directive(self, directive: Directive):
-        if (directive.domain is not None) or (directive.role not in (None, "mod")):
+        if (directive.domain is not None) or (
+            directive.role not in (None, "mod", "class", "func", "meth", "any")
+        ):
+            # TODO :many of these directive need to be implemented
+            if directive.role not in (
+                "attr",
+                "meth",
+                "doc",
+                "ref",
+                "func",
+                "math",
+                "mod",
+                "class",
+                "term",
+            ):
+                print(directive.role)
             return [directive]
         r = resolve_(self.qa, self.known_refs, self.local_refs, directive.text)
         # this is now likely incorrect as Ref kind should not be exists,
