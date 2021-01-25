@@ -1090,6 +1090,7 @@ class BlockDirective(Block):
         self.directive_name = pred[3:]
         self.args0 = postd
         if self.ind:
+            # TODO: we may want to call self.ind.dedented() here ?
             self.inner = Paragraph.parse_lines([x._line for x in self.ind])
         else:
             self.inner = None
