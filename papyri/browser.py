@@ -206,6 +206,12 @@ def main(ex):
 
         def render_Directive(self, d):
             cont = "".join(d.value)
+            if d.role == 'math':
+                from flatlatex import converter
+
+                c = converter()
+
+                return ("math", c.convert(cont))
             return ("directive", f"{d.domain}:{d.role}:`{cont}`")
 
         def render_Words(self, words):
@@ -217,6 +223,11 @@ def main(ex):
             return Link("link", link.reference.path, lambda: self.cb(link.reference))
 
         def render_BlockDirective(self, directive):
+            if directive.directive_name == 'math':
+                from flatlatex import converter
+                c = converter()
+                return urwid.Padding(urwid.Text(('math',c.convert(' '.join(directive.args0)))), left=2)
+                assert not dirrective.inner
             inn = [
                 blank,
                 Text(
@@ -232,7 +243,7 @@ def main(ex):
             return urwid.Pile(
                 [
                     TextWithLink(
-                        [Link("link", sa.name.name, lambda: self.cb(sa.name.ref))]
+                        [Link("link" if sa.name.exists else "link-broken", sa.name.name, lambda: self.cb(sa.name.ref))]
                     ),
                     urwid.Padding(
                         urwid.Pile([self.render(x) for x in sa.descriptions]), left=2
@@ -445,7 +456,6 @@ def main(ex):
         ("header", "white", "dark red", "bold"),
         ("bb", "bold", "default", ("standout", "underline")),
         ("important", "dark red,bold", "default", ("standout", "underline")),
-        ("link", "dark red,bold", "default", ("standout", "underline")),
         ("link_selected", "dark red,bold", "light blue"),
         ("editfc", "white", "dark blue", "bold"),
         ("editbx", "light gray", "dark blue"),
@@ -454,13 +464,17 @@ def main(ex):
         ("buttn", "black", "dark cyan"),
         ("buttnf", "white", "dark blue", "bold"),
         ("verbatim", "brown", "", "bold"),
+        #("link", "dark red,bold", "default", ("standout", "underline")),
         ("link", "dark green", "", "bold"),
+        ("link", "dark green", "", "bold"),
+        ("link-broken", "dark red,strikethrough", "", "bold"),
         ("type", "dark cyan", "", "bold"),
         ("signature", "dark cyan,bold", "", "bold"),
         ("param", "dark blue", "", "bold"),
         ("section", "dark magenta,bold", "", "bold"),
         ("unknown", "white", "dark red", "bold"),
         ("directive", "white", "dark red", "bold"),
+        ("math", "dark magenta,italics", "", "bold"),
         # pygments
         ("pyg-o", "dark blue", "", "bold"),
         ("pyg-mi", "dark red", "", "bold"),

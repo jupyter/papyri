@@ -275,7 +275,7 @@ class IngestedBlobs(Node):
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
-            assert len(visitor.local) == 0, f"{visitor.local} | {qa}"
+            # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {qa}"
             print(f"{len(visitor.total)}, {qa}, {visitor.total}")
         self.example_section_data = visitor.visit(self.example_section_data)
 
@@ -655,10 +655,16 @@ class DirectiveVisiter(TreeReplacer):
                 "mod",
                 "class",
                 "term",
+                "exc",
+                "rc" # matplotlib
             ):
                 print(directive.role)
             return [directive]
-        r = resolve_(self.qa, self.known_refs, self.local_refs, directive.text)
+        if directive.role not in ['any', None]:
+            loc = frozenset()
+        else:
+            loc = self.local_refs
+        r = resolve_(self.qa, self.known_refs, loc, directive.text)
         # this is now likely incorrect as Ref kind should not be exists,
         # but things like "local", "api", "gallery..."
         ref, exists = r.path, r.kind

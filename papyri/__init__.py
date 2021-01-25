@@ -6,28 +6,28 @@ papyri works, generally because they crashed papyri at some point during the
 developement, and/or do not work yet.:: 
 
 
-`dask.delayed.delayed`
+`dask.delayed.delayed`:
     one of the parameter of the docstring has multiple paragraphs.
 
-`IPython.core.display.Video.__init__`
+`IPython.core.display.Video.__init__`:
     Block Verbatim in params ?
 
-`IPython.core.interactiveshell.InteractiveShell.complete`
+`IPython.core.interactiveshell.InteractiveShell.complete`:
     contain a `DefListItem`
 
-`matplotlib.transforms.Bbox`
+`matplotlib.transforms.Bbox`:
     parsing of example is completely incorrect.
 
-`matplotlib.axes._axes.Axes.text`
+`matplotlib.axes._axes.Axes.text`:
     misparse example as well.
 
-`IPython.core.completer.Completion`
+`IPython.core.completer.Completion`:
     item list
 
-`matplotlib.figure.Figure.add_subplot` 
+`matplotlib.figure.Figure.add_subplot`: 
     custom double dot example
 
-`matplotlib.colors`
+`matplotlib.colors`:
     unnumbered list with indent.
 
 `matplotlib.colors`: 
@@ -46,6 +46,18 @@ developement, and/or do not work yet.::
     The Parameter section have a pair of parameter separated with the coma in
     the name field; and those parameter should be properly detected as local
     references in the rest of the docstrings.
+
+`numpy.polynomial.laguerre.lagfit`:
+    should have plenty of math items
+
+
+`numpy.polyfit`:
+    The see also section links to `scipy.interpolate.UnivariateSpline` which
+    will not resolve (yet) as the fully qualified name is
+    `scipy.interpolate.fitpack2.UnivariateSpline`; this should be fixed at some
+    points via aliases; in the intro one link as a ``name <value>`` syntax which
+    is also not yet recognized.
+
 
 """
 
