@@ -1091,7 +1091,7 @@ class BlockDirective(Block):
         self.args0 = postd
         if self.ind:
             # TODO: we may want to call self.ind.dedented() here ?
-            self.inner = Paragraph.parse_lines([x._line for x in self.ind])
+            self.inner = Paragraph.parse_lines([x.text for x in self.ind.dedented()])
         else:
             self.inner = None
 
@@ -1161,7 +1161,7 @@ class DefListItem(Block):
     def parse(cls, lines, wh, ind):
         dl = Paragraph.parse_lines([l.text.strip() for l in lines])
         assert len(dl.children) == 1
-        dd = Paragraph.parse_lines([x._line for x in ind.dedented()])
+        dd = Paragraph.parse_lines([x.text for x in ind.dedented()])
         return cls(lines, wh, ind, dl, dd)
 
     COLOR = BLUE
@@ -1301,6 +1301,9 @@ def deflist_pass(blocks):
     acc = []
     deflist = []
     for block in blocks:
+        if not type(block) == Block:
+            acc.append(block)
+            continue
         if len(block.lines) == 1:
             p = Paragraph.parse_lines([l.text.strip() for l in block.lines])
         if (

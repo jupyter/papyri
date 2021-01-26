@@ -223,11 +223,20 @@ def main(ex):
             return Link("link", link.reference.path, lambda: self.cb(link.reference))
 
         def render_BlockDirective(self, directive):
-            if directive.directive_name == 'math':
+            if directive.directive_name == "note":
+                return urwid.Padding(
+                    urwid.LineBox(
+                        self.render(directive.inner), title="Note", title_align="left"
+                    ),
+                    left=2,
+                    right=2,
+                )
+
+            elif directive.directive_name == "math":
                 from flatlatex import converter
                 c = converter()
-                return urwid.Padding(urwid.Text(('math',c.convert(' '.join(directive.args0)))), left=2)
                 assert not dirrective.inner
+                return urwid.Padding(urwid.Text(('math',c.convert(' '.join(directive.args0)))), left=2)
             inn = [
                 blank,
                 Text(
@@ -236,7 +245,7 @@ def main(ex):
                 ),
             ]
             if directive.inner:
-                inn.append(urwid.Padding(self.render(directive.inner), left=2)),
+                inn.append(urwid.Padding(self.render(directive.inner), left=4)),
             return urwid.Pile(inn)
 
         def render_SeeAlsoItem(self, sa):
@@ -344,7 +353,7 @@ def main(ex):
                     ),
                     urwid.Padding(
                         urwid.Pile([self.render(d) for d in param.desc]),
-                        left=2,
+                        left=3,
                         right=2,
                         min_width=20,
                     ),
@@ -456,7 +465,7 @@ def main(ex):
         ("header", "white", "dark red", "bold"),
         ("bb", "bold", "default", ("standout", "underline")),
         ("important", "dark red,bold", "default", ("standout", "underline")),
-        ("link_selected", "dark red,bold", "light blue"),
+        ("link_selected", "dark blue,bold", "white"),
         ("editfc", "white", "dark blue", "bold"),
         ("editbx", "light gray", "dark blue"),
         ("editcp", "black", "light gray", "standout"),
