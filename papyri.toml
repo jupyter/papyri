@@ -17,6 +17,8 @@ submodules = [
  "signal", 
 ]
 
+exclude = ["scipy.signal.spectral._spectral_helper"]
+
 execute_exclude_patterns = []
 exec_failure = 'fallback'
 

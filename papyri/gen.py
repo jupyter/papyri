@@ -315,6 +315,7 @@ def processed_example_data(example_section_data, qa):
             blocks = P2(in_out.value.split("\n"))
             for b in blocks:
                 new_example_section_data.append(b)
+
         elif type_ == "Code":
             in_ = in_out.entries
             # assert len(in_[0]) == 3, len(in_[0])
@@ -322,9 +323,8 @@ def processed_example_data(example_section_data, qa):
                 text = "".join([x for x, y in in_])
                 classes = get_classes(text)
                 in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
+        if type_ is not "Text":
             new_example_section_data.append(in_out)
-        else:
-            assert False, type_
     return new_example_section_data
 
 @lru_cache()
@@ -934,6 +934,9 @@ class Gen:
                 else:
                     print("differs: {item} != {other}")
 
+        for target in module_conf.get('exclude',[]):
+            print("exclude tgt:", target)
+            del collected[target]
         # p = nullcontext
         with p() as p2:
 
@@ -999,13 +1002,15 @@ class Gen:
 
                 # processing....
                 doc_blob.signature = doc_blob.content.pop("Signature")
-
-                for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
-                    if section in doc_blob.content:
-                        if data := doc_blob.content[section]:
-                            doc_blob.content[section] = Section(P2(data))
-                        else:
-                            doc_blob.content[section] = Section()
+                try:
+                    for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
+                        if section in doc_blob.content:
+                            if data := doc_blob.content[section]:
+                                doc_blob.content[section] = Section(P2(data))
+                            else:
+                                doc_blob.content[section] = Section()
+                except Exception as e:
+                    raise type(e)(f"during {qa}")
 
                 doc_blob.references = doc_blob.content.pop("References")
                 if isinstance(doc_blob.references, str):

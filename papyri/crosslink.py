@@ -148,7 +148,6 @@ class IngestedBlobs(Node):
         }
         self._content = new
 
-    @profile
     def process(self, qa, known_refs, verbose=True):
         local_refs = []
         sections_ = [
@@ -291,7 +290,6 @@ def resolve_(
         return RefInfo(None, None, "exists", attempts[0])
     return RefInfo(None, None, "missing", ref)
 
-@profile
 def load_one_uningested(
     bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs
 ) -> IngestedBlobs:

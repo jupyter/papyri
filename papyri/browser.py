@@ -322,15 +322,16 @@ def main(ex):
             def insert_prompt(entries):
                 yield Link(
                     "verbatim",
-                    ">>> ",
+                    ">>>",
                     lambda: self.cb("likely copy content to clipboard"),
                 )
+                yield (None, ' ')
                 for txt, ref, css in entries:
                     if txt == "\n":
                         yield (None, "\n")
                         yield ("verbatim", "... ")
                     else:
-                        yield ("pyg-" + str(css), txt)
+                        yield ("pyg-" + str(css), f"{txt}")
 
             return urwid.Padding(
                 urwid.Pile(
@@ -485,10 +486,15 @@ def main(ex):
         ("directive", "white", "dark red", "bold"),
         ("math", "dark magenta,italics", "", "bold"),
         # pygments
-        ("pyg-o", "dark blue", "", "bold"),
-        ("pyg-mi", "dark red", "", "bold"),
+        ("pyg-o", "dark blue", "", "bold"),  # operator (+, .)
+        ("pyg-mi", "dark red", "", "bold"),  # number literal 12, 55 
         ("pyg-kc", "dark green", "", "bold"),
         ("pyg-nb", "white", "", "bold"),
+        ("pyg-kn", "dark green", "", "bold"), # keyword import
+        ("pyg-nn", "dark blue", "", "bold"),  # name
+        ("pyg-k", "dark green", "", "bold"), # keyword as
+        ("pyg-s2", "dark green", "", "bold"), # strings, like "this is a string s2"
+        ("pyg-sa", "dark green", "", "bold"), # string brefixes like b"", u"" r""
     ]
 
     # use appropriate Screen class
