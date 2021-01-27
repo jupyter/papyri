@@ -464,19 +464,6 @@ def load_one_uningested(
         type_ = in_out.__class__.__name__
         assert type_ in ("Code", "Text", "Fig"), f"{type_}, {in_out}"
         if type_ == "Text":
-            pass
-            # !!! MOVE This To GEN ?
-            # assert isinstance(in_out, str), repr(in_out)
-            # ps = paragraphs(in_out.split("\n"))
-            # blob.example_section_data[i][1] = ps
-            # for ps in in_out:
-            #    for p in ps:
-            #        assert p.__class__.__name__ in {
-            #            "Word",
-            #            "Verbatim",
-            #            "Directive",
-            #            "Math",
-            #        }, f"{p[0]}, {qa}"
             blocks = P2(in_out.value.split("\n"))
             for b in blocks:
                 new_sec.append(b)
