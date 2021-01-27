@@ -411,12 +411,8 @@ def load_one_uningested(
     # we also need to move this step at generation time,as we (likely), want to
     # do some local pre-processing of the references to already do some resolutions.
 
-    sec = Section.from_json(blob.example_section_data)
+    blob.example_section_data = Section.from_json(blob.example_section_data)
 
-    #new_sec = Section()
-
-    #new_sec = processed_example_data(new_sec, qa)
-    blob.example_section_data = sec
 
     try:
         notes = blob.content["Notes"]
