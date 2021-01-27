@@ -235,7 +235,7 @@ def main(ex):
             elif directive.directive_name == "math":
                 from flatlatex import converter
                 c = converter()
-                assert not dirrective.inner
+                assert not directive.inner
                 return urwid.Padding(urwid.Text(('math',c.convert(' '.join(directive.args0)))), left=2)
             inn = [
                 blank,

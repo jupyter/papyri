@@ -191,7 +191,7 @@ class IngestedBlobs(Node):
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
             # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {qa}"
-            print(f"{len(visitor.total)}, {qa}, {visitor.total}")
+            print(f"Newly found links: {len(visitor.total)}, {qa}, {visitor.total}")
         self.example_section_data = visitor.visit(self.example_section_data)
 
         for d in self.see_also:
