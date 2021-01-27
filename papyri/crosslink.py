@@ -6,9 +6,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
-from pygments import lex
-from pygments.formatters import HtmlFormatter
-from pygments.lexers import PythonLexer
 from there import print
 
 from .stores import Store
@@ -26,7 +23,6 @@ from .take2 import (
     SeeAlsoItem,
     Directive,
 )
-from .take2 import main as t2main
 from .take2 import make_block_3
 from .utils import progress
 
@@ -68,21 +64,7 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
     return p
 
 
-def P2(lines) -> List[Node]:
-    assert isinstance(lines, list)
-    for l in lines:
-        if isinstance(l, str):
-            assert "\n" not in l
-        else:
-            assert "\n" not in l._line
-    assert lines, lines
-    blocks_data = t2main("\n".join(lines))
-
-    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for block in blocks_data:
-        assert not block.__class__.__name__ == "Block"
-    return blocks_data
-
+from .gen import P2
 
 def paragraphs(lines) -> List[Any]:
     assert isinstance(lines, list)
@@ -110,35 +92,8 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def processed_example_data(example_section_data, qa):
-    """this should be no-op on already ingested"""
-    new_example_section_data = Section()
-    for in_out in example_section_data:
-        type_ = in_out.__class__.__name__
-        # color examples with pygments classes
-        if type_ == "Text":
-            assert False
-            blocks = P2(in_out.value.split("\n"))
-            for b in blocks:
-                new_example_section_data.append(b)
-        if type_ == "Code":
-            in_ = in_out.entries
-            # assert len(in_[0]) == 3, len(in_[0])
-            if len(in_[0]) == 2:
-                text = "".join([x for x, y in in_])
-                classes = get_classes(text)
-                in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
-        new_example_section_data.append(in_out)
+from .gen import processed_example_data, get_classes
 
-    return new_example_section_data
-
-
-def get_classes(code):
-    list(lex(code, PythonLexer()))
-    FMT = HtmlFormatter()
-    classes = [FMT.ttype2class.get(x) for x, y in lex(code, PythonLexer())]
-    classes = [c if c is not None else "" for c in classes]
-    return classes
 
 
 from .take2 import Node
@@ -458,21 +413,10 @@ def load_one_uningested(
 
     sec = Section.from_json(blob.example_section_data)
 
-    new_sec = Section()
+    #new_sec = Section()
 
-    for in_out in sec:
-        type_ = in_out.__class__.__name__
-        assert type_ in ("Code", "Text", "Fig"), f"{type_}, {in_out}"
-        if type_ == "Text":
-            blocks = P2(in_out.value.split("\n"))
-            for b in blocks:
-                new_sec.append(b)
-        else:
-            new_sec.append(in_out)
-
-    assert qa is not None
-    new_sec = processed_example_data(new_sec, qa)
-    blob.example_section_data = new_sec
+    #new_sec = processed_example_data(new_sec, qa)
+    blob.example_section_data = sec
 
     try:
         notes = blob.content["Notes"]
@@ -602,6 +546,8 @@ class TreeReplacer:
                 "Words",
             ]:
                 return [node]
+            elif name in ["Text"]:
+                assert False, "Text still present"
             else:
                 new_children = []
                 for c in node.children:

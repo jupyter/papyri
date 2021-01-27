@@ -4,6 +4,9 @@ import inspect
 import io
 import json
 import time
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import PythonLexer
+from pygments import lex
 from collections import defaultdict
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
@@ -118,6 +121,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
         whether to run type inference; which can be time consuming.
 
     """
+    assert qa is not None
     if not config:
         config = {}
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
@@ -220,8 +224,54 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     if len(fig_managers) != 0:
         plt.close("all")
-    return example_section_data, figs
+    return processed_example_data(example_section_data, qa), figs
 
+from .take2 import main as t2main
+
+
+def get_classes(code):
+    list(lex(code, PythonLexer()))
+    FMT = HtmlFormatter()
+    classes = [FMT.ttype2class.get(x) for x, y in lex(code, PythonLexer())]
+    classes = [c if c is not None else "" for c in classes]
+    return classes
+
+def P2(lines) -> List[Node]:
+    assert isinstance(lines, list)
+    for l in lines:
+        if isinstance(l, str):
+            assert "\n" not in l
+        else:
+            assert "\n" not in l._line
+    assert lines, lines
+    blocks_data = t2main("\n".join(lines))
+
+    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+    for block in blocks_data:
+        assert not block.__class__.__name__ == "Block"
+    return blocks_data
+
+def processed_example_data(example_section_data, qa):
+    """this should be no-op on already ingested"""
+    new_example_section_data = Section()
+    for in_out in example_section_data:
+        type_ = in_out.__class__.__name__
+        # color examples with pygments classes
+        if type_ == "Text":
+            blocks = P2(in_out.value.split("\n"))
+            for b in blocks:
+                new_example_section_data.append(b)
+        elif type_ == "Code":
+            in_ = in_out.entries
+            # assert len(in_[0]) == 3, len(in_[0])
+            if len(in_[0]) == 2:
+                text = "".join([x for x, y in in_])
+                classes = get_classes(text)
+                in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
+            new_example_section_data.append(in_out)
+        else:
+            assert False, type_
+    return new_example_section_data
 
 @lru_cache()
 def normalise_ref(ref):
