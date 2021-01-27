@@ -46,50 +46,10 @@ def find_all_refs(store):
     return frozenset(known_refs), ref_map
 
 
-def paragraph(lines) -> List[Tuple[str, Any]]:
-    """
-    return container of (type, obj)
-    """
-    p = Paragraph.parse_lines(lines)
-    acc = []
-    for c in p.children:
-        if type(c).__name__ == "Directive":
-            if c.role == "math":
-                acc.append(Math(c.value))
-            else:
-                acc.append(c)
-        else:
-            acc.append(c)
-    p.children = acc
-    return p
 
 
-from .gen import P2
+from .gen import P2, paragraphs, paragraph
 
-def paragraphs(lines) -> List[Any]:
-    assert isinstance(lines, list)
-    for l in lines:
-        if isinstance(l, str):
-            assert "\n" not in l
-        else:
-            assert "\n" not in l._line
-    blocks_data = make_block_3(Lines(lines))
-    acc = []
-
-    # blocks_data = t2main("\n".join(lines))
-
-    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-        # pre_blank_lines = block.lines
-        # blank_lines = block.wh
-        # post_black_lines = block.ind
-        if pre_blank_lines:
-            acc.append(paragraph([x._line for x in pre_blank_lines]))
-        ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
-        if post_black_lines:
-            acc.append(paragraph([x._line for x in post_black_lines]))
-        # print(block)
-    return acc
 
 
 from .gen import processed_example_data, get_classes
@@ -345,7 +305,7 @@ def load_one_uningested(
     # TODO: here or maybe somewhere else:
     # see also 3rd item description is improperly deserialised as now it can be a paragraph.
     # Make see Also an auto deserialised object in take2.
-    blob.see_also = [SeeAlsoItem.from_json(x) for x in data.pop("see_also", [])]
+    blob.see_also = old_data.see_also
 
     for k in old_data.slots():
         setattr(blob, k, getattr(old_data, k))
@@ -361,44 +321,43 @@ def load_one_uningested(
         backrefs = []
     blob.backrefs = backrefs
     blob.version = data.pop("version", "")
+    #if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
+    #    for nts, d0 in see_also:
+    #        try:
+    #            d = d0
+    #            for (name, type_or_description) in nts:
+    #                if type_or_description and not d:
+    #                    desc = type_or_description
+    #                    if isinstance(desc, str):
+    #                        desc = [desc]
+    #                    assert isinstance(desc, list)
+    #                    desc = paragraphs(desc)
+    #                    type_ = None
+    #                else:
+    #                    desc = d0
+    #                    type_ = type_or_description
+    #                    assert isinstance(desc, list)
+    #                    desc = paragraphs(desc)
 
-    if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
-        for nts, d0 in see_also:
-            try:
-                d = d0
-                for (name, type_or_description) in nts:
-                    if type_or_description and not d:
-                        desc = type_or_description
-                        if isinstance(desc, str):
-                            desc = [desc]
-                        assert isinstance(desc, list)
-                        desc = paragraphs(desc)
-                        type_ = None
-                    else:
-                        desc = d0
-                        type_ = type_or_description
-                        assert isinstance(desc, list)
-                        desc = paragraphs(desc)
-
-                    sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
-                    blob.see_also.append(sai)
-                    del desc
-                    del type_
-            except Exception as e:
-                raise ValueError(
-                    f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
-                ) from e
+    #                sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
+    #                blob.see_also.append(sai)
+    #                del desc
+    #                del type_
+    #        except Exception as e:
+    #            raise ValueError(
+    #                f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
+    #            ) from e
 
     # see also is one of the few section that is weird, and is now stores in the see_also attribute
     # we replace it by an empty section for now to still find the key in templates, and insert the see_also attribute
     # content.
     blob.content["See Also"] = Section([])
-    assert blob.content["index"] == {}
+    # assert blob.content["index"] == {}
 
     # here as well, we remove index which is not the same structure as other values, and make serialisation more
     # complicated in strongly typed languages.
-    del blob.content["index"]
-    del blob.content["Examples"]
+    #del blob.content["index"]
+    #del blob.content["Examples"]
 
     assert isinstance(blob.see_also, list), f"{blob.see_also=}"
     for l in blob.see_also:
@@ -411,21 +370,23 @@ def load_one_uningested(
     # we also need to move this step at generation time,as we (likely), want to
     # do some local pre-processing of the references to already do some resolutions.
 
-    blob.example_section_data = Section.from_json(blob.example_section_data)
+    blob.example_section_data = blob.example_section_data
 
-
-    try:
-        notes = blob.content["Notes"]
-        if notes:
-            blob.refs.extend(Paragraph.parse_lines(notes).references)
-    except KeyError:
-        pass
+    if "Notes" in blob.content:
+        assert isinstance(blob.content['Notes'], Section)
+    #try:
+    #    notes = blob.content["Notes"]
+    #    if notes:
+    #        blob.refs.extend(Paragraph.parse_lines(notes).references)
+    #except KeyError:
+    #    pass
     for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
         if section in blob.content:
-            if data := blob.content[section]:
-                blob.content[section] = Section(P2(data))
-            else:
-                blob.content[section] = Section()
+            assert isinstance(blob.content[section], Section)
+            #if data := blob.content[section]:
+            #    blob.content[section] = Section(P2(data))
+            #else:
+            #    blob.content[section] = Section()
 
     blob.refs = list(sorted(set(blob.refs)))
     for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
@@ -449,16 +410,16 @@ def load_one_uningested(
 
     for s in sections_:
         if s in blob.content:
-            assert isinstance(blob.content[s], list)
-            new_content = Section()
-            for param, type_, desc in blob.content[s]:
-                assert isinstance(desc, list)
-                blocks = []
-                items = []
-                if desc:
-                    items = P2(desc)
-                new_content.append(Param(param, type_, items))
-            blob.content[s] = new_content
+            assert isinstance(blob.content[s], Section)
+            #new_content = Section()
+            #for param, type_, desc in blob.content[s]:
+            #    assert isinstance(desc, list)
+            #    blocks = []
+            #    items = []
+            #    if desc:
+            #        items = P2(desc)
+            #    new_content.append(Param(param, type_, items))
+            #blob.content[s] = new_content
 
     local_refs: List[str] = []
 
@@ -489,8 +450,12 @@ def load_one_uningested(
             continue
         assert isinstance(v, Section), f"{k} is of type {type(v)}"
 
-    blob.signature = blob.content.pop("Signature")
-    blob.references = blob.content.pop("References")
+    #blob.signature = blob.content.pop("Signature")
+    blob.signature = old_data.signature
+
+
+    #blob.references = blob.content.pop("References")
+    blob.references = old_data.references
     if not isinstance(blob.references, list) and blob.references:
         print(blob.references)
     if isinstance(blob.references, str):

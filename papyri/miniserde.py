@@ -146,7 +146,7 @@ def serialize(instance, annotation):
     except Exception as e:
         raise type(e)(
             f"Error serialising {instance!r}, of type {type(instance)} "
-            "expecting {annotation}, got {type(instance)}"
+            f"expecting {annotation}, got {type(instance)}"
         ) from e
 
 

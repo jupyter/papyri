@@ -26,9 +26,63 @@ from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
 from .take2 import Code, Fig, Section, Text
+from .take2 import make_block_3
+from .take2 import (
+    Lines,
+    Link,
+    Math,
+    Node,
+    Paragraph,
+    Ref,
+    RefInfo,
+    Section,
+    SeeAlsoItem,
+    Directive,
+)
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 
+def paragraph(lines) -> List[Tuple[str, Any]]:
+    """
+    return container of (type, obj)
+    """
+    p = Paragraph.parse_lines(lines)
+    acc = []
+    for c in p.children:
+        if type(c).__name__ == "Directive":
+            if c.role == "math":
+                acc.append(Math(c.value))
+            else:
+                acc.append(c)
+        else:
+            acc.append(c)
+    p.children = acc
+    return p
+
+def paragraphs(lines) -> List[Any]:
+    assert isinstance(lines, list)
+    for l in lines:
+        if isinstance(l, str):
+            assert "\n" not in l
+        else:
+            assert "\n" not in l._line
+    blocks_data = make_block_3(Lines(lines))
+    acc = []
+
+    # blocks_data = t2main("\n".join(lines))
+
+    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+    for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+        # pre_blank_lines = block.lines
+        # blank_lines = block.wh
+        # post_black_lines = block.ind
+        if pre_blank_lines:
+            acc.append(paragraph([x._line for x in pre_blank_lines]))
+        ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
+        if post_black_lines:
+            acc.append(paragraph([x._line for x in post_black_lines]))
+        # print(block)
+    return acc
 
 def parse_script(script, ns=None, infer=None, prev=""):
     """
@@ -523,7 +577,9 @@ class Collector:
         return self.obj
 
 
-class DocBlob:
+from .take2 import Node
+
+class DocBlob(Node):
     """
     An object containing information about the documentation of an arbitrary object.
 
@@ -553,14 +609,18 @@ class DocBlob:
         "index",
     ]  # List of sections in order
 
-    _content: dict
-    refs: list
-    ordered_sections: list
+    _content: Dict[str, Optional[Section]]
+    refs: List[str]
+    ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
     item_type: Optional[str]
-    aliases: dict
+    aliases: List[str]
     example_section_data: Section
+    see_also: List[SeeAlsoItem]  # see also data
+    signature = Optional[str]
+    references: Optional[List[str]]
+    signature: Optional[str]
 
     __slots__ = (
         "_content",
@@ -571,6 +631,8 @@ class DocBlob:
         "item_line",
         "item_type",
         "aliases",
+        "see_also",
+        "references",
         "logo",
     )
 
@@ -628,53 +690,53 @@ class DocBlob:
         }
         self._content = new
 
-    def to_json(self):
-
-        res = {
-            k: getattr(self, k, "")
-            for k in self.slots()
-            if k not in {"example_section_data"}
-        }
-        assert not hasattr(self, "see_also")
-        res["example_section_data"] = self.example_section_data.to_json()
-
-        return res
-
-    @classmethod
-    def from_json(cls, obj):
-        new_doc_blob = cls()
-        for k, v in obj.items():
-            setattr(new_doc_blob, k, v)
-        if new_doc_blob._content is None:
-            new_doc_blob._content = {}
-
-        new_doc_blob._content["Parameters"] = [
-            Parameter(a, b, c)
-            for (a, b, c) in new_doc_blob._content.get("Parameters", [])
-        ]
-
-        for it in (
-            "Returns",
-            "Yields",
-            "Extended Summary",
-            "Receives",
-            "Other Parameters",
-            "Raises",
-            "Warns",
-            "Warnings",
-            "See Also",
-            "Notes",
-            "References",
-            "Examples",
-            "Attributes",
-            "Methods",
-        ):
-            if it not in new_doc_blob._content:
-                new_doc_blob._content[it] = []
-        for it in ("index",):
-            if it not in new_doc_blob._content:
-                new_doc_blob._content[it] = {}
-        return new_doc_blob
+#    def to_json(self):
+#
+#        res = {
+#            k: getattr(self, k, "")
+#            for k in self.slots()
+#            if k not in {"example_section_data"}
+#        }
+#        assert not hasattr(self, "see_also")
+#        res["example_section_data"] = self.example_section_data.to_json()
+#
+#        return res
+#
+#    @classmethod
+#    def from_json(cls, obj):
+#        new_doc_blob = cls()
+#        for k, v in obj.items():
+#            setattr(new_doc_blob, k, v)
+#        if new_doc_blob._content is None:
+#            new_doc_blob._content = {}
+#
+#        new_doc_blob._content["Parameters"] = [
+#            Parameter(a, b, c)
+#            for (a, b, c) in new_doc_blob._content.get("Parameters", [])
+#        ]
+#
+#        for it in (
+#            "Returns",
+#            "Yields",
+#            "Extended Summary",
+#            "Receives",
+#            "Other Parameters",
+#            "Raises",
+#            "Warns",
+#            "Warnings",
+#            "See Also",
+#            "Notes",
+#            "References",
+#            "Examples",
+#            "Attributes",
+#            "Methods",
+#        ):
+#            if it not in new_doc_blob._content:
+#                new_doc_blob._content[it] = []
+#        for it in ("index",):
+#            if it not in new_doc_blob._content:
+#                new_doc_blob._content[it] = {}
+#        return new_doc_blob
 
 
 class Gen:
@@ -932,6 +994,92 @@ class Gen:
                             target_item, ndoc, infer, False, qa, config=module_conf
                         )
                 doc_blob.aliases = collector.aliases[qa]
+
+                # processing....
+                doc_blob.signature = doc_blob.content.pop("Signature")
+
+                for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
+                    if section in doc_blob.content:
+                        if data := doc_blob.content[section]:
+                            doc_blob.content[section] = Section(P2(data))
+                        else:
+                            doc_blob.content[section] = Section()
+
+                doc_blob.references = doc_blob.content.pop("References")
+                if isinstance(doc_blob.references, str):
+                    if doc_blob.references == "":
+                        doc_blob.references = None
+                    else:
+                        doc_blob.references = list(blob.references)
+                assert isinstance(doc_blob.references, list) or doc_blob.references is None
+                del doc_blob.content["Examples"]
+                del doc_blob.content["index"]
+                sections_ = [
+                    "Parameters",
+                    "Returns",
+                    "Raises",
+                    "Yields",
+                    "Attributes",
+                    "Other Parameters",
+                    "Warns",
+                    ##"Warnings",
+                    "Methods",
+                    # "Summary",
+                    "Receives",
+                ]
+                from .take2 import Param
+                #        new_doc_blob._content["Parameters"] = [
+                #            Parameter(a, b, c)
+                #            for (a, b, c) in new_doc_blob._content.get("Parameters", [])
+                #        ]
+
+                for s in sections_:
+                    if s in doc_blob.content:
+                        assert isinstance(doc_blob.content[s], list), f"{s}, {doc_blob.content[s]} "
+                        new_content = Section()
+                        for param, type_, desc in doc_blob.content[s]:
+                            assert isinstance(desc, list)
+                            blocks = []
+                            items = []
+                            if desc:
+                                items = P2(desc)
+                            new_content.append(Param(param, type_, items))
+                        doc_blob.content[s] = new_content
+
+                doc_blob.see_also = []
+                if (see_also := doc_blob.content.get("See Also", None)) :
+                    for nts, d0 in see_also:
+                        try:
+                            d = d0
+                            for (name, type_or_description) in nts:
+                                if type_or_description and not d:
+                                    desc = type_or_description
+                                    if isinstance(desc, str):
+                                        desc = [desc]
+                                    assert isinstance(desc, list)
+                                    desc = paragraphs(desc)
+                                    type_ = None
+                                else:
+                                    desc = d0
+                                    type_ = type_or_description
+                                    assert isinstance(desc, list)
+                                    desc = paragraphs(desc)
+
+                                sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
+                                doc_blob.see_also.append(sai)
+                                del desc
+                                del type_
+                        except Exception as e:
+                            raise ValueError(
+                                f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
+                            ) from e
+                del doc_blob.content['See Also']
+
+
+                for k,v in doc_blob.content.items():
+                    assert isinstance(v, Section), f"{k} is not a section {v}"
+                # end processing
+
                 self.put(qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(name, data)
