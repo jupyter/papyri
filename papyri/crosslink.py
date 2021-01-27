@@ -24,6 +24,7 @@ from .take2 import (
     Directive,
 )
 from .take2 import make_block_3
+from .take2 import Param
 from .utils import progress
 
 warnings.simplefilter("ignore", UserWarning)
@@ -147,6 +148,7 @@ class IngestedBlobs(Node):
         }
         self._content = new
 
+    @profile
     def process(self, qa, known_refs, verbose=True):
         local_refs = []
         sections_ = [
@@ -170,7 +172,6 @@ class IngestedBlobs(Node):
             #'Examples'
         ]
         for s in sections_:
-            from .take2 import Param
 
             local_refs = local_refs + [
                 [u.strip() for u in x[0].split(",")]
@@ -290,7 +291,7 @@ def resolve_(
         return RefInfo(None, None, "exists", attempts[0])
     return RefInfo(None, None, "missing", ref)
 
-
+@profile
 def load_one_uningested(
     bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs
 ) -> IngestedBlobs:
@@ -310,10 +311,6 @@ def load_one_uningested(
     for k in old_data.slots():
         setattr(blob, k, getattr(old_data, k))
 
-    # blob = IngestedBlobs.from_json(data, rehydrate=False)
-    # blob._parsed_data = data.pop("_parsed_data")
-    data.pop("_parsed_data", None)
-    data.pop("example_section_data", None)
     blob.refs = data.pop("refs", [])
     if bytes2_ is not None:
         backrefs = json.loads(bytes2_)
@@ -321,77 +318,10 @@ def load_one_uningested(
         backrefs = []
     blob.backrefs = backrefs
     blob.version = data.pop("version", "")
-    #if (see_also := blob.content.get("See Also", None)) and not blob.see_also:
-    #    for nts, d0 in see_also:
-    #        try:
-    #            d = d0
-    #            for (name, type_or_description) in nts:
-    #                if type_or_description and not d:
-    #                    desc = type_or_description
-    #                    if isinstance(desc, str):
-    #                        desc = [desc]
-    #                    assert isinstance(desc, list)
-    #                    desc = paragraphs(desc)
-    #                    type_ = None
-    #                else:
-    #                    desc = d0
-    #                    type_ = type_or_description
-    #                    assert isinstance(desc, list)
-    #                    desc = paragraphs(desc)
 
-    #                sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
-    #                blob.see_also.append(sai)
-    #                del desc
-    #                del type_
-    #        except Exception as e:
-    #            raise ValueError(
-    #                f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
-    #            ) from e
-
-    # see also is one of the few section that is weird, and is now stores in the see_also attribute
-    # we replace it by an empty section for now to still find the key in templates, and insert the see_also attribute
-    # content.
-    blob.content["See Also"] = Section([])
-    # assert blob.content["index"] == {}
-
-    # here as well, we remove index which is not the same structure as other values, and make serialisation more
-    # complicated in strongly typed languages.
-    #del blob.content["index"]
-    #del blob.content["Examples"]
-
-    assert isinstance(blob.see_also, list), f"{blob.see_also=}"
-    for l in blob.see_also:
-        assert isinstance(l, SeeAlsoItem), f"{blob.see_also=}"
     blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.name))
-
-    # here we parse the example_section_data text paragraph into their
-    # detailed representation of tokens this will simplify finding references
-    # at ingestion time.
-    # we also need to move this step at generation time,as we (likely), want to
-    # do some local pre-processing of the references to already do some resolutions.
-
     blob.example_section_data = blob.example_section_data
-
-    if "Notes" in blob.content:
-        assert isinstance(blob.content['Notes'], Section)
-    #try:
-    #    notes = blob.content["Notes"]
-    #    if notes:
-    #        blob.refs.extend(Paragraph.parse_lines(notes).references)
-    #except KeyError:
-    #    pass
-    for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
-        if section in blob.content:
-            assert isinstance(blob.content[section], Section)
-            #if data := blob.content[section]:
-            #    blob.content[section] = Section(P2(data))
-            #else:
-            #    blob.content[section] = Section()
-
     blob.refs = list(sorted(set(blob.refs)))
-    for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
-        if (data := blob.content.get(section, None)) is not None:
-            assert isinstance(data, Section), f"{data} {section}"
 
     sections_ = [
         "Parameters",
@@ -406,25 +336,11 @@ def load_one_uningested(
         # "Summary",
         "Receives",
     ]
-    from .take2 import Param
 
-    for s in sections_:
-        if s in blob.content:
-            assert isinstance(blob.content[s], Section)
-            #new_content = Section()
-            #for param, type_, desc in blob.content[s]:
-            #    assert isinstance(desc, list)
-            #    blocks = []
-            #    items = []
-            #    if desc:
-            #        items = P2(desc)
-            #    new_content.append(Param(param, type_, items))
-            #blob.content[s] = new_content
 
     local_refs: List[str] = []
 
     for s in sections_:
-        from .take2 import Param
 
         local_refs = local_refs + [
             [u.strip() for u in x[0].split(",")]
@@ -441,33 +357,6 @@ def load_one_uningested(
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
         assert section in blob.content
         blob.content[section] = visitor.visit(blob.content[section])
-
-    for k, v in blob.content.items():
-        if k in ["References"]:
-            if v:
-                pass
-        if k in ["Signature", "References", "Examples"]:
-            continue
-        assert isinstance(v, Section), f"{k} is of type {type(v)}"
-
-    #blob.signature = blob.content.pop("Signature")
-    blob.signature = old_data.signature
-
-
-    #blob.references = blob.content.pop("References")
-    blob.references = old_data.references
-    if not isinstance(blob.references, list) and blob.references:
-        print(blob.references)
-    if isinstance(blob.references, str):
-        if blob.references == "":
-            blob.references = None
-        else:
-            blob.references = list(blob.references)
-
-    del blob.content["See Also"]
-
-    for k, v in blob.content.items():
-        assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
 
     blob.process(qa, known_refs=known_refs, verbose=False)
 

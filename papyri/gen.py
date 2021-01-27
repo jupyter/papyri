@@ -645,6 +645,8 @@ class DocBlob(Node):
             "item_file",
             "item_line",
             "item_type",
+            "signature",
+            "references",
             "aliases",
         ]
 
