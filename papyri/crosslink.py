@@ -1,33 +1,20 @@
 from __future__ import annotations
+
+import builtins
 import json
 import warnings
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
-from typing import Any, List, Optional, Tuple, Dict, Union, FrozenSet
 from glob import escape as ge
-import builtins
-
-from functools import lru_cache
+from pathlib import Path
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple, Union
 
 from there import print
 
-from .stores import Store
 from .config import ingest_dir
-from .gen import (
-    DocBlob,
-    normalise_ref,
-)
-from .take2 import (
-    Lines,
-    Link,
-    Node,
-    RefInfo,
-    Section,
-    SeeAlsoItem,
-    Directive,
-    Param,
-)
+from .gen import DocBlob, normalise_ref
+from .stores import Store
+from .take2 import Directive, Lines, Link, Node, Param, RefInfo, Section, SeeAlsoItem
 from .utils import progress
 
 warnings.simplefilter("ignore", UserWarning)
@@ -48,13 +35,6 @@ def find_all_refs(store):
         known_refs.append(r)
         ref_map[r.path] = r
     return frozenset(known_refs), ref_map
-
-
-
-
-
-
-
 
 
 @dataclass
@@ -204,7 +184,6 @@ class IngestedBlobs(Node):
         return inst
 
 
-
 @lru_cache
 def _into(
     known_refs: List[Union[RefInfo, str]]
@@ -212,8 +191,6 @@ def _into(
     assert isinstance(known_refs, frozenset)
     k_path_map = frozenset({k.path for k in known_refs})
     return k_path_map
-
-
 
 
 @lru_cache
@@ -284,6 +261,7 @@ def resolve_(
         return RefInfo(None, None, "exists", attempts[0])
     return RefInfo(None, None, "missing", ref)
 
+
 def load_one_uningested(
     bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs
 ) -> IngestedBlobs:
@@ -328,7 +306,6 @@ def load_one_uningested(
         # "Summary",
         "Receives",
     ]
-
 
     local_refs: List[str] = []
 
@@ -431,11 +408,11 @@ class DirectiveVisiter(TreeReplacer):
                 "class",
                 "term",
                 "exc",
-                "rc" # matplotlib
+                "rc",  # matplotlib
             ):
                 print(directive.role)
             return [directive]
-        if directive.role not in ['any', None]:
+        if directive.role not in ["any", None]:
             loc = frozenset()
         else:
             loc = self.local_refs

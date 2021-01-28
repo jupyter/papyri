@@ -1,6 +1,6 @@
 import json
-import random
 import os
+import random
 from collections import OrderedDict, defaultdict
 from pathlib import Path
 
@@ -14,14 +14,14 @@ from .config import html_dir, ingest_dir
 from .crosslink import (
     IngestedBlobs,
     RefInfo,
+    find_all_refs,
     load_one,
     paragraph,
     resolve_,
 )
 from .stores import Store
-from .utils import progress
-from .crosslink import find_all_refs
 from .take2 import Link, RefInfo
+from .utils import progress
 
 
 def url(info):

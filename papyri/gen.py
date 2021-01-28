@@ -4,9 +4,6 @@ import inspect
 import io
 import json
 import time
-from pygments.formatters import HtmlFormatter
-from pygments.lexers import PythonLexer
-from pygments import lex
 from collections import defaultdict
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
@@ -18,6 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import jedi
 from numpydoc.docscrape import Parameter
+from pygments import lex
+from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 from rich.progress import BarColumn, Progress, ProgressColumn
 from rich.progress import Text as RichText
@@ -25,9 +24,10 @@ from rich.progress import TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
-from .take2 import Code, Fig, Section, Text
-from .take2 import make_block_3
 from .take2 import (
+    Code,
+    Directive,
+    Fig,
     Lines,
     Link,
     Math,
@@ -37,10 +37,12 @@ from .take2 import (
     RefInfo,
     Section,
     SeeAlsoItem,
-    Directive,
+    Text,
+    make_block_3,
 )
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
+
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
     """
@@ -58,6 +60,7 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
             acc.append(c)
     p.children = acc
     return p
+
 
 def paragraphs(lines) -> List[Any]:
     assert isinstance(lines, list)
@@ -83,6 +86,7 @@ def paragraphs(lines) -> List[Any]:
             acc.append(paragraph([x._line for x in post_black_lines]))
         # print(block)
     return acc
+
 
 def parse_script(script, ns=None, infer=None, prev=""):
     """
@@ -281,6 +285,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
         plt.close("all")
     return processed_example_data(example_section_data, qa), figs
 
+
 from .take2 import main as t2main
 
 
@@ -290,6 +295,7 @@ def get_classes(code):
     classes = [FMT.ttype2class.get(x) for x, y in lex(code, PythonLexer())]
     classes = [c if c is not None else "" for c in classes]
     return classes
+
 
 def P2(lines) -> List[Node]:
     assert isinstance(lines, list)
@@ -305,6 +311,7 @@ def P2(lines) -> List[Node]:
     for block in blocks_data:
         assert not block.__class__.__name__ == "Block"
     return blocks_data
+
 
 def processed_example_data(example_section_data, qa):
     """this should be no-op on already ingested"""
@@ -327,6 +334,7 @@ def processed_example_data(example_section_data, qa):
         if type_ != "Text":
             new_example_section_data.append(in_out)
     return new_example_section_data
+
 
 @lru_cache()
 def normalise_ref(ref):
@@ -574,6 +582,7 @@ class Collector:
 
 from .take2 import Node
 
+
 class DocBlob(Node):
     """
     An object containing information about the documentation of an arbitrary object.
@@ -686,6 +695,7 @@ class DocBlob(Node):
             "index",
         }
         self._content = new
+
 
 #    def to_json(self):
 #
@@ -929,7 +939,7 @@ class Gen:
                 else:
                     print("differs: {item} != {other}")
 
-        for target in module_conf.get('exclude',[]):
+        for target in module_conf.get("exclude", []):
             print("exclude tgt:", target)
             del collected[target]
         # p = nullcontext
@@ -1013,7 +1023,9 @@ class Gen:
                         doc_blob.references = None
                     else:
                         doc_blob.references = list(blob.references)
-                assert isinstance(doc_blob.references, list) or doc_blob.references is None
+                assert (
+                    isinstance(doc_blob.references, list) or doc_blob.references is None
+                )
                 del doc_blob.content["Examples"]
                 del doc_blob.content["index"]
                 sections_ = [
@@ -1030,6 +1042,7 @@ class Gen:
                     "Receives",
                 ]
                 from .take2 import Param
+
                 #        new_doc_blob._content["Parameters"] = [
                 #            Parameter(a, b, c)
                 #            for (a, b, c) in new_doc_blob._content.get("Parameters", [])
@@ -1037,7 +1050,9 @@ class Gen:
 
                 for s in sections_:
                     if s in doc_blob.content:
-                        assert isinstance(doc_blob.content[s], list), f"{s}, {doc_blob.content[s]} "
+                        assert isinstance(
+                            doc_blob.content[s], list
+                        ), f"{s}, {doc_blob.content[s]} "
                         new_content = Section()
                         for param, type_, desc in doc_blob.content[s]:
                             assert isinstance(desc, list)
@@ -1075,10 +1090,9 @@ class Gen:
                             raise ValueError(
                                 f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
                             ) from e
-                del doc_blob.content['See Also']
+                del doc_blob.content["See Also"]
 
-
-                for k,v in doc_blob.content.items():
+                for k, v in doc_blob.content.items():
                     assert isinstance(v, Section), f"{k} is not a section {v}"
                 # end processing
 

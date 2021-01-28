@@ -77,7 +77,7 @@ BOLD = lambda x: "\033[1m" + x + "\033[0m"
 UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 
-from .miniserde import serialize, deserialize, get_type_hints
+from .miniserde import deserialize, get_type_hints, serialize
 
 
 class Base:

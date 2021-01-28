@@ -24,34 +24,29 @@
 Urwid tour.  Shows many of the standard widget types and features.
 """
 
-from papyri.crosslink import load_one
-
 import urwid
 import urwid.raw_display
 import urwid.web_display
-
-from urwid.canvas import apply_text_layout
-from urwid.canvas import CompositeCanvas
-
+from urwid.canvas import CompositeCanvas, apply_text_layout
 from urwid.command_map import (
-    command_map,
-    CURSOR_LEFT,
-    CURSOR_RIGHT,
-    CURSOR_UP,
     CURSOR_DOWN,
+    CURSOR_LEFT,
     CURSOR_MAX_LEFT,
     CURSOR_MAX_RIGHT,
+    CURSOR_RIGHT,
+    CURSOR_UP,
+    command_map,
 )
 
+from papyri.crosslink import load_one
 
 # Text alignment modes
 LEFT = "left"
 RIGHT = "right"
 CENTER = "center"
 
-from urwid.widget import LEFT, SPACE
-
 from urwid import Text
+from urwid.widget import LEFT, SPACE
 
 
 class Link:
@@ -206,7 +201,7 @@ def main(ex):
 
         def render_Directive(self, d):
             cont = "".join(d.value)
-            if d.role == 'math':
+            if d.role == "math":
                 from flatlatex import converter
 
                 c = converter()
@@ -234,9 +229,12 @@ def main(ex):
 
             elif directive.directive_name == "math":
                 from flatlatex import converter
+
                 c = converter()
                 assert not directive.inner
-                return urwid.Padding(urwid.Text(('math',c.convert(' '.join(directive.args0)))), left=2)
+                return urwid.Padding(
+                    urwid.Text(("math", c.convert(" ".join(directive.args0)))), left=2
+                )
             inn = [
                 blank,
                 Text(
@@ -252,7 +250,13 @@ def main(ex):
             return urwid.Pile(
                 [
                     TextWithLink(
-                        [Link("link" if sa.name.exists else "link-broken", sa.name.name, lambda: self.cb(sa.name.ref))]
+                        [
+                            Link(
+                                "link" if sa.name.exists else "link-broken",
+                                sa.name.name,
+                                lambda: self.cb(sa.name.ref),
+                            )
+                        ]
                     ),
                     urwid.Padding(
                         urwid.Pile([self.render(x) for x in sa.descriptions]), left=2
@@ -325,7 +329,7 @@ def main(ex):
                     ">>>",
                     lambda: self.cb("likely copy content to clipboard"),
                 )
-                yield (None, ' ')
+                yield (None, " ")
                 for txt, ref, css in entries:
                     if txt == "\n":
                         yield (None, "\n")
@@ -426,6 +430,7 @@ def main(ex):
                 frame.footer = urwid.AttrWrap(
                     urwid.Text(["Enter ?...: ", value]), "header"
                 )
+
             return callback
 
         return doc
@@ -474,7 +479,7 @@ def main(ex):
         ("buttn", "black", "dark cyan"),
         ("buttnf", "white", "dark blue", "bold"),
         ("verbatim", "brown", "", "bold"),
-        #("link", "dark red,bold", "default", ("standout", "underline")),
+        # ("link", "dark red,bold", "default", ("standout", "underline")),
         ("link", "dark green", "", "bold"),
         ("link", "dark green", "", "bold"),
         ("link-broken", "dark red,strikethrough", "", "bold"),
@@ -487,14 +492,14 @@ def main(ex):
         ("math", "dark magenta,italics", "", "bold"),
         # pygments
         ("pyg-o", "dark blue", "", "bold"),  # operator (+, .)
-        ("pyg-mi", "dark red", "", "bold"),  # number literal 12, 55 
+        ("pyg-mi", "dark red", "", "bold"),  # number literal 12, 55
         ("pyg-kc", "dark green", "", "bold"),
         ("pyg-nb", "white", "", "bold"),
-        ("pyg-kn", "dark green", "", "bold"), # keyword import
+        ("pyg-kn", "dark green", "", "bold"),  # keyword import
         ("pyg-nn", "dark blue", "", "bold"),  # name
-        ("pyg-k", "dark green", "", "bold"), # keyword as
-        ("pyg-s2", "dark green", "", "bold"), # strings, like "this is a string s2"
-        ("pyg-sa", "dark green", "", "bold"), # string brefixes like b"", u"" r""
+        ("pyg-k", "dark green", "", "bold"),  # keyword as
+        ("pyg-s2", "dark green", "", "bold"),  # strings, like "this is a string s2"
+        ("pyg-sa", "dark green", "", "bold"),  # string brefixes like b"", u"" r""
     ]
 
     # use appropriate Screen class
