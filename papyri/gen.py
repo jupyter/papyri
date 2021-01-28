@@ -622,7 +622,7 @@ class DocBlob(Node):
     aliases: List[str]
     example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
-    signature = Optional[str]
+    signature: Optional[str]
     references: Optional[List[str]]
 
     __slots__ = (
