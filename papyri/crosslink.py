@@ -4,27 +4,30 @@ import warnings
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Dict, Union, FrozenSet
+from glob import escape as ge
+import builtins
+
+from functools import lru_cache
 
 from there import print
 
 from .stores import Store
 from .config import ingest_dir
-from .gen import DocBlob, normalise_ref
+from .gen import (
+    DocBlob,
+    normalise_ref,
+)
 from .take2 import (
     Lines,
     Link,
-    Math,
     Node,
-    Paragraph,
-    Ref,
     RefInfo,
     Section,
     SeeAlsoItem,
     Directive,
+    Param,
 )
-from .take2 import make_block_3
-from .take2 import Param
 from .utils import progress
 
 warnings.simplefilter("ignore", UserWarning)
@@ -49,16 +52,9 @@ def find_all_refs(store):
 
 
 
-from .gen import P2, paragraphs, paragraph
 
 
 
-from .gen import processed_example_data, get_classes
-
-
-
-from .take2 import Node
-from typing import Dict
 
 
 @dataclass
@@ -98,6 +94,7 @@ class IngestedBlobs(Node):
     __isfrozen = False
 
     def __init__(self, *args, **kwargs):
+        super().__init__()
         self.backrefs = []
         self._content = None
         self.example_section_data = None
@@ -207,8 +204,6 @@ class IngestedBlobs(Node):
         return inst
 
 
-from typing import Union, FrozenSet
-
 
 @lru_cache
 def _into(
@@ -219,7 +214,6 @@ def _into(
     return k_path_map
 
 
-from functools import lru_cache
 
 
 @lru_cache
@@ -558,7 +552,6 @@ class Ingester:
                         continue
                     if ref_root == "builtins":
                         continue
-                    from glob import escape as ge
 
                     existing_locations = list(
                         (self.ingest_dir / ref_root).glob(
@@ -717,7 +710,6 @@ def main(path, check):
 def relink():
     store = Store(ingest_dir)
     known_refs, _ = find_all_refs(store)
-    import builtins
 
     builtins.print(
         "Relinking is safe to cancel, but some back references may be broken...."

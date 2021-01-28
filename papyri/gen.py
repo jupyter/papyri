@@ -221,6 +221,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                             except Exception:
                                 ce_status = "exception_in_exec"
                                 if config.get("exec_failure", "") != "fallback":
+                                    print(config)
                                     raise
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                         assert (len(fig_managers)) in (0, 1, 2), fig_managers
@@ -323,7 +324,7 @@ def processed_example_data(example_section_data, qa):
                 text = "".join([x for x, y in in_])
                 classes = get_classes(text)
                 in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
-        if type_ is not "Text":
+        if type_ != "Text":
             new_example_section_data.append(in_out)
     return new_example_section_data
 
@@ -369,17 +370,11 @@ def gen_main(names, infer, exec_):
     """
     import toml
 
-    conffile = Path("papyri.toml")
-    if conffile.exists():
-        conf = toml.loads(conffile.read_text())
-    else:
-        conf = {}
+    conffile = Path("~/.papyri/papyri.toml").expanduser()
+    conf = toml.loads(conffile.read_text())
 
     global_conffile = Path("~/.papyri/config.toml").expanduser()
-    if global_conffile.exists():
-        global_conf = toml.loads(global_conffile.read_text())
-    else:
-        global_conf = {}
+    global_conf = toml.loads(global_conffile.read_text())
 
     tp = global_conf.get("global", {}).get("target_path", ".")
 
