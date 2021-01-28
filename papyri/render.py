@@ -15,13 +15,13 @@ from pygments.formatters import HtmlFormatter
 from quart_trio import QuartTrio
 from there import print
 
-from papyri.crosslink import IngestedBlobs
+from .crosslink import IngestedBlobs
 
 from .config import html_dir, ingest_dir
-from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one, resolve_
+from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
 from .gen import paragraph
 from .stores import Store
-from .take2 import Link, RefInfo
+from .take2 import RefInfo
 from .utils import progress
 
 
@@ -82,7 +82,7 @@ def root():
     for f in filenames:
         sub = tree
         parts = f.split(".")
-        for i, part in enumerate(parts):
+        for part in parts:
             if part not in sub:
                 sub[part] = {}
             sub = sub[part]
@@ -107,7 +107,7 @@ async def gallery(module, store, version=None):
         for k in [
             u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
         ]:
-            module, v, _, path = target_path.path.parts[-4:]
+            module, v, _, _path = target_path.path.parts[-4:]
 
             # module, filename, link
             impath = f"/p/{module}/{v}/img/{k}"
@@ -176,16 +176,13 @@ def compute_siblings(ref, family):
     for i, part in enumerate(parts):
         sib = list(
             sorted(
-                set(
-                    [
+                {
                         ".".join(s.split(".")[: i + 1])
                         for s in family
                         if s.startswith(cpath) and "." in s
-                    ]
-                ),
+                },
             )
         )
-        print("SIBN for i", i, cpath, ":", sib[:20])
         siblings[part] = [(s, s.split(".")[-1]) for s in sib]
         cpath += part + "."
     if not siblings["+"]:
