@@ -177,9 +177,9 @@ def compute_siblings(ref, family):
         sib = list(
             sorted(
                 {
-                        ".".join(s.split(".")[: i + 1])
-                        for s in family
-                        if s.startswith(cpath) and "." in s
+                    ".".join(s.split(".")[: i + 1])
+                    for s in family
+                    if s.startswith(cpath) and "." in s
                 },
             )
         )

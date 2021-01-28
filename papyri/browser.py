@@ -163,8 +163,6 @@ def main(qualname: str):
     if not isinstance(qualname, str):
         qualname = qualname.__module__ + "." + qualname.__qualname__
 
-    import os.path
-    from pathlib import Path
 
     # import json
     # data = json.loads(file_path.read_text())
@@ -383,7 +381,6 @@ def main(qualname: str):
             doc.append(Text([("signature", blob.signature)]))
 
         for k, v in blob.content.items():
-            from papyri import take2
 
             if not v.empty():
                 if k not in ["Summary", "Extended Summary"]:

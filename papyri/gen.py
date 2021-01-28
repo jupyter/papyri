@@ -14,7 +14,6 @@ from types import FunctionType, ModuleType
 from typing import Any, Dict, List, Optional, Tuple
 
 import jedi
-from numpydoc.docscrape import Parameter
 from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -26,15 +25,12 @@ from velin.examples_section_utils import InOut, splitblank, splitcode
 
 from .take2 import (
     Code,
-    Directive,
     Fig,
     Lines,
-    Link,
     Math,
     Node,
     Paragraph,
     Ref,
-    RefInfo,
     Section,
     SeeAlsoItem,
     Text,
@@ -1058,7 +1054,6 @@ class Gen:
                         new_content = Section()
                         for param, type_, desc in doc_blob.content[s]:
                             assert isinstance(desc, list)
-                            blocks: List[Any] = []
                             items = []
                             if desc:
                                 items = P2(desc)
