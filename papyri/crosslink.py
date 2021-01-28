@@ -330,9 +330,10 @@ def load_one_uningested(
     blob.process(qa, known_refs=known_refs, verbose=False)
 
     if blob.refs:
-        new_refs = []
+        new_refs: List[Link] = []
         kind = "exists"
         for value in blob.refs:
+            assert isinstance(blob.refs, str)
             r = resolve_(qa, known_refs, frozenset(), value)
             new_refs.append(Link(value, r, kind, r.kind != "missing"))
 
@@ -412,7 +413,7 @@ class DirectiveVisiter(TreeReplacer):
             ):
                 print(directive.role)
             return [directive]
-        loc: FrozenSet[RefInfo]
+        loc: FrozenSet[str]
         if directive.role not in ["any", None]:
             loc = frozenset()
         else:
