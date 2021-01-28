@@ -14,7 +14,7 @@ from there import print
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .stores import Store
-from .take2 import Link, Node, Param, RefInfo, Section, SeeAlsoItem, Directive
+from .take2 import Directive, Link, Node, Param, RefInfo, Section, SeeAlsoItem
 from .utils import progress
 
 warnings.simplefilter("ignore", UserWarning)

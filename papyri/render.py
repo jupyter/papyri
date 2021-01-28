@@ -15,8 +15,6 @@ from pygments.formatters import HtmlFormatter
 from quart_trio import QuartTrio
 from there import print
 
-from .crosslink import IngestedBlobs
-
 from .config import html_dir, ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
 from .gen import paragraph

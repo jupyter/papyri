@@ -26,6 +26,7 @@ Urwid tour.  Shows many of the standard widget types and features.
 import urwid
 import urwid.raw_display
 import urwid.web_display
+from urwid import Text
 from urwid.canvas import CompositeCanvas, apply_text_layout
 from urwid.command_map import (
     CURSOR_DOWN,
@@ -36,11 +37,9 @@ from urwid.command_map import (
     CURSOR_UP,
     command_map,
 )
+from urwid.widget import CENTER, LEFT, RIGHT, SPACE
 
 from papyri.crosslink import load_one
-
-from urwid import Text
-from urwid.widget import LEFT, SPACE, RIGHT, CENTER
 
 
 class Link:
@@ -162,7 +161,6 @@ class TextWithLink(urwid.Text):
 def main(qualname: str):
     if not isinstance(qualname, str):
         qualname = qualname.__module__ + "." + qualname.__qualname__
-
 
     # import json
     # data = json.loads(file_path.read_text())
