@@ -1,24 +1,25 @@
+import builtins
 import json
+import operator
 import os
 import random
+import shutil
 from collections import OrderedDict, defaultdict
+from functools import lru_cache
+from glob import escape as ge
 from pathlib import Path
 
+from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
+from pygments.formatters import HtmlFormatter
 from quart_trio import QuartTrio
 from there import print
 
 from papyri.crosslink import IngestedBlobs
 
 from .config import html_dir, ingest_dir
-from .crosslink import (
-    IngestedBlobs,
-    RefInfo,
-    find_all_refs,
-    load_one,
-    paragraph,
-    resolve_,
-)
+from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one, resolve_
+from .gen import paragraph
 from .stores import Store
 from .take2 import Link, RefInfo
 from .utils import progress
@@ -196,7 +197,6 @@ def compute_siblings_II(ref, family):
     parts = ref.split(".") + ["+"]
     siblings = OrderedDict()
     cpath = ""
-    import operator
 
     # TODO: move this at ingestion time for all the non-top-level.
     for i, part in enumerate(parts):
@@ -213,9 +213,6 @@ def compute_siblings_II(ref, family):
     if not siblings["+"]:
         del siblings["+"]
     return siblings
-
-
-from collections import OrderedDict, defaultdict
 
 
 def make_tree(names):
@@ -277,9 +274,6 @@ def cs2(ref, tree, ref_map):
     return siblings
 
 
-from pygments.formatters import HtmlFormatter
-
-
 async def _route(ref, store, version=None, env=None, template=None):
     assert not ref.endswith(".html")
     if env is None:
@@ -315,7 +309,6 @@ async def _route(ref, store, version=None, env=None, template=None):
     if version is not None:
         files = [store / root / version / "module" / f"{ref}.json"]
     else:
-        from glob import escape as ge
 
         files = list((store / root).glob(f"*/module/{ge(ref)}.json"))
     if files and await (file_ := files[0]).exists():
@@ -509,9 +502,6 @@ def render_one(
         raise ValueError("qa=", qa) from e
 
 
-from functools import lru_cache
-
-
 @lru_cache
 def _ascci_env():
     env = Environment(
@@ -524,7 +514,6 @@ def _ascci_env():
     env.globals["paragraph"] = paragraph
     env.globals["unreachable"] = unreachable
     try:
-        from flatlatex import converter
 
         c = converter()
 
@@ -580,7 +569,6 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
 
 
 async def ascii_render(name, store=None):
-    import builtins
 
     builtins.print(await _ascii_render(name, store))
 
@@ -721,6 +709,5 @@ async def main(ascii, html, dry_run):
             module, version, _, name = asset.parts[-4:]
             b = html_dir / "p" / module / version / "img"
             b.mkdir(parents=True, exist_ok=True)
-            import shutil
 
             shutil.copy(asset.path, b / asset.name)
