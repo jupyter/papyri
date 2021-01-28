@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 #
 # Urwid tour.  It slices, it dices..
 #    Copyright (C) 2004-2011  Ian Ward

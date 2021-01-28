@@ -336,7 +336,7 @@ def processed_example_data(example_section_data, qa):
     return new_example_section_data
 
 
-@lru_cache()
+@lru_cache
 def normalise_ref(ref):
     """
     Consistently normalize references.
