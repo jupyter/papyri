@@ -39,13 +39,8 @@ from urwid.command_map import (
 
 from papyri.crosslink import load_one
 
-# Text alignment modes
-LEFT = "left"
-RIGHT = "right"
-CENTER = "center"
-
 from urwid import Text
-from urwid.widget import LEFT, SPACE
+from urwid.widget import LEFT, SPACE, RIGHT, CENTER
 
 
 class Link:
@@ -164,9 +159,9 @@ class TextWithLink(urwid.Text):
         return canv
 
 
-def main(ex):
-    if not isinstance(ex, str):
-        ex = ex.__module__ + "." + ex.__qualname__
+def main(qualname: str):
+    if not isinstance(qualname, str):
+        qualname = qualname.__module__ + "." + qualname.__qualname__
 
     import os.path
     from pathlib import Path
@@ -460,7 +455,7 @@ def main(ex):
         for i in gen_content(blob, frame):
             walk.append(i)
 
-    guess_load(ex)
+    guess_load(qualname)
 
     # header = urwid.AttrWrap(Text("numpy.geomspace"), "header")
 
@@ -526,7 +521,9 @@ def setup():
         return
     import sys
 
+    target: str
     target = sys.argv[1]
+    assert isinstance(target, str)
     main(target)
 
 

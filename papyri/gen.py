@@ -624,13 +624,13 @@ class DocBlob(Node):
     see_also: List[SeeAlsoItem]  # see also data
     signature = Optional[str]
     references: Optional[List[str]]
-    signature: Optional[str]
 
     __slots__ = (
         "_content",
         "example_section_data",
         "refs",
         "ordered_sections",
+        "signature",
         "item_file",
         "item_line",
         "item_type",
@@ -663,6 +663,7 @@ class DocBlob(Node):
         self.item_line = None
         self.item_type = None
         self.aliases = []
+        self.signature = None
 
     @property
     def content(self):
@@ -1022,7 +1023,8 @@ class Gen:
                     if doc_blob.references == "":
                         doc_blob.references = None
                     else:
-                        doc_blob.references = list(blob.references)
+                        assert False
+                        doc_blob.references = list(doc_blob.references)
                 assert (
                     isinstance(doc_blob.references, list) or doc_blob.references is None
                 )
@@ -1056,7 +1058,7 @@ class Gen:
                         new_content = Section()
                         for param, type_, desc in doc_blob.content[s]:
                             assert isinstance(desc, list)
-                            blocks = []
+                            blocks: List[Any] = []
                             items = []
                             if desc:
                                 items = P2(desc)

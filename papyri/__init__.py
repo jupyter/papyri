@@ -186,9 +186,9 @@ def serve():
 @app.command()
 def browse(qualname: str):
 
-    from papyri.browser import main
+    from papyri.browser import main as browse
 
-    main(qualname)
+    browse(qualname)
 
 
 @app.command()

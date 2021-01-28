@@ -703,7 +703,7 @@ async def main(ascii, html, dry_run):
     if not dry_run:
         assets = store.glob("*/*/assets/*")
         for asset in assets:
-            module, version, _, name = asset.parts[-4:]
+            module, version, _, _name = asset.parts[-4:]
             b = html_dir / "p" / module / version / "img"
             b.mkdir(parents=True, exist_ok=True)
 

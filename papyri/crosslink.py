@@ -307,20 +307,20 @@ def load_one_uningested(
         "Receives",
     ]
 
-    local_refs: List[str] = []
+    _local_refs: List[List[str]] = []
 
     for s in sections_:
 
-        local_refs = local_refs + [
+        _local_refs = _local_refs + [
             [u.strip() for u in x[0].split(",")]
             for x in blob.content[s]
             if isinstance(x, Param)
         ]
 
-    def flat(l):
+    def flat(l) -> List[str]:
         return [y for x in l for y in x]
 
-    local_refs = frozenset(flat(local_refs))
+    local_refs: FrozenSet[str] = frozenset(flat(local_refs))
 
     visitor = DirectiveVisiter(qa, frozenset(), local_refs)
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
@@ -412,6 +412,7 @@ class DirectiveVisiter(TreeReplacer):
             ):
                 print(directive.role)
             return [directive]
+        loc: FrozenSet[RefInfo]
         if directive.role not in ["any", None]:
             loc = frozenset()
         else:
