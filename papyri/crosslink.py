@@ -320,7 +320,7 @@ def load_one_uningested(
     def flat(l) -> List[str]:
         return [y for x in l for y in x]
 
-    local_refs: FrozenSet[str] = frozenset(flat(local_refs))
+    local_refs: FrozenSet[str] = frozenset(flat(_local_refs))
 
     visitor = DirectiveVisiter(qa, frozenset(), local_refs)
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
@@ -393,6 +393,22 @@ class DirectiveVisiter(TreeReplacer):
         self.local: List[str] = []
         self.total: List[Tuple[Any, str]] = []
 
+    def replace_BlockDirective(self, block_directive):
+        name = block_directive.directive_name
+        if name not in {
+            "math",
+            "note",
+            "versionadded",
+            "versionchanged",
+            "attribute",
+            "deprecated",
+            "data",
+            "plot",
+            "warning",
+        }:
+            print(repr(name), "         ", self.qa)
+        return [block_directive]
+
     def replace_Directive(self, directive: Directive):
         if (directive.domain is not None) or (
             directive.role not in (None, "mod", "class", "func", "meth", "any")
@@ -409,6 +425,13 @@ class DirectiveVisiter(TreeReplacer):
                 "class",
                 "term",
                 "exc",
+                "obj",
+                "data",
+                "sub",
+                "program",
+                "file",
+                "command",
+                "sup",
                 "rc",  # matplotlib
             ):
                 print(directive.role)

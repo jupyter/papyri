@@ -11,6 +11,7 @@ classifiers = ["License :: OSI Approved :: MIT License"]
 description-file="Readme.md"
 requires-python=">=3.8"
 requires=[
+    "urwid",
     "numpydoc",
     "cachetools",
     "pygments",
