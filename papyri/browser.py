@@ -208,8 +208,8 @@ def main(qualname: str):
 
         def render_Link(self, link):
             if link.reference.kind == "local":
-                return ("link", link.reference.path)
-            return Link("link", link.reference.path, lambda: self.cb(link.reference))
+                return ("link", link.value)
+            return Link("link", link.value, lambda: self.cb(link.reference))
 
         def render_BlockDirective(self, directive):
             if directive.directive_name == "note":

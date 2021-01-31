@@ -620,9 +620,10 @@ class Ingester:
                         ph.write_text(json.dumps(ph_data))
                     else:
                         print(resolved, "not valid reference, skipping.")
-
+            # todo: warning mutation.
             for sa in doc_blob.see_also:
-                r = resolve_(qa, known_ref_info, frozenset(), sa.name.name)
+                rev_aliases = {v:k for k,v in aliases.items()}
+                r = resolve_(qa, known_ref_info, frozenset(), sa.name.name, rev_aliases, rev_aliases)
                 resolved, exists = r.path, r.kind
                 if exists == "exists":
                     sa.name.exists = True
@@ -737,6 +738,7 @@ def relink():
         data = json.loads(meta_path.path.read_text())
         aliases.update(data)
     print(len(aliases))
+    rev_aliases = {v:k for k,v in aliases.items()}
 
     builtins.print(
         "Relinking is safe to cancel, but some back references may be broken...."
@@ -753,6 +755,14 @@ def relink():
         data["backrefs"] = []
         doc_blob = IngestedBlobs.from_json(data)
         doc_blob.process(qa, known_refs, aliases=aliases)
+        
+        for sa in doc_blob.see_also:
+            r = resolve_(qa, known_refs, frozenset(), sa.name.name, rev_aliases=rev_aliases)
+            resolved, exists = r.path, r.kind
+            if exists == "exists":
+                sa.name.exists = True
+                sa.name.ref = resolved
+
         data = doc_blob.to_json()
         data.pop("backrefs")
         item.path.write_text(json.dumps(data, indent=2))
