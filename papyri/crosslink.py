@@ -54,6 +54,7 @@ class IngestedBlobs(Node):
         "signature",
         "references",
         "logo",
+        "qa",
     )
 
     _content: Dict[str, Section]
@@ -70,6 +71,7 @@ class IngestedBlobs(Node):
     references: Optional[List[str]]
     logo: Optional[str]
     backrefs: List[str]
+    qa: str
 
     __isfrozen = False
 
@@ -125,7 +127,7 @@ class IngestedBlobs(Node):
         }
         self._content = new
 
-    def process(self, qa, known_refs, aliases, verbose=True):
+    def process(self, known_refs, aliases, verbose=True):
         local_refs = []
         sections_ = [
             "Parameters",
@@ -162,13 +164,13 @@ class IngestedBlobs(Node):
 
         assert isinstance(known_refs, frozenset)
 
-        visitor = DirectiveVisiter(qa, known_refs, local_refs, aliases)
+        visitor = DirectiveVisiter(self.qa, known_refs, local_refs, aliases)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
-            # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {qa}"
-            print(f"Newly found links: {len(visitor.total)}, {qa}, {visitor.total}")
+            # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {self.qa}"
+            print(f"Newly found links: {len(visitor.total)}, {self.qa}, {visitor.total}")
         self.example_section_data = visitor.visit(self.example_section_data)
 
         for d in self.see_also:
@@ -284,6 +286,7 @@ def load_one_uningested(
     old_data = DocBlob.from_json(data)
 
     blob = IngestedBlobs()
+    blob.qa = qa
     # TODO: here or maybe somewhere else:
     # see also 3rd item description is improperly deserialised as now it can be a paragraph.
     # Make see Also an auto deserialised object in take2.
@@ -338,7 +341,7 @@ def load_one_uningested(
         assert section in blob.content
         blob.content[section] = visitor.visit(blob.content[section])
 
-    blob.process(qa, known_refs=known_refs, aliases=aliases, verbose=False)
+    blob.process(known_refs=known_refs, aliases=aliases, verbose=False)
 
     if blob.refs:
         new_refs: List[Link] = []
@@ -470,7 +473,7 @@ class DirectiveVisiter(TreeReplacer):
 
 
 def load_one(
-    bytes_: bytes, bytes2_: bytes, qa: str, known_refs: FrozenSet[RefInfo] = None
+    bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None
 ) -> IngestedBlobs:
     data = json.loads(bytes_)
     assert "backrefs" not in data
@@ -480,7 +483,7 @@ def load_one(
     # TODO move that one up.
     if known_refs is None:
         known_refs = frozenset()
-    blob.process(qa, known_refs=known_refs, aliases={})
+    blob.process(known_refs=known_refs, aliases={})
     return blob
 
 
@@ -554,7 +557,7 @@ class Ingester:
                 [x[0] for x in doc_blob.content["Parameters"] if x[0]]
                 + [x[0] for x in doc_blob.content["Returns"] if x[0]]
             )
-            doc_blob.process(qa, known_ref_info, verbose=False, aliases=aliases)
+            doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
             doc_blob.logo = logo
             for ref in doc_blob.refs:
                 hash(known_ref_info)
@@ -599,7 +602,6 @@ class Ingester:
                             other_backrefs[resolved] = load_one(
                                 existing_location.read_bytes(),
                                 brdata,
-                                qa=resolved,
                             )
                         except Exception as e:
                             raise type(e)(f"Error in {qa} {existing_location}")
@@ -623,7 +625,7 @@ class Ingester:
             # todo: warning mutation.
             for sa in doc_blob.see_also:
                 rev_aliases = {v:k for k,v in aliases.items()}
-                r = resolve_(qa, known_ref_info, frozenset(), sa.name.name, rev_aliases, rev_aliases)
+                r = resolve_(qa, known_ref_info, frozenset(), sa.name.name, rev_aliases=rev_aliases)
                 resolved, exists = r.path, r.kind
                 if exists == "exists":
                     sa.name.exists = True
@@ -734,10 +736,8 @@ def relink():
     
     aliases:Dict[str, str] = {}
     for meta_path in store.glob('*/*/papyri.json'):
-        print(meta_path)
         data = json.loads(meta_path.path.read_text())
         aliases.update(data)
-    print(len(aliases))
     rev_aliases = {v:k for k,v in aliases.items()}
 
     builtins.print(
@@ -754,7 +754,7 @@ def relink():
         qa = item.path.name[:-5]
         data["backrefs"] = []
         doc_blob = IngestedBlobs.from_json(data)
-        doc_blob.process(qa, known_refs, aliases=aliases)
+        doc_blob.process(known_refs, aliases=aliases)
         
         for sa in doc_blob.see_also:
             r = resolve_(qa, known_refs, frozenset(), sa.name.name, rev_aliases=rev_aliases)
