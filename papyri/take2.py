@@ -1087,7 +1087,7 @@ class BlockDirective(Block):
         l0 = lines[0]
         pred, *postd = l0.split("::")
         # assert pred.startswith(".. ")
-        self.directive_name = pred[3:]
+        self.directive_name = pred[3:].strip()
         self.args0 = postd
         if self.ind:
             # TODO: we may want to call self.ind.dedented() here ?
@@ -1337,7 +1337,16 @@ def deflist_item_pass(block):
 def block_directive_pass(block):
     if not type(block) == Block:
         return [block]
-    if len(block.lines) >= 1 and (block.lines[0].startswith("..")):
+    if len(block.lines) >= 1 and (block.lines[0].startswith(".. ") and  ('::' in block.lines[0])):
+        return [BlockDirective(block.lines, block.wh, block.ind)]
+    return [block]
+
+# TODO Comments
+def block_comment(block):
+    if not type(block) == Block:
+        return [block]
+    if len(block.lines) >= 1 and (block.lines[0].startswith(".. ")):
+        assert not '::' in block.lines[0]
         return [BlockDirective(block.lines, block.wh, block.ind)]
     return [block]
 
