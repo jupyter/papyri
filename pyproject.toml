@@ -23,7 +23,8 @@ requires=[
     "velin", 
     "quart-trio",
     "quart<0.14",
-    "toml"
+    "toml",
+    "flatlatex",
 ]
 
 [tool.flit.scripts]

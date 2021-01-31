@@ -131,6 +131,12 @@ def ingest(paths: List[Path], check: bool = False):
         cr.main(Path(p), check)
     cr.relink()
 
+@app.command()
+def relink():
+    _intro()
+    from . import crosslink as cr
+    cr.relink()
+
 
 @app.command()
 def gen(

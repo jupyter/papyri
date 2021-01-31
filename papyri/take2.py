@@ -1088,12 +1088,26 @@ class BlockDirective(Block):
         pred, *postd = l0.split("::")
         # assert pred.startswith(".. ")
         self.directive_name = pred[3:].strip()
+        if ' ' in self.directive_name:
+            assert False, repr(pred)
         self.args0 = postd
         if self.ind:
-            # TODO: we may want to call self.ind.dedented() here ?
             self.inner = Paragraph.parse_lines([x.text for x in self.ind.dedented()])
         else:
             self.inner = None
+
+
+class Comment(Block):
+    lines: Lines
+    wh: Lines
+    ind: Lines
+
+    def __init__(self, lines=None, wh=None, ind=None):
+        if None in (lines, wh, ind):
+            return
+        self.lines = lines
+        self.wh = wh
+        self.ind = ind
 
 
 class BlockVerbatim(Block):
@@ -1337,7 +1351,7 @@ def deflist_item_pass(block):
 def block_directive_pass(block):
     if not type(block) == Block:
         return [block]
-    if len(block.lines) >= 1 and (block.lines[0].startswith(".. ") and  ('::' in block.lines[0])):
+    if len(block.lines) >= 1 and (block.lines[0].startswith(".. ") and  ('::' in block.lines[0].text)):
         return [BlockDirective(block.lines, block.wh, block.ind)]
     return [block]
 
@@ -1346,7 +1360,7 @@ def block_comment(block):
     if not type(block) == Block:
         return [block]
     if len(block.lines) >= 1 and (block.lines[0].startswith(".. ")):
-        assert not '::' in block.lines[0]
+        assert not '::' in block.lines[0].text
         return [BlockDirective(block.lines, block.wh, block.ind)]
     return [block]
 
