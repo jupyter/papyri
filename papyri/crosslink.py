@@ -333,7 +333,7 @@ def load_one_uningested(
         new_refs: List[Link] = []
         kind = "exists"
         for value in blob.refs:
-            assert isinstance(blob.refs, str)
+            assert isinstance(value, str)
             r = resolve_(qa, known_refs, frozenset(), value)
             new_refs.append(Link(value, r, kind, r.kind != "missing"))
 
