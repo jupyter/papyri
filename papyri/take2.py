@@ -77,7 +77,7 @@ BOLD = lambda x: "\033[1m" + x + "\033[0m"
 UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 
-from .miniserde import deserialize, get_type_hints, serialize
+from papyri.miniserde import deserialize, get_type_hints, serialize
 
 
 class Base:
@@ -1327,7 +1327,7 @@ def deflist_pass(blocks):
             and len(p.children) == 1
         ):
             deflist.append(
-                DefListItem.parse(block.lines.dedented(), block.wh, block.ind)
+                DefListItem.parse(block.lines.dedented(), block.wh, block.ind.dedented())
             )
         else:
             if deflist:
