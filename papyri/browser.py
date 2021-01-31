@@ -160,7 +160,11 @@ class TextWithLink(urwid.Text):
 
 def main(qualname: str):
     if not isinstance(qualname, str):
-        qualname = qualname.__module__ + "." + qualname.__qualname__
+        from types import ModuleType
+        if isinstance(qualname, ModuleType):
+            qualname = qualname.__name__
+        else:
+            qualname = qualname.__module__ + "." + qualname.__qualname__
 
     # import json
     # data = json.loads(file_path.read_text())
