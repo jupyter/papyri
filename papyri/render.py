@@ -100,7 +100,7 @@ async def gallery(module, store, version=None):
         data = json.loads(await target_path.read_text())
         data["backrefs"] = []
         i = IngestedBlobs.from_json(data)
-        i.process(qa=target_path.name[:-5])
+        i.process(frozenset(), {})
 
         for k in [
             u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"

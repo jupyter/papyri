@@ -450,7 +450,7 @@ def main(qualname: str):
     def load(file_path, walk, qa):
         p = file_path
         br = p.parent / (p.stem + ".br")
-        blob = load_one(file_path.read_text(), br.read_text(), qa=qa)
+        blob = load_one(file_path.read_text(), br.read_text())
         for i in gen_content(blob, frame):
             walk.append(i)
 

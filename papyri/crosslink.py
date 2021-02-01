@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 import json
 import warnings
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from glob import escape as ge
@@ -190,9 +191,21 @@ class IngestedBlobs(Node):
 def _into(
     known_refs: List[Union[RefInfo, str]]
 ) -> Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
+
+    _map = defaultdict(lambda:[])
     assert isinstance(known_refs, frozenset)
-    k_path_map = frozenset({k.path for k in known_refs})
-    return k_path_map
+    #k_path_map = frozenset({k.path for k in known_refs})
+    for k in known_refs:
+        _map[k.path].append(k)
+
+    _m2 = {}
+    for k, v in _map.items():
+        cand = list(sorted(v, key=lambda x:x.version))
+        assert len(set(c.module for c in cand)) == 1, cand
+        _m2[k] = cand[-1]
+
+
+    return _m2
 
 
 @lru_cache
@@ -220,7 +233,6 @@ def resolve_(
         assert new_ref not in rev_aliases, 'would loop....'
         # TODOlikely can drop rev_aliases here
         res = resolve_(qa, known_refs, local_refs, new_ref, rev_aliases)
-        print('   ', res)
         return res
 
     assert isinstance(ref, str), ref
@@ -241,14 +253,19 @@ def resolve_(
     if ref in local_refs:
         return RefInfo(None, None, "local", ref)
     if ref in k_path_map:
-        return RefInfo(None, None, "exists", ref)
+        # get the more recent.
+        stuff = {k for k in known_refs if k.path==ref}
+        c2 = list(sorted(stuff, key=lambda x:x.version))[-1]
+        assert isinstance(c2, RefInfo), c2
+        assert k_path_map[ref] == c2
+        return k_path_map[ref]
     else:
         if ref.startswith("."):
             if (found := qa + ref) in k_path_map:
-                return RefInfo(None, None, "exists", found)
+                return k_path_map[found]
             else:
                 root = qa.split(".")[0]
-                sub1 = root_start(root, k_path_map)
+                sub1 = root_start(root, frozenset(k_path_map.keys()))
                 subset = endswith(ref, sub1)
                 if len(subset) == 1:
                     return RefInfo(None, None, "exists", next(iter(subset)))
@@ -265,10 +282,10 @@ def resolve_(
         for i in range(len(parts)):
             attempt = ".".join(parts[:i]) + "." + ref
             if attempt in k_path_map:
-                return RefInfo(None, None, "exists", attempt)
+                return k_path_map[attempt]
 
     q0 = qa.split(".")[0]
-    rs = root_start(q0, k_path_map)
+    rs = root_start(q0,frozenset(k_path_map.keys()))
     attempts = [q for q in rs if (ref in q)]
     if len(attempts) == 1:
         return RefInfo(None, None, "exists", attempts[0])
@@ -425,6 +442,7 @@ class DirectiveVisiter(TreeReplacer):
             "warning",
         }:
             print(repr(name), "         ", self.qa)
+        block_directive.children = [self.visit(c) for c in block_directive.children]
         return [block_directive]
 
     def replace_Directive(self, directive: Directive):

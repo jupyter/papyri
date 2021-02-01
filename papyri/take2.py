@@ -223,6 +223,7 @@ class Link(Node):
     exists: bool
 
     def __init__(self, value=None, reference=None, kind=None, exists=None):
+        assert kind in ('exists',"missing", "local","api" , None), kind
         self.value = value
         self.reference = reference
         if reference is not None:
@@ -1049,6 +1050,7 @@ class BlockDirective(Block):
 
     directive_name: str
     args0: List[str]
+    # TODO : this is likely wrong...
     inner: Optional[Paragraph]
     COLOR = ORANGE
 
@@ -1088,7 +1090,10 @@ class BlockDirective(Block):
         pred, *postd = l0.split("::")
         # assert pred.startswith(".. ")
         self.directive_name = pred[3:].strip()
-        if ' ' in self.directive_name:
+        if pred.startswith('.. |'):
+            # TODO:
+            print('replacement not implemented yet')
+        elif ' ' in self.directive_name:
             assert False, repr(pred)
         self.args0 = postd
         if self.ind:

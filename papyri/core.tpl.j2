@@ -42,10 +42,10 @@
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
             <code><a link href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
-        {%- elif obj.kind in ('exists', ) -%}
-            <code><a link href="{{url(obj.reference)}}{{ext}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
+        {%- elif obj.kind in ('api', 'exists' ) -%}
+            <code><a link href="{{url(obj.reference)}}{{ext}}" class='exists'>{{obj.value}}</a></code>
         {% else %}
-            {{unreachable(obj.__dict__)}}
+            {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
         {%- endif -%}
     {% elif type_ == 'Math' %}
         <span class="tex2jax_process">${{obj.text}}$</span>
@@ -255,7 +255,7 @@
             {% if type=='Text' %}
                 {{render_paragraph(data)}}
             {% elif type == 'Fig' %}
-                <div><img src="img/{{module}}/assets/{{data.value}}"/></div>
+                <div><img src="/p/{{module}}/{{version}}/img/{{data.value}}"/></div>
             {% elif type == 'Code' %}
                 {% if data.ce_status == 'syntax_error' -%}
                     <span class='warning'>This example raised an error at execution time but compiled correctly</span>
