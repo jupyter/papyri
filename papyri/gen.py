@@ -958,6 +958,8 @@ class Gen:
 
                 if item_docstring is None and not isinstance(target_item, ModuleType):
                     continue
+                elif item_docstring is None and isinstance(target_item, ModuleType):
+                    item_docstring = """This module has no documentation"""
 
                 # progress.console.print(qa)
                 t1 = nullcontext
