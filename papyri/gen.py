@@ -944,7 +944,6 @@ class Gen:
 
             # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
-            t1 = timer(p2, taskp)
 
             for qa, target_item in collected.items():
                 short_description = (qa[:19] + "..") if len(qa) > 21 else qa
@@ -962,22 +961,20 @@ class Gen:
                     item_docstring = """This module has no documentation"""
 
                 # progress.console.print(qa)
-                t1 = nullcontext
-                with t1():
-                    try:
-                        ndoc = NumpyDocString(dedent_but_first(item_docstring))
-                    except Exception:
-                        p2.console.print(
-                            "Unexpected error parsing",
-                            target_item,
-                            target_item.__name__,
+                try:
+                    ndoc = NumpyDocString(dedent_but_first(item_docstring))
+                except Exception:
+                    p2.console.print(
+                        "Unexpected error parsing",
+                        target_item,
+                        target_item.__name__,
+                    )
+                    if isinstance(target_item, ModuleType):
+                        ndoc = NumpyDocString(
+                            f"Was not able to parse docstring for {qa}"
                         )
-                        if isinstance(target_item, ModuleType):
-                            ndoc = NumpyDocString(
-                                f"Was not able to parse docstring for {qa}"
-                            )
-                        else:
-                            continue
+                    else:
+                        continue
                 execute_exclude_patterns = module_conf.get(
                     "execute_exclude_patterns", None
                 )
