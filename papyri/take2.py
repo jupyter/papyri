@@ -397,6 +397,13 @@ def lex(lines):
             yield " "
 
 
+class BulletList(Node):
+    value: List[Paragraph]
+
+    def __init__(self, value):
+        self.value = value
+
+
 class FirstCombinator:
     def __init__(self, parsers):
         self.parsers = parsers
@@ -423,16 +430,21 @@ class Section(Node):
             Example,
             BlockVerbatim,
             Param,
+            BulletList,
+            BlockQuote,
         ]
     ]
+    # might need to be more complicated like verbatim.
+    title: Optional[str]
 
-    def __init__(self, children=None):
+    def __init__(self, children=None, title=None):
         if children is None:
             children = []
         self.children = children
         tt = get_type_hints(type(self))["children"].__args__[0].__args__
         for c in children:
             assert isinstance(c, tt), f"{c} not in {tt}"
+        self.title = title
 
     def __getitem__(self, k):
         return self.children[k]
@@ -447,7 +459,7 @@ class Section(Node):
         self.children.append(item)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.children}>"
+        return f"<{self.__class__.__name__} {self.title}: {self.children}>"
 
     def empty(self):
         return len(self.children) == 0
@@ -535,6 +547,13 @@ class Text(Node):
     value: str
 
 
+class BlockQuote(Node):
+    value: List[str]
+
+    def __init__(self, value=None):
+        self.value = value
+
+
 class Fig(Node):
     value: str
 
@@ -560,7 +579,9 @@ class Paragraph(Node):
 
     __slots__ = ["children", "width"]
 
-    children: List[Union[Paragraph, Word, Words, Directive, Verbatim, Link, Math]]
+    children: List[
+        Union[Paragraph, Word, Words, Directive, Verbatim, Link, Math, BulletList]
+    ]
 
     def __init__(self, children, width=80):
         self.children = children
@@ -1431,12 +1452,13 @@ def main(text):
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
     assert_block_lines(doc), "raw blocks"
+    print(doc)
     doc = [x for pairs in doc for x in header_pass(pairs)]
-    doc = header_level_pass(doc)
-    doc = [x for pairs in doc for x in example_pass(pairs)]
-    doc = [x for pairs in doc for x in block_directive_pass(pairs)]
-    doc = deflist_pass(doc)
-    doc = [x for pairs in doc for x in paragraphs_pass(pairs)]
+    # doc = header_level_pass(doc)
+    # doc = [x for pairs in doc for x in example_pass(pairs)]
+    # doc = [x for pairs in doc for x in block_directive_pass(pairs)]
+    # doc = deflist_pass(doc)
+    # doc = [x for pairs in doc for x in paragraphs_pass(pairs)]
 
     # TODO: third pass to set the header level for each header.
     # TODO: forth pass to make sections.
