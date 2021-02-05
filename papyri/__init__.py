@@ -6,6 +6,28 @@ papyri works, generally because they crashed papyri at some point during the
 developement, and/or do not work yet.:: 
 
 
+Installation
+------------
+
+pip install papyri
+
+Usage
+-----
+
+  $ papyri gen <module name>
+
+  $ papyri ingest ...
+
+  $ papyri render
+
+  $ papyri browse ....
+
+  $ papyri serve
+
+
+Of Interest
+-----------
+
 `dask.delayed.delayed`
     one of the parameter of the docstring has multiple paragraphs.
 

@@ -400,7 +400,7 @@ def lex(lines):
 class BulletList(Node):
     value: List[Paragraph]
 
-    def __init__(self, value):
+    def __init__(self, value=None):
         self.value = value
 
 
@@ -580,7 +580,17 @@ class Paragraph(Node):
     __slots__ = ["children", "width"]
 
     children: List[
-        Union[Paragraph, Word, Words, Directive, Verbatim, Link, Math, BulletList]
+        Union[
+            Paragraph,
+            Word,
+            Words,
+            Directive,
+            Verbatim,
+            Link,
+            Math,
+            BulletList,
+            BlockVerbatim,
+        ]
     ]
 
     def __init__(self, children, width=80):
@@ -752,11 +762,11 @@ def make_block_3(lines: "Lines"):
     """
     I think the correct alternative is that each block may get an indented children, and that a block is thus:
 
-    - a) The sequence of consecutive non blank lines with 0 indentation
-    - b) The (potentially absent) blank lines leading to the indent block
-    - c) The Raw indent block (we can decide to recurse, or not later)
-    - d?) The trailing blank line at the end of the block leading to the next one. I think the blank line will be in the
-      raw indent block
+        - a) The sequence of consecutive non blank lines with 0 indentation
+        - b) The (potentially absent) blank lines leading to the indent block
+        - c) The Raw indent block (we can decide to recurse, or not later)
+        - d?) The trailing blank line at the end of the block leading to the next one. I think the blank line will be in the
+        raw indent block
 
     """
     assert isinstance(lines, Lines)
@@ -807,9 +817,10 @@ class Block(Node):
 
     ---
 
-    A chunk of lines that breaks when the indentation reaches
-    - the last of a list of blank lines if indentation is consistant
-    - the last non-0  indented lines
+    A chunk of lines that breaks when the indentation reaches::
+
+        - the last of a list of blank lines if indentation is consistant
+        - the last non-0  indented lines
 
 
     Note we likely want the _body_ lines and then the _indented_ lines if any, which would mean we
@@ -818,12 +829,12 @@ class Block(Node):
 
     ----
 
-    I think the correct alternative is that each block may get an indented children, and that a block is thus:
+    I think the correct alternative is that each block may get an indented children, and that a block is thus::
 
-    - 1) The sequence of consecutive non blank lines with 0 indentation
-    - 2) The (potentially absent) blank lines leading to the indent block
-    - 3) The Raw indent block (we can decide to recurse, or not later)
-    - 4) The trailing blank line at the end of the block leading to the next one.
+        - 1) The sequence of consecutive non blank lines with 0 indentation
+        - 2) The (potentially absent) blank lines leading to the indent block
+        - 3) The Raw indent block (we can decide to recurse, or not later)
+        - 4) The trailing blank line at the end of the block leading to the next one.
 
     """
 
@@ -1452,13 +1463,12 @@ def main(text):
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
     assert_block_lines(doc), "raw blocks"
-    print(doc)
     doc = [x for pairs in doc for x in header_pass(pairs)]
-    # doc = header_level_pass(doc)
-    # doc = [x for pairs in doc for x in example_pass(pairs)]
-    # doc = [x for pairs in doc for x in block_directive_pass(pairs)]
-    # doc = deflist_pass(doc)
-    # doc = [x for pairs in doc for x in paragraphs_pass(pairs)]
+    doc = header_level_pass(doc)
+    doc = [x for pairs in doc for x in example_pass(pairs)]
+    doc = [x for pairs in doc for x in block_directive_pass(pairs)]
+    doc = deflist_pass(doc)
+    doc = [x for pairs in doc for x in paragraphs_pass(pairs)]
 
     # TODO: third pass to set the header level for each header.
     # TODO: forth pass to make sections.

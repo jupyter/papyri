@@ -38,6 +38,7 @@ from .take2 import (
 )
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
+from .ts import tsparse
 
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
@@ -305,7 +306,7 @@ def P2(lines) -> List[Node]:
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
     for block in blocks_data:
-        assert not block.__class__.__name__ == "Block"
+        assert not block.__class__.__name__ == "Block", block
     return blocks_data
 
 
@@ -620,6 +621,7 @@ class DocBlob(Node):
     see_also: List[SeeAlsoItem]  # see also data
     signature: Optional[str]
     references: Optional[List[str]]
+    arbitrary: List[Section]
 
     __slots__ = (
         "_content",
@@ -634,6 +636,7 @@ class DocBlob(Node):
         "see_also",
         "references",
         "logo",
+        "arbitrary",
     )
 
     def slots(self):
@@ -648,6 +651,7 @@ class DocBlob(Node):
             "signature",
             "references",
             "aliases",
+            "arbitrary",
         ]
 
     def __init__(self):
@@ -660,6 +664,7 @@ class DocBlob(Node):
         self.item_type = None
         self.aliases = []
         self.signature = None
+        arbitrary = []
 
     @property
     def content(self):
@@ -921,7 +926,7 @@ class Gen:
                 n0 = getattr(n0, sub)
             modules.append(n0)
 
-        print(modules)
+        # print(modules)
 
         collector = DFSCollector(modules[0], modules[1:])
         collected: Dict[str, Any] = collector.items()
@@ -962,6 +967,12 @@ class Gen:
 
                 # progress.console.print(qa)
                 try:
+                    arbitrary = tsparse(dedent_but_first(item_docstring).encode())
+                except Exception as e:
+                    print(f"TS could not parse: {qa}")
+                    # raise ValueError(f"from {qa}") from e
+                    arbitrary = []
+                try:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
                 except Exception:
                     p2.console.print(
@@ -970,11 +981,15 @@ class Gen:
                         target_item.__name__,
                     )
                     if isinstance(target_item, ModuleType):
+                        # from .take2 import main
+                        # main(item_docstring)
                         ndoc = NumpyDocString(
                             f"Was not able to parse docstring for {qa}"
                         )
                     else:
                         continue
+                if not isinstance(target_item, ModuleType):
+                    arbitrary = []
                 execute_exclude_patterns = module_conf.get(
                     "execute_exclude_patterns", None
                 )
@@ -991,6 +1006,7 @@ class Gen:
                     doc_blob, figs = self.do_one_item(
                         target_item, ndoc, infer, ex, qa, config=module_conf
                     )
+                    doc_blob.arbitrary = arbitrary
                 except Exception:
                     raise
                     if module_conf.get("exec_failure", None) == "fallback":
@@ -1007,7 +1023,8 @@ class Gen:
                     for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
                         if section in doc_blob.content:
                             if data := doc_blob.content[section]:
-                                doc_blob.content[section] = Section(P2(data))
+                                PX = P2(data)
+                                doc_blob.content[section] = Section(PX)
                             else:
                                 doc_blob.content[section] = Section()
                 except Exception as e:

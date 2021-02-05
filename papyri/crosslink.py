@@ -56,6 +56,7 @@ class IngestedBlobs(Node):
         "references",
         "logo",
         "qa",
+        "arbitrary",
     )
 
     _content: Dict[str, Section]
@@ -73,6 +74,7 @@ class IngestedBlobs(Node):
     logo: Optional[str]
     backrefs: List[str]
     qa: str
+    arbitrary: List[Section]
 
     __isfrozen = False
 
@@ -173,6 +175,8 @@ class IngestedBlobs(Node):
             # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {self.qa}"
             print(f"Newly found links: {len(visitor.total)}, {self.qa}, {visitor.total}")
         self.example_section_data = visitor.visit(self.example_section_data)
+
+        self.arbitrary = [visitor.visit(s) for s in self.arbitrary]
 
         for d in self.see_also:
             new_desc = []
@@ -301,6 +305,7 @@ def load_one_uningested(
     data = json.loads(bytes_)
 
     old_data = DocBlob.from_json(data)
+    assert hasattr(old_data, "arbitrary")
 
     blob = IngestedBlobs()
     blob.qa = qa
@@ -358,6 +363,11 @@ def load_one_uningested(
         assert section in blob.content
         blob.content[section] = visitor.visit(blob.content[section])
 
+    acc = []
+    for s in blob.arbitrary:
+        acc.append(visitor.visit(s))
+    blob.arbitrary = acc
+
     blob.process(known_refs=known_refs, aliases=aliases, verbose=False)
 
     if blob.refs:
@@ -395,6 +405,8 @@ class TreeReplacer:
                 "Code",
                 "Fig",
                 "Words",
+                "BlockQuote",
+                "BulletList",
             ]:
                 return [node]
             elif name in ["Text"]:
@@ -552,6 +564,7 @@ class Ingester:
                     nvisited_items[qa] = load_one_uningested(
                         fff.read(), br, qa=qa, known_refs=known_refs, aliases=aliases
                     )
+                    assert hasattr(nvisited_items[qa], "arbitrary")
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f1}") from e
         del f1
@@ -671,6 +684,7 @@ class Ingester:
                 ph_data = []
 
             doc_blob.backrefs = list(sorted(set(doc_blob.backrefs + ph_data)))
+            assert hasattr(doc_blob, "arbitrary")
         for console, path in progress(
             (self.ingest_dir / root / version / "module").glob("*.json"),
             description="cleanig previsous files ....",
@@ -690,6 +704,7 @@ class Ingester:
             assert mod_root == root, f"{mod_root}, {root}"
             # TODO : this is wrong, we get version of module we are currently ingesting
             doc_blob.version = version
+            assert hasattr(doc_blob, "arbitrary")
             js = doc_blob.to_json()
             br = js.pop("backrefs", [])
             try:

@@ -3,46 +3,46 @@
 A mini-implementation of an automatic serialiser-deserialiser for nested
 dataclass like class based on type annotations.
 
-Example:
+Example::
 
 
-In [14]: from dataclasses import dataclass
-    ...: from typing import Optional, Union, List
-    ...:
+    In [14]: from dataclasses import dataclass
+        ...: from typing import Optional, Union, List
+        ...:
 
-Note that Author and Reviewer are isomorphic even if totally unrelated.
+    Note that Author and Reviewer are isomorphic even if totally unrelated.
 
-In [15]: @dataclass
-    ...: class Author:
-    ...:     first: Optional[str]
-    ...:     last: str
-    ...:
-    ...: @dataclass
-    ...: class Reviewer:
-    ...:     first: Optional[str]
-    ...:     last: str
-    ...:
+    In [15]: @dataclass
+        ...: class Author:
+        ...:     first: Optional[str]
+        ...:     last: str
+        ...:
+        ...: @dataclass
+        ...: class Reviewer:
+        ...:     first: Optional[str]
+        ...:     last: str
+        ...:
 
-Here, items can be heterogenous, or of ambiguous type based only on its fields values.
+    Here, items can be heterogenous, or of ambiguous type based only on its fields values.
 
-In [16]: @dataclass
-    ...: class Book:
-    ...:     author: List[Union[Author, Reviewer]]
-    ...:     title: str
-    ...:
+    In [16]: @dataclass
+        ...: class Book:
+        ...:     author: List[Union[Author, Reviewer]]
+        ...:     title: str
+        ...:
 
 
-In [17]: obj = Book([Author("Matthias", "B"), Reviewer("Tony", "Fast")], "pyshs")
-    ...:
-    ...: data = serialize(obj , Book)
-    ...:
-    ...: deserialize(Book, Book, data)
+    In [17]: obj = Book([Author("Matthias", "B"), Reviewer("Tony", "Fast")], "pyshs")
+        ...:
+        ...: data = serialize(obj , Book)
+        ...:
+        ...: deserialize(Book, Book, data)
 
-Out[17]: Book(author=[Author(first='Matthias', last='B'), Reviewer(first='Tony', last='Fast')], title='pyshs')
+    Out[17]: Book(author=[Author(first='Matthias', last='B'), Reviewer(first='Tony', last='Fast')], title='pyshs')
 
-                      ^...................................^
-                                        .
-                                        .Note the conserved types.
+                          ^...................................^
+                                            .
+                                            .Note the conserved types.
 
 
 

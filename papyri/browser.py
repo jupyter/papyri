@@ -268,7 +268,21 @@ def main(qualname: str):
             return urwid.Pile(acc)
 
         def render_Paragraph(self, paragraph):
-            return TextWithLink([self.render(o) for o in paragraph.children])
+            from .take2 import Words, Paragraph, Verbatim
+
+            print([type(x) for x in paragraph.children])
+            if any([isinstance(x, Paragraph) for x in paragraph.children]):
+                assert len(paragraph.children) == 1
+                return self.render_Paragraph(paragraph.children[0])
+
+            cc = paragraph.children
+            if not cc:
+                return urwid.Text("EMPTY")
+
+            try:
+                return TextWithLink([self.render(o) for o in paragraph.children])
+            except Exception:
+                raise ValueError(cc, paragraph.children)
 
         def render_Section(self, section):
             acc = []
@@ -410,6 +424,9 @@ def main(qualname: str):
                         TextWithLink([Link("param", b, lambda: R.cb(b))]), left=2
                     )
                 )
+        if blob.item_type and ("module" in blob.item_type):
+            for s in blob.arbitrary:
+                doc.append(R.render(s))
 
         doc = dedup(doc)
 
@@ -451,6 +468,7 @@ def main(qualname: str):
         p = file_path
         br = p.parent / (p.stem + ".br")
         blob = load_one(file_path.read_text(), br.read_text())
+        assert hasattr(blob, "arbitrary")
         for i in gen_content(blob, frame):
             walk.append(i)
 
