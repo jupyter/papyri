@@ -699,55 +699,6 @@ class DocBlob(Node):
         self._content = new
 
 
-#    def to_json(self):
-#
-#        res = {
-#            k: getattr(self, k, "")
-#            for k in self.slots()
-#            if k not in {"example_section_data"}
-#        }
-#        assert not hasattr(self, "see_also")
-#        res["example_section_data"] = self.example_section_data.to_json()
-#
-#        return res
-#
-#    @classmethod
-#    def from_json(cls, obj):
-#        new_doc_blob = cls()
-#        for k, v in obj.items():
-#            setattr(new_doc_blob, k, v)
-#        if new_doc_blob._content is None:
-#            new_doc_blob._content = {}
-#
-#        new_doc_blob._content["Parameters"] = [
-#            Parameter(a, b, c)
-#            for (a, b, c) in new_doc_blob._content.get("Parameters", [])
-#        ]
-#
-#        for it in (
-#            "Returns",
-#            "Yields",
-#            "Extended Summary",
-#            "Receives",
-#            "Other Parameters",
-#            "Raises",
-#            "Warns",
-#            "Warnings",
-#            "See Also",
-#            "Notes",
-#            "References",
-#            "Examples",
-#            "Attributes",
-#            "Methods",
-#        ):
-#            if it not in new_doc_blob._content:
-#                new_doc_blob._content[it] = []
-#        for it in ("index",):
-#            if it not in new_doc_blob._content:
-#                new_doc_blob._content[it] = {}
-#        return new_doc_blob
-
-
 class Gen:
     def __init__(self):
         self.data = {}
