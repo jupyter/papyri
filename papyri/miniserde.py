@@ -140,7 +140,7 @@ def serialize(instance, annotation):
 
         else:
             assert False, (
-                f"Error serializing {instance!r}, of type {type(instance)!r} "
+                f"Error serializing {instance!r}\n, of type {type(instance)!r} "
                 f"expected  {annotation}, got {type(instance)}"
             )
     except Exception as e:

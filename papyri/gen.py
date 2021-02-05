@@ -972,6 +972,7 @@ class Gen:
                     print(f"TS could not parse: {qa}")
                     # raise ValueError(f"from {qa}") from e
                     arbitrary = []
+                    # raise
                 try:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
                 except Exception:

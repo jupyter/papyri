@@ -136,7 +136,7 @@ class Node(Base):
         return not bool(self.value.strip())
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.value}>"
+        return f"<{self.__class__.__name__}: \n{indent(repr(self.value))}>"
 
     def to_json(self):
         return serialize(self, type(self))
@@ -320,7 +320,7 @@ class Directive(Node):
         if self.role:
             prefix += ":" + self.role + ":"
         # prefix = ''
-        return GREEN(prefix) + HEADER("`" + "".join(self.value) + "`")
+        return "<Directive " + prefix + "`" + "".join(self.value) + "`>"
 
 
 class Math(Node):
@@ -459,7 +459,11 @@ class Section(Node):
         self.children.append(item)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} {self.title}: {self.children}>"
+        rep = f"<{self.__class__.__name__} {self.title}:"
+        for c in self.children:
+            rep += "\n" + indent(repr(c).rstrip())
+        rep += "\n>"
+        return rep
 
     def empty(self):
         return len(self.children) == 0
@@ -577,25 +581,58 @@ def compress_word(stream):
 
 class Paragraph(Node):
 
-    __slots__ = ["children", "width"]
+    __slots__ = ["inner", "inline", "width"]
 
-    children: List[
+    inline: List[
         Union[
-            Paragraph,
             Word,
             Words,
             Directive,
             Verbatim,
             Link,
             Math,
-            BulletList,
-            BlockVerbatim,
         ]
     ]
 
-    def __init__(self, children, width=80):
-        self.children = children
+    inner: List[Union[Paragraph, BlockVerbatim, BulletList]]
+
+    def __init__(self, inline, inner, width=80):
+        for i in inline:
+            assert isinstance(
+                i,
+                (
+                    # Word,
+                    Words,
+                    Directive,
+                    Verbatim,
+                    Link,
+                    Math,
+                ),
+            ), i
+        self.inline = inline
+        self.inner = inner
         self.width = width
+
+    @property
+    def children(self):
+        return [*self.inline, *self.inner]
+
+    @children.setter
+    def children(self, new):
+        inner = []
+        inline = []
+        for n in new:
+            if isinstance(n, (Word, Words, Directive, Verbatim, Link, Math)):
+                inline.append(n)
+            else:
+                break
+        for n in new:
+            if isinstance(n, (Paragraph, BlockVerbatim, BulletList)):
+                inner.append(n)
+
+        assert len(inner) + len(inline) == len(new)
+        self.inner = inner
+        self.inline = inline
 
     def __hash__(self):
         return hash((tuple(self.children), self.width))
@@ -605,7 +642,7 @@ class Paragraph(Node):
 
     @classmethod
     def _instance(cls):
-        return cls([])
+        return cls([], [])
 
     @classmethod
     def parse_lines(cls, lines):
@@ -620,7 +657,7 @@ class Paragraph(Node):
             parsed, rest = parser.parse(rest)
             acc.append(parsed)
 
-        return cls(compress_word(acc))
+        return cls(compress_word(acc), [])
 
     @property
     def references(self):
@@ -657,7 +694,7 @@ class Paragraph(Node):
                 clen = 0
 
             # do no append whitespace at SOL
-            if clen == 0 and t.is_whitespace():
+            if clen == 0 and hasattr(t, "value") and t.is_whitespace():
                 continue
             acc[-1].append(t)
             clen += lent
@@ -1179,9 +1216,8 @@ class DefList(Block):
         self.children = children
 
     def __repr__(self):
-        return type(self).COLOR(
-            f"<{self.__class__.__name__} '{len(self.children)}'> with\n"
-            + indent("\n".join([str(l) for l in self.children]), "    ")
+        return f"<{self.__class__.__name__} '{len(self.children)}'> with\n" + indent(
+            "\n".join([str(l) for l in self.children]), "    "
         )
 
 
@@ -1191,7 +1227,7 @@ class DefListItem(Block):
     ind: Lines
     dt: Paragraph  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
-    dd: Paragraph
+    dd: Union[Paragraph, BulletList]
 
     @property
     def children(self):
@@ -1215,7 +1251,6 @@ class DefListItem(Block):
         dd = Paragraph.parse_lines([x.text for x in ind.dedented()])
         return cls(lines, wh, ind, dl, dd)
 
-    COLOR = BLUE
 
     @classmethod
     def _deserialise(cls, **kwargs):

@@ -280,9 +280,10 @@ def main(qualname: str):
                 return urwid.Text("EMPTY")
 
             try:
+                rr = [self.render(o) for o in paragraph.children]
                 return TextWithLink([self.render(o) for o in paragraph.children])
             except Exception:
-                raise ValueError(cc, paragraph.children)
+                raise ValueError(cc, rr)
 
         def render_Section(self, section):
             acc = []
