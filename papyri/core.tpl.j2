@@ -152,6 +152,13 @@
            {% for item in obj %}
                {{ render_II(item) }}
            {% endfor %}
+       {% elif type == 'BlockQuote' %}
+            # TODO : finish blockquote rendering
+            <pre>
+               {%- for line in obj.value %}{{line}}
+               {% endfor %}
+            </pre>
+
        {% else %}
            <code>Some A {{type}} Not implemented yet</code>
            {{unreachable(type, obj)}}
@@ -276,7 +283,15 @@
          {% for r in doc.refs %}
              {{render_inner('Link', r)}}
          {% endfor %}
-{% endif %}
+     {% endif %}
+
+{% for s in doc.arbitrary %}
+    {% if s.title %}
+        <h1>{{s.title}}</h1>
+    {% endif %}
+
+    {{render_II(s)}}
+{% endfor %}
 
 <hr>
 
