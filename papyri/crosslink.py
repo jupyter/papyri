@@ -152,6 +152,8 @@ class IngestedBlobs(Node):
             #'See Also'
             #'Examples'
         ]
+        if aliases is None:
+            aliases = {}
         for s in sections_:
 
             local_refs = local_refs + [
@@ -510,7 +512,7 @@ class DirectiveVisiter(TreeReplacer):
 
 
 def load_one(
-    bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None
+    bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None, strict=False
 ) -> IngestedBlobs:
     data = json.loads(bytes_)
     assert "backrefs" not in data
@@ -520,7 +522,8 @@ def load_one(
     # TODO move that one up.
     if known_refs is None:
         known_refs = frozenset()
-    blob.process(known_refs=known_refs, aliases={})
+    if not strict:
+        blob.process(known_refs=known_refs, aliases=None)
     return blob
 
 
@@ -640,6 +643,7 @@ class Ingester:
                             other_backrefs[resolved] = load_one(
                                 existing_location.read_bytes(),
                                 brdata,
+                                strict=True,
                             )
                         except Exception as e:
                             raise type(e)(f"Error in {qa} {existing_location}")

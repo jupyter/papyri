@@ -324,7 +324,7 @@ async def _route(ref, store, version=None, env=None, template=None):
         env.globals["unreachable"] = unreachable
         # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
-        doc_blob = load_one(bytes_, br, known_refs=known_refs)
+        doc_blob = load_one(bytes_, br, known_refs=known_refs, strict=True)
         parts_links = {}
         acc = ""
         for k in siblings.keys():
@@ -552,7 +552,7 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
         br = None
 
     ## TODO : move this to ingest.
-    doc_blob = load_one(bytes_, br)
+    doc_blob = load_one(bytes_, br, strict=True)
     return render_one(
         template=template,
         doc=doc_blob,
@@ -622,7 +622,9 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
         brpath = store / root / version / "module" / f"{qa}.br"
         assert await brpath.exists()
         br = await brpath.read_text()
-        doc_blob: IngestedBlobs = load_one(bytes_, br, known_refs=known_refs)
+        doc_blob: IngestedBlobs = load_one(
+            bytes_, br, known_refs=known_refs, strict=True
+        )
 
     except Exception as e:
         raise RuntimeError(f"error with {document}") from e
