@@ -161,6 +161,7 @@ class TextWithLink(urwid.Text):
 def main(qualname: str):
     if not isinstance(qualname, str):
         from types import ModuleType
+
         if isinstance(qualname, ModuleType):
             qualname = qualname.__name__
         else:

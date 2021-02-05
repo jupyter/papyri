@@ -223,7 +223,7 @@ class Link(Node):
     exists: bool
 
     def __init__(self, value=None, reference=None, kind=None, exists=None):
-        assert kind in ('exists',"missing", "local","api" , None), kind
+        assert kind in ("exists", "missing", "local", "api", None), kind
         self.value = value
         self.reference = reference
         if reference is not None:
@@ -1159,10 +1159,10 @@ class BlockDirective(Block):
         pred, *postd = l0.split("::")
         # assert pred.startswith(".. ")
         self.directive_name = pred[3:].strip()
-        if pred.startswith('.. |'):
+        if pred.startswith(".. |"):
             # TODO:
-            print('replacement not implemented yet')
-        elif ' ' in self.directive_name:
+            print("replacement not implemented yet")
+        elif " " in self.directive_name:
             assert False, repr(pred)
         self.args0 = postd
         if self.ind:
@@ -1250,7 +1250,6 @@ class DefListItem(Block):
         assert len(dl.children) == 1
         dd = Paragraph.parse_lines([x.text for x in ind.dedented()])
         return cls(lines, wh, ind, dl, dd)
-
 
     @classmethod
     def _deserialise(cls, **kwargs):
@@ -1399,7 +1398,9 @@ def deflist_pass(blocks):
             and len(p.children) == 1
         ):
             deflist.append(
-                DefListItem.parse(block.lines.dedented(), block.wh, block.ind.dedented())
+                DefListItem.parse(
+                    block.lines.dedented(), block.wh, block.ind.dedented()
+                )
             )
         else:
             if deflist:
@@ -1423,16 +1424,19 @@ def deflist_item_pass(block):
 def block_directive_pass(block):
     if not type(block) == Block:
         return [block]
-    if len(block.lines) >= 1 and (block.lines[0].startswith(".. ") and  ('::' in block.lines[0].text)):
+    if len(block.lines) >= 1 and (
+        block.lines[0].startswith(".. ") and ("::" in block.lines[0].text)
+    ):
         return [BlockDirective(block.lines, block.wh, block.ind)]
     return [block]
+
 
 # TODO Comments
 def block_comment(block):
     if not type(block) == Block:
         return [block]
     if len(block.lines) >= 1 and (block.lines[0].startswith(".. ")):
-        assert not '::' in block.lines[0].text
+        assert not "::" in block.lines[0].text
         return [BlockDirective(block.lines, block.wh, block.ind)]
     return [block]
 

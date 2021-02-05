@@ -173,7 +173,9 @@ class IngestedBlobs(Node):
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
             # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {self.qa}"
-            print(f"Newly found links: {len(visitor.total)}, {self.qa}, {visitor.total}")
+            print(
+                f"Newly found links: {len(visitor.total)}, {self.qa}, {visitor.total}"
+            )
         self.example_section_data = visitor.visit(self.example_section_data)
 
         self.arbitrary = [visitor.visit(s) for s in self.arbitrary]
@@ -196,18 +198,17 @@ def _into(
     known_refs: List[Union[RefInfo, str]]
 ) -> Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
 
-    _map = defaultdict(lambda:[])
+    _map = defaultdict(lambda: [])
     assert isinstance(known_refs, frozenset)
-    #k_path_map = frozenset({k.path for k in known_refs})
+    # k_path_map = frozenset({k.path for k in known_refs})
     for k in known_refs:
         _map[k.path].append(k)
 
     _m2 = {}
     for k, v in _map.items():
-        cand = list(sorted(v, key=lambda x:x.version))
+        cand = list(sorted(v, key=lambda x: x.version))
         assert len(set(c.module for c in cand)) == 1, cand
         _m2[k] = cand[-1]
-
 
     return _m2
 
@@ -223,7 +224,11 @@ def endswith(end, refs):
 
 
 def resolve_(
-    qa: str, known_refs: FrozenSet[RefInfo], local_refs: FrozenSet[str], ref: str, rev_aliases=None
+    qa: str,
+    known_refs: FrozenSet[RefInfo],
+    local_refs: FrozenSet[str],
+    ref: str,
+    rev_aliases=None,
 ) -> RefInfo:
     # RefInfo(module, version, kind, path)
     bq = False
@@ -233,8 +238,8 @@ def resolve_(
         rev_aliases = {}
     if ref in rev_aliases:
         new_ref = rev_aliases[ref]
-        #print(f'now looking for {new_ref} instead of {ref}')
-        assert new_ref not in rev_aliases, 'would loop....'
+        # print(f'now looking for {new_ref} instead of {ref}')
+        assert new_ref not in rev_aliases, "would loop...."
         # TODOlikely can drop rev_aliases here
         res = resolve_(qa, known_refs, local_refs, new_ref, rev_aliases)
         return res
@@ -258,8 +263,8 @@ def resolve_(
         return RefInfo(None, None, "local", ref)
     if ref in k_path_map:
         # get the more recent.
-        stuff = {k for k in known_refs if k.path==ref}
-        c2 = list(sorted(stuff, key=lambda x:x.version))[-1]
+        stuff = {k for k in known_refs if k.path == ref}
+        c2 = list(sorted(stuff, key=lambda x: x.version))[-1]
         assert isinstance(c2, RefInfo), c2
         assert k_path_map[ref] == c2
         return k_path_map[ref]
@@ -289,7 +294,7 @@ def resolve_(
                 return k_path_map[attempt]
 
     q0 = qa.split(".")[0]
-    rs = root_start(q0,frozenset(k_path_map.keys()))
+    rs = root_start(q0, frozenset(k_path_map.keys()))
     attempts = [q for q in rs if (ref in q)]
     if len(attempts) == 1:
         return RefInfo(None, None, "exists", attempts[0])
@@ -438,7 +443,7 @@ class DirectiveVisiter(TreeReplacer):
         # long -> short
         self.aliases: Dict[str, str] = aliases
         # short -> long
-        self.rev_aliases = {v:k for k,v in aliases.items()}
+        self.rev_aliases = {v: k for k, v in aliases.items()}
 
     def replace_BlockDirective(self, block_directive):
         name = block_directive.directive_name
@@ -489,7 +494,9 @@ class DirectiveVisiter(TreeReplacer):
             loc = frozenset()
         else:
             loc = self.local_refs
-        r = resolve_(self.qa, self.known_refs, loc, directive.text, rev_aliases=self.rev_aliases)
+        r = resolve_(
+            self.qa, self.known_refs, loc, directive.text, rev_aliases=self.rev_aliases
+        )
         # this is now likely incorrect as Ref kind should not be exists,
         # but things like "local", "api", "gallery..."
         ref, exists = r.path, r.kind
@@ -535,7 +542,7 @@ class Ingester:
             version = data["version"]
             logo = data.get("logo", None)
             # long : short
-            aliases:Dict[str, str] = data.get("aliases", {})
+            aliases: Dict[str, str] = data.get("aliases", {})
             root = data.get("module")
             print(len(set(aliases.keys())), len(set(aliases.values())))
 
@@ -655,8 +662,14 @@ class Ingester:
                         print(resolved, "not valid reference, skipping.")
             # todo: warning mutation.
             for sa in doc_blob.see_also:
-                rev_aliases = {v:k for k,v in aliases.items()}
-                r = resolve_(qa, known_ref_info, frozenset(), sa.name.name, rev_aliases=rev_aliases)
+                rev_aliases = {v: k for k, v in aliases.items()}
+                r = resolve_(
+                    qa,
+                    known_ref_info,
+                    frozenset(),
+                    sa.name.name,
+                    rev_aliases=rev_aliases,
+                )
                 resolved, exists = r.path, r.kind
                 if exists == "exists":
                     sa.name.exists = True
@@ -766,12 +779,11 @@ def relink():
     store = Store(ingest_dir)
     known_refs, _ = find_all_refs(store)
 
-    
-    aliases:Dict[str, str] = {}
-    for meta_path in store.glob('*/*/papyri.json'):
+    aliases: Dict[str, str] = {}
+    for meta_path in store.glob("*/*/papyri.json"):
         data = json.loads(meta_path.path.read_text())
         aliases.update(data)
-    rev_aliases = {v:k for k,v in aliases.items()}
+    rev_aliases = {v: k for k, v in aliases.items()}
 
     builtins.print(
         "Relinking is safe to cancel, but some back references may be broken...."
@@ -788,9 +800,11 @@ def relink():
         data["backrefs"] = []
         doc_blob = IngestedBlobs.from_json(data)
         doc_blob.process(known_refs, aliases=aliases)
-        
+
         for sa in doc_blob.see_also:
-            r = resolve_(qa, known_refs, frozenset(), sa.name.name, rev_aliases=rev_aliases)
+            r = resolve_(
+                qa, known_refs, frozenset(), sa.name.name, rev_aliases=rev_aliases
+            )
             resolved, exists = r.path, r.kind
             if exists == "exists":
                 sa.name.exists = True
