@@ -239,16 +239,16 @@ user-select: none;
                      </div>
                 </div>
                 <div class="dropdown">
-                <a href={{module}}>{{version}}</a>&nbsp;/&nbsp;
+                <a href='/p/{{module}}/{{version}}/api/{{module}}{{ext}}'>{{version}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
                             {% for v in [version] -%}
-                                <a href="{{module}}{{ext}}">{{version}}</a>
+                                <a href="/p/{{module}}/{{v}}/api/{{module}}{{ext}}">{{v}}</a>
                             {% endfor %}
                     </div>
                 </div>
 
                 <div class="dropdown">
-                <a href='/p/{{module}}/{{version}}/api/{{module}}'>api</a>&nbsp;/&nbsp;
+                    <a href='/p/{{module}}/{{version}}/api/{{module}}{{ext}}'>api</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
                         <a href="/p/{{module}}/{{version}}/api/{{module}}{{ext}}">API</a>
                         <a href="/p/{{module}}/{{version}}/gallery">Gallery</a>

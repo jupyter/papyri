@@ -282,7 +282,13 @@ async def _route(ref, store, version=None, env=None, template=None):
         env.globals["url"] = url
     if template is None:
         template = env.get_template("core.tpl.j2")
+    if ref == "":
+        # root = "*"
+        # print("GLOB", f"{root}/*/papyri.json")
+        ref = "papyri"
+        import papyri
 
+        version = papyri.__version__
     root = ref.split(".")[0]
 
     papp_files = store.glob(f"{root}/*/papyri.json")
@@ -304,7 +310,6 @@ async def _route(ref, store, version=None, env=None, template=None):
     if version is not None:
         files = [store / root / version / "module" / f"{ref}.json"]
     else:
-
         files = list((store / root).glob(f"*/module/{ge(ref)}.json"))
     if files and await (file_ := files[0]).exists():
         # The reference we are trying to view exists;
@@ -401,20 +406,25 @@ def serve():
 
     app = QuartTrio(__name__)
 
+    store = Store(str(ingest_dir))
+
     async def r(ref):
-        return await _route(ref, Store(str(ingest_dir)))
+        return await _route(ref, store)
 
     async def full(package, version, sub, ref):
-        return await _route(ref, Store(str(ingest_dir)), version)
+        return await _route(ref, store, version)
 
     async def full_gallery(module, version):
-        return await gallery(module, Store(str(ingest_dir)), version)
+        return await gallery(module, store, version)
 
     async def g(module):
-        return await gallery(module, Store(str(ingest_dir)))
+        return await gallery(module, store)
 
     async def gr():
-        return await gallery("*", Store(str(ingest_dir)))
+        return await gallery("*", store)
+
+    async def index():
+        return await _route("", store)
 
     # return await _route(ref, GHStore(Path('.')))
 
@@ -427,7 +437,7 @@ def serve():
     app.route("/<ref>")(r)
     app.route("/gallery/")(gr)
     app.route("/gallery/<module>")(g)
-    app.route("/")(root)
+    app.route("/")(index)
     port = os.environ.get("PORT", 5000)
     print("Seen config port ", port)
     prod = os.environ.get("PROD", None)
@@ -711,6 +721,31 @@ async def main(ascii, html, dry_run):
                 (output_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
                 with (output_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                     f.write(data)
+    document = store / "papyri" / "0.0.2" / "module" / "papyri.json"
+
+    module, v = document.path.parts[-4:-2]
+    if html:
+        doc_blob, qa, siblings, parts_links = await loc(
+            document,
+            store=store,
+            tree=tree,
+            known_refs=known_refs,
+            ref_map=ref_map,
+        )
+        data = render_one(
+            template=template,
+            doc=doc_blob,
+            qa=qa,
+            ext=".html",
+            parts=siblings,
+            parts_links=parts_links,
+            backrefs=doc_blob.backrefs,
+            pygment_css=css_data,
+        )
+        if not dry_run:
+            with (output_dir / "index.html").open("w") as f:
+                f.write(data)
+
     if not dry_run:
         assets = store.glob("*/*/assets/*")
         for asset in assets:
