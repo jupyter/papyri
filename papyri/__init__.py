@@ -80,6 +80,15 @@ Of Interest
     points via aliases; in the intro one link as a ``name <value>`` syntax which
     is also not yet recognized.
 
+`scipy.signal.filter_design.zpk2sos`:
+    multi blocks in enumerated list
+
+`scipy.signal.filter_design.zpk2sos`:
+    blockquote insted of enumerate list (to fix upstream)
+
+`scipy.optimize._lsq.trf`:
+    has lineblocks, which I belive is wrong. 
+
 
 """
 
@@ -211,6 +220,23 @@ def serve():
     from .render import serve
 
     serve()
+
+
+@app.command()
+def serve_static():
+    import http.server
+    import socketserver
+
+    PORT = 8000
+    from papyri.config import html_dir
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(html_dir), **kwargs)
+
+    with socketserver.TCPServer(("", PORT), Handler) as httpd:
+        print(f"serving at http://localhost:{PORT}")
+        httpd.serve_forever()
 
 
 @app.command()

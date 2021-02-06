@@ -397,11 +397,27 @@ def lex(lines):
             yield " "
 
 
-class BulletList(Node):
-    value: List[Paragraph]
+class _XList(Node):
+    value: List[Union[Paragraph, EnumeratedList, BulletList, DefList, BlockQuote]]
+
+    @property
+    def children(self):
+        return self.value
+
+    @children.setter
+    def children(self, children):
+        self.value = children
 
     def __init__(self, value=None):
         self.value = value
+
+
+class EnumeratedList(_XList):
+    pass
+
+
+class BulletList(_XList):
+    pass
 
 
 class FirstCombinator:
@@ -425,12 +441,12 @@ class Section(Node):
             Fig,
             Paragraph,
             DefList,
-            DefListItem,
             BlockDirective,
             Example,
             BlockVerbatim,
             Param,
             BulletList,
+            EnumeratedList,
             BlockQuote,
         ]
     ]
@@ -594,7 +610,7 @@ class Paragraph(Node):
         ]
     ]
 
-    inner: List[Union[Paragraph, BlockVerbatim, BulletList]]
+    inner: List[Union[Paragraph, BlockVerbatim, BulletList, EnumeratedList]]
 
     def __init__(self, inline, inner, width=80):
         for i in inline:
@@ -627,7 +643,7 @@ class Paragraph(Node):
             else:
                 break
         for n in new:
-            if isinstance(n, (Paragraph, BlockVerbatim, BulletList)):
+            if isinstance(n, (Paragraph, BlockVerbatim, BulletList, EnumeratedList)):
                 inner.append(n)
 
         assert len(inner) + len(inline) == len(new)
@@ -1227,21 +1243,22 @@ class DefListItem(Block):
     ind: Lines
     dt: Paragraph  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
-    dd: Union[Paragraph, BulletList]
+    dd: List[Union[Paragraph, BulletList, EnumeratedList, BlockQuote, DefList]]
 
     @property
     def children(self):
-        return [self.dt, self.dd]
+        return [self.dt, *self.dd]
 
     @children.setter
     def children(self, value):
-        self.dt, self.dd = value
+        self.dt, *self.dd = value
 
     def __init__(self, lines=None, wh=None, ind=None, dl=None, dd=None):
         self.lines = lines
         self.wh = wh
         self.ind = ind
         self.dt = dl
+        assert isinstance(dd, (list, type(None))), dd
         self.dd = dd
 
     @classmethod
@@ -1249,7 +1266,7 @@ class DefListItem(Block):
         dl = Paragraph.parse_lines([l.text.strip() for l in lines])
         assert len(dl.children) == 1
         dd = Paragraph.parse_lines([x.text for x in ind.dedented()])
-        return cls(lines, wh, ind, dl, dd)
+        return cls(lines, wh, ind, dl, [dd])
 
     @classmethod
     def _deserialise(cls, **kwargs):

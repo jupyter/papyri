@@ -15,6 +15,7 @@ from papyri.take2 import (
     BlockQuote,
     Section,
     BulletList,
+    EnumeratedList,
     DefList,
     DefListItem,
     Lines,
@@ -47,6 +48,14 @@ class TSW:
             acc.extend(meth(c))
         self.depth -= 1
         return acc
+
+    def visit_citation(self, node):
+        # just hlines, like ------
+        return []
+
+    def visit_citation_reference(self, node):
+        # just hlines, like ------
+        return []
 
     def visit_transition(self, node):
         # just hlines, like ------
@@ -94,9 +103,9 @@ class TSW:
         for list_item in node.children:
             assert list_item.type == "list_item"
             _bullet, body = list_item.children
-            assert len(body.children) == 1
-            parg = body.children[0]
-            assert parg.type == "paragraph", parg.type
+            # assert len(body.children) == 1
+            # parg = body.children[0]
+            # assert parg.type == "paragraph", parg.type
             acc.extend(self.visit(body))
         return [BulletList(acc)]
 
@@ -107,11 +116,17 @@ class TSW:
     def visit_section(self, node):
         # print(' '*self.depth*4, '->', node)
         # print(' '*self.depth*4, '::',self.bytes[node.start_byte: node.end_byte].decode())
-        assert node.children[0].type == "title"
-        tc = node.children[0]
+        if node.children[0].type == "adornment":
+            assert node.children[1].type == "title"
+            tc = node.children[1]
+            assert node.children[2].type == "adornment"
+            assert len(node.children) == 3
+        else:
+            assert node.children[0].type == "title"
+            tc = node.children[0]
+            assert node.children[1].type == "adornment"
+            assert len(node.children) == 2
         title = self.bytes[tc.start_byte : tc.end_byte].decode()
-        assert node.children[1].type == "adornment"
-        assert len(node.children) == 2
         # print(' '*self.depth*4, '== Section: ', title, '==')
         # print(' '*self.depth*4, '->', node)
         return [Section([], title)]
@@ -150,6 +165,14 @@ class TSW:
         return []
         return self.visit(node)
 
+    def visit_line_block(self, node):
+        # TODO
+        return []
+
+    def visit_substitution_reference(self, node):
+        # TODO
+        return []
+
     def visit_doctest_block(self, node):
         # TODO
         return []
@@ -159,10 +182,46 @@ class TSW:
         return []
 
     def visit_enumerated_list(self, node):
-        # TODO
+        acc = []
+        for list_item in node.children:
+            assert list_item.type == "list_item"
+            _bullet, body = list_item.children
+            acc.extend(self.visit(body))
+        return [EnumeratedList(acc)]
+
+    def visit_target(self, node):
+        # TODO:
         return []
 
     def visit_directive(self, node):
+        # TODO
+        return []
+
+    def visit_footnote_reference(self, node):
+        # TODO
+        return []
+
+    def visit_emphasis(self, node):
+        # TODO
+        return []
+
+    def visit_substitution_definition(self, node):
+        # TODO
+        return []
+
+    def visit_comment(self, node):
+        # TODO
+        return []
+
+    def visit_strong(self, node):
+        # TODO
+        return []
+
+    def visit_footnote(self, node):
+        # TODO
+        return []
+
+    def visit_ERROR(self, node):
         # TODO
         return []
 
@@ -180,14 +239,13 @@ class TSW:
                     [Words(self.bytes[term.start_byte : term.end_byte].decode())], []
                 )
                 _dd = self.visit(definition)
-                assert len(_dd) == 1, self.bytes[node.start_byte : node.end_byte]
                 acc.append(
                     DefListItem(
                         Lines(),
                         Lines(),
                         Lines(),
                         dl=self.visit_paragraph(term)[0],
-                        dd=_dd[0],
+                        dd=_dd,
                     )
                 )
             elif len(list_item.children) == 4:
@@ -197,7 +255,6 @@ class TSW:
                 assert classsifier.type == "classifier"
                 assert _.type == ":"
                 _dd = self.visit(definition)
-                assert len(_dd) == 1
                 # TODO missing type
                 acc.append(
                     DefListItem(
@@ -205,7 +262,7 @@ class TSW:
                         Lines(),
                         Lines(),
                         dl=Paragraph(compress_word(self.visit(term)), []),
-                        dd=self.visit_paragraph(term)[0],
+                        dd=self.visit_paragraph(term),
                     )
                 )
             else:
@@ -217,6 +274,8 @@ class TSW:
 
 
 def nest_sections(items):
+    if not items:
+        return []
     acc = []
     if not isinstance(items[0], Section):
         acc.append(Section([]))

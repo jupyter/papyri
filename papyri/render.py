@@ -90,7 +90,7 @@ def root():
     return template.render(tree=tree)
 
 
-async def gallery(module, store, version=None):
+async def gallery(module, store, version=None, ext=""):
     if version is None:
         version = "*"
 
@@ -140,7 +140,7 @@ async def gallery(module, store, version=None):
         pygment_css="",
         module=module,
         parts=parts,
-        ext="",
+        ext=ext,
         version=version,
         parts_links=defaultdict(lambda: ""),
         doc=doc,
@@ -671,7 +671,19 @@ async def main(ascii, html, dry_run):
 
     tree = make_tree(family)
 
+    print("going to erase", html_dir)
+    # input("press enter to continue...")
+    shutil.rmtree(html_dir)
     random.shuffle(files)
+    # Gallery
+    mv = store.glob("*/*")
+    for item in mv:
+        version, module = item.path.name, item.path.parent.name
+        data = await gallery(module, store, version, ext="html")
+        (output_dir / module / version / "gallery").mkdir(parents=True, exist_ok=True)
+        with (output_dir / module / version / "gallery" / "index.html").open("w") as f:
+            f.write(data)
+
     for p, document in progress(files, description="Rendering..."):
         module, v = document.path.parts[-4:-2]
         if ascii:
@@ -699,7 +711,6 @@ async def main(ascii, html, dry_run):
                 (output_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
                 with (output_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                     f.write(data)
-
     if not dry_run:
         assets = store.glob("*/*/assets/*")
         for asset in assets:

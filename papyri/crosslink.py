@@ -420,8 +420,11 @@ class TreeReplacer:
                 assert False, "Text still present"
             else:
                 new_children = []
+                if not hasattr(node, "children"):
+                    raise ValueError(f"{node.__class__} has no children {node}")
                 for c in node.children:
                     assert c is not None, f"{node=} has a None child"
+                    assert isinstance(c, Node), node
                     replacement = self.generic_visit(c)
                     assert isinstance(replacement, list)
                     new_children.extend(replacement)

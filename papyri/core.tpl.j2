@@ -138,7 +138,11 @@
            <dl>
                {% for item in obj.children %}
                <dt>{{render_II(item.dt)}}<dt>
-               <dd>{{render_II(item.dd)}}<dd>
+               <dd>{% for it in item.dd %}
+
+                       {{render_II(it)}}
+                  {% endfor %}
+               <dd>
                {%endfor %}  
            </dl>
        {% elif type == 'DefListItem' %}
@@ -155,9 +159,16 @@
            # TODO : finish BulletList rendering
            <ul>
                {%- for item in obj.value %}
-                  {{render_II(item)}}
+               <li>{{render_II(item)}}</li>
                {% endfor %}
             <ul>
+       {% elif type == 'EnumeratedList' %}
+           # TODO : finish EnumeratedList rendering
+           <ol>
+               {%- for item in obj.value %}
+               <li>{{render_II(item)}}</li>
+               {% endfor %}
+            <ol>
        {% elif type == 'BlockQuote' %}
             # TODO : finish blockquote rendering
             <pre>

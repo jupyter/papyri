@@ -921,7 +921,7 @@ class Gen:
                     arbitrary = tsparse(dedent_but_first(item_docstring).encode())
                 except Exception as e:
                     print(f"TS could not parse: {qa}")
-                    # raise ValueError(f"from {qa}") from e
+                    raise ValueError(f"from {qa}") from e
                     arbitrary = []
                     # raise
                 try:
