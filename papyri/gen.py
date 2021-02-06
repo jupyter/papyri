@@ -38,7 +38,12 @@ from .take2 import (
 )
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
-from .ts import tsparse
+
+try:
+    from .ts import tsparse
+except ImportError:
+    print("TREE SITTER IMPORTING FAILED, will return empty on parse")
+    tsparse = lambda x: []
 
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
