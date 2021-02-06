@@ -799,9 +799,10 @@ class Gen:
             )
             ndoc.figs = figs
         except Exception as e:
-            ndoc.example_section_data = []
+            ndoc.example_section_data = Section()
             print("Error getting example data in ", qa)
-            raise ValueError("Error getting example data in ", qa) from e
+            # raise ValueError("Error getting example data in ", qa) from e
+            ndoc.figs = []
 
         ndoc.refs = list(
             {

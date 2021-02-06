@@ -679,7 +679,7 @@ async def main(ascii, html, dry_run):
     mv = store.glob("*/*")
     for item in mv:
         version, module = item.path.name, item.path.parent.name
-        data = await gallery(module, store, version, ext="html")
+        data = await gallery(module, store, version, ext=".html")
         (output_dir / module / version / "gallery").mkdir(parents=True, exist_ok=True)
         with (output_dir / module / version / "gallery" / "index.html").open("w") as f:
             f.write(data)
