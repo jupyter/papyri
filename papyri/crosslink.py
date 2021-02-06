@@ -196,11 +196,10 @@ class IngestedBlobs(Node):
 
 
 @lru_cache
-def _into(
-    known_refs: List[Union[RefInfo, str]]
-) -> Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
+def _into(known_refs: List[Union[RefInfo, str]]) -> Dict[str, RefInfo]:
+    # Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
 
-    _map = defaultdict(lambda: [])
+    _map: Dict[str, List[RefInfo]] = defaultdict(lambda: [])
     assert isinstance(known_refs, frozenset)
     # k_path_map = frozenset({k.path for k in known_refs})
     for k in known_refs:
@@ -370,10 +369,10 @@ def load_one_uningested(
         assert section in blob.content
         blob.content[section] = visitor.visit(blob.content[section])
 
-    acc = []
-    for s in blob.arbitrary:
-        acc.append(visitor.visit(s))
-    blob.arbitrary = acc
+    acc1 = []
+    for sec in blob.arbitrary:
+        acc1.append(visitor.visit(sec))
+    blob.arbitrary = acc1
 
     blob.process(known_refs=known_refs, aliases=aliases, verbose=False)
 
