@@ -90,6 +90,10 @@ def root():
     return template.render(tree=tree)
 
 
+async def examples(module, store, version, name, ext):
+    pass
+
+
 async def gallery(module, store, version=None, ext=""):
     if version is None:
         version = "*"

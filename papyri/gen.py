@@ -739,6 +739,7 @@ class Gen:
         self.data = {}
         self.bdata = {}
         self.metadata = {}
+        self.examples = {}
 
     def clean(self, where: Path):
         for _, path in progress(
@@ -761,6 +762,11 @@ class Gen:
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
             with (where / "module" / k).open("w") as f:
+                f.write(v)
+
+        (where / "examples").mkdir(exist_ok=True)
+        for k, v in self.examples.items():
+            with (where / "examples" / k).open("w") as f:
                 f.write(v)
 
         assets = where / "assets"
@@ -864,13 +870,30 @@ class Gen:
         return blob, figs
 
     def collect_examples(self, folder):
+        acc = []
         examples = list(folder.glob("*.py"))
         for example in examples:
             executor = BlockExecutor({})
             with executor:
-                data = example.read_text()
-                executor.exec(data)
-                print("Found", len(executor.get_figs()))
+                script = example.read_text()
+                executor.exec(script)
+                figs = [
+                    (f"ex-{example.name}-{i}.png", f)
+                    for i, f in enumerate(executor.get_figs())
+                ]
+                entries = list(parse_script(script, ns={}, infer=True, prev=""))
+                acc.append(
+                    (
+                        {
+                            example.name: Section(
+                                [Code(entries, "", "execed")]
+                                + [Fig(name) for name, _ in figs]
+                            )
+                        },
+                        figs,
+                    )
+                )
+        return acc
 
     def do_one_mod(self, names: List[str], infer: bool, exec_: bool, conf: dict):
         """
@@ -910,11 +933,17 @@ class Gen:
         root = names[0].split(".")[0]
         module_conf = conf.get(root, {})
         examples_folder = module_conf.get("examples_folder", None)
+        print("EF", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
-        print("EF", examples_folder)
-        self.collect_examples(examples_folder)
-
+            examples_data = self.collect_examples(examples_folder)
+            for edoc, figs in examples_data:
+                self.examples.update(
+                    {k: json.dumps(v.to_json()) for k, v in edoc.items()}
+                )
+                for name, data in figs:
+                    print("put one fig", name)
+                    self.put_raw(name, data)
         print("Configuration:", json.dumps(module_conf, indent=2))
         self.root = root
         self.version = version

@@ -552,6 +552,17 @@ class Ingester:
             print(len(set(aliases.keys())), len(set(aliases.values())))
 
         del f
+        (self.ingest_dir / root / version / "examples").mkdir(
+            parents=True, exist_ok=True
+        )
+        for p, fe in progress(
+            (path / "examples/").glob("*"), description=f"Reading {path.name} Examples"
+        ):
+            s = Section.from_json(json.loads(fe.read_text()))
+            with open(
+                self.ingest_dir / root / version / "examples" / fe.name, "w"
+            ) as f:
+                f.write(json.dumps(s.to_json()))
 
         for p, f1 in progress(
             (path / "module").glob("*.json"),
