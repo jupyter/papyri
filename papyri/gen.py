@@ -201,6 +201,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     figs = []
     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
+    wait_for_show = config.get("wait_for_plt_show", True)
     for b in blocks:
         for item in b:
             if isinstance(item, InOut):
@@ -217,7 +218,8 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                 did_except = False
                 if exec_:
                     try:
-                        assert len(fig_managers) == 0
+                        if not wait_for_show:
+                            assert len(fig_managers) == 0
                         with cbook._setattr_cm(
                             FigureManagerBase, show=lambda self: None
                         ):
@@ -230,10 +232,9 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                                     print(config)
                                     raise
                         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                        assert (len(fig_managers)) in (0, 1, 2), fig_managers
+                        # assert (len(fig_managers)) in (0, 1, 2), fig_managers
                         if fig_managers and (
-                            ("plt.show" in script)
-                            or not config.get("wait_for_plt_show", True)
+                            ("plt.show" in script) or not wait_for_show
                         ):
                             raise_in_fig = True
                             for figman in fig_managers:
@@ -258,17 +259,18 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                         if ("2d" in qa) or (raise_in_fig):
                             raise
                     finally:
-                        if fig_managers:
-                            plt.close("all")
-                        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                        # import traceback
-                        # traceback.print_exc()
-                        # print(script)
-                        # print(e)
-                        # raise
-                        assert len(fig_managers) == 0, fig_managers + [
-                            did_except,
-                        ]
+                        if not wait_for_show:
+                            if fig_managers:
+                                plt.close("all")
+                            fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                            # import traceback
+                            # traceback.print_exc()
+                            # print(script)
+                            # print(e)
+                            # raise
+                            assert len(fig_managers) == 0, fig_managers + [
+                                did_except,
+                            ]
 
                 entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
                 acc += "\n" + script
@@ -806,7 +808,7 @@ class Gen:
         except Exception as e:
             ndoc.example_section_data = Section()
             print("Error getting example data in ", qa)
-            # raise ValueError("Error getting example data in ", qa) from e
+            raise ValueError("Error getting example data in ", qa) from e
             ndoc.figs = []
 
         ndoc.refs = list(

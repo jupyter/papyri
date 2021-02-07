@@ -89,12 +89,17 @@ Of Interest
 `scipy.optimize._lsq.trf`:
     has lineblocks, which I belive is wrong. 
 
+`scipy.signal.exponential`:
+    multiple figures
+
 
 """
 
 
 from pathlib import Path
 from typing import List
+from . import examples
+
 
 import typer
 

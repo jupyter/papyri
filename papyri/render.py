@@ -743,7 +743,7 @@ async def main(ascii, html, dry_run):
             pygment_css=css_data,
         )
         if not dry_run:
-            with (output_dir / "index.html").open("w") as f:
+            with (html_dir / "index.html").open("w") as f:
                 f.write(data)
 
     if not dry_run:

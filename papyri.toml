@@ -45,6 +45,7 @@ exec_failure = 'fallback'
 
 [dask]
 logo = 'dask-logo.png'
+exclude = ['dask.utils.Dispatch']
 
 [skimage]
 logo = 'skimage-logo.png'
