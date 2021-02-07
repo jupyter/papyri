@@ -37,6 +37,7 @@ submodules = [
 ]
 [papyri]
 logo = 'papyri-logo.png'
+examples_folder = '~/dev/papyri/examples/'
 
 [IPython]
 logo = 'ipython-logo.png'

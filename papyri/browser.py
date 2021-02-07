@@ -271,7 +271,6 @@ def main(qualname: str):
         def render_Paragraph(self, paragraph):
             from .take2 import Words, Paragraph, Verbatim
 
-            print([type(x) for x in paragraph.children])
             if any([isinstance(x, Paragraph) for x in paragraph.children]):
                 assert len(paragraph.children) == 1
                 return self.render_Paragraph(paragraph.children[0])

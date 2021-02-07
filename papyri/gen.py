@@ -23,6 +23,7 @@ from rich.progress import TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
+from .take2 import main as t2main
 from .take2 import (
     Code,
     Fig,
@@ -161,6 +162,54 @@ def parse_script(script, ns=None, infer=None, prev=""):
     warnings.simplefilter("default", UserWarning)
 
 
+class BlockExecutor:
+    """
+    To merge with next function; a block executor that
+    can take sequences of code, keep state and will return the figures generated.
+    """
+
+    def __init__(self, ns):
+        import matplotlib
+
+        matplotlib.use("agg")
+        self.ns = ns
+        pass
+
+    def __enter__(self):
+        assert (len(self.fig_man())) == 0, f"init fail in {qa} {len(fig_managers)}"
+
+    def __exit__(self, *args, **kwargs):
+        import matplotlib.pyplot as plt
+
+        plt.close("all")
+        assert (len(self.fig_man())) == 0, f"init fail in {qa} {len(fig_managers)}"
+
+    def fig_man(self):
+        from matplotlib import _pylab_helpers
+
+        return _pylab_helpers.Gcf.get_all_fig_managers()
+
+    def get_figs(self):
+        figs = []
+        for fig_man in self.fig_man():
+            buf = io.BytesIO()
+            fig_man.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
+            buf.seek(0)
+            figs.append(buf.read())
+        return figs
+
+    def exec(self, text):
+        from matplotlib import _pylab_helpers, cbook
+        from matplotlib.backend_bases import FigureManagerBase
+
+        with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
+            res = exec(text, self.ns)
+
+        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+
+        return res, fig_managers
+
+
 def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None):
     """Extract example section data from a NumpyDocstring
 
@@ -186,102 +235,82 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
         config = {}
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     example_section_data = Section()
-    import matplotlib
     import matplotlib.pyplot as plt
-    from matplotlib import _pylab_helpers, cbook
-    from matplotlib.backend_bases import FigureManagerBase
+    from matplotlib import _pylab_helpers
 
-    matplotlib.use("agg")
 
     acc = ""
     import numpy as np
 
     counter = 0
     ns = {"np": np, "plt": plt, obj.__name__: obj}
+    executor = BlockExecutor(ns)
     figs = []
     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
     wait_for_show = config.get("wait_for_plt_show", True)
-    for b in blocks:
-        for item in b:
-            if isinstance(item, InOut):
-                script = "\n".join(item.in_)
-                figname = None
-                ce_status = "None"
-                try:
-                    compile(script, "<>", "exec")
-                    ce_status = "compiled"
-                except SyntaxError:
-                    ce_status = "syntax_error"
-                    pass
-                raise_in_fig = "?"
-                did_except = False
-                if exec_:
+    with executor:
+        for b in blocks:
+            for item in b:
+                if isinstance(item, InOut):
+                    script = "\n".join(item.in_)
+                    figname = None
+                    ce_status = "None"
                     try:
-                        if not wait_for_show:
-                            assert len(fig_managers) == 0
-                        with cbook._setattr_cm(
-                            FigureManagerBase, show=lambda self: None
-                        ):
+                        compile(script, "<>", "exec")
+                        ce_status = "compiled"
+                    except SyntaxError:
+                        ce_status = "syntax_error"
+                        pass
+                    raise_in_fig = "?"
+                    did_except = False
+                    if exec_:
+                        try:
+                            if not wait_for_show:
+                                assert len(fig_managers) == 0
                             try:
-                                exec(script, ns)
+                                res, fig_managers = executor.exec(script)
                                 ce_status = "execed"
                             except Exception:
                                 ce_status = "exception_in_exec"
                                 if config.get("exec_failure", "") != "fallback":
-                                    print(config)
                                     raise
-                        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                        # assert (len(fig_managers)) in (0, 1, 2), fig_managers
-                        if fig_managers and (
-                            ("plt.show" in script) or not wait_for_show
-                        ):
-                            raise_in_fig = True
-                            for figman in fig_managers:
-                                counter += 1
-
-                                if not qa:
-                                    qa = obj.__name__
-                                figname = f"fig-{qa}-{counter}.png"
-                                buf = io.BytesIO()
-                                figman.canvas.figure.savefig(
-                                    buf, dpi=300  # , bbox_inches="tight"
-                                )
-                                buf.seek(0)
-                                figs.append((figname, buf.read()))
-                            plt.close("all")
-                            raise_in_fig = False
-
-                    except Exception:
-                        did_except = True
-                        print(f"exception executing... {qa}")
-                        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                        if ("2d" in qa) or (raise_in_fig):
-                            raise
-                    finally:
-                        if not wait_for_show:
-                            if fig_managers:
+                            if fig_managers and (
+                                ("plt.show" in script) or not wait_for_show
+                            ):
+                                raise_in_fig = True
+                                for fig in executor.get_figs():
+                                    counter += 1
+                                    figname = f"fig-{qa}-{counter}.png"
+                                    figs.append((figname, fig))
                                 plt.close("all")
-                            fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                            # import traceback
-                            # traceback.print_exc()
-                            # print(script)
-                            # print(e)
-                            # raise
-                            assert len(fig_managers) == 0, fig_managers + [
-                                did_except,
-                            ]
+                                raise_in_fig = False
 
-                entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
-                acc += "\n" + script
-                example_section_data.append(
-                    Code(entries, "\n".join(item.out), ce_status)
-                )
-                if figname:
-                    example_section_data.append(Fig(figname))
-            else:
-                assert isinstance(item.out, list)
-                example_section_data.append(Text("\n".join(item.out)))
+                        except Exception:
+                            did_except = True
+                            print(f"exception executing... {qa}")
+                            fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                            if raise_in_fig:
+                                raise
+                        finally:
+                            if not wait_for_show:
+                                if fig_managers:
+                                    plt.close("all")
+                                fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                                assert len(fig_managers) == 0, fig_managers + [
+                                    did_except,
+                                ]
+
+                    entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
+                    acc += "\n" + script
+                    example_section_data.append(
+                        Code(entries, "\n".join(item.out), ce_status)
+                    )
+                    if figname:
+                        example_section_data.append(Fig(figname))
+                else:
+                    assert isinstance(item.out, list)
+                    example_section_data.append(Text("\n".join(item.out)))
 
     # TODO fix this if plt.close not called and still a ligering figure.
     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
@@ -290,7 +319,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     return processed_example_data(example_section_data, qa), figs
 
 
-from .take2 import main as t2main
 
 
 def get_classes(code):
@@ -835,6 +863,15 @@ class Gen:
 
         return blob, figs
 
+    def collect_examples(self, folder):
+        examples = list(folder.glob("*.py"))
+        for example in examples:
+            executor = BlockExecutor({})
+            with executor:
+                data = example.read_text()
+                executor.exec(data)
+                print("Found", len(executor.get_figs()))
+
     def do_one_mod(self, names: List[str], infer: bool, exec_: bool, conf: dict):
         """
         Crawl one modules and stores resulting docbundle in self.store.
@@ -872,6 +909,11 @@ class Gen:
 
         root = names[0].split(".")[0]
         module_conf = conf.get(root, {})
+        examples_folder = module_conf.get("examples_folder", None)
+        if examples_folder is not None:
+            examples_folder = Path(examples_folder).expanduser()
+        print("EF", examples_folder)
+        self.collect_examples(examples_folder)
 
         print("Configuration:", json.dumps(module_conf, indent=2))
         self.root = root
