@@ -17,7 +17,6 @@ from there import print
 
 from .config import html_dir, ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
-from .gen import paragraph
 from .stores import Store
 from .take2 import RefInfo
 from .utils import progress
@@ -90,8 +89,44 @@ def root():
     return template.render(tree=tree)
 
 
-async def examples(module, store, version, name, ext):
-    pass
+async def examples(module, store, version, subpath, ext=""):
+    env = Environment(
+        loader=FileSystemLoader(os.path.dirname(__file__)),
+        autoescape=select_autoescape(["html", "tpl.j2"]),
+        undefined=StrictUndefined,
+    )
+    env.globals["len"] = len
+    env.globals["url"] = url
+    env.globals["unreachable"] = unreachable
+    css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
+
+    pap_files = store.glob("*/*/papyri.json")
+    parts = {module: []}
+    for pp in pap_files:
+        mod, ver = pp.path.parts[-3:-1]
+        parts[module].append((RefInfo(mod, ver, "api", mod), mod))
+
+    efile = store / module / version / "examples" / subpath
+    from .take2 import Section
+
+    ex = Section.from_json(json.loads(await efile.read_text()))
+
+    class Doc:
+        pass
+
+    doc = Doc()
+    doc.logo = None
+
+    return env.get_template("examples.tpl.j2").render(
+        pygment_css=css_data,
+        module=module,
+        parts=parts,
+        ext=ext,
+        version=version,
+        parts_links=defaultdict(lambda: ""),
+        doc=doc,
+        ex=ex,
+    )
 
 
 async def gallery(module, store, version=None, ext=""):
@@ -118,13 +153,28 @@ async def gallery(module, store, version=None, ext=""):
             # figmap.append((impath, link, name)
             m[module].append((impath, link, name))
 
+    for target_path in store.glob(f"{module}/{version}/examples/*"):
+        data = json.loads(await target_path.read_text())
+        from .take2 import Section
+
+        s = Section.from_json(data)
+
+        for k in [u.value for u in s.children if u.__class__.__name__ == "Fig"]:
+            module, v, _, _path = target_path.path.parts[-4:]
+
+            # module, filename, link
+            impath = f"/p/{module}/{v}/img/{k}"
+            link = f"/p/{module}/{v}/examples/{target_path.name}"
+            name = target_path.name
+            # figmap.append((impath, link, name)
+            m[module].append((impath, link, name))
+
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["paragraph"] = paragraph
     env.globals["url"] = url
 
     class D:
@@ -281,7 +331,6 @@ async def _route(ref, store, version=None, env=None, template=None):
             autoescape=select_autoescape(["html", "tpl.j2"]),
             undefined=StrictUndefined,
         )
-        env.globals["paragraph"] = paragraph
         env.globals["len"] = len
         env.globals["url"] = url
     if template is None:
@@ -430,12 +479,18 @@ def serve():
     async def index():
         return await _route("", store)
 
+    async def ex(module, version, subpath):
+        return await examples(
+            module=module, store=store, version=version, subpath=subpath
+        )
+
     # return await _route(ref, GHStore(Path('.')))
 
     app.route("/logo.png")(logo)
     app.route("/favicon.ico")(static("favicon.ico"))
     # sub here is likely incorrect
     app.route("/p/<package>/<version>/img/<path:subpath>")(img)
+    app.route("/p/<module>/<version>/examples/<path:subpath>")(ex)
     app.route("/p/<module>/<version>/gallery")(full_gallery)
     app.route("/p/<package>/<version>/<sub>/<ref>")(full)
     app.route("/<ref>")(r)
@@ -520,7 +575,6 @@ def _ascci_env():
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["paragraph"] = paragraph
     env.globals["unreachable"] = unreachable
     try:
 
@@ -667,7 +721,6 @@ async def main(ascii, html, dry_run):
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["paragraph"] = paragraph
     env.globals["unreachable"] = unreachable
     env.globals["url"] = url
     template = env.get_template("core.tpl.j2")

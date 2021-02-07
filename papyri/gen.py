@@ -316,7 +316,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     if len(fig_managers) != 0:
         plt.close("all")
-    return processed_example_data(example_section_data, qa), figs
+    return processed_example_data(example_section_data), figs
 
 
 
@@ -345,7 +345,7 @@ def P2(lines) -> List[Node]:
     return blocks_data
 
 
-def processed_example_data(example_section_data, qa):
+def processed_example_data(example_section_data):
     """this should be no-op on already ingested"""
     new_example_section_data = Section()
     for in_out in example_section_data:
@@ -882,14 +882,14 @@ class Gen:
                     for i, f in enumerate(executor.get_figs())
                 ]
                 entries = list(parse_script(script, ns={}, infer=True, prev=""))
+                s = Section(
+                    [Code(entries, "", "execed")] + [Fig(name) for name, _ in figs]
+                )
+                s = processed_example_data(s)
+
                 acc.append(
                     (
-                        {
-                            example.name: Section(
-                                [Code(entries, "", "execed")]
-                                + [Fig(name) for name, _ in figs]
-                            )
-                        },
+                        {example.name: s},
                         figs,
                     )
                 )
