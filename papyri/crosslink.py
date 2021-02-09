@@ -413,6 +413,8 @@ class TreeReplacer:
                 "Words",
                 "BlockQuote",
                 "BulletList",
+                "Directive",
+                "SeeAlsoItems",
             ]:
                 return [node]
             elif name in ["Text"]:

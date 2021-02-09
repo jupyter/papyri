@@ -311,7 +311,7 @@ def main(qualname: str):
             return [
                 self.render(item.dt),
                 urwid.Padding(
-                    self.render(item.dd),
+                    urwid.Pile([self.render(p) for p in item.dd]),
                     left=2,
                 ),
                 blank,

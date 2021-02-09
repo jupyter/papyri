@@ -234,6 +234,9 @@ class Link(Node):
     def __len__(self):
         return len(self.value)
 
+    def __repr__(self):
+        return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
+
     def __hash__(self):
         assert False
         return hash((self.value, self.reference, self.kind, self.exists))
