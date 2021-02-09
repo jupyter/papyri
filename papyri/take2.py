@@ -440,6 +440,7 @@ class Section(Node):
     children: List[
         Union[
             Code,
+            Code2,
             Text,
             Fig,
             Paragraph,
@@ -499,7 +500,7 @@ class Param(Node):
     type_: str
     desc: List[
         Union[
-            Code,
+            # Code,
             Text,
             Fig,
             Paragraph,
@@ -536,6 +537,32 @@ class Param(Node):
     def __hash__(self):
         assert False
         return hash((self.param, self.type_, self.desc))
+
+
+class Token(Node):
+    type: Optional[str]
+    link: Union[Link, str]
+
+    def __init__(self, link=None, type=None):
+        self.link = link
+        self.type = type
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.link=} {self.type=} >"
+
+
+class Code2(Node):
+    entries: List[Token]
+    out: str
+    ce_status: str
+
+    def __init__(self, entries=None, out=None, ce_status=None):
+        self.entries = entries
+        self.out = out
+        self.ce_status = ce_status
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
 
 class Code(Node):

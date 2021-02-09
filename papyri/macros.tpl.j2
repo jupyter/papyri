@@ -155,7 +155,7 @@
     {%- endif %}
 {%- endmacro %}
 
-{%- macro example(entries) -%}
+{%- macro example_old(entries) -%}
 <span class='nsl'>{{'>>> ' -}}</span>{{ '' -}}
     {%- for text, t_, cc in entries %}
         {%- if text == '\n' -%}
@@ -170,5 +170,27 @@
     {%- endfor-%}
     {{-'\n'}}
 {%- endmacro %}
+
+
+
+{%- macro example(entries) -%}
+<span class='nsl'>{{'>>> ' -}}</span>{{ '' -}}
+    {%- for token in entries -%}
+        {%- if token.link.__class__.__name__ == 'Link' -%}
+            <a class="foo {{token.type}}", href="{{url(token.link.reference)}}{{ext}}">{{token.link.value}}</a>
+        {%- else -%}
+            {%- if token.link == '\n' -%}
+                <br><span class='nsl'>...&nbsp;</span>
+            {%- else -%}
+                <span class="{{token.type}}">{{token.link}}</span>
+            {%- endif -%}
+        {%- endif -%}
+    {%- endfor-%}
+    {{-'\n'}}
+{%- endmacro %}
+
+
+
+
 
 

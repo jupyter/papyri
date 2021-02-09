@@ -15,7 +15,18 @@ from there import print
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .stores import Store
-from .take2 import Directive, Link, Node, Param, RefInfo, Section, SeeAlsoItem
+from .take2 import (
+    Directive,
+    Link,
+    Node,
+    Param,
+    RefInfo,
+    Section,
+    SeeAlsoItem,
+    Code,
+    Code2,
+    Token,
+)
 from .utils import progress
 
 warnings.simplefilter("ignore", UserWarning)
@@ -25,7 +36,7 @@ def find_all_refs(store):
     o_family = sorted(list(store.glob("*/*/module/*.json")))
 
     # TODO
-    # here we can't computejust the dictionary and use frozenset(....values())
+    # here we can't compute just the dictionary and use frozenset(....values())
     # as we may have multiple version of libraries; this is something that will
     # need to be fixed in the long run
     known_refs = []
@@ -169,7 +180,7 @@ class IngestedBlobs(Node):
 
         assert isinstance(known_refs, frozenset)
 
-        visitor = DirectiveVisiter(self.qa, known_refs, local_refs, aliases)
+        visitor = DVR(self.qa, known_refs, local_refs, aliases)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
@@ -178,6 +189,7 @@ class IngestedBlobs(Node):
             print(
                 f"Newly found links: {len(visitor.total)}, {self.qa}, {visitor.total}"
             )
+
         self.example_section_data = visitor.visit(self.example_section_data)
 
         self.arbitrary = [visitor.visit(s) for s in self.arbitrary]
@@ -415,6 +427,7 @@ class TreeReplacer:
                 "BulletList",
                 "Directive",
                 "SeeAlsoItems",
+                "Code2",
             ]:
                 return [node]
             elif name in ["Text"]:
@@ -468,6 +481,12 @@ class DirectiveVisiter(TreeReplacer):
         block_directive.children = [self.visit(c) for c in block_directive.children]
         return [block_directive]
 
+    def _resolve(self, loc, text):
+        assert isinstance(text, str)
+        return resolve_(
+            self.qa, self.known_refs, loc, text, rev_aliases=self.rev_aliases
+        )
+
     def replace_Directive(self, directive: Directive):
         if (directive.domain is not None) or (
             directive.role not in (None, "mod", "class", "func", "meth", "any")
@@ -500,9 +519,7 @@ class DirectiveVisiter(TreeReplacer):
             loc = frozenset()
         else:
             loc = self.local_refs
-        r = resolve_(
-            self.qa, self.known_refs, loc, directive.text, rev_aliases=self.rev_aliases
-        )
+        r = self._resolve(loc, directive.text)
         # this is now likely incorrect as Ref kind should not be exists,
         # but things like "local", "api", "gallery..."
         ref, exists = r.path, r.kind
@@ -513,6 +530,35 @@ class DirectiveVisiter(TreeReplacer):
                 self.total.append((directive.text, ref))
             return [Link(directive.text, r, exists, exists != "missing")]
         return [directive]
+
+
+class DVR(DirectiveVisiter):
+    def replace_Code(self, code):
+        new_entries = []
+        for entry in code.entries:
+            # TODO
+            if entry[1] and entry[1].strip():
+                # print(entry[1])
+                r = self._resolve(frozenset(), entry[1])
+                print(r.kind, entry[1], self.qa)
+                if r.kind == "api":
+                    new_entries.append(
+                        Token(
+                            Link(
+                                str(entry[0]),
+                                r,
+                                "api",
+                                True,
+                            ),
+                            entry[2],
+                        )
+                    )
+                    continue
+            new_entries.append(
+                Token(str(entry[0]), entry[2]),
+            )
+
+        return [Code2(new_entries, code.out, code.ce_status)]
 
 
 def load_one(
