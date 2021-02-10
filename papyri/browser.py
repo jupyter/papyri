@@ -212,6 +212,11 @@ def main(qualname: str):
                 return ("link", link.value)
             return Link("link", link.value, lambda: self.cb(link.reference))
 
+        def render_BlockQuote(self, quote):
+            return urwid.Padding(
+                urwid.Pile([urwid.Text(x) for x in quote.value]), left=4, right=4
+            )
+
         def render_BlockDirective(self, directive):
             if directive.directive_name == "note":
                 return urwid.Padding(
@@ -327,6 +332,36 @@ def main(qualname: str):
                         lambda: self.cb("Not Implemented"),
                     ),
                 ]
+            )
+
+        def render_Code2(self, code):
+            # entries/out/ce_status
+
+            def insert_prompt(entries):
+                yield Link(
+                    "verbatim",
+                    ">>>",
+                    lambda: self.cb("likely copy content to clipboard"),
+                )
+                yield (None, " ")
+                for e in entries:
+                    type_ = e.type
+                    maybe_link = e.link
+                    if maybe_link.__class__.__name__ == "Link":
+                        yield ("pyg-" + str(type_), maybe_link.ref.value)
+                    else:
+                        if maybe_link == "\n":
+                            yield (None, "\n")
+                            yield ("verbatim", "... ")
+                        else:
+                            yield ("pyg-" + str(type_), f"{maybe_link}")
+
+            return urwid.Padding(
+                urwid.Pile(
+                    [TextWithLink([x for x in insert_prompt(code.entries)])]
+                    + ([Text(code.out)] if code.out else []),
+                ),
+                left=2,
             )
 
         def render_Code(self, code):
