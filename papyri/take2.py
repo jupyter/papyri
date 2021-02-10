@@ -148,16 +148,30 @@ class Node(Base):
 
 @dataclass(frozen=True)
 class RefInfo(Node):
+    """
+    This is likely not completely correct for target that are not Python object,
+    like example of gallery.
+
+    We also likely want to keep a reference to original object for later updates.
+
+
+    Parameters
+    ----------
+    module:
+        the module this object is defined in
+    version:
+        the version of the module where this is defined in
+    kind: {'api', 'example', ...}
+        ...
+    path:
+        full path to location.
+
+
+    """
     module: Optional[str]
     version: Optional[str]
     kind: str
     path: str
-
-    #    def __init__(module=None, version=None, kind=None, path=None):
-    #        self.module = module
-    #        self.version = version
-    #        self.kind = kind
-    #        self.path = path
 
     @classmethod
     def _deserialise(cls, *args, **kwargs):
@@ -219,6 +233,8 @@ class Link(Node):
 
     value: str
     reference: RefInfo
+    # kind likely should be deprecated, or renamed
+    # either keep exists/true/false, but that can be a property as to wether reference is None ?
     kind: str
     exists: bool
 

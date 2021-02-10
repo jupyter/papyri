@@ -534,13 +534,16 @@ class DirectiveVisiter(TreeReplacer):
 
 class DVR(DirectiveVisiter):
     def replace_Code(self, code):
+        """
+        Here we'll crawl example data and convert code entries so that each token contain a link to the object they
+        refered to.
+        """
         new_entries = []
         for entry in code.entries:
             # TODO
             if entry[1] and entry[1].strip():
                 # print(entry[1])
                 r = self._resolve(frozenset(), entry[1])
-                print(r.kind, entry[1], self.qa)
                 if r.kind == "api":
                     new_entries.append(
                         Token(
