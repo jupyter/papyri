@@ -20,14 +20,43 @@ var canvas = document.querySelector("canvas"),
     height = canvas.height,
     searchRadius = 40;
 
+
+ d3.select(context.canvas).call(d3.zoom()
+      .scaleExtent([0.96, 2])
+      .on("zoom", zoomed));
+
+var transform = d3.zoomIdentity*5
+
+function zoomed(t){
+        transform = d3.event.transform;
+        simulation.alphaTarget(0.3).restart()
+        console.log(transform)
+}
+
+//function zoomed(transform) {
+//    context.save();
+//    context.clearRect(0, 0, width, height);
+//    context.translate(transform.x, transform.y);
+//    context.scale(d3.event.transform.k, transform.k);
+//    context.beginPath();
+//    for (const [x, y] of data) {
+//      context.moveTo(x + r, y);
+//      context.arc(x, y, r, 0, 2 * Math.PI);
+//    }
+//    context.fill();
+//    context.restore();
+//  }
+//
+//zoomed();
+
 var color = d3.scaleOrdinal()
     .range(d3.schemeCategory10);
 
 var simulation = d3.forceSimulation()
-    .force("charge", d3.forceManyBody().strength(-28))
-    .force("link", d3.forceLink().strength(0.1).iterations(9).id(function(d) { return d.id; }))
-    .force("x", d3.forceX().strength(0.05))
-    .force("y", d3.forceY().strength(0.09));
+    .force("charge", d3.forceManyBody().strength(-58))
+    .force("link", d3.forceLink().distance(40).strength(0.1).iterations(9).id(function(d) { return d.id; }))
+    .force("x", d3.forceX().strength(0.01))
+    .force("y", d3.forceY().strength(0.01));
 
 d3.json("d3.json", function(error, graph) {
   if (error) throw error;
@@ -64,6 +93,9 @@ d3.json("d3.json", function(error, graph) {
     context.clearRect(0, 0, width, height);
     context.save();
     context.translate(width / 2, height / 2);
+    var sc = (transform.k-1)*20 +1
+    context.scale(sc, sc)
+    context.translate(transform.x*sc, transform.y*sc)
 
     context.beginPath();
     graph.links.forEach(drawLink);
@@ -74,11 +106,12 @@ d3.json("d3.json", function(error, graph) {
     //});
 
     var margin = 10; 
-
-    graph.nodes.forEach(function(d) { 
-      d.x = Math.max(-width/2+10, Math.min(width/2-10, d.x))
-      d.y = Math.max(-height/2+10, Math.min(height/2-10, d.y))
-    })
+    
+    // hit edges
+    // graph.nodes.forEach(function(d) { 
+    //   d.x = Math.max(-width/2+10, Math.min(width/2-10, d.x))
+    //   d.y = Math.max(-height/2+10, Math.min(height/2-10, d.y))
+    // })
     pages.forEach(function(page) {
       context.beginPath();
       page.values.forEach(drawNode);
@@ -134,8 +167,8 @@ function drawLink(d) {
 }
 
 function drawNode(d) {
-  context.moveTo(d.x + 3, d.y);
-  context.arc(d.x, d.y, 3, 0, 2 * Math.PI);
+  context.moveTo(d.x + 5, d.y);
+  context.arc(d.x, d.y, 5, 0, 2 * Math.PI);
 }
 
 </script>
