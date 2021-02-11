@@ -91,7 +91,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns=None, infer=None, prev=""):
+def parse_script(script, ns=None, infer=None, prev="", config=None):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -101,11 +101,11 @@ def parse_script(script, ns=None, infer=None, prev=""):
     script : str
         the script to tokenize and infer types on
     ns : dict
-        extra namesapce to use with jedi's Interpreter.
+        extra namespace to use with jedi's Interpreter.
     infer : bool
         whether to run jedi type inference that can be quite time consuming.
     prev : str
-        previsou lines that lead to this.
+        previous lines that lead to this.
 
     Yields
     ------
@@ -299,8 +299,15 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                                 assert len(fig_managers) == 0, fig_managers + [
                                     did_except,
                                 ]
-
-                    entries = list(parse_script(script, ns=ns, infer=infer, prev=acc))
+                    infer_exclude = config.get("exclude_jedi", frozenset())
+                    if qa in infer_exclude:
+                        print("Turning off type inference for this function:", qa)
+                        inf = False
+                    else:
+                        inf = infer
+                    entries = list(
+                        parse_script(script, ns=ns, infer=inf, prev=acc, config=config)
+                    )
                     acc += "\n" + script
                     example_section_data.append(
                         Code(entries, "\n".join(item.out), ce_status)
@@ -1003,11 +1010,12 @@ class Gen:
                 try:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
                 except Exception:
-                    p2.console.print(
-                        "Unexpected error parsing",
-                        target_item,
-                        target_item.__name__,
-                    )
+                    if not isinstance(target_item, ModuleType):
+                        p2.console.print(
+                            "Unexpected error parsing",
+                            target_item,
+                            target_item.__name__,
+                        )
                     if isinstance(target_item, ModuleType):
                         # from .take2 import main
                         # main(item_docstring)
