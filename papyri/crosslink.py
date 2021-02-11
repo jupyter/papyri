@@ -16,7 +16,9 @@ from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .stores import Store
 from .take2 import (
+    Admonition,
     Directive,
+    BlockDirective,
     Link,
     Node,
     Param,
@@ -276,10 +278,10 @@ def resolve_(
         return RefInfo(None, None, "local", ref)
     if ref in k_path_map:
         # get the more recent.
-        stuff = {k for k in known_refs if k.path == ref}
-        c2 = list(sorted(stuff, key=lambda x: x.version))[-1]
-        assert isinstance(c2, RefInfo), c2
-        assert k_path_map[ref] == c2
+        # stuff = {k for k in known_refs if k.path == ref}
+        # c2 = list(sorted(stuff, key=lambda x: x.version))[-1]
+        # assert isinstance(c2, RefInfo), c2
+        # assert k_path_map[ref] == c2
         return k_path_map[ref]
     else:
         if ref.startswith("."):
@@ -464,21 +466,46 @@ class DirectiveVisiter(TreeReplacer):
         # short -> long
         self.rev_aliases = {v: k for k, v in aliases.items()}
 
-    def replace_BlockDirective(self, block_directive):
-        name = block_directive.directive_name
-        if name not in {
-            "math",
-            "note",
-            "versionadded",
-            "versionchanged",
-            "attribute",
-            "deprecated",
-            "data",
-            "plot",
-            "warning",
-        }:
-            print(repr(name), "         ", self.qa)
+    def replace_BlockDirective(self, block_directive: BlockDirective):
         block_directive.children = [self.visit(c) for c in block_directive.children]
+        if block_directive.directive_name in ["warning", "notes"]:
+            title = None
+            args0 = block_directive.args0
+            args0 = [a.strip() for a in args0 if a.strip()]
+            if args0:
+                assert len(args0) == 1
+                print(
+                    "ADM!!",
+                    self.qa,
+                    "does title block adm",
+                    repr(args0),
+                    repr(block_directive.children),
+                )
+                title = args0[0]
+
+            assert block_directive.children is not None, block_directive
+            return [
+                Admonition(
+                    block_directive.directive_name, title, block_directive.children
+                )
+            ]
+        if block_directive.directive_name in [
+            "deprecated",
+            "code",
+            "versionchanged",
+            "autosummary",
+            "note",
+            "warning",
+            "math",
+            "versionadded",
+            "attribute",
+            "hint",
+            "plot",
+            "seealso",
+        ]:
+            return [block_directive]
+        print(block_directive.directive_name, self.qa)
+
         return [block_directive]
 
     def _resolve(self, loc, text):
@@ -512,7 +539,7 @@ class DirectiveVisiter(TreeReplacer):
                 "sup",
                 "rc",  # matplotlib
             ):
-                print(directive.role)
+                print("TODO role:", directive.role)
             return [directive]
         loc: FrozenSet[str]
         if directive.role not in ["any", None]:

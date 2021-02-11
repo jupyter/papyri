@@ -73,6 +73,15 @@
 </div>
 {% endmacro %}
 
+{% macro block_admonition(adm) -%}
+<div class='admonition'>
+    <div class='head'> {{adm.kind}}</div>
+    {% for it in adm.children %}
+        {{render_II(it)}}
+    {% endfor %}
+</div>
+{% endmacro %}
+
 
 {% macro render_II(obj) -%}
     {% if obj.__class__.__name__ == 'Paragraph' %}
@@ -86,7 +95,9 @@
        {% elif type == 'Math' %}
            {{unreachable()}}
        {% elif type == 'BlockDirective' %}
-            {{block_directive(obj)}}
+           {{block_directive(obj)}}
+        {% elif type == 'Admonition' %}
+            {{block_admonition(obj)}}
        {% elif type == 'Verbatim' %}
            {{unreachable()}}
        {% elif type == 'Paragraph' %}

@@ -150,7 +150,7 @@ def parse_script(script, ns=None, infer=None, prev=""):
                         ref = ""
                 except (AttributeError, TypeError, Exception) as e:
                     raise type(e)(
-                        f"{contextscript}, {line_n}, {col_n}, {prev}, {jed}"
+                        f"{contextscript}, {line_n=}, {col_n=}, {prev=}, {jed=}"
                     ) from e
                     failed = "(jedi failed inference)"
                     print("failed inference on ", script, ns, jed, col_n, line_n + 1)
@@ -238,7 +238,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     import matplotlib.pyplot as plt
     from matplotlib import _pylab_helpers
 
-
     acc = ""
     import numpy as np
 
@@ -317,8 +316,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     if len(fig_managers) != 0:
         plt.close("all")
     return processed_example_data(example_section_data), figs
-
-
 
 
 def get_classes(code):

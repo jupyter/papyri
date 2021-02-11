@@ -168,6 +168,7 @@ class RefInfo(Node):
 
 
     """
+
     module: Optional[str]
     version: Optional[str]
     kind: str
@@ -468,6 +469,7 @@ class Section(Node):
             BulletList,
             EnumeratedList,
             BlockQuote,
+            Admonition,
         ]
     ]
     # might need to be more complicated like verbatim.
@@ -526,6 +528,7 @@ class Param(Node):
             Example,
             BlockVerbatim,
             Math,
+            Admonition,
         ]
     ]
 
@@ -650,6 +653,7 @@ class Paragraph(Node):
             Word,
             Words,
             Directive,
+            Admonition,
             Verbatim,
             Link,
             Math,
@@ -937,8 +941,6 @@ class Block(Node):
 
     """
 
-    COLOR = lambda x: x
-
     def __init__(self, lines, wh, ind, *, reason=None):
         if not lines:
             lines = [
@@ -950,14 +952,12 @@ class Block(Node):
         self.reason = reason
 
     def __repr__(self):
-        return type(self).COLOR(
-            f"<{self.__class__.__name__} '{len(self.lines)},{len(self.wh)},{len(self.ind)}'> with\n"
-            + indent("\n".join([str(l) for l in self.lines]), "    ")
-            + "\n"
-            + indent("\n".join([str(w) for w in self.wh]), "    ")
-            + "\n"
-            + indent("\n".join([repr(x) for x in self.ind]), "    ")
-        )
+        from typing import get_type_hints as gth
+
+        attrs = gth(type(self)).keys()
+        reprattr = ", ".join([f"{name}={getattr(self, name)}" for name in attrs])
+
+        return f"<{self.__class__.__name__} '" + reprattr + "'>"
 
 
 class BlockError(Block):
@@ -1174,6 +1174,18 @@ class Header:
         )
 
 
+class Admonition(Block):
+
+    kind: str
+    title: Optional[str]
+    children: List[Paragraph]
+
+    def __init__(self, kind=None, title=None, children=None):
+        self.kind = kind
+        self.children = children
+        self.title = title
+
+
 class BlockDirective(Block):
     lines: Lines
     wh: Lines
@@ -1183,7 +1195,6 @@ class BlockDirective(Block):
     args0: List[str]
     # TODO : this is likely wrong...
     inner: Optional[Paragraph]
-    COLOR = ORANGE
 
     @property
     def children(self):
@@ -1262,9 +1273,8 @@ class BlockVerbatim(Block):
         return cls("")
 
     def __repr__(self):
-        return type(self).COLOR(
-            f"<{self.__class__.__name__} '{len(self.lines)}'> with\n"
-            + indent("\n".join([str(l) for l in self.lines]), "    ")
+        return f"<{self.__class__.__name__} '{len(self.lines)}'> with\n" + indent(
+            "\n".join([str(l) for l in self.lines]), "    "
         )
 
     def to_json(self):
@@ -1377,8 +1387,6 @@ class Example(Block):
         self.lines = lines
         self.wh = wh
         self.ind = ind
-
-    COLOR = GREEN
 
 
 def header_pass(block):
