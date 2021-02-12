@@ -2,3 +2,5 @@
 *.ipynb
 cache
 html
+build
+*.lprof
