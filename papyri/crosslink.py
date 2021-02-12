@@ -893,7 +893,10 @@ def relink():
             raise ValueError(str(item)) from e
         qa = item.path.name[:-5]
         data["backrefs"] = []
-        doc_blob = IngestedBlobs.from_json(data)
+        try:
+            doc_blob = IngestedBlobs.from_json(data)
+        except Exception as e:
+            raise type(e)(item)
         doc_blob.process(known_refs, aliases=aliases)
 
         for sa in doc_blob.see_also:
