@@ -93,7 +93,6 @@ Of Interest
     multiple figures
 
 `numpy.einsum`:
-
     one of the longest numpy docstring/document, or at least one of the longest to render, with
     `scipy.signal.windows.windows.dpss` , `scipy.optimize._minimize.minimize` and
     `scipy.optimize._basinhopping.basinhopping`
