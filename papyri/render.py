@@ -712,8 +712,13 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
 
 
 async def main(ascii, html, dry_run):
+    from .graphstore import GraphStore
+
+    gs = GraphStore(ingest_dir, {})
     store = Store(ingest_dir)
     files = store.glob("*/*/module/*.json")
+    gfiles = list(gs.glob((None, None, "module", None)))
+
     css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -742,6 +747,7 @@ async def main(ascii, html, dry_run):
     # input("press enter to continue...")
     shutil.rmtree(html_dir)
     random.shuffle(files)
+    random.shuffle(gfiles)
     # Gallery
     mv = store.glob("*/*")
     for item in mv:
