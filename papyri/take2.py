@@ -178,6 +178,9 @@ class RefInfo(Node):
     def _deserialise(cls, *args, **kwargs):
         return cls(**kwargs)
 
+    def __iter__(self):
+        return iter([self.module, self.version, self.kind, self.path])
+
 
 class Verbatim(Node):
     value: List[str]

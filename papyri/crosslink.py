@@ -14,6 +14,7 @@ from there import print
 
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
+from .graphstore import GraphStore
 from .stores import Store
 from .take2 import (
     Admonition,
@@ -34,7 +35,27 @@ from .utils import progress
 warnings.simplefilter("ignore", UserWarning)
 
 
+def g_find_all_refs(graph_store):
+    o_family = sorted(list(graph_store.glob((None, None, "module", None))))
+
+    # TODO
+    # here we can't compute just the dictionary and use frozenset(....values())
+    # as we may have multiple version of libraries; this is something that will
+    # need to be fixed in the long run
+    known_refs = []
+    ref_map = {}
+    for item in o_family:
+        module, v = item.module, item.version
+        r = RefInfo(item.module, item.version, "api", item.path)
+        known_refs.append(r)
+        ref_map[r.path] = r
+    return frozenset(known_refs), ref_map
+
+
 def find_all_refs(store):
+    if isinstance(store, GraphStore):
+        return g_find_all_refs(store)
+
     o_family = sorted(list(store.glob("*/*/module/*.json")))
 
     # TODO
@@ -73,7 +94,7 @@ class IngestedBlobs(Node):
     )
 
     _content: Dict[str, Section]
-    refs: List[Link]
+    refs: List[RefInfo]
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
@@ -85,7 +106,7 @@ class IngestedBlobs(Node):
     signature: Optional[str]
     references: Optional[List[str]]
     logo: Optional[str]
-    backrefs: List[str]
+    backrefs: List[RefInfo]
     qa: str
     arbitrary: List[Section]
 
@@ -165,6 +186,10 @@ class IngestedBlobs(Node):
             #'See Also'
             #'Examples'
         ]
+        if self.refs is None:
+            self.refs = []
+        for r in self.refs:
+            assert None not in r
         if aliases is None:
             aliases = {}
         for s in sections_:
@@ -201,6 +226,14 @@ class IngestedBlobs(Node):
             for dsc in d.descriptions:
                 new_desc.append(visitor.visit(dsc))
             d.descriptions = new_desc
+        try:
+            for r in visitor._targets:
+                assert None not in r, r
+            self.refs = list(set(visitor._targets).union(set(self.refs)))
+            for r in self.refs:
+                assert None not in r
+        except Exception as e:
+            raise type(e)(self.refs)
 
     @classmethod
     def from_json(cls, data):
@@ -292,7 +325,8 @@ def resolve_(
                 sub1 = root_start(root, frozenset(k_path_map.keys()))
                 subset = endswith(ref, sub1)
                 if len(subset) == 1:
-                    return RefInfo(None, None, "exists", next(iter(subset)))
+                    return k_path_map[next(iter(subset))]
+                    # return RefInfo(None, None, "exists", next(iter(subset)))
                 else:
                     if len(subset) > 1:
                         # ambiguous ref
@@ -312,7 +346,9 @@ def resolve_(
     rs = root_start(q0, frozenset(k_path_map.keys()))
     attempts = [q for q in rs if (ref in q)]
     if len(attempts) == 1:
-        return RefInfo(None, None, "exists", attempts[0])
+        # return RefInfo(None, None, "exists", attempts[0])
+        return k_path_map[attempts[0]]
+
     return RefInfo(None, None, "missing", ref)
 
 
@@ -347,7 +383,11 @@ def load_one_uningested(
 
     blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.name))
     blob.example_section_data = blob.example_section_data
-    blob.refs = list(sorted(set(blob.refs)))
+    # blob.refs = list(sorted(set(blob.refs)))
+    blob.refs = []
+
+    for r in blob.refs:
+        assert None not in r
 
     sections_ = [
         "Parameters",
@@ -389,16 +429,22 @@ def load_one_uningested(
     blob.arbitrary = acc1
 
     blob.process(known_refs=known_refs, aliases=aliases, verbose=False)
+    # if targets:
+    #    print("LL", len(targets))
 
-    if blob.refs:
-        new_refs: List[Link] = []
-        kind = "exists"
-        for value in blob.refs:
-            assert isinstance(value, str)
-            r = resolve_(qa, known_refs, frozenset(), value)
-            new_refs.append(Link(value, r, kind, r.kind != "missing"))
+    # if blob.refs:
+    #    new_refs: List[RefInfo] = []
+    #    kind = "exists"
+    #    for value in blob.refs:
+    #        assert isinstance(value, str)
+    #        r = resolve_(qa, known_refs, frozenset(), value)
+    #        if None not in r:
+    #            new_refs.append(r)
 
-        blob.refs = new_refs
+    #    blob.refs = new_refs
+    # blob.refs = list(targets)
+    # if blob.refs:
+    #    print("BLOB REFS:", blob.refs)
     return blob
 
 
@@ -465,6 +511,7 @@ class DirectiveVisiter(TreeReplacer):
         self.aliases: Dict[str, str] = aliases
         # short -> long
         self.rev_aliases = {v: k for k, v in aliases.items()}
+        self._targets = set()
 
     def replace_BlockDirective(self, block_directive: BlockDirective):
         block_directive.children = [self.visit(c) for c in block_directive.children]
@@ -555,6 +602,9 @@ class DirectiveVisiter(TreeReplacer):
                 self.local.append(directive.text)
             else:
                 self.total.append((directive.text, ref))
+            if r.kind != "local":
+                assert None not in r, r
+                self._targets.add(r)
             return [Link(directive.text, r, exists, exists != "missing")]
         return [directive]
 
@@ -572,6 +622,7 @@ class DVR(DirectiveVisiter):
                 # print(entry[1])
                 r = self._resolve(frozenset(), entry[1])
                 if r.kind == "api":
+                    self._targets.add(r)
                     new_entries.append(
                         Token(
                             Link(
@@ -603,7 +654,9 @@ def load_one(
     if known_refs is None:
         known_refs = frozenset()
     if not strict:
-        blob.process(known_refs=known_refs, aliases=None)
+        targets = blob.process(known_refs=known_refs, aliases=None)
+        if targets:
+            print("OA", len(targets))
     return blob
 
 
@@ -614,7 +667,11 @@ class Ingester:
     def ingest(self, path: Path, check: bool):
 
         store = Store(self.ingest_dir)
-        known_refs, _ = find_all_refs(store)
+        gstore = GraphStore(self.ingest_dir)
+        known_refs, _ = find_all_refs(gstore)
+        _x, _y = find_all_refs(store)
+        assert len(_x) == len(known_refs), (len(_x), len(known_refs))
+        assert _x == known_refs, (list(_x - known_refs)[:1], list(known_refs - _x)[:1])
 
         nvisited_items = {}
         other_backrefs = {}
@@ -633,14 +690,20 @@ class Ingester:
         (self.ingest_dir / root / version / "examples").mkdir(
             parents=True, exist_ok=True
         )
+
         for p, fe in progress(
             (path / "examples/").glob("*"), description=f"Reading {path.name} Examples"
         ):
             s = Section.from_json(json.loads(fe.read_text()))
-            with open(
-                self.ingest_dir / root / version / "examples" / fe.name, "w"
-            ) as f:
-                f.write(json.dumps(s.to_json()))
+            gstore.put(
+                (root, version, "examples", fe.name),
+                json.dumps(s.to_json()).encode(),
+                [],
+            )
+            # with open(
+            #    self.ingest_dir / root / version / "examples" / fe.name, "w"
+            # ) as f:
+            #    f.write()
 
         for p, f1 in progress(
             (path / "module").glob("*.json"),
@@ -689,72 +752,86 @@ class Ingester:
                 [x[0] for x in doc_blob.content["Parameters"] if x[0]]
                 + [x[0] for x in doc_blob.content["Returns"] if x[0]]
             )
-            doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
+            refs = doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
             doc_blob.logo = logo
-            for ref in doc_blob.refs:
-                hash(known_ref_info)
-                hash(local_refs)
-                # r = resolve_(qa, known_ref_info, local_refs, ref)
-                resolved, exists = ref.reference.path, ref.reference.kind
-                # here need to check and load the new files touched.
-                if resolved in nvisited_items and ref != qa:
-                    nvisited_items[resolved].backrefs.append(qa)
-                elif ref != qa and exists == "missing" and "." in ref.reference.path:
-                    assert ref.reference.module is None
-                    ref_root = ref.reference.path.split(".")[0]
-                    if ref_root == root:
-                        continue
-                    if ref_root == "builtins":
-                        continue
+            # if refs:
+            #    print("R IN qa", qa)
+            # for ref in doc_blob.refs:
+            #    hash(known_ref_info)
+            #    hash(local_refs)
+            #    # r = resolve_(qa, known_ref_info, local_refs, ref)
+            #    resolved, exists = ref.reference.path, ref.reference.kind
+            #    # here need to check and load the new files touched.
+            #    if resolved in nvisited_items and ref != qa:
+            #        if None not in ref.reference:
+            #            assert None not in ref.reference, ref.reference
+            #            nvisited_items[resolved].backrefs.append(ref.reference)
+            #    elif ref != qa and exists == "missing" and "." in ref.reference.path:
+            #        assert ref.reference.module is None
+            #        ref_root = ref.reference.path.split(".")[0]
+            #        if ref_root == root:
+            #            continue
+            #        if ref_root == "builtins":
+            #            continue
+            #        if ref_root == "":
+            #            continue
 
-                    existing_locations = list(
-                        (self.ingest_dir / ref_root).glob(
-                            f"*/module/{ge(resolved)}.json"
-                        )
-                    )
-                    # TODO: get the latest, if there are many versions.
-                    # assert len(existing_locations) <= 1, existing_locations
-                    # pass
-                    if not existing_locations:
-                        # print("Could not find", resolved, ref, f"({qa})")
-                        continue
-                    existing_location = existing_locations[0]
-                    # existing_location = (
-                    #    self.ingest_dir / ref_root / "module" / (resolved + ".json")
-                    # )
-                    if existing_location.exists():
-                        brpath = Path(str(existing_location)[:-5] + ".br")
-                        brdata: Optional[bytes]
-                        if brpath.exists():
-                            brdata = brpath.read_bytes()
-                        else:
-                            assert False
-                            brdata = None
-                        try:
-                            other_backrefs[resolved] = load_one(
-                                existing_location.read_bytes(),
-                                brdata,
-                                strict=True,
-                            )
-                        except Exception as e:
-                            raise type(e)(f"Error in {qa} {existing_location}")
-                        other_backrefs[resolved].backrefs.append(qa)
-                    elif "/" not in resolved:
-                        # TODO figure out this one.
-                        phantom_dir = (
-                            self.ingest_dir / ref_root / "module" / "__phantom__"
-                        )
-                        phantom_dir.mkdir(exist_ok=True, parents=True)
-                        ph = phantom_dir / (resolved + ".json")
-                        if ph.exists():
-                            ph_data = json.loads(ph.read_text())
+            #        existing_locations = list(
+            #            (self.ingest_dir / ref_root).glob(
+            #                f"*/module/{ge(resolved)}.json"
+            #            )
+            #        )
+            #        gex = list(
+            #            gstore.glob((ref_root, None, "module", f"{ge(resolved)}.json"))
+            #        )
+            #        assert gex == existing_locations, (gex, existing_locations)
+            #        # TODO: get the latest, if there are many versions.
+            #        # assert len(existing_locations) <= 1, existing_locations
+            #        # pass
+            #        if not existing_locations:
+            #            # print("Could not find", resolved, ref, f"({qa})")
+            #            continue
+            #        existing_location = existing_locations[0]
+            #        # existing_location = (
+            #        #    self.ingest_dir / ref_root / "module" / (resolved + ".json")
+            #        # )
+            #        if existing_location.exists():
+            #            brpath = Path(str(existing_location)[:-5] + ".br")
+            #            brdata: Optional[bytes]
+            #            if brpath.exists():
+            #                brdata = brpath.read_bytes()
+            #            else:
+            #                assert False
+            #                brdata = None
+            #            try:
+            #                other_backrefs[resolved] = load_one(
+            #                    existing_location.read_bytes(),
+            #                    brdata,
+            #                    strict=True,
+            #                )
+            #            except Exception as e:
+            #                raise type(e)(f"Error in {qa} {existing_location}")
+            #            # TODO:
+            #            other_backrefs[resolved].backrefs.append(
+            #                (module, version, "module", qa)
+            #            )
+            #        elif "/" not in resolved:
+            #            # TODO figure out this one.
+            #            assert False
+            #            phantom_dir = (
+            #                self.ingest_dir / ref_root / "module" / "__phantom__"
+            #            )
+            #            phantom_dir.mkdir(exist_ok=True, parents=True)
+            #            ph = phantom_dir / (resolved + ".json")
+            #            if ph.exists():
+            #                ph_data = json.loads(ph.read_text())
 
-                        else:
-                            ph_data = []
-                        ph_data.append(qa)
-                        ph.write_text(json.dumps(ph_data))
-                    else:
-                        print(resolved, "not valid reference, skipping.")
+            #            else:
+            #                ph_data = []
+            #            ph_data.append(qa)
+            #            ph.write_text(json.dumps(ph_data))
+            #        else:
+            #            print(resolved, "not valid reference, skipping.")
             # todo: warning mutation.
             for sa in doc_blob.see_also:
                 rev_aliases = {v: k for k, v in aliases.items()}
@@ -774,9 +851,10 @@ class Ingester:
             (path / "assets").glob("*"),
             description=f"Reading {path.name} image files ...",
         ):
-            (self.ingest_dir / root / version / "assets" / f2.name).write_bytes(
-                f2.read_bytes()
-            )
+            # (self.ingest_dir / root / version / "assets" / f2.name).write_bytes(
+            #    f2.read_bytes()
+            # )
+            gstore.put((root, version, "assets", f2.name), f2.read_bytes(), [])
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cleaning double references"
@@ -787,11 +865,12 @@ class Ingester:
             phantom_dir = self.ingest_dir / root / version / "module" / "__phantom__"
             ph = phantom_dir / (qa + ".json")
             if ph.exists():
+                assert False
                 ph_data = json.loads(ph.read_text())
             else:
                 ph_data = []
 
-            doc_blob.backrefs = list(sorted(set(doc_blob.backrefs + ph_data)))
+            doc_blob.backrefs = list(set(doc_blob.backrefs + ph_data))
             assert hasattr(doc_blob, "arbitrary")
         for console, path in progress(
             (self.ingest_dir / root / version / "module").glob("*.json"),
@@ -814,18 +893,35 @@ class Ingester:
             doc_blob.version = version
             assert hasattr(doc_blob, "arbitrary")
             js = doc_blob.to_json()
-            br = js.pop("backrefs", [])
+            # br = js.pop("backrefs", [])
+            refs = [
+                (b["module"], b["version"], b["kind"], b["path"])
+                for b in js.get("refs", [])
+            ]
+            # print("RR", refs)
+            for r in refs:
+                assert None not in r
             try:
-                path = self.ingest_dir / mod_root / version / "module" / f"{qa}.json"
-                path_br = self.ingest_dir / mod_root / version / "module" / f"{qa}.br"
+                # path = self.ingest_dir / mod_root / version / "module" / f"{qa}.json"
+                # path_br = self.ingest_dir / mod_root / version / "module" / f"{qa}.br"
+                key = (mod_root, version, "module", f"{qa}.json")
+                assert mod_root is not None
+                assert version is not None
+                assert None not in key
+                gstore.put(
+                    key,
+                    json.dumps(js, indent=2).encode(),
+                    refs,
+                )
 
-                with path.open("w") as f:
-                    f.write(json.dumps(js, indent=2))
-                if path_br.exists():
-                    bb = json.loads(path_br.read_text())
-                else:
-                    bb = []
-                path_br.write_text(json.dumps(list(sorted(set(br + bb)))))
+                # with path.open("w") as f:
+                #    f.write(json.dumps(js, indent=2))
+                # if path_br.exists():
+                #    bb = json.loads(path_br.read_text())
+                # else:
+                #    bb = []
+                # try:
+                # path_br.write_text(json.dumps(list(sorted(set(br )))))
             except Exception as e:
                 raise RuntimeError(f"error writing to {path}") from e
 

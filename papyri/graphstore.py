@@ -33,6 +33,9 @@ class Path:
     def mkdir(self, *args, **kwargs):
         self.path.mkdir(*args, **kwargs)
 
+    def __getattr__(self, name):
+        return getattr(self.path, name)
+
 
 Key = namedtuple("Key", ["module", "version", "kind", "path"])
 
@@ -85,26 +88,29 @@ class GraphStore:
 
     """
 
-    def __init__(self, root, link_finder):
-        assert isinstance(link_finder, dict)
+    def __init__(self, root, link_finder=None):
+
+        # assert isinstance(link_finder, dict)
         if not isinstance(root, _Path):
             root = _Path(root)
         self._root = Path(root)
-        self._suffix = ".json"
         self._link_finder = link_finder
 
     def _key_to_paths(self, key) -> Tuple[Path, Path]:
         path = self._root
+        assert None not in key, key
         for k in key[:-1]:
             path = path / k
+        path0 = path / (key[-1])
         path_br = path / (key[-1] + ".br")
-        path = path / (key[-1] + self._suffix)
-        return path, path_br
+        return path0, path_br
 
     @staticmethod
     def _path_to_key(path):
         a, b, c, d = path.parts[-4:]
-        return Key(a, b, c, d[:-5])
+        if d.endswith(".json"):
+            d = d[:-5]
+        return Key(a, b, c, d)
 
     def remove(self, key) -> None:
         a, b = self._key_to_paths(key)
@@ -119,7 +125,7 @@ class GraphStore:
     def _add_edge(self, source, dest):
         _, p = self._key_to_paths(dest)
         if p.path.exists():
-            data = set(p.read_json())
+            data = set([tuple(x) for x in p.read_json()])
         else:
             p.parent.mkdir(parents=True, exist_ok=True)
             data = set()
@@ -135,8 +141,10 @@ class GraphStore:
 
     def put(self, key, bytes_, refs) -> None:
         path, path_br = self._key_to_paths(key)
-        print(path.path.parent.mkdir(parents=True, exist_ok=True))
+        path.path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(bytes_)
+        if refs:
+            print("REFS!", refs)
         if path_br.path.exists():
             old_refs = set(path_br.read_json())
         else:
@@ -157,7 +165,10 @@ class GraphStore:
                 acc += "/*"
             else:
                 acc += "/" + p
-        acc += self._suffix
-        acc = acc[1:]
-        print(acc)
-        return (self._path_to_key(p) for p in self._root.glob(acc))
+        acc = acc[1:] + ".json"
+        try:
+            res = [self._path_to_key(p) for p in self._root.glob(acc)]  # !!
+        except Exception as e:
+            print(acc)
+            raise type(e)("Acc:" + acc, pattern)
+        return res
