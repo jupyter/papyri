@@ -490,7 +490,7 @@ class DFSCollector:
     def __init__(self, root, others):
         assert isinstance(root, ModuleType), root
         self.root = root.__name__
-        assert '.' not in self.root
+        assert "." not in self.root
         self.obj = dict()
         self.aliases = defaultdict(lambda: [])
         self._open_list = [(root, [root.__name__])]
@@ -521,7 +521,7 @@ class DFSCollector:
                 # might be worth looking into like np.exp.
                 pass
             return
-        if not qa.split('.')[0] == self.root:
+        if not qa.split(".")[0] == self.root:
             return
         if obj in self.obj.values():
             return
