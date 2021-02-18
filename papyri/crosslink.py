@@ -303,7 +303,9 @@ def resolve_(
 
     assert isinstance(ref, str), ref
 
-    # LRU Cache seem to have a problem here; and get slow while this is just fine.
+    # TODO: LRU Cache seem to have speed problem here; and get slow while this should be just fine.
+    # this seem to be due to the fact that even if the hash is the same this still needs to compare the objects, as
+    # those may have been muted.
     if hk not in _cache:
         _cache[hk] = _into(known_refs)
 
