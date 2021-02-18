@@ -213,9 +213,9 @@ class IngestedBlobs(Node):
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
             # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {self.qa}"
-            print(
-                f"Newly found links: {len(visitor.total)}, {self.qa}, {visitor.total}"
-            )
+            print(f"Newly found {len(visitor.total)} links in {self.qa}:")
+            for a, b in visitor.total:
+                print("     ", repr(a), "refers to", repr(b))
 
         self.example_section_data = visitor.visit(self.example_section_data)
 
@@ -242,9 +242,15 @@ class IngestedBlobs(Node):
         return inst
 
 
-@lru_cache
+# iii = 0
+
+
+# @lru_cache(maxsize=100000)
 def _into(known_refs: List[Union[RefInfo, str]]) -> Dict[str, RefInfo]:
     # Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
+    # global iii
+    # iii += 1
+    # print("III", iii)
 
     _map: Dict[str, List[RefInfo]] = defaultdict(lambda: [])
     assert isinstance(known_refs, frozenset)
@@ -258,7 +264,7 @@ def _into(known_refs: List[Union[RefInfo, str]]) -> Dict[str, RefInfo]:
         assert len(set(c.module for c in cand)) == 1, cand
         _m2[k] = cand[-1]
 
-    return _m2
+    return _m2, frozenset(_m2.keys())
 
 
 @lru_cache
@@ -271,6 +277,9 @@ def endswith(end, refs):
     return frozenset(r for r in refs if r.endswith(end))
 
 
+_cache = {}
+
+
 def resolve_(
     qa: str,
     known_refs: FrozenSet[RefInfo],
@@ -280,7 +289,7 @@ def resolve_(
 ) -> RefInfo:
     # RefInfo(module, version, kind, path)
     bq = False
-    hash(known_refs)
+    hk = hash(known_refs)
     hash(local_refs)
     if rev_aliases is None:
         rev_aliases = {}
@@ -293,7 +302,12 @@ def resolve_(
         return res
 
     assert isinstance(ref, str), ref
-    k_path_map = _into(known_refs)
+
+    # LRU Cache seem to have a problem here; and get slow while this is just fine.
+    if hk not in _cache:
+        _cache[hk] = _into(known_refs)
+
+    k_path_map, keyset = _cache[hk]
 
     if ref.startswith("builtins."):
         return RefInfo(None, None, "missing", ref)
@@ -322,7 +336,7 @@ def resolve_(
                 return k_path_map[found]
             else:
                 root = qa.split(".")[0]
-                sub1 = root_start(root, frozenset(k_path_map.keys()))
+                sub1 = root_start(root, keyset)
                 subset = endswith(ref, sub1)
                 if len(subset) == 1:
                     return k_path_map[next(iter(subset))]
@@ -343,7 +357,7 @@ def resolve_(
                 return k_path_map[attempt]
 
     q0 = qa.split(".")[0]
-    rs = root_start(q0, frozenset(k_path_map.keys()))
+    rs = root_start(q0, keyset)
     attempts = [q for q in rs if (ref in q)]
     if len(attempts) == 1:
         # return RefInfo(None, None, "exists", attempts[0])
@@ -520,14 +534,15 @@ class DirectiveVisiter(TreeReplacer):
             args0 = block_directive.args0
             args0 = [a.strip() for a in args0 if a.strip()]
             if args0:
-                assert len(args0) == 1
-                print(
-                    "ADM!!",
-                    self.qa,
-                    "does title block adm",
-                    repr(args0),
-                    repr(block_directive.children),
-                )
+                # assert len(args0) == 1
+                # TODO: dont' allow admonition on first line.
+                # print(
+                #    "ADM!!",
+                #    self.qa,
+                #    "does title block adm",
+                #    repr(args0),
+                #    repr(block_directive.children),
+                # )
                 title = args0[0]
 
             assert block_directive.children is not None, block_directive
@@ -549,6 +564,16 @@ class DirectiveVisiter(TreeReplacer):
             "hint",
             "plot",
             "seealso",
+            "moduleauthor",
+            "data",
+            "WARNING",
+            "currentmodule",
+            "important",
+            "code-block",
+            "image",
+            "rubric",
+            "inheritance-diagram",
+            "table",
         ]:
             return [block_directive]
         print(block_directive.directive_name, self.qa)
@@ -684,7 +709,6 @@ class Ingester:
             # long : short
             aliases: Dict[str, str] = data.get("aliases", {})
             root = data.get("module")
-            print(len(set(aliases.keys())), len(set(aliases.values())))
 
         del f
         (self.ingest_dir / root / version / "examples").mkdir(
@@ -962,8 +986,14 @@ class Ingester:
 
 
 def main(path, check):
-    print("Ingesting ", path.name)
+    builtins.print("Ingesting", path.name, "...")
+    from time import perf_counter
+
+    now = perf_counter()
     Ingester().ingest(path, check)
+    delta = perf_counter() - now
+
+    builtins.print(f"Ingesting {path.name} done in {delta:0.2f}s")
 
 
 def relink():

@@ -143,8 +143,6 @@ class GraphStore:
         path, path_br = self._key_to_paths(key)
         path.path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(bytes_)
-        if refs:
-            print("REFS!", refs)
         if path_br.path.exists():
             old_refs = set(path_br.read_json())
         else:
