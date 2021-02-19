@@ -105,12 +105,13 @@ class GraphStore:
         path_br = path / (key[-1] + ".br")
         return path0, path_br
 
-    @staticmethod
-    def _path_to_key(path):
-        a, b, c, d = path.parts[-4:]
-        if d.endswith(".json"):
-            d = d[:-5]
-        return Key(a, b, c, d)
+    def _path_to_key(self, path):
+        path = path.relative_to(self._root.path)
+        if len(path.parts) == 4:
+            a, b, c, d = path.parts
+            return Key(a, b, c, d)
+        else:
+            return path.parts
 
     def remove(self, key) -> None:
         a, b = self._key_to_paths(key)
@@ -144,7 +145,7 @@ class GraphStore:
         path.path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(bytes_)
         if path_br.path.exists():
-            old_refs = set(path_br.read_json())
+            old_refs = set(tuple(x) for x in path_br.read_json())
         else:
             old_refs = set()
         new_refs = set(refs)
@@ -163,10 +164,13 @@ class GraphStore:
                 acc += "/*"
             else:
                 acc += "/" + p
-        acc = acc[1:] + ".json"
+        acc = acc[1:]
         try:
-            res = [self._path_to_key(p) for p in self._root.glob(acc)]  # !!
+            res = [
+                self._path_to_key(p)
+                for p in self._root.glob(acc)
+                if not p.name.endswith(".br")
+            ]  # !!
         except Exception as e:
-            print(acc)
             raise type(e)("Acc:" + acc, pattern)
         return res

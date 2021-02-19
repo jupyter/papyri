@@ -46,7 +46,7 @@ def g_find_all_refs(graph_store):
     ref_map = {}
     for item in o_family:
         module, v = item.module, item.version
-        r = RefInfo(item.module, item.version, "api", item.path)
+        r = RefInfo(item.module, item.version, "module", item.path)
         known_refs.append(r)
         ref_map[r.path] = r
     return frozenset(known_refs), ref_map
@@ -56,7 +56,9 @@ def find_all_refs(store):
     if isinstance(store, GraphStore):
         return g_find_all_refs(store)
 
-    o_family = sorted(list(store.glob("*/*/module/*.json")))
+    o_family = sorted(
+        list(r for r in store.glob("*/*/module/*") if not r.path.name.endswith(".br"))
+    )
 
     # TODO
     # here we can't compute just the dictionary and use frozenset(....values())
@@ -66,7 +68,7 @@ def find_all_refs(store):
     ref_map = {}
     for item in o_family:
         module, v = item.path.parts[-4:-2]
-        r = RefInfo(module, v, "api", item.name[:-5])
+        r = RefInfo(module, v, "module", item.name)
         known_refs.append(r)
         ref_map[r.path] = r
     return frozenset(known_refs), ref_map
@@ -655,7 +657,7 @@ class DVR(DirectiveVisiter):
                             Link(
                                 str(entry[0]),
                                 r,
-                                "api",
+                                "module",
                                 True,
                             ),
                             entry[2],
@@ -713,9 +715,9 @@ class Ingester:
             root = data.get("module")
 
         del f
-        (self.ingest_dir / root / version / "examples").mkdir(
-            parents=True, exist_ok=True
-        )
+        # (self.ingest_dir / root / version / "examples").mkdir(
+        #    parents=True, exist_ok=True
+        # )
 
         for p, fe in progress(
             (path / "examples/").glob("*"), description=f"Reading {path.name} Examples"
@@ -726,15 +728,13 @@ class Ingester:
                 json.dumps(s.to_json()).encode(),
                 [],
             )
-            # with open(
-            #    self.ingest_dir / root / version / "examples" / fe.name, "w"
-            # ) as f:
-            #    f.write()
 
         for p, f1 in progress(
-            (path / "module").glob("*.json"),
+            (path / "module").glob("*"),
             description=f"Reading {path.name} doc bundle files ...",
         ):
+            if f1.name.endswith(".br"):
+                continue
             qa = f1.name[:-5]
             if check:
                 rqa = normalise_ref(qa)
@@ -759,14 +759,11 @@ class Ingester:
                 raise RuntimeError(f"error Reading to {f1}") from e
         del f1
 
-        (self.ingest_dir / root).mkdir(exist_ok=True)
-        (self.ingest_dir / root / version).mkdir(exist_ok=True)
-        (self.ingest_dir / root / version / "module").mkdir(exist_ok=True)
         known_refs_II = frozenset(nvisited_items.keys())
 
         # TODO :in progress, crosslink needs version information.
         known_ref_info = frozenset(
-            RefInfo(root, version, "api", qa) for qa in known_refs_II
+            RefInfo(root, version, "module", qa) for qa in known_refs_II
         ).union(known_refs)
 
         for p, (qa, doc_blob) in progress(
@@ -872,14 +869,11 @@ class Ingester:
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
-        (self.ingest_dir / root / version / "assets").mkdir(exist_ok=True)
+        # (self.ingest_dir / root / version / "assets").mkdir(exist_ok=True)
         for px, f2 in progress(
             (path / "assets").glob("*"),
             description=f"Reading {path.name} image files ...",
         ):
-            # (self.ingest_dir / root / version / "assets" / f2.name).write_bytes(
-            #    f2.read_bytes()
-            # )
             gstore.put((root, version, "assets", f2.name), f2.read_bytes(), [])
 
         for p, (qa, doc_blob) in progress(
@@ -898,14 +892,10 @@ class Ingester:
 
             doc_blob.backrefs = list(set(doc_blob.backrefs + ph_data))
             assert hasattr(doc_blob, "arbitrary")
-        for console, path in progress(
-            (self.ingest_dir / root / version / "module").glob("*.json"),
-            description="cleanig previsous files ....",
-        ):
-            path.unlink()
 
-        with open(self.ingest_dir / root / version / "papyri.json", "w") as f:
-            f.write(json.dumps(aliases))
+        # with open(self.ingest_dir / root / version / "papyri.json", "w") as f:
+        # f.write(json.dumps(aliases))
+        gstore.put((root, version, "papyri.json"), json.dumps(aliases).encode(), [])
 
         for p, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."
@@ -930,7 +920,7 @@ class Ingester:
             try:
                 # path = self.ingest_dir / mod_root / version / "module" / f"{qa}.json"
                 # path_br = self.ingest_dir / mod_root / version / "module" / f"{qa}.br"
-                key = (mod_root, version, "module", f"{qa}.json")
+                key = (mod_root, version, "module", qa)
                 assert mod_root is not None
                 assert version is not None
                 assert None not in key
@@ -962,27 +952,28 @@ class Ingester:
             js = doc_blob.to_json()
             br = js.pop("backrefs", [])
             try:
-                path = (
-                    self.ingest_dir
-                    / mod_root
-                    / doc_blob.version
-                    / "module"
-                    / f"{qa}.json"
-                )
-                path_br = (
-                    self.ingest_dir
-                    / mod_root
-                    / doc_blob.version
-                    / "module"
-                    / f"{qa}.br"
-                )
-                with path.open("w") as f:
-                    f.write(json.dumps(js, indent=2))
-                if path_br.exists():
-                    bb = json.loads(path_br.read_text())
-                else:
-                    bb = []
-                path_br.write_text(json.dumps(list(sorted(set(br + bb)))))
+                gstore.put((mod_root, doc_blob.version, "module", qa), [])
+                # path = (
+                #    self.ingest_dir
+                #    / mod_root
+                #    / doc_blob.version
+                #    / "module"
+                #    / f"{qa}.json"
+                # )
+                # path_br = (
+                #    self.ingest_dir
+                #    / mod_root
+                #    / doc_blob.version
+                #    / "module"
+                #    / f"{qa}.br"
+                # )
+                # with path.open("w") as f:
+                #    f.write(json.dumps(js, indent=2))
+                # if path_br.exists():
+                #    bb = json.loads(path_br.read_text())
+                # else:
+                #    bb = []
+                # path_br.write_text(json.dumps(list(sorted(set(br + bb)))))
             except Exception as e:
                 raise RuntimeError(f"error writing to {path}") from e
 
@@ -1000,11 +991,12 @@ def main(path, check):
 
 def relink():
     store = Store(ingest_dir)
-    known_refs, _ = find_all_refs(store)
-
+    gstore = GraphStore(ingest_dir)
+    known_refs, _ = find_all_refs(gstore)
     aliases: Dict[str, str] = {}
-    for meta_path in store.glob("*/*/papyri.json"):
-        data = json.loads(meta_path.path.read_text())
+    for key in gstore.glob((None, None, "papyri.json")):
+        data = gstore.get(key)
+        data = json.loads(data)
         aliases.update(data)
     rev_aliases = {v: k for k, v in aliases.items()}
 
@@ -1012,14 +1004,14 @@ def relink():
         "Relinking is safe to cancel, but some back references may be broken...."
     )
     builtins.print("Press Ctrl-C to abort...")
-    for p, item in progress(
-        store.glob("*/*/module/*.json"), description="Relinking..."
+    for p, key in progress(
+        gstore.glob((None, None, "module", None)), description="Relinking..."
     ):
         try:
-            data = json.loads(item.path.read_text())
+            data = json.loads(gstore.get(key))
         except Exception as e:
             raise ValueError(str(item)) from e
-        qa = item.path.name[:-5]
+        qa = key[-1]
         data["backrefs"] = []
         try:
             doc_blob = IngestedBlobs.from_json(data)
@@ -1035,7 +1027,10 @@ def relink():
             if exists == "exists":
                 sa.name.exists = True
                 sa.name.ref = resolved
-
         data = doc_blob.to_json()
         data.pop("backrefs")
-        item.path.write_text(json.dumps(data, indent=2))
+        refs = [
+            (b["module"], b["version"], b["kind"], b["path"])
+            for b in data.get("refs", [])
+        ]
+        gstore.put(key, json.dumps(data).encode(), refs)

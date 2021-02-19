@@ -243,7 +243,7 @@ class Link(Node):
     exists: bool
 
     def __init__(self, value=None, reference=None, kind=None, exists=None):
-        assert kind in ("exists", "missing", "local", "api", None), kind
+        assert kind in ("exists", "missing", "local", "module", None), kind
         self.value = value
         self.reference = reference
         if reference is not None:
