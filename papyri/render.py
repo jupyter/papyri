@@ -18,6 +18,7 @@ from there import print
 from .config import html_dir, ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
 from .stores import Store
+from .graphstore import GraphStore, Key
 from .take2 import RefInfo
 from .utils import progress
 
@@ -64,7 +65,9 @@ def until_ruler(doc):
 
 def root():
     store = Store(ingest_dir)
+    gstore = GraphStore(ingest_dir)
     files = store.glob("*/*/module/*.json")
+    keys = store.glob((None, None, "module", None))
 
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -75,6 +78,8 @@ def root():
     env.globals["len"] = len
     template = env.get_template("root.tpl.j2")
     filenames = [_.name[:-5] for _ in files if _.name.endswith(".json")]
+    fns = [k.path for k in keys]
+    assert set(fns) == set(filenames)
     tree = {}
     for f in filenames:
         sub = tree
@@ -680,16 +685,30 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
     these heuristics break down.
 
     """
-    qa = document.name[:-5]
-    version = document.path.parts[-3]
-    # help to keep ascii bug free.
-    # await _ascii_render(qa, store, known_refs=known_refs)
-    root = qa.split(".")[0]
+    if isinstance(document, tuple):
+        qa = document.path
+        version = document.version
+        root = document.module
+    else:
+        qa = document.name[:-5]
+        version = document.path.parts[-3]
+        # help to keep ascii bug free.
+        # await _ascii_render(qa, store, known_refs=known_refs)
+        root = qa.split(".")[0]
     try:
-        bytes_ = await document.read_text()
-        brpath = store / root / version / "module" / f"{qa}.br"
-        assert await brpath.exists()
-        br = await brpath.read_text()
+        if isinstance(document, tuple):
+            assert isinstance(store, GraphStore)
+            bytes_ = store.get(document)
+        else:
+            bytes_ = await document.read_text()
+        if isinstance(store, Store):
+            brpath = store / root / version / "module" / f"{qa}.br"
+            assert await brpath.exists()
+            br = await brpath.read_text()
+        elif isinstance(store, GraphStore):
+            br = ""
+        else:
+            assert False
         doc_blob: IngestedBlobs = load_one(
             bytes_, br, known_refs=known_refs, strict=True
         )
@@ -714,10 +733,10 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
 async def main(ascii, html, dry_run):
     from .graphstore import GraphStore
 
-    gs = GraphStore(ingest_dir, {})
+    gstore = GraphStore(ingest_dir, {})
     store = Store(ingest_dir)
     files = store.glob("*/*/module/*.json")
-    gfiles = list(gs.glob((None, None, "module", None)))
+    gfiles = list(gstore.glob((None, None, "module", None)))
 
     css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
     env = Environment(
@@ -750,6 +769,10 @@ async def main(ascii, html, dry_run):
     random.shuffle(gfiles)
     # Gallery
     mv = store.glob("*/*")
+    mv2 = gstore.glob((None, None))
+    assert set((m, v) for (m, v) in mv2) == set(
+        (item.path.parent.name, item.path.name) for item in mv
+    )
     for item in mv:
         version, module = item.path.name, item.path.parent.name
         data = await gallery(module, store, version, ext=".html")
@@ -757,15 +780,15 @@ async def main(ascii, html, dry_run):
         with (output_dir / module / version / "gallery" / "index.html").open("w") as f:
             f.write(data)
 
-    for p, document in progress(files, description="Rendering..."):
-        module, v = document.path.parts[-4:-2]
+    for p, key in progress(gfiles, description="Rendering..."):
+        module, v = key.module, key.version
         if ascii:
-            qa = document.name[:-5]
+            qa = key.path
             await _ascii_render(qa, store, family, version=v)
         if html:
             doc_blob, qa, siblings, parts_links = await loc(
-                document,
-                store=store,
+                key,
+                store=gstore,
                 tree=tree,
                 known_refs=known_refs,
                 ref_map=ref_map,
@@ -784,13 +807,14 @@ async def main(ascii, html, dry_run):
                 (output_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
                 with (output_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                     f.write(data)
-    document = store / "papyri" / "0.0.2" / "module" / "papyri.json"
 
-    module, v = document.path.parts[-4:-2]
+    key = Key("papyri", "0.0.2", "module", "papyri")
+
+    module, v = "papyri", "0.0.2"
     if html:
         doc_blob, qa, siblings, parts_links = await loc(
-            document,
-            store=store,
+            key,
+            store=gstore,
             tree=tree,
             known_refs=known_refs,
             ref_map=ref_map,

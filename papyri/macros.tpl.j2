@@ -9,8 +9,17 @@
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
             <code><a link href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
-        {%- elif obj.kind in ('api', 'exists' ) -%}
+        {%- elif obj.kind in ('api', 'exists', 'module') -%}
             <code><a link href="{{url(obj.reference)}}{{ext}}" class='exists'>{{obj.value}}</a></code>
+        {% else %}
+            {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
+        {%- endif -%}
+    {%- elif type_ == 'RefInfo' -%}
+        {# Links have : value, reference, kind exists#}
+        {%- if obj.kind=='local' -%}
+            <code><a link href="#{{obj.path}}" class='{{obj.kind}}'>{{obj.path}}</a></code>
+        {%- elif obj.kind in ('api', 'exists', 'module') -%}
+            <code><a link href="{{url(obj)}}{{ext}}" class='exists'>{{obj.path}}</a></code>
         {% else %}
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
         {%- endif -%}
