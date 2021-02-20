@@ -6,7 +6,6 @@ import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
-from glob import escape as ge
 from pathlib import Path
 from typing import Any, Dict, FrozenSet, List, Optional, Tuple, Union
 
@@ -15,7 +14,6 @@ from there import print
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore
-from .stores import Store
 from .take2 import (
     Admonition,
     Directive,
@@ -26,7 +24,6 @@ from .take2 import (
     RefInfo,
     Section,
     SeeAlsoItem,
-    Code,
     Code2,
     Token,
 )
@@ -45,7 +42,6 @@ def g_find_all_refs(graph_store):
     known_refs = []
     ref_map = {}
     for item in o_family:
-        module, v = item.module, item.version
         r = RefInfo(item.module, item.version, "module", item.path)
         known_refs.append(r)
         ref_map[r.path] = r
@@ -291,7 +287,6 @@ def resolve_(
     rev_aliases=None,
 ) -> RefInfo:
     # RefInfo(module, version, kind, path)
-    bq = False
     hk = hash(known_refs)
     hash(local_refs)
     if rev_aliases is None:
@@ -835,13 +830,13 @@ class Ingester:
             try:
                 data = json.loads(gstore.get(key))
             except Exception as e:
-                raise ValueError(str(item)) from e
+                raise ValueError(str(key)) from e
             qa = key[-1]
             data["backrefs"] = []
             try:
                 doc_blob = IngestedBlobs.from_json(data)
             except Exception as e:
-                raise type(e)(item)
+                raise type(e)(key)
             doc_blob.process(known_refs, aliases=aliases)
 
             for sa in doc_blob.see_also:
@@ -860,6 +855,7 @@ class Ingester:
             ]
             gstore.put(key, json.dumps(data).encode(), refs)
 
+
 def main(path, check):
     builtins.print("Ingesting", path.name, "...")
     from time import perf_counter
@@ -869,6 +865,7 @@ def main(path, check):
     delta = perf_counter() - now
 
     builtins.print(f"Ingesting {path.name} done in {delta:0.2f}s")
+
 
 def relink():
     Ingester().relink()
