@@ -487,7 +487,7 @@ def main(qualname: str):
         stack.append(rough)
         from papyri.config import ingest_dir
 
-        candidates = list(ingest_dir.glob(f"*/*/module/{rough}.json"))
+        candidates = list(ingest_dir.glob(f"*/*/module/{rough}"))
         if candidates:
             for q in range(len(walk)):
                 walk.pop()
@@ -503,7 +503,7 @@ def main(qualname: str):
     def load(file_path, walk, qa):
         p = file_path
         br = p.parent / (p.stem + ".br")
-        blob = load_one(file_path.read_text(), br.read_text())
+        blob = load_one(file_path.read_text(), None)
         assert hasattr(blob, "arbitrary")
         for i in gen_content(blob, frame):
             walk.append(i)

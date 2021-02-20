@@ -17,6 +17,8 @@ class TimeElapsedColumn(ProgressColumn):
         super().__init__(*args, **kwargs)
 
     def render(self, task: "Task"):
+        # task.completed
+        # task.total
         elapsed = task.elapsed
         if elapsed is None:
             return Text("-:--:--", style="progress.elapsed")
@@ -54,12 +56,19 @@ def progress(iterable, *, description="Progress", transient=True):
 
     def gen():
         try:
+            c = 0
             while True:
                 p.update(task, ee=time.monotonic() - now)
                 p.advance(task)
                 yield p, next(it)
+                c += 1
         except StopIteration:
             p.stop()
+            if transient:
+                print(
+                    description,
+                    f"Done {c} items in {time.monotonic() - now:.2f} seconds",
+                )
             return
         except BaseException:
             p.stop()

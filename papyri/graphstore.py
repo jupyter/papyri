@@ -120,8 +120,15 @@ class GraphStore:
         b.unlink()
 
     def get(self, key) -> bytes:
-        path, path_br = self._key_to_paths(key)
+        path, _ = self._key_to_paths(key)
         return path.read_bytes()
+
+    def get_backref(self, key):
+        _, pathbr = self._key_to_paths(key)
+        if pathbr.path.exists():
+            return pathbr.read_json()
+        else:
+            return []
 
     def _add_edge(self, source, dest):
         _, p = self._key_to_paths(dest)

@@ -9,7 +9,7 @@
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
             <code><a link href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
-        {%- elif obj.kind in ('api', 'exists', 'module') -%}
+        {%- elif obj.kind in ('api', 'exists', 'module', 'assets') -%}
             <code><a link href="{{url(obj.reference)}}{{ext}}" class='exists'>{{obj.value}}</a></code>
         {% else %}
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
@@ -18,7 +18,7 @@
         {# Links have : value, reference, kind exists#}
         {%- if obj.kind=='local' -%}
             <code><a link href="#{{obj.path}}" class='{{obj.kind}}'>{{obj.path}}</a></code>
-        {%- elif obj.kind in ('api', 'exists', 'module') -%}
+        {%- elif obj.kind in ('api', 'exists', 'module','assets') -%}
             <code><a link href="{{url(obj)}}{{ext}}" class='exists'>{{obj.path}}</a></code>
         {% else %}
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
@@ -195,7 +195,7 @@
 
 {%- macro example(entries) -%}
 <span class='nsl'>{{'>>> ' -}}</span>{{ '' -}}
-    {%- for token in entries -%}
+{%- for token in entries -%}
         {%- if token.link.__class__.__name__ == 'Link' -%}
             <a class="foo {{token.type}}", href="{{url(token.link.reference)}}{{ext}}">{{token.link.value}}</a>
         {%- else -%}

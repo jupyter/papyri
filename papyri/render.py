@@ -103,16 +103,22 @@ async def examples(module, store, version, subpath, ext=""):
     )
 
 
-async def gallery(module, store, version=None, ext=""):
+async def gallery(module, store, version=None, ext="", gstore=None):
     if version is None:
         version = "*"
+    assert gstore is not None
 
     m = defaultdict(lambda: [])
-    print("Gallery will glob:")
-    for target_path in store.glob(f"{module}/{version}/module/*"):
-        if target_path.name.endswith(".br"):
-            continue
-        data = json.loads(await target_path.read_text())
+    assert gstore is not None
+    if gstore:
+        res = gstore.glob((module, version, "assets", None))
+        backrefs = set()
+        for key in res:
+            brs = set(tuple(x) for x in gstore.get_backref(key))
+            backrefs = backrefs.union(brs)
+
+    for key in backrefs:
+        data = json.loads(gstore.get(key).decode())
         data["backrefs"] = []
         i = IngestedBlobs.from_json(data)
         i.process(frozenset(), {})
@@ -120,14 +126,12 @@ async def gallery(module, store, version=None, ext=""):
         for k in [
             u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
         ]:
-            module, v, _, _path = target_path.path.parts[-4:]
-
+            module, v, kind, _path = key
             # module, filename, link
             impath = f"/p/{module}/{v}/img/{k}"
-            link = f"/p/{module}/{v}/api/{target_path.name}"
-            name = target_path.name
+            link = f"/p/{module}/{v}/api/{_path}"
             # figmap.append((impath, link, name)
-            m[module].append((impath, link, name))
+            m[module].append((impath, link, _path))
 
     for target_path in store.glob(f"{module}/{version}/examples/*"):
         data = json.loads(await target_path.read_text())
@@ -454,13 +458,13 @@ def serve():
         return await _route(ref, store, version, gstore=gstore)
 
     async def full_gallery(module, version):
-        return await gallery(module, store, version)
+        return await gallery(module, store, version, gstore=gstore)
 
     async def g(module):
-        return await gallery(module, store)
+        return await gallery(module, store, gstore=gstore)
 
     async def gr():
-        return await gallery("*", store)
+        return await gallery("*", store, gstore=gstore)
 
     async def index():
         return redirect("/p/papyri/0.0.2/api/papyri")
@@ -753,9 +757,11 @@ async def main(ascii, html, dry_run):
     random.shuffle(gfiles)
     # Gallery
     mv2 = gstore.glob((None, None))
-    for _, (module, version) in progress(mv2, description="Rendering galleries..."):
+    for _, (module, version) in progress(
+        set(mv2), description="Rendering galleries..."
+    ):
         # version, module = item.path.name, item.path.parent.name
-        data = await gallery(module, store, version, ext=".html")
+        data = await gallery(module, store, version, ext=".html", gstore=gstore)
         (output_dir / module / version / "gallery").mkdir(parents=True, exist_ok=True)
         with (output_dir / module / version / "gallery" / "index.html").open("w") as f:
             f.write(data)
@@ -815,7 +821,7 @@ async def main(ascii, html, dry_run):
 
     if not dry_run:
         assets_2 = gstore.glob((None, None, "assets", None))
-        for asset in assets_2:
+        for _, asset in progress(assets_2, description="Copying assets"):
             b = html_dir / "p" / asset.module / asset.version / "img"
             b.mkdir(parents=True, exist_ok=True)
             data = gstore.get(asset)

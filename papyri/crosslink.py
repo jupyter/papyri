@@ -644,9 +644,9 @@ class DVR(DirectiveVisiter):
         for entry in code.entries:
             # TODO
             if entry[1] and entry[1].strip():
-                # print(entry[1])
                 r = self._resolve(frozenset(), entry[1])
-                if r.kind == "api":
+                # print(entry[1], r)
+                if r.kind == "module":
                     self._targets.add(r)
                     new_entries.append(
                         Token(
@@ -799,7 +799,6 @@ class Ingester:
 
             def vv(x):
                 if x == "??":
-                    print("?? to", version)
                     return version
                 else:
                     return x
