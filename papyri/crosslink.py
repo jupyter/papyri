@@ -51,7 +51,6 @@ def g_find_all_refs(graph_store):
 def find_all_refs(store):
     if isinstance(store, GraphStore):
         return g_find_all_refs(store)
-    assert False
 
     o_family = sorted(
         list(r for r in store.glob("*/*/module/*") if not r.path.name.endswith(".br"))
@@ -789,6 +788,7 @@ class Ingester:
             doc_blob.version = version
             assert hasattr(doc_blob, "arbitrary")
             js = doc_blob.to_json()
+            del js["backrefs"]
             refs = [
                 (b["module"], b["version"], b["kind"], b["path"])
                 for b in js.get("refs", [])

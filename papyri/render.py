@@ -756,6 +756,9 @@ async def main(ascii, html, dry_run):
     document: Store
 
     known_refs, ref_map = find_all_refs(store)
+    x_, y_ = find_all_refs(gstore)
+    assert x_ == known_refs
+    assert y_ == ref_map
     # end
 
     family = frozenset(_.path for _ in known_refs)

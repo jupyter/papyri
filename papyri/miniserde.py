@@ -87,25 +87,25 @@ def serialize(instance, annotation):
         ):
             # this may be slightly incorrect as usually tuple as positionally type dependant.
             inner_annotation = annotation.__args__
-            assert len(inner_annotation) == 1, inner_annotation
+            # assert len(inner_annotation) == 1, inner_annotation
             return tuple(serialize(x, inner_annotation[0]) for x in instance)
         elif getattr(annotation, "__origin__", None) is list and isinstance(
             instance, list
         ):
             inner_annotation = annotation.__args__
-            assert len(inner_annotation) == 1, inner_annotation
+            # assert len(inner_annotation) == 1, inner_annotation
             return [serialize(x, inner_annotation[0]) for x in instance]
         elif getattr(annotation, "__origin__", None) is dict:
-            assert type(instance) == dict
+            # assert type(instance) == dict
             key_annotation, value_annotation = annotation.__args__
-            assert key_annotation == str, key_annotation
+            # assert key_annotation == str, key_annotation
             return {k: serialize(v, value_annotation) for k, v in instance.items()}
 
         elif getattr(annotation, "__origin__", None) is Union:
 
             inner_annotation = annotation.__args__
             if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
-                assert inner_annotation[0] is not None
+                # assert inner_annotation[0] is not None
                 # here we are optional; we _likely_ can avoid doing the union trick and store just the type, or null
                 if instance is None:
                     return None
@@ -115,7 +115,7 @@ def serialize(instance, annotation):
                 type(instance) in inner_annotation
             ), f"{type(instance)} not in {inner_annotation}, {instance}"
             ma = [x for x in inner_annotation if type(instance) is x]
-            assert len(ma) == 1
+            # assert len(ma) == 1
             ann_ = ma[0]
             return {"type": ann_.__name__, "data": serialize(instance, ann_)}
         elif (
@@ -152,37 +152,37 @@ def serialize(instance, annotation):
 
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
 def deserialize(type_, annotation, data):
-    assert type_ is annotation
-    assert annotation != {}
-    assert annotation is not dict
-    assert annotation is not None, "None is handled by nullable types"
+    # assert type_ is annotation
+    # assert annotation != {}
+    # assert annotation is not dict
+    # assert annotation is not None, "None is handled by nullable types"
     if annotation is str:
-        assert isinstance(data, str)
+        # assert isinstance(data, str)
         return data
     if annotation is int:
-        assert isinstance(data, int)
+        # assert isinstance(data, int)
         return data
     if annotation is bool:
-        assert isinstance(data, bool)
+        # assert isinstance(data, bool)
         return data
     orig = getattr(annotation, "__origin__", None)
     if orig:
         if orig is tuple:
-            assert isinstance(data, list)
+            # assert isinstance(data, list)
             inner_annotation = annotation.__args__
-            assert len(inner_annotation) == 1, inner_annotation
+            # assert len(inner_annotation) == 1, inner_annotation
             return tuple(
                 [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
             )
         elif orig is list:
-            assert isinstance(data, list)
+            # assert isinstance(data, list)
             inner_annotation = annotation.__args__
-            assert len(inner_annotation) == 1, inner_annotation
+            # assert len(inner_annotation) == 1, inner_annotation
             return [
                 deserialize(inner_annotation[0], inner_annotation[0], x) for x in data
             ]
         elif orig is dict:
-            assert isinstance(data, dict)
+            # assert isinstance(data, dict)
             _, value_annotation = annotation.__args__
             return {
                 k: deserialize(value_annotation, value_annotation, x)
@@ -191,13 +191,13 @@ def deserialize(type_, annotation, data):
         elif orig is Union:
             inner_annotation = annotation.__args__
             if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
-                assert inner_annotation[0] is not None
+                # assert inner_annotation[0] is not None
                 if data is None:
                     return None
                 else:
                     return deserialize(inner_annotation[0], inner_annotation[0], data)
             real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
-            assert len(real_type) == 1, real_type
+            # assert len(real_type) == 1, real_type
             real_type = real_type[0]
             return deserialize(real_type, real_type, data["data"])
         else:
@@ -208,13 +208,13 @@ def deserialize(type_, annotation, data):
     ):
         loc = {}
         new_ann = get_type_hints(annotation).items()
-        assert new_ann
+        # assert new_ann
         for k, v in new_ann:
-            assert k in data.keys(), f"{k} not int {data.keys()}"
-            if data[k] != 0:
-                assert data[k] != {}, f"{data}, {k}"
+            # assert k in data.keys(), f"{k} not int {data.keys()}"
+            # if data[k] != 0:
+            #     assert data[k] != {}, f"{data}, {k}"
             intermediate = deserialize(v, v, data[k])
-            assert intermediate != {}, f"{v}, {data}, {k}"
+            # assert intermediate != {}, f"{v}, {data}, {k}"
             loc[k] = intermediate
         if hasattr(annotation, "_deserialise"):
             return annotation._deserialise(**loc)
