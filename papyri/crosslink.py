@@ -815,6 +815,50 @@ class Ingester:
                 raise RuntimeError(f"error writing to {path}") from e
 
 
+    def relink(self):
+        gstore = self.gstore
+        known_refs, _ = find_all_refs(gstore)
+        aliases: Dict[str, str] = {}
+        for key in gstore.glob((None, None, "papyri.json")):
+            data = gstore.get(key)
+            data = json.loads(data)
+            aliases.update(data)
+        rev_aliases = {v: k for k, v in aliases.items()}
+
+        builtins.print(
+            "Relinking is safe to cancel, but some back references may be broken...."
+        )
+        builtins.print("Press Ctrl-C to abort...")
+        for p, key in progress(
+            gstore.glob((None, None, "module", None)), description="Relinking..."
+        ):
+            try:
+                data = json.loads(gstore.get(key))
+            except Exception as e:
+                raise ValueError(str(item)) from e
+            qa = key[-1]
+            data["backrefs"] = []
+            try:
+                doc_blob = IngestedBlobs.from_json(data)
+            except Exception as e:
+                raise type(e)(item)
+            doc_blob.process(known_refs, aliases=aliases)
+
+            for sa in doc_blob.see_also:
+                r = resolve_(
+                    qa, known_refs, frozenset(), sa.name.name, rev_aliases=rev_aliases
+                )
+                resolved, exists = r.path, r.kind
+                if exists == "exists":
+                    sa.name.exists = True
+                    sa.name.ref = resolved
+            data = doc_blob.to_json()
+            data.pop("backrefs")
+            refs = [
+                (b["module"], b["version"], b["kind"], b["path"])
+                for b in data.get("refs", [])
+            ]
+            gstore.put(key, json.dumps(data).encode(), refs)
 
 def main(path, check):
     builtins.print("Ingesting", path.name, "...")
@@ -826,48 +870,5 @@ def main(path, check):
 
     builtins.print(f"Ingesting {path.name} done in {delta:0.2f}s")
 
-
 def relink():
-    gstore = GraphStore(ingest_dir)
-    known_refs, _ = find_all_refs(gstore)
-    aliases: Dict[str, str] = {}
-    for key in gstore.glob((None, None, "papyri.json")):
-        data = gstore.get(key)
-        data = json.loads(data)
-        aliases.update(data)
-    rev_aliases = {v: k for k, v in aliases.items()}
-
-    builtins.print(
-        "Relinking is safe to cancel, but some back references may be broken...."
-    )
-    builtins.print("Press Ctrl-C to abort...")
-    for p, key in progress(
-        gstore.glob((None, None, "module", None)), description="Relinking..."
-    ):
-        try:
-            data = json.loads(gstore.get(key))
-        except Exception as e:
-            raise ValueError(str(item)) from e
-        qa = key[-1]
-        data["backrefs"] = []
-        try:
-            doc_blob = IngestedBlobs.from_json(data)
-        except Exception as e:
-            raise type(e)(item)
-        doc_blob.process(known_refs, aliases=aliases)
-
-        for sa in doc_blob.see_also:
-            r = resolve_(
-                qa, known_refs, frozenset(), sa.name.name, rev_aliases=rev_aliases
-            )
-            resolved, exists = r.path, r.kind
-            if exists == "exists":
-                sa.name.exists = True
-                sa.name.ref = resolved
-        data = doc_blob.to_json()
-        data.pop("backrefs")
-        refs = [
-            (b["module"], b["version"], b["kind"], b["path"])
-            for b in data.get("refs", [])
-        ]
-        gstore.put(key, json.dumps(data).encode(), refs)
+    Ingester().relink()
