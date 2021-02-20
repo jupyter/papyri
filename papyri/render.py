@@ -6,7 +6,6 @@ import random
 import shutil
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
-from glob import escape as ge
 from pathlib import Path
 
 from flatlatex import converter
@@ -62,37 +61,6 @@ def until_ruler(doc):
             l = l.lstrip()[1:]
         new.append(l)
     return "\n".join(new)
-
-
-def root():
-    store = Store(ingest_dir)
-    gstore = GraphStore(ingest_dir)
-    files = store.glob("*/*/module/*.json")
-    keys = store.glob((None, None, "module", None))
-
-    env = Environment(
-        loader=FileSystemLoader(os.path.dirname(__file__)),
-        autoescape=select_autoescape(["html", "tpl.j2"]),
-        undefined=StrictUndefined,
-    )
-    env.globals["isstr"] = lambda x: isinstance(x, str)
-    env.globals["len"] = len
-    template = env.get_template("root.tpl.j2")
-    filenames = [_.name[:-5] for _ in files if _.name.endswith(".json")]
-    fns = [k.path for k in keys]
-    assert set(fns) == set(filenames)
-    tree = {}
-    for f in filenames:
-        sub = tree
-        parts = f.split(".")
-        for part in parts:
-            if part not in sub:
-                sub[part] = {}
-            sub = sub[part]
-
-        sub["__link__"] = f
-
-    return template.render(tree=tree)
 
 
 async def examples(module, store, version, subpath, ext=""):
@@ -355,10 +323,10 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
         version = papyri.__version__
     root = ref.split(".")[0]
 
-    papp_files = store.glob(f"{root}/*/papyri.json")
+    # papp_files = store.glob(f"{root}/*/papyri.json")
     # TODO: deal with versions
-    for p in papp_files:
-        aliases = json.loads(await p.read_text())
+    # for p in papp_files:
+    #    aliases = json.loads(await p.read_text())
 
     known_refs, ref_map = find_all_refs(store)
     x_, y_ = find_all_refs(gstore)
@@ -375,7 +343,7 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
 
     else:
         assert False
-        files = list((store / root).glob(f"*/module/{ge(ref)}"))
+        # files = list((store / root).glob(f"*/module/{ge(ref)}"))
     if file_.exists():
         # The reference we are trying to view exists;
         # we will now just render it.
@@ -852,4 +820,3 @@ async def main(ascii, html, dry_run):
             b.mkdir(parents=True, exist_ok=True)
             data = gstore.get(asset)
             (b / asset.path).write_bytes(data)
-
