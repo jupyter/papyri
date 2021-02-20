@@ -228,6 +228,7 @@ class IngestedBlobs(Node):
             for r in visitor._targets:
                 assert None not in r, r
             self.refs = list(set(visitor._targets).union(set(self.refs)))
+
             for r in self.refs:
                 assert None not in r
         except Exception as e:
@@ -665,6 +666,12 @@ class DVR(DirectiveVisiter):
 
         return [Code2(new_entries, code.out, code.ce_status)]
 
+    def replace_Fig(self, fig):
+
+        self._targets.add(RefInfo(self.qa.split(".")[0], "??", "assets", fig.value))
+
+        return [fig]
+
 
 def load_one(
     bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None, strict=False
@@ -789,8 +796,15 @@ class Ingester:
             assert hasattr(doc_blob, "arbitrary")
             js = doc_blob.to_json()
             del js["backrefs"]
+
+            def vv(x):
+                if x == "??":
+                    print("?? to", version)
+                    return version
+                else:
+                    return x
             refs = [
-                (b["module"], b["version"], b["kind"], b["path"])
+                (b["module"], vv(b["version"]), b["kind"], b["path"])
                 for b in js.get("refs", [])
             ]
             for r in refs:
