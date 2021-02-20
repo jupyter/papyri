@@ -815,16 +815,15 @@ class Ingester:
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}
         for key in gstore.glob((None, None, "papyri.json")):
-            data = gstore.get(key)
-            data = json.loads(data)
-            aliases.update(data)
+            aliases.update(json.loads(gstore.get(key)))
+
         rev_aliases = {v: k for k, v in aliases.items()}
 
         builtins.print(
             "Relinking is safe to cancel, but some back references may be broken...."
         )
         builtins.print("Press Ctrl-C to abort...")
-        for p, key in progress(
+        for _, key in progress(
             gstore.glob((None, None, "module", None)), description="Relinking..."
         ):
             try:
@@ -839,6 +838,8 @@ class Ingester:
                 raise type(e)(key)
             doc_blob.process(known_refs, aliases=aliases)
 
+            # TODO: Move this into process ?
+
             for sa in doc_blob.see_also:
                 r = resolve_(
                     qa, known_refs, frozenset(), sa.name.name, rev_aliases=rev_aliases
@@ -847,6 +848,9 @@ class Ingester:
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
+
+            # end todo
+
             data = doc_blob.to_json()
             data.pop("backrefs")
             refs = [
