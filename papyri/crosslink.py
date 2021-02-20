@@ -830,7 +830,6 @@ class Ingester:
                 data = json.loads(gstore.get(key))
             except Exception as e:
                 raise ValueError(str(key)) from e
-            qa = key[-1]
             data["backrefs"] = []
             try:
                 doc_blob = IngestedBlobs.from_json(data)
@@ -842,7 +841,11 @@ class Ingester:
 
             for sa in doc_blob.see_also:
                 r = resolve_(
-                    qa, known_refs, frozenset(), sa.name.name, rev_aliases=rev_aliases
+                    key.path,
+                    known_refs,
+                    frozenset(),
+                    sa.name.name,
+                    rev_aliases=rev_aliases,
                 )
                 resolved, exists = r.path, r.kind
                 if exists == "exists":
