@@ -55,6 +55,7 @@ def g_find_all_refs(graph_store):
 def find_all_refs(store):
     if isinstance(store, GraphStore):
         return g_find_all_refs(store)
+    assert False
 
     o_family = sorted(
         list(r for r in store.glob("*/*/module/*") if not r.path.name.endswith(".br"))
@@ -695,12 +696,8 @@ class Ingester:
 
     def ingest(self, path: Path, check: bool):
 
-        store = Store(self.ingest_dir)
         gstore = GraphStore(self.ingest_dir)
         known_refs, _ = find_all_refs(gstore)
-        _x, _y = find_all_refs(store)
-        assert len(_x) == len(known_refs), (len(_x), len(known_refs))
-        assert _x == known_refs, (list(_x - known_refs)[:1], list(known_refs - _x)[:1])
 
         nvisited_items = {}
         other_backrefs = {}
@@ -990,7 +987,6 @@ def main(path, check):
 
 
 def relink():
-    store = Store(ingest_dir)
     gstore = GraphStore(ingest_dir)
     known_refs, _ = find_all_refs(gstore)
     aliases: Dict[str, str] = {}
