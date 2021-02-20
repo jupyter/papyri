@@ -14,6 +14,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoes
 from pygments.formatters import HtmlFormatter
 from quart_trio import QuartTrio
 from there import print
+from quart import redirect
 
 from .config import html_dir, ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
@@ -140,7 +141,9 @@ async def gallery(module, store, version=None, ext=""):
 
     m = defaultdict(lambda: [])
     print("Gallery will glob:")
-    for target_path in store.glob(f"{module}/{version}/module/*.json"):
+    for target_path in store.glob(f"{module}/{version}/module/*"):
+        if target_path.name.endswith(".br"):
+            continue
         data = json.loads(await target_path.read_text())
         data["backrefs"] = []
         i = IngestedBlobs.from_json(data)
@@ -153,8 +156,8 @@ async def gallery(module, store, version=None, ext=""):
 
             # module, filename, link
             impath = f"/p/{module}/{v}/img/{k}"
-            link = f"/p/{module}/{v}/api/{target_path.name[:-5]}"
-            name = target_path.name[:-5]
+            link = f"/p/{module}/{v}/api/{target_path.name}"
+            name = target_path.name
             # figmap.append((impath, link, name)
             m[module].append((impath, link, name))
 
@@ -328,7 +331,7 @@ def cs2(ref, tree, ref_map):
     return siblings
 
 
-async def _route(ref, store, version=None, env=None, template=None):
+async def _route(ref, store, version=None, env=None, template=None, gstore=None):
     assert not ref.endswith(".html")
     if env is None:
         env = Environment(
@@ -338,6 +341,9 @@ async def _route(ref, store, version=None, env=None, template=None):
         )
         env.globals["len"] = len
         env.globals["url"] = url
+        env.globals["unreachable"] = unreachable
+        # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
+
     if template is None:
         template = env.get_template("core.tpl.j2")
     if ref == "":
@@ -355,38 +361,40 @@ async def _route(ref, store, version=None, env=None, template=None):
         aliases = json.loads(await p.read_text())
 
     known_refs, ref_map = find_all_refs(store)
-
-    # known_refs = []
-    # for item in o_family:
-    #    module, v = item.path.parts[-4:-2]
-    #    known_refs.append(RefInfo(module, v, "api", item.name[:-5]))
+    x_, y_ = find_all_refs(gstore)
+    assert x_ == known_refs
+    assert y_ == ref_map
+    assert version is not None
 
     siblings = compute_siblings_II(ref, known_refs)
     # print(siblings)
 
     # End computing siblings.
     if version is not None:
-        files = [store / root / version / "module" / f"{ref}.json"]
+        file_ = store / root / version / "module" / f"{ref}"
+
     else:
-        files = list((store / root).glob(f"*/module/{ge(ref)}.json"))
-    if files and await (file_ := files[0]).exists():
+        assert False
+        files = list((store / root).glob(f"*/module/{ge(ref)}"))
+    if file_.exists():
         # The reference we are trying to view exists;
         # we will now just render it.
         bytes_ = await file_.read_text()
+        gbytes = gstore.get((root, version, "module", ref)).decode()
+        assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
+        assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
         assert root is not None
         # assert version is not None
         brpath = store / root / version / "module" / f"{ref}.br"
         print(brpath)
         if await brpath.exists():
             br = await brpath.read_text()
+            print("BR:", br)
+            # TODO: update to new way of getting backrefs.
+            br = None
         else:
             br = None
-        # known_refs = frozenset(
-        #    {str(x.name)[:-5] for x in store.glob("*/*/module/*.json")}
-        # )
-        env.globals["unreachable"] = unreachable
-        # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
-
+        print("bytes_", bytes_[:40], "...")
         doc_blob = load_one(bytes_, br, known_refs=known_refs, strict=True)
         parts_links = {}
         acc = ""
@@ -413,8 +421,15 @@ async def _route(ref, store, version=None, env=None, template=None):
         # it migt be a page, or a module we do not have documentation about.
         r = ref.split(".")[0]
         this_module_known_refs = [
-            str(s.name)[:-5] for s in store.glob(f"{r}/*/module/{ref}*.json")
+            str(s.name)
+            for s in store.glob(f"{r}/*/module/{ref}")
+            if not s.name.endswith(".br")
         ]
+        x2 = [x.path for x in gstore.glob((r, None, "module", ref))]
+        assert set(x2) == set(this_module_known_refs), (
+            set(x2) - set(this_module_known_refs),
+            (set(this_module_known_refs) - set(x2)),
+        )
         brpath = store / "__phantom__" / f"{ref}.json"
         if await brpath.exists():
             br = json.loads(await brpath.read_text())
@@ -465,12 +480,10 @@ def serve():
     app = QuartTrio(__name__)
 
     store = Store(str(ingest_dir))
-
-    async def r(ref):
-        return await _route(ref, store)
+    gstore = GraphStore(ingest_dir)
 
     async def full(package, version, sub, ref):
-        return await _route(ref, store, version)
+        return await _route(ref, store, version, gstore=gstore)
 
     async def full_gallery(module, version):
         return await gallery(module, store, version)
@@ -482,7 +495,7 @@ def serve():
         return await gallery("*", store)
 
     async def index():
-        return await _route("", store)
+        return redirect("/p/papyri/0.0.2/api/papyri")
 
     async def ex(module, version, subpath):
         return await examples(
@@ -498,7 +511,6 @@ def serve():
     app.route("/p/<module>/<version>/examples/<path:subpath>")(ex)
     app.route("/p/<module>/<version>/gallery")(full_gallery)
     app.route("/p/<package>/<version>/<sub>/<ref>")(full)
-    app.route("/<ref>")(r)
     app.route("/gallery/")(gr)
     app.route("/gallery/<module>")(g)
     app.route("/")(index)
