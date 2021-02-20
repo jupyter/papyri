@@ -619,24 +619,26 @@ def _ascci_env():
 
 async def _ascii_render(name, store, known_refs=None, template=None, version=None):
     if store is None:
-        store = Store(ingest_dir)
+        store = GraphStore(ingest_dir)
+    assert isinstance(store, GraphStore)
     ref = name
     root = name.split(".")[0]
 
-    if not version:
-        version = list((store / root).path.iterdir())[-1].name
+    keys = store.glob((root, None))
+    version = keys[0][-1]
 
     env, template = _ascci_env()
-    if known_refs is None:
-        known_refs = frozenset({x.name[:-5] for x in store.glob("*/module/*.json")})
-    bytes_ = await (store / root / version / "module" / f"{ref}.json").read_text()
-    brpath = store / root / version / "module" / f"{ref}.br"
-    if await brpath.exists():
-        br = await brpath.read_text()
-    else:
-        br = None
+    bytes_ = store.get((root, version, "module", ref)).decode()
 
-    ## TODO : move this to ingest.
+    # TODO:
+    # brpath = store / root / rsion / "module" / f"{ref}.br"
+    # if await brpath.exists():
+    #    br = await brpath.read_text()
+    #    br = None
+    # else:
+    #    br = None
+    br = None
+
     doc_blob = load_one(bytes_, br, strict=True)
     return render_one(
         template=template,
@@ -653,7 +655,7 @@ async def ascii_render(name, store=None):
     builtins.print(await _ascii_render(name, store))
 
 
-async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
+async def loc(document: Store, *, store: GraphStore, tree, known_refs, ref_map):
     """
     return data for rendering in the templates
 
@@ -743,7 +745,6 @@ async def loc(document: Store, *, store: Store, tree, known_refs, ref_map):
 
 
 async def main(ascii, html, dry_run):
-    from .graphstore import GraphStore
 
     gstore = GraphStore(ingest_dir, {})
     store = Store(ingest_dir)
@@ -767,8 +768,8 @@ async def main(ascii, html, dry_run):
         output_dir.mkdir(exist_ok=True)
     document: Store
 
-    known_refs, ref_map = find_all_refs(store)
-    x_, y_ = find_all_refs(gstore)
+    x_, y_ = find_all_refs(store)
+    known_refs, ref_map = find_all_refs(gstore)
     assert x_ == known_refs
     assert y_ == ref_map
     # end
@@ -783,13 +784,9 @@ async def main(ascii, html, dry_run):
     random.shuffle(files)
     random.shuffle(gfiles)
     # Gallery
-    mv = store.glob("*/*")
     mv2 = gstore.glob((None, None))
-    assert set((m, v) for (m, v) in mv2) == set(
-        (item.path.parent.name, item.path.name) for item in mv
-    )
-    for item in mv:
-        version, module = item.path.name, item.path.parent.name
+    for _, (module, version) in progress(mv2, description="Rendering galleries..."):
+        # version, module = item.path.name, item.path.parent.name
         data = await gallery(module, store, version, ext=".html")
         (output_dir / module / version / "gallery").mkdir(parents=True, exist_ok=True)
         with (output_dir / module / version / "gallery" / "index.html").open("w") as f:
@@ -799,7 +796,7 @@ async def main(ascii, html, dry_run):
         module, v = key.module, key.version
         if ascii:
             qa = key.path
-            await _ascii_render(qa, store, family, version=v)
+            await _ascii_render(qa, store=gstore, version=v)
         if html:
             doc_blob, qa, siblings, parts_links = await loc(
                 key,
@@ -849,10 +846,10 @@ async def main(ascii, html, dry_run):
                 f.write(data)
 
     if not dry_run:
-        assets = store.glob("*/*/assets/*")
-        for asset in assets:
-            module, version, _, _name = asset.parts[-4:]
-            b = html_dir / "p" / module / version / "img"
+        assets_2 = gstore.glob((None, None, "assets", None))
+        for asset in assets_2:
+            b = html_dir / "p" / asset.module / asset.version / "img"
             b.mkdir(parents=True, exist_ok=True)
+            data = gstore.get(asset)
+            (b / asset.path).write_bytes(data)
 
-            shutil.copy(asset.path, b / asset.name)
