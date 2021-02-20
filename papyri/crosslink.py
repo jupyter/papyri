@@ -693,26 +693,29 @@ def load_one(
 class Ingester:
     def __init__(self):
         self.ingest_dir = ingest_dir
+        self.gstore = GraphStore(self.ingest_dir)
 
     def ingest(self, path: Path, check: bool):
 
-        gstore = GraphStore(self.ingest_dir)
+        gstore = self.gstore
+
         known_refs, _ = find_all_refs(gstore)
 
         nvisited_items = {}
-        root = None
+
+        ###
+
         meta_path = path / "papyri.json"
-        with meta_path.open() as f:
-            data = json.loads(f.read())
-            version = data["version"]
-            logo = data.get("logo", None)
-            # long : short
-            aliases: Dict[str, str] = data.get("aliases", {})
-            root = data.get("module")
+        data = json.loads(meta_path.read_text())
+        version = data["version"]
+        root = data["module"]
+        logo = data.get("logo", None)
+        # long : short
+        aliases: Dict[str, str] = data.get("aliases", {})
+        rev_aliases = {v: k for k, v in aliases.items()}
 
-        del f
 
-        for p, fe in progress(
+        for _, fe in progress(
             (path / "examples/").glob("*"), description=f"Reading {path.name} Examples"
         ):
             s = Section.from_json(json.loads(fe.read_text()))
@@ -722,12 +725,11 @@ class Ingester:
                 [],
             )
 
-        for p, f1 in progress(
+        for _, f1 in progress(
             (path / "module").glob("*"),
             description=f"Reading {path.name} doc bundle files ...",
         ):
-            if f1.name.endswith(".br"):
-                continue
+            assert f1.name.endswith(".json")
             qa = f1.name[:-5]
             if check:
                 rqa = normalise_ref(qa)
@@ -737,20 +739,16 @@ class Ingester:
                     continue
                 assert rqa == qa, f"{rqa} !+ {qa}"
             try:
-                with f1.open() as fff:
-                    brpath = Path(str(f1)[:-5] + "br")
-                    br: Optional[bytes]
-                    if brpath.exists():
-                        br = brpath.read_bytes()
-                    else:
-                        br = None
-                    nvisited_items[qa] = load_one_uningested(
-                        fff.read(), br, qa=qa, known_refs=known_refs, aliases=aliases
-                    )
-                    assert hasattr(nvisited_items[qa], "arbitrary")
+                nvisited_items[qa] = load_one_uningested(
+                    f1.read_text(),
+                    None,
+                    qa=qa,
+                    known_refs=known_refs,
+                    aliases=aliases,
+                )
+                assert hasattr(nvisited_items[qa], "arbitrary")
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f1}") from e
-        del f1
 
         known_refs_II = frozenset(nvisited_items.keys())
 
@@ -759,20 +757,13 @@ class Ingester:
             RefInfo(root, version, "module", qa) for qa in known_refs_II
         ).union(known_refs)
 
-        for p, (qa, doc_blob) in progress(
+        for _, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Cross referencing"
         ):
-            for k, v in doc_blob.content.items():
-                assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
-            local_refs = frozenset(
-                [x[0] for x in doc_blob.content["Parameters"] if x[0]]
-                + [x[0] for x in doc_blob.content["Returns"] if x[0]]
-            )
             refs = doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
             doc_blob.logo = logo
             # todo: warning mutation.
             for sa in doc_blob.see_also:
-                rev_aliases = {v: k for k, v in aliases.items()}
                 r = resolve_(
                     qa,
                     known_ref_info,
@@ -784,7 +775,7 @@ class Ingester:
                 if exists == "exists":
                     sa.name.exists = True
                     sa.name.ref = resolved
-        for px, f2 in progress(
+        for _, f2 in progress(
             (path / "assets").glob("*"),
             description=f"Reading {path.name} image files ...",
         ):
@@ -792,7 +783,7 @@ class Ingester:
 
         gstore.put((root, version, "papyri.json"), json.dumps(aliases).encode(), [])
 
-        for p, (qa, doc_blob) in progress(
+        for _, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."
         ):
             # we might update other modules with backrefs
@@ -800,7 +791,6 @@ class Ingester:
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
             mod_root = qa.split(".")[0]
             assert mod_root == root, f"{mod_root}, {root}"
-            # TODO : this is wrong, we get version of module we are currently ingesting
             doc_blob.version = version
             assert hasattr(doc_blob, "arbitrary")
             js = doc_blob.to_json()
