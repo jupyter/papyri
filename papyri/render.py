@@ -304,6 +304,62 @@ def cs2(ref, tree, ref_map):
     return siblings
 
 
+def compute_graph(gs, blob, key):
+    nodes_names = [b.path for b in blob.backrefs + blob.refs] + [key[3]]
+    # nodes_names = [n for n in nodes_names if n.startswith('numpy')]
+    weights = {}
+
+    raw_edges = []
+    for k in blob.backrefs + blob.refs:
+        name = tuple(k)[3]
+        neighbors_refs = gs.get_backref(tuple(k))
+        weights[name] = len(neighbors_refs)
+        orig = [x[3] for x in neighbors_refs]
+        for o in orig:
+            raw_edges.append((k.path, o))
+
+    data = {"nodes": [], "links": []}
+
+    nums_ = set()
+    edges = list(raw_edges)
+    nodes = list(set(nodes_names))
+    for a, b in edges:
+        if (a not in nodes) or (b not in nodes):
+            continue
+        nums_.add(a)
+        nums_.add(b)
+    nums = {x: i for i, x in enumerate(nodes, start=1)}
+
+    for i, (from_, to) in enumerate(edges):
+        if from_ not in nodes:
+            continue
+        if to not in nodes:
+            continue
+        if key[3] in (to, from_):
+            continue
+
+        data["links"].append({"source": nums[from_], "target": nums[to], "id": i})
+    x = nums.keys()
+
+    for node in nodes:
+        diam = 8
+        if node == key[3]:
+            diam = 18
+        elif node in weights:
+            import numpy
+
+            diam = 8 + numpy.sqrt(weights[node])
+        data["nodes"].append(
+            {
+                "id": nums[node],
+                "val": diam,
+                "label": node,
+                "mod": ".".join(node.split(".")[0:1]),
+            }
+        )
+    return data
+
+
 async def _route(ref, store, version=None, env=None, template=None, gstore=None):
     assert not ref.endswith(".html")
     if env is None:
@@ -373,6 +429,9 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
         gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
         # print("bytes_", bytes_[:40], "...")
         doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
+
+        data = compute_graph(gstore, doc_blob, (root, version, "module", ref))
+        json_str = json.dumps(data)
         parts_links = {}
         acc = ""
         for k in siblings.keys():
@@ -390,6 +449,7 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
             parts_links=parts_links,
             backrefs=doc_blob.backrefs,
             pygment_css=css_data,
+            graph=json_str,
         )
     else:
         # The reference we are trying to render does not exists
@@ -510,6 +570,7 @@ def render_one(
     pygment_css=None,
     parts={},
     parts_links={},
+    graph="{}",
 ):
     """
     Return the rendering of one document
@@ -559,6 +620,7 @@ def render_one(
             parts=parts,
             parts_links=parts_links,
             pygment_css=pygment_css,
+            graph=graph,
         )
     except Exception as e:
         raise ValueError("qa=", qa) from e
