@@ -78,26 +78,31 @@
    {% endif %}
 {% endfor%}
 {% if backrefs[0] or backrefs[1] %}
-    <h1 id='section-backrefs'>Back References</h1>
+    <h3 id='section-backrefs'>Back References</h3>
     <p>The following pages refer to to this document either explicitly or contain code examples using this.</p>
+
     {% if backrefs[0] is not none %}
     {% for r in backrefs[0] %}
-        <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>
+        {{ render_inner('RefInfo', r) }}
     {% endfor %}
     {% endif%}
     {% if backrefs[1] is not none %}
         {% for k,v in backrefs[1].items() %}
-         <h3>{{k}}</h3>
-         {% if len(v) < 30 %}
+         <h4>{{k}}</h4>
+         {% if len(v) < 10 %}
+         <dl>
          {% for r in v %}
-            <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>
-         {% endfor %}
+             <dd>{{ render_inner('RefInfo', r) }}</dd>
+        {% endfor %}
+         </dl>
          {% else %}
         <details>
         <summary>{{v | length}} Elements</summary>
+         <dl>
         {% for r in v %}
-            <a class='exists' href='{{r}}{{ext}}'>{{r}}</a>
+            <dd>{{ render_inner('RefInfo', r) }}</dd>
         {% endfor %}
+         </dl>
         </details>
         {% endif %}
     {% endfor %}
@@ -120,7 +125,8 @@
                     <span class='note'>This example is valid syntax, but we were not able to check execution</span>
                 {%-endif-%}
             <pre class='highlight {{data.ce_status}}'>{{example(data.entries) -}}
-             {{- data.out}}</pre>
+             {{- data.out -}}
+            </pre>
             {% else %}
                 {{render_II(data)}}
             {% endif %}

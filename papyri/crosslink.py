@@ -802,8 +802,20 @@ class Ingester:
                     return version
                 else:
                     return x
+
+            # TODO: FIX
+            # when walking the tree of figure we can't properly crosslink
+            # as we don't know the version number.
+            # fix it at serialisation time.
+            rr = []
+            for r in js["refs"]:
+                if r["version"] == "??":
+                    r["version"] == version
+                rr.append(r)
+            js["refs"] = rr
+
             refs = [
-                (b["module"], vv(b["version"]), b["kind"], b["path"])
+                (b["module"], b["version"], b["kind"], b["path"])
                 for b in js.get("refs", [])
             ]
             for r in refs:

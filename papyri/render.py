@@ -120,6 +120,7 @@ async def gallery(module, store, version=None, ext="", gstore=None):
     for key in backrefs:
         data = json.loads(gstore.get(key).decode())
         data["backrefs"] = []
+
         i = IngestedBlobs.from_json(data)
         i.process(frozenset(), {})
 
@@ -351,10 +352,12 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
     if file_.exists():
         # The reference we are trying to view exists;
         # we will now just render it.
-        bytes_ = await file_.read_text()
+        # bytes_ = await file_.read_text()
+        key = (root, version, "module", ref)
         gbytes = gstore.get((root, version, "module", ref)).decode()
-        assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
-        assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
+        gbr_data = gstore.get_backref(key)
+        # assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
+        # assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
         assert root is not None
         # assert version is not None
         brpath = store / root / version / "module" / f"{ref}.br"
@@ -366,8 +369,10 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
             br = None
         else:
             br = None
-        print("bytes_", bytes_[:40], "...")
-        doc_blob = load_one(bytes_, br, known_refs=known_refs, strict=True)
+
+        gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
+        # print("bytes_", bytes_[:40], "...")
+        doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
         parts_links = {}
         acc = ""
         for k in siblings.keys():
@@ -533,7 +538,8 @@ def render_one(
 
         b2 = defaultdict(lambda: [])
         for ref in backrefs:
-            mod, _ = ref.split(".", maxsplit=1)
+            assert isinstance(ref, RefInfo)
+            mod, _ = ref.path.split(".", maxsplit=1)
             b2[mod].append(ref)
         backrefs = (None, b2)
     else:
