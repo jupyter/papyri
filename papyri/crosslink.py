@@ -797,12 +797,6 @@ class Ingester:
             js = doc_blob.to_json()
             del js["backrefs"]
 
-            def vv(x):
-                if x == "??":
-                    return version
-                else:
-                    return x
-
             # TODO: FIX
             # when walking the tree of figure we can't properly crosslink
             # as we don't know the version number.
@@ -810,7 +804,7 @@ class Ingester:
             rr = []
             for r in js["refs"]:
                 if r["version"] == "??":
-                    r["version"] == version
+                    r["version"] = version
                 rr.append(r)
             js["refs"] = rr
 

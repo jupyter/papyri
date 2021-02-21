@@ -9,7 +9,7 @@ canvas {
 }
 </style>
 <body>
-<a target="_blank" style="outline:none;"><canvas width="1224" height="860"></canvas></a>
+<a target="_blank" style="outline:none;"><canvas width="500" height="500"></canvas></a>
 </body>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
@@ -21,17 +21,17 @@ var canvas = document.querySelector("canvas"),
     searchRadius = 40;
 
 
- d3.select(context.canvas).call(d3.zoom()
-      .scaleExtent([0.96, 2])
-      .on("zoom", zoomed));
-
+// d3.select(context.canvas).call(d3.zoom()
+//      .scaleExtent([0.96, 2])
+//      .on("zoom", zoomed));
+//
 var transform = d3.zoomIdentity*5
-
-function zoomed(t){
-        transform = d3.event.transform;
-        simulation.alphaTarget(0.3).restart()
-        console.log(transform)
-}
+//
+//function zoomed(t){
+//        transform = d3.event.transform;
+//        simulation.alphaTarget(0.3).restart()
+//        console.log(transform)
+//}
 
 //function zoomed(transform) {
 //    context.save();
@@ -54,12 +54,19 @@ var color = d3.scaleOrdinal()
 
 var simulation = d3.forceSimulation()
     .force("charge", d3.forceManyBody().strength(-58))
-    .force("link", d3.forceLink().distance(40).strength(0.1).iterations(9).id(function(d) { return d.id; }))
+    .force("link", d3.forceLink().distance(50).strength(0.0001).iterations(50).id(function(d) { return d.id; }))
     .force("x", d3.forceX().strength(0.01))
     .force("y", d3.forceY().strength(0.01));
 
-d3.json("d3.json", function(error, graph) {
-  if (error) throw error;
+
+var graph = {"nodes": 
+   [{"id": 1, "val": 8, "label": "numpy.polynomial.polynomial.polyfit", "mod": "numpy"}, {"id": 2, "val": 8, "label": "matplotlib.pyplot.show", "mod": "matplotlib"}, {"id": 3, "val": 18, "label": "numpy.polyfit", "mod": "numpy"}, {"id": 4, "val": 8, "label": "matplotlib.pyplot.ylim", "mod": "matplotlib"}, {"id": 5, "val": 8, "label": "numpy.RankWarning", "mod": "numpy"}, {"id": 6, "val": 8, "label": "numpy.polynomial", "mod": "numpy"}, {"id": 7, "val": 8, "label": "papyri", "mod": "papyri"}, {"id": 8, "val": 8, "label": "matplotlib.pyplot", "mod": "matplotlib"}, {"id": 9, "val": 8, "label": "matplotlib", "mod": "matplotlib"}, {"id": 10, "val": 8, "label": "matplotlib.pyplot.plot", "mod": "matplotlib"}, {"id": 11, "val": 8, "label": "fig-numpy.polyfit-1.png", "mod": "fig-numpy"}, {"id": 12, "val": 8, "label": "numpy.poly1d", "mod": "numpy"}, {"id": 13, "val": 8, "label": "numpy.ma.extras.polyfit", "mod": "numpy"}, {"id": 14, "val": 8, "label": "numpy.linalg.lstsq", "mod": "numpy"}], 
+        "links":
+        [{"source": 13, "target": 3, "id": 0}, {"source": 3, "target": 3, "id": 1}, {"source": 3, "target": 13, "id": 2}, {"source": 3, "target": 3, "id": 3}, {"source": 3, "target": 1, "id": 4}, {"source": 3, "target": 7, "id": 5}, {"source": 1, "target": 3, "id": 6}, {"source": 7, "target": 3, "id": 7}, {"source": 11, "target": 3, "id": 8}, {"source": 11, "target": 3, "id": 9}, {"source": 10, "target": 3, "id": 10}, {"source": 10, "target": 10, "id": 11}, {"source": 10, "target": 14, "id": 23}, {"source": 10, "target": 13, "id": 31}, {"source": 10, "target": 3, "id": 32}, {"source": 14, "target": 3, "id": 155}, {"source": 14, "target": 14, "id": 156}, {"source": 14, "target": 13, "id": 159}, {"source": 14, "target": 3, "id": 160}, {"source": 14, "target": 1, "id": 166}, {"source": 11, "target": 3, "id": 169}, {"source": 11, "target": 3, "id": 170}, {"source": 4, "target": 3, "id": 171}, {"source": 4, "target": 13, "id": 175}, {"source": 4, "target": 3, "id": 176}, {"source": 12, "target": 3, "id": 186}, {"source": 12, "target": 13, "id": 187}, {"source": 12, "target": 3, "id": 189}, {"source": 5, "target": 3, "id": 197}, {"source": 5, "target": 5, "id": 198}, {"source": 5, "target": 13, "id": 199}, {"source": 5, "target": 3, "id": 200}, {"source": 5, "target": 1, "id": 206}, {"source": 6, "target": 3, "id": 207}, {"source": 6, "target": 13, "id": 208}, {"source": 6, "target": 12, "id": 210}, {"source": 6, "target": 3, "id": 214}, {"source": 6, "target": 6, "id": 217}, {"source": 2, "target": 3, "id": 229}, {"source": 2, "target": 14, "id": 247}, {"source": 2, "target": 13, "id": 256}, {"source": 2, "target": 3, "id": 258}, {"source": 8, "target": 3, "id": 419}, {"source": 8, "target": 8, "id": 421}, {"source": 8, "target": 14, "id": 436}, {"source": 8, "target": 13, "id": 444}, {"source": 8, "target": 3, "id": 446}, {"source": 9, "target": 3, "id": 677}, {"source": 9, "target": 14, "id": 691}, {"source": 9, "target": 13, "id": 700}, {"source": 9, "target": 3, "id": 702}, {"source": 3, "target": 3, "id": 933}, {"source": 3, "target": 13, "id": 934}, {"source": 3, "target": 3, "id": 935}, {"source": 3, "target": 1, "id": 936}, {"source": 3, "target": 7, "id": 937}]};
+
+// d3.json("d3.json", function(error, graph) {
+(function() {
+  //if (error) throw error;
 
   var pages = d3.nest()
       .key(function(d) { return d.mod; })
@@ -68,10 +75,8 @@ d3.json("d3.json", function(error, graph) {
 
   var c = color.domain(pages.map(function(d) { return d.key; }));
 
-  console.log(pages.map(function(d) { return d.key; }))
+  console.log(graph)
     
-
-
 
   simulation
       .nodes(graph.nodes)
@@ -93,9 +98,9 @@ d3.json("d3.json", function(error, graph) {
     context.clearRect(0, 0, width, height);
     context.save();
     context.translate(width / 2, height / 2);
-    var sc = (transform.k-1)*20 +1
-    context.scale(sc, sc)
-    context.translate(transform.x*sc, transform.y*sc)
+    //var sc = (transform.k-1)*20 +1
+    //context.scale(sc, sc)
+    //context.translate(transform.x*sc, transform.y*sc)
 
     context.beginPath();
     graph.links.forEach(drawLink);
@@ -140,10 +145,10 @@ d3.json("d3.json", function(error, graph) {
     //a.setAttribute("href", "http://bl.ocks.org/" + (d.user ? d.user + "/" : "") + d.id);
     a.setAttribute("title", d.label );
   }
-});
+})();
 
 function dragstarted() {
-  if (!d3.event.active) simulation.alphaTarget(1.9).restart();
+  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
   d3.event.subject.fx = d3.event.subject.x;
   d3.event.subject.fy = d3.event.subject.y;
 }
@@ -163,12 +168,12 @@ function drawLink(d) {
   context.moveTo(d.source.x, d.source.y);
   context.lineTo(d.target.x, d.target.y);
    //context.moveTo(d.x + 3, d.y);
-  context.arc((d.target.x*9+d.source.x)/10, (d.target.y*9+d.source.y)/10, 2, 0, 2 * Math.PI);
+  //context.arc((d.target.x*9+d.source.x)/10, (d.target.y*9+d.source.y)/10, 2, 0, 2 * Math.PI);
 }
 
 function drawNode(d) {
   context.moveTo(d.x + 5, d.y);
-  context.arc(d.x, d.y, 5, 0, 2 * Math.PI);
+  context.arc(d.x, d.y, d.val, 0, 2 * Math.PI);
 }
 
 </script>

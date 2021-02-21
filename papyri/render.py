@@ -539,7 +539,10 @@ def render_one(
         b2 = defaultdict(lambda: [])
         for ref in backrefs:
             assert isinstance(ref, RefInfo)
-            mod, _ = ref.path.split(".", maxsplit=1)
+            if "." in ref.path:
+                mod, _ = ref.path.split(".", maxsplit=1)
+            else:
+                mod = ref.path
             b2[mod].append(ref)
         backrefs = (None, b2)
     else:
