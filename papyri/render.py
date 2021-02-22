@@ -78,7 +78,7 @@ async def examples(module, store, version, subpath, ext=""):
     parts = {module: []}
     for pp in pap_files:
         mod, ver = pp.path.parts[-3:-1]
-        parts[module].append((RefInfo(mod, ver, "api", mod), mod))
+        parts[module].append((RefInfo(mod, ver, "api", mod), mod) + ext)
 
     efile = store / module / version / "examples" / subpath
     from .take2 import Section
@@ -705,6 +705,8 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
     br = None
 
     doc_blob = load_one(bytes_, br, strict=True)
+    data = compute_graph(store, doc_blob, (root, version, "module", ref))
+    json_str = json.dumps(data)
     return render_one(
         template=template,
         doc=doc_blob,
@@ -712,6 +714,7 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
         ext="",
         backrefs=doc_blob.backrefs,
         pygment_css=None,
+        graph=json_str,
     )
 
 
@@ -872,6 +875,8 @@ async def main(ascii, html, dry_run):
                 known_refs=known_refs,
                 ref_map=ref_map,
             )
+            data = compute_graph(gstore, doc_blob, key)
+            json_str = json.dumps(data)
             data = render_one(
                 template=template,
                 doc=doc_blob,
@@ -881,6 +886,7 @@ async def main(ascii, html, dry_run):
                 parts_links=parts_links,
                 backrefs=doc_blob.backrefs,
                 pygment_css=css_data,
+                graph=json_str,
             )
             if not dry_run:
                 (output_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
