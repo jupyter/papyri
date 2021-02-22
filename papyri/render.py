@@ -360,9 +360,9 @@ def compute_graph(gs, blob, key):
             continue
             diam = 18
         elif node in weights:
-            import numpy
+            import math
 
-            diam = 8 + numpy.sqrt(weights[node])
+            diam = 8 + math.sqrt(weights[node])
 
         candidates = [n for n in all_nodes if n[3] == node and "??" not in n]
         if not candidates:
