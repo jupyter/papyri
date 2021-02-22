@@ -305,9 +305,11 @@ def cs2(ref, tree, ref_map):
 
 
 def compute_graph(gs, blob, key):
-    nodes_names = [b.path for b in blob.backrefs + blob.refs] + [key[3]]
+    # nodes_names = [b.path for b in blob.backrefs + blob.refs] + [key[3]]
     # nodes_names = [n for n in nodes_names if n.startswith('numpy')]
     weights = {}
+
+    all_nodes = [tuple(x) for x in blob.backrefs + blob.refs]
 
     raw_edges = []
     for k in blob.backrefs + blob.refs:
@@ -315,14 +317,24 @@ def compute_graph(gs, blob, key):
         neighbors_refs = gs.get_backref(tuple(k))
         weights[name] = len(neighbors_refs)
         orig = [x[3] for x in neighbors_refs]
+        all_nodes.extend([tuple(x) for x in neighbors_refs])
         for o in orig:
             raw_edges.append((k.path, o))
 
     data = {"nodes": [], "links": []}
 
+    if len(weights) > 50:
+        for thresh in sorted(set(weights.values())):
+            print(f"{len(weights)} items ; remove items {thresh} or lower")
+            weights = {k: v for k, v in weights.items() if v > thresh}
+            print(f"down to {len(weights)} items")
+            if len(weights) < 50:
+                break
+
+    all_nodes = set(all_nodes)
     nums_ = set()
     edges = list(raw_edges)
-    nodes = list(set(nodes_names))
+    nodes = list(set(weights.keys()))
     for a, b in edges:
         if (a not in nodes) or (b not in nodes):
             continue
@@ -331,30 +343,41 @@ def compute_graph(gs, blob, key):
     nums = {x: i for i, x in enumerate(nodes, start=1)}
 
     for i, (from_, to) in enumerate(edges):
+        if from_ == to:
+            continue
         if from_ not in nodes:
             continue
         if to not in nodes:
             continue
         if key[3] in (to, from_):
             continue
-
         data["links"].append({"source": nums[from_], "target": nums[to], "id": i})
     x = nums.keys()
 
     for node in nodes:
         diam = 8
         if node == key[3]:
+            continue
             diam = 18
         elif node in weights:
             import numpy
 
             diam = 8 + numpy.sqrt(weights[node])
+
+        candidates = [n for n in all_nodes if n[3] == node and "??" not in n]
+        if not candidates:
+            uu = None
+        else:
+            assert len(candidates) == 1, (candidates, node)
+            uu = url(RefInfo(*candidates[0]))
+
         data["nodes"].append(
             {
                 "id": nums[node],
                 "val": diam,
                 "label": node,
                 "mod": ".".join(node.split(".")[0:1]),
+                "url": uu,
             }
         )
     return data
@@ -420,7 +443,6 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
         print(brpath)
         if await brpath.exists():
             br = await brpath.read_text()
-            print("BR:", br)
             # TODO: update to new way of getting backrefs.
             br = None
         else:
