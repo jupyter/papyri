@@ -32,8 +32,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest flit flake8 black scipy numpy matplotlib 'velin>=0.0.5' pytest-trio mypy py-tree-sitter
-        git clone https://github.com/tree-sitter/py-tree-sitter
+        pip install pytest flit flake8 black scipy numpy matplotlib 'velin>=0.0.5' pytest-trio mypy tree_sitter
+        git clone https://github.com/stsewd/tree-sitter-rst
         python build build_tree_sitter.py
         flit install --symlink
     - name: Lint with black
