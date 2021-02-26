@@ -428,13 +428,12 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
     else:
         assert False
         # files = list((store / root).glob(f"*/module/{ge(ref)}"))
-    if file_.exists():
+    if await file_.exists():
         # The reference we are trying to view exists;
         # we will now just render it.
         # bytes_ = await file_.read_text()
         key = (root, version, "module", ref)
         gbytes = gstore.get((root, version, "module", ref)).decode()
-        gbr_data = gstore.get_backref(key)
         # assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
         # assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
         assert root is not None
@@ -448,6 +447,7 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
         else:
             br = None
 
+        gbr_data = gstore.get_backref(key)
         gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
         # print("bytes_", bytes_[:40], "...")
         doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
@@ -788,7 +788,9 @@ async def loc(document: Store, *, store: GraphStore, tree, known_refs, ref_map):
             assert await brpath.exists()
             br = await brpath.read_text()
         elif isinstance(store, GraphStore):
-            br = ""
+            gbr_data = store.get_backref(document)
+            gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
+            br = gbr_bytes
         else:
             assert False
         doc_blob: IngestedBlobs = load_one(
