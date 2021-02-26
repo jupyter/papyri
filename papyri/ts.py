@@ -1,6 +1,9 @@
 from tree_sitter import Language, Parser
+from pathlib import Path
 
-RST = Language("/Users/bussonniermatthias/dev/papyri/build/rst.so", "rst")
+pth = str(Path(__file__).parent / "rst.so")
+
+RST = Language(pth, "rst")
 parser = Parser()
 parser.set_language(RST)
 
