@@ -40,7 +40,9 @@ from urwid.command_map import (
 from urwid.widget import CENTER, LEFT, RIGHT, SPACE
 
 from papyri.crosslink import load_one
+from urwid.text_layout import calc_pos, calc_coords
 
+from there import syslogprint as LOG
 
 class Link:
     def __init__(self, attr, text, cb):
@@ -50,8 +52,8 @@ class Link:
 
 
 class TextWithLink(urwid.Text):
-    _selectable = True
-    ignore_focus = False
+    # _selectable = True
+    # ignore_focus = False
     signals = ["change", "postchange"]
 
     def get_cursor_coords(self, size):
@@ -61,9 +63,31 @@ class TextWithLink(urwid.Text):
         >>> Edit("? ","yes").get_cursor_coords((10,))
         (5, 0)
         """
+        if not self._focusable:
+            return None
+
         (maxcol,) = size
 
-        return (0, 0)
+        LOG(len(self.get_text()[0]))
+        trans = self.get_line_translation(maxcol)
+
+        current_len = 0
+        k = 0
+        for item in self.markup:
+            if isinstance(item, Link):
+                if k == self.link_index:
+                    break
+                else:
+                    k += 1
+                current_len += len(item.text)
+            else:
+                assert isinstance(item, str), item
+                current_len += len(item)
+
+        LOG("FOCUS at pos", current_len)
+        x, y = calc_coords(self.get_text()[0], trans, current_len)
+
+        return (x, y)
 
     def compute_focused(self, markup, focus):
         nm = []
@@ -87,11 +111,17 @@ class TextWithLink(urwid.Text):
 
         self.markup = markup
 
+        self._focusable = len([x for x in markup if isinstance(x, Link)]) > 0
+        self._selectable = self._focusable
+        self.ignore_focus = not self._focusable
+
         self.__super.__init__(
             self.compute_focused(markup, False), align=LEFT, wrap=SPACE, layout=None
         )
 
     def keypress(self, size, key):
+        if not self._focusable:
+            return key
         text, attr = self.get_text()
         if self._command_map[key] in (CURSOR_LEFT, CURSOR_UP):
             self.link_index -= 1
@@ -531,7 +561,6 @@ def main(qualname: str):
         ("header", "white", "dark red", "bold"),
         ("bb", "bold", "default", ("standout", "underline")),
         ("important", "dark red,bold", "default", ("standout", "underline")),
-        ("link_selected", "dark blue,bold", "white"),
         ("editfc", "white", "dark blue", "bold"),
         ("editbx", "light gray", "dark blue"),
         ("editcp", "black", "light gray", "standout"),
@@ -542,6 +571,8 @@ def main(qualname: str):
         # ("link", "dark red,bold", "default", ("standout", "underline")),
         ("link", "dark green", "", "bold"),
         ("link", "dark green", "", "bold"),
+        ("link_selected", "dark green,bold", "", "bold"),
+        ("link_selected", "black,bold", "white"),
         ("link-broken", "dark red,strikethrough", "", "bold"),
         ("type", "dark cyan", "", "bold"),
         ("signature", "dark cyan,bold", "", "bold"),
