@@ -54,6 +54,17 @@ class TextWithLink(urwid.Text):
     ignore_focus = False
     signals = ["change", "postchange"]
 
+    def get_cursor_coords(self, size):
+        """
+        Return the (*x*, *y*) coordinates of cursor within widget.
+
+        >>> Edit("? ","yes").get_cursor_coords((10,))
+        (5, 0)
+        """
+        (maxcol,) = size
+
+        return (0, 0)
+
     def compute_focused(self, markup, focus):
         nm = []
         k = 0
@@ -150,6 +161,7 @@ class TextWithLink(urwid.Text):
         canv = self._render(size, focus)
         if focus:
             canv = CompositeCanvas(canv)
+            canv.cursor = self.get_cursor_coords(size)
 
         # .. will need to FIXME if I want highlight to work again
         # if self.highlight:
@@ -315,6 +327,7 @@ def main(qualname: str):
         def render_DefListItem(self, item):
             return [
                 self.render(item.dt),
+                # urwid.Button(str(item.dt)),
                 urwid.Padding(
                     urwid.Pile([self.render(p) for p in item.dd]),
                     left=2,
