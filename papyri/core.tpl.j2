@@ -78,6 +78,44 @@
        {% endif %}
    {% endif %}
 {% endfor%}
+{% for s in doc.arbitrary %}
+    {% if s.title %}
+        <h1>{{s.title}}</h1>
+    {% endif %}
+
+{{render_II(s)}}
+{% endfor %}
+{% if doc.example_section_data %}
+    <h3 id="section-Examples">Examples</h3>
+        {% for data in doc.example_section_data %}
+            {%- set type = data.__class__.__name__ -%}
+            {% if type=='Text' %}
+                {{render_paragraph(data)}}
+            {% elif type == 'Fig' %}
+                <div><img src="/p/{{module}}/{{version}}/img/{{data.value}}"/></div>
+            {% elif type == 'Code2' %}
+                {% if data.ce_status == 'syntax_error' -%}
+                    <span class='warning'>This example raised an error at execution time but compiled correctly</span>
+                {%-elif data.ce_status == 'exception_in_exec' -%}
+                    <span class='warning'>This example is valid syntax, but raise an exception at execution</span>
+                {%-elif data.ce_status == 'compiled' -%}
+                    <span class='note'>This example is valid syntax, but we were not able to check execution</span>
+                {%-endif-%}
+            <pre class='highlight {{data.ce_status}}'>{{example(data.entries) -}}
+             {{- data.out -}}
+            </pre>
+            {% else %}
+                {{render_II(data)}}
+            {% endif %}
+            
+         {% endfor %}
+         See :
+         {% for r in doc.refs %}
+             {{render_inner('RefInfo', r)}}
+         {% endfor %}
+     {% endif %}
+    
+
 {% if backrefs[0] or backrefs[1] %}
     <h3 id='section-backrefs'>Back References</h3>
     <p>The following pages refer to to this document either explicitly or contain code examples using this.</p>
@@ -109,54 +147,22 @@
     {% endfor %}
     {% endif%}
 {% endif %}
-{% if doc.example_section_data %}
-    <h3 id="section-Examples">Examples</h3>
-        {% for data in doc.example_section_data %}
-            {%- set type = data.__class__.__name__ -%}
-            {% if type=='Text' %}
-                {{render_paragraph(data)}}
-            {% elif type == 'Fig' %}
-                <div><img src="/p/{{module}}/{{version}}/img/{{data.value}}"/></div>
-            {% elif type == 'Code2' %}
-                {% if data.ce_status == 'syntax_error' -%}
-                    <span class='warning'>This example raised an error at execution time but compiled correctly</span>
-                {%-elif data.ce_status == 'exception_in_exec' -%}
-                    <span class='warning'>This example is valid syntax, but raise an exception at execution</span>
-                {%-elif data.ce_status == 'compiled' -%}
-                    <span class='note'>This example is valid syntax, but we were not able to check execution</span>
-                {%-endif-%}
-            <pre class='highlight {{data.ce_status}}'>{{example(data.entries) -}}
-             {{- data.out -}}
-            </pre>
-            {% else %}
-                {{render_II(data)}}
-            {% endif %}
-            
-         {% endfor %}
-         See :
-         {% for r in doc.refs %}
-             {{render_inner('RefInfo', r)}}
-         {% endfor %}
-     {% endif %}
-    
-     <h3>Local connectivity graph</h3>
-     <p>Hover to see nodes names; edges to Self not shown, Caped at 50 nodes.</p>
 
-     <p> Using a canvas is more power efficient and can get hundred of nodes ; but does not allow hyperlinks; , arrows
-     or text (beyond on hover) </p> 
-     <canvas width="800" height="500"></canvas>
-     <p> SVG is more flexible but power hungry; and does not scale well to 50 + nodes. </p> 
+{% if graph %}
+<h3>Local connectivity graph</h3>
+<p>Hover to see nodes names; edges to Self not shown, Caped at 50 nodes.</p>
 
-     <svg width="800" height="500"></svg>
-     <p>All aboves nodes referred to, (or are referred from) current nodes; Edges from Self to other have been omitted (or all nodes would be connected to the central node "self" which is not useful). Nodes are colored by the library they belong to, and scaled with the number of references pointing them</p>
+<p> Using a canvas is more power efficient and can get hundred of nodes ; but does not allow hyperlinks; , arrows
+or text (beyond on hover) </p> 
+<canvas width="800" height="500"></canvas>
+<p> SVG is more flexible but power hungry; and does not scale well to 50 + nodes. </p> 
 
-{% for s in doc.arbitrary %}
-    {% if s.title %}
-        <h1>{{s.title}}</h1>
-    {% endif %}
+<svg width="800" height="500"></svg>
 
-    {{render_II(s)}}
-{% endfor %}
+<p>All aboves nodes referred to, (or are referred from) current nodes; Edges from Self to other have been omitted
+(or all nodes would be connected to the central node "self" which is not useful). Nodes are colored by the library
+they belong to, and scaled with the number of references pointing them</p>
+{% endif %}
 
 <hr>
 
