@@ -28,6 +28,9 @@ pip install flit
 flit install --symlink
 ```
 
+Some functionality require tree_sitter_rst, see build_tree_sitter.py, and CI config file on how to build the tree-sitter
+shared object locally.
+
 ## Instructions / Overview
 
 In the end there should be roughly 3 steps:
@@ -38,17 +41,33 @@ It is _slow_ on full numpy/scipy, use `--no-infer` see below for a subpar but
 faster experience.
 
 ```
-$ papyri gen numpy scipy
-$ papyri ingest
-$ papyri render
-$ papyri open numpy.array
+$ papyri gen numpy
+$ papyri gen scipy scipy.stats # list submodules if they can't be automatically found
 ```
 
+This will create intermediate docs files in in `~/.papyri/data/<library name>_<library_version>`
 
-Hacking on rendering use `papyri serve` to start a flask server.
+
+```
+$ papyri ingest ~/.papyri/data/<path to folder generated at previous step>
+```
+
+This will crosslink the newly generate folder will the existing ones.
+
+
+```
+$ papyri render  # render all the html pages statically in ~/.papyri/html
+$ papyri serve-static # start a http.server with the propoer root to serve above files.
+$ papyri serve # start a server that will render the pages on the fly (nice to debug or iterate on theme, rendering)
+$ papyri ascii <fully qualified names> # try to render in the terminal.
+$ papyri browse <fully qualified name> # urwid documentation browser.
+```
 
 Hacking on scrapping libraries `papyri gen --no-infer [...]` will skip type
-inference of examples.
+inference of examples. `--exec` option need to be passed to try to execute examples. 
+
+When run from this repo root, per project configuration are read from `papyri.toml`
+
 
 
 #### generation (papyri gen module_name),
@@ -109,7 +128,7 @@ environment.
 
 2) online experience can allow (back-)links to private doc-bundles to users. 
 
-### tree sitter:
+### tree sitter info.
 
 https://tree-sitter.github.io/tree-sitter/creating-parsers
 
