@@ -413,6 +413,7 @@ def gen_main(names, infer, exec_):
     main entry point
     """
     import toml
+    import os
 
     conffile = Path("~/.papyri/papyri.toml").expanduser()
     conf = toml.loads(conffile.read_text())
@@ -420,9 +421,12 @@ def gen_main(names, infer, exec_):
     global_conffile = Path("~/.papyri/config.toml").expanduser()
     global_conf = toml.loads(global_conffile.read_text())
 
-    tp = global_conf.get("global", {}).get("target_path", ".")
+    # tp = global_conf.get("global", {}).get("target_path", ".")
+    tp = os.path.expanduser("~/.papyri/data")
 
     target_dir = Path(tp).expanduser()
+    if not target_dir.exists():
+        target_dir.mkdir(parents=True, exist_ok=True)
 
     print(target_dir)
     g = Gen()
