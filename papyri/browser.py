@@ -81,8 +81,16 @@ class TextWithLink(urwid.Text):
                     k += 1
                 current_len += len(item.text)
             else:
-                assert isinstance(item, str), item
-                current_len += len(item)
+                if isinstance(item, tuple):
+                    assert len(item) == 2
+                    item = item[1]
+                    if isinstance(item, list):
+                        for it in item:
+                            assert isinstance(it, str)
+                        current_len += sum([len(x) for x in item])
+
+                elif isinstance(item, str):
+                    current_len += len(item)
 
         LOG("FOCUS at pos", current_len)
         x, y = calc_coords(self.get_text()[0], trans, current_len)
@@ -270,13 +278,20 @@ def main(qualname: str):
                 )
 
             elif directive.directive_name == "math":
+                args0 = [a for a in directive.args0 if a]
+                inner = directive.inner
+                content = " ".join(directive.args0)
+                if content:
+                    assert not inner
+                else:
+                    assert len(inner.children) == 1
+
+                    content = inner.children[0].value
+
                 from flatlatex import converter
 
                 c = converter()
-                assert not directive.inner
-                return urwid.Padding(
-                    urwid.Text(("math", c.convert(" ".join(directive.args0)))), left=2
-                )
+                return urwid.Padding(urwid.Text(("math", c.convert(content))), left=2)
             inn = [
                 blank,
                 Text(
@@ -391,7 +406,7 @@ def main(qualname: str):
                     type_ = e.type
                     maybe_link = e.link
                     if maybe_link.__class__.__name__ == "Link":
-                        yield ("pyg-" + str(type_), maybe_link.ref.value)
+                        yield ("pyg-" + str(type_), maybe_link.value)
                     else:
                         if maybe_link == "\n":
                             yield (None, "\n")
