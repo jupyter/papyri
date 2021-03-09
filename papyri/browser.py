@@ -208,6 +208,296 @@ class TextWithLink(urwid.Text):
         return canv
 
 
+blank = urwid.Divider()
+from papyri.config import ingest_dir
+
+
+def dedup(l):
+    acc = []
+    bk = False
+    for item in l:
+        if item is blank:
+            if bk is not True:
+                acc.append(item)
+            else:
+                acc.append(Text("<...>"))
+
+            bk = True
+        else:
+            bk = False
+            acc.append(item)
+    return acc
+
+
+def load(file_path, walk, qa, gen_content, frame):
+    p = file_path
+    br = p.parent / (p.stem + ".br")
+    blob = load_one(file_path.read_text(), None)
+    assert hasattr(blob, "arbitrary")
+    for i in gen_content(blob, frame):
+        walk.append(i)
+
+
+def guess_load(rough, walk, gen_content, stack, frame):
+    stack.append(rough)
+
+    candidates = list(ingest_dir.glob(f"*/*/module/{rough}"))
+    if candidates:
+        for q in range(len(walk)):
+            walk.pop()
+        try:
+            load(candidates[0], walk, rough, gen_content, frame)
+            return True
+        except Exception as e:
+            raise ValueError(str(candidates)) from e
+    return False
+
+
+class Renderer:
+    def __init__(self, frame, walk, gen_content, stack):
+        self.frame = frame
+        self.walk = walk
+        self.gen_content = gen_content
+        self.stack = stack
+
+    def cb(self, value):
+        # self.frame.footer = urwid.AttrWrap(
+        #    urwid.Text(["Enter ?...: ", str(value)]), "header"
+        # )
+        if value.__class__.__name__ == "RefInfo":
+            guess_load(value.path, self.walk, self.gen_content, self.stack, self.frame)
+        elif isinstance(value, str):
+            guess_load(value, self.walk, self.gen_content, self.stack, self.frame)
+
+    def render(self, obj):
+        name = obj.__class__.__name__
+        method = getattr(self, "render_" + name, None)
+        if not method:
+            return urwid.Text(("unknown", "<" + obj.__class__.__name__ + ">"))
+
+        return method(obj)
+
+    def render_Directive(self, d):
+        cont = "".join(d.value)
+        if d.role == "math":
+            from flatlatex import converter
+
+            c = converter()
+
+            return ("math", c.convert(cont))
+        return ("directive", f"{d.domain}:{d.role}:`{cont}`")
+
+    def render_Words(self, words):
+        return words.value
+
+    def render_Link(self, link):
+        if link.reference.kind == "local":
+            return ("link", link.value)
+        return Link("link", link.value, lambda: self.cb(link.reference))
+
+    def render_BlockQuote(self, quote):
+        return urwid.Padding(
+            urwid.Pile([urwid.Text(x) for x in quote.value]), left=4, right=4
+        )
+
+    def render_BlockDirective(self, directive):
+        if directive.directive_name == "note":
+            return urwid.Padding(
+                urwid.LineBox(
+                    self.render(directive.inner), title="Note", title_align="left"
+                ),
+                left=2,
+                right=2,
+            )
+
+        elif directive.directive_name == "math":
+            args0 = [a for a in directive.args0 if a]
+            inner = directive.inner
+            content = " ".join(directive.args0)
+            if content:
+                assert not inner
+            else:
+                assert len(inner.children) == 1
+
+                content = inner.children[0].value
+
+            from flatlatex import converter
+
+            c = converter()
+            return urwid.Padding(urwid.Text(("math", c.convert(content))), left=2)
+        inn = [
+            blank,
+            Text(
+                [("param", ".. " + directive.directive_name + "::")] + directive.args0
+            ),
+        ]
+        if directive.inner:
+            inn.append(urwid.Padding(self.render(directive.inner), left=4)),
+        return urwid.Pile(inn)
+
+    def render_SeeAlsoItem(self, sa):
+        return urwid.Pile(
+            [
+                TextWithLink(
+                    [
+                        Link(
+                            "link" if sa.name.exists else "link-broken",
+                            sa.name.name,
+                            lambda: self.cb(sa.name.ref),
+                        )
+                    ]
+                ),
+                urwid.Padding(
+                    urwid.Pile([self.render(x) for x in sa.descriptions]), left=2
+                ),
+            ]
+        )
+
+    def render_Verbatim(self, verb):
+        return ("verbatim", verb.value)
+
+    def render_BlockVerbatim(self, verb):
+        acc = []
+        for line in verb.lines:
+            acc.append(Text(line._line))
+        return urwid.Pile(acc)
+
+    def render_Paragraph(self, paragraph):
+        from .take2 import Words, Paragraph, Verbatim
+
+        if any([isinstance(x, Paragraph) for x in paragraph.children]):
+            assert len(paragraph.children) == 1
+            return self.render_Paragraph(paragraph.children[0])
+
+        cc = paragraph.children
+        if not cc:
+            return urwid.Text("EMPTY")
+
+        try:
+            rr = [self.render(o) for o in paragraph.children]
+            return TextWithLink([self.render(o) for o in paragraph.children])
+        except Exception:
+            raise ValueError(cc, rr)
+
+    def render_Section(self, section):
+        acc = []
+        for c in section.children:
+            acc.append(self.render(c))
+            # acc.append(Text("<Section Blank>"))
+            acc.append(blank)
+
+        return urwid.Padding(
+            urwid.Pile(dedup(acc)),
+            left=2,
+            right=2,
+        )
+
+    def render_DefList(self, deflist):
+        p = [blank]
+        for c in deflist.children:
+            assert c.__class__.__name__ == "DefListItem", c.__class__.__name__
+            res = self.render(c)
+            assert isinstance(res, list)
+            p.extend(res)
+        return urwid.Pile(p)
+
+    def render_DefListItem(self, item):
+        return [
+            self.render(item.dt),
+            # urwid.Button(str(item.dt)),
+            urwid.Padding(
+                urwid.Pile([self.render(p) for p in item.dd]),
+                left=2,
+            ),
+            blank,
+        ]
+
+    def render_Fig(self, code):
+        return TextWithLink(
+            [
+                ("", "Figure not available in terminal : "),
+                Link(
+                    "verbatim",
+                    "Open in os window",
+                    lambda: self.cb("Not Implemented"),
+                ),
+            ]
+        )
+
+    def render_Code2(self, code):
+        # entries/out/ce_status
+
+        def insert_prompt(entries):
+            yield Link(
+                "verbatim",
+                ">>>",
+                lambda: self.cb("likely copy content to clipboard"),
+            )
+            yield (None, " ")
+            for e in entries:
+                type_ = e.type
+                maybe_link = e.link
+                if maybe_link.__class__.__name__ == "Link":
+                    yield ("pyg-" + str(type_), maybe_link.value)
+                else:
+                    if maybe_link == "\n":
+                        yield (None, "\n")
+                        yield ("verbatim", "... ")
+                    else:
+                        yield ("pyg-" + str(type_), f"{maybe_link}")
+
+        return urwid.Padding(
+            urwid.Pile(
+                [TextWithLink([x for x in insert_prompt(code.entries)])]
+                + ([Text(code.out)] if code.out else []),
+            ),
+            left=2,
+        )
+
+    def render_Code(self, code):
+        # entries/out/ce_status
+
+        def insert_prompt(entries):
+            yield Link(
+                "verbatim",
+                ">>>",
+                lambda: self.cb("likely copy content to clipboard"),
+            )
+            yield (None, " ")
+            for txt, ref, css in entries:
+                if txt == "\n":
+                    yield (None, "\n")
+                    yield ("verbatim", "... ")
+                else:
+                    yield ("pyg-" + str(css), f"{txt}")
+
+        return urwid.Padding(
+            urwid.Pile(
+                [TextWithLink([x for x in insert_prompt(code.entries)])]
+                + ([Text(code.out)] if code.out else []),
+            ),
+            left=2,
+        )
+
+    def render_Param(self, param):
+        return urwid.Pile(
+            [
+                TextWithLink(
+                    [
+                        Link("param", param.param, lambda: None),
+                        # ("param", param.param),
+                        " : ",
+                        ("type", param.type_),
+                    ]
+                ),
+                urwid.Padding(
+                    urwid.Pile([self.render(d) for d in param.desc]),
+                    left=3,
+                    right=2,
+                    min_width=20,
+                ),
+            ]
+        )
 def main(qualname: str):
     if not isinstance(qualname, str):
         from types import ModuleType
@@ -221,270 +511,11 @@ def main(qualname: str):
     # data = json.loads(file_path.read_text())
     # data
 
-    blank = urwid.Divider()
 
-    class Renderer:
-        def __init__(self, frame):
-            self.frame = frame
 
-        def cb(self, value):
-            # self.frame.footer = urwid.AttrWrap(
-            #    urwid.Text(["Enter ?...: ", str(value)]), "header"
-            # )
-            if value.__class__.__name__ == "RefInfo":
-                guess_load(value.path)
-            elif isinstance(value, str):
-                guess_load(value)
-
-        def render(self, obj):
-            name = obj.__class__.__name__
-            method = getattr(self, "render_" + name, None)
-            if not method:
-                return urwid.Text(("unknown", "<" + obj.__class__.__name__ + ">"))
-
-            return method(obj)
-
-        def render_Directive(self, d):
-            cont = "".join(d.value)
-            if d.role == "math":
-                from flatlatex import converter
-
-                c = converter()
-
-                return ("math", c.convert(cont))
-            return ("directive", f"{d.domain}:{d.role}:`{cont}`")
-
-        def render_Words(self, words):
-            return words.value
-
-        def render_Link(self, link):
-            if link.reference.kind == "local":
-                return ("link", link.value)
-            return Link("link", link.value, lambda: self.cb(link.reference))
-
-        def render_BlockQuote(self, quote):
-            return urwid.Padding(
-                urwid.Pile([urwid.Text(x) for x in quote.value]), left=4, right=4
-            )
-
-        def render_BlockDirective(self, directive):
-            if directive.directive_name == "note":
-                return urwid.Padding(
-                    urwid.LineBox(
-                        self.render(directive.inner), title="Note", title_align="left"
-                    ),
-                    left=2,
-                    right=2,
-                )
-
-            elif directive.directive_name == "math":
-                args0 = [a for a in directive.args0 if a]
-                inner = directive.inner
-                content = " ".join(directive.args0)
-                if content:
-                    assert not inner
-                else:
-                    assert len(inner.children) == 1
-
-                    content = inner.children[0].value
-
-                from flatlatex import converter
-
-                c = converter()
-                return urwid.Padding(urwid.Text(("math", c.convert(content))), left=2)
-            inn = [
-                blank,
-                Text(
-                    [("param", ".. " + directive.directive_name + "::")]
-                    + directive.args0
-                ),
-            ]
-            if directive.inner:
-                inn.append(urwid.Padding(self.render(directive.inner), left=4)),
-            return urwid.Pile(inn)
-
-        def render_SeeAlsoItem(self, sa):
-            return urwid.Pile(
-                [
-                    TextWithLink(
-                        [
-                            Link(
-                                "link" if sa.name.exists else "link-broken",
-                                sa.name.name,
-                                lambda: self.cb(sa.name.ref),
-                            )
-                        ]
-                    ),
-                    urwid.Padding(
-                        urwid.Pile([self.render(x) for x in sa.descriptions]), left=2
-                    ),
-                ]
-            )
-
-        def render_Verbatim(self, verb):
-            return ("verbatim", verb.value)
-
-        def render_BlockVerbatim(self, verb):
-            acc = []
-            for line in verb.lines:
-                acc.append(Text(line._line))
-            return urwid.Pile(acc)
-
-        def render_Paragraph(self, paragraph):
-            from .take2 import Words, Paragraph, Verbatim
-
-            if any([isinstance(x, Paragraph) for x in paragraph.children]):
-                assert len(paragraph.children) == 1
-                return self.render_Paragraph(paragraph.children[0])
-
-            cc = paragraph.children
-            if not cc:
-                return urwid.Text("EMPTY")
-
-            try:
-                rr = [self.render(o) for o in paragraph.children]
-                return TextWithLink([self.render(o) for o in paragraph.children])
-            except Exception:
-                raise ValueError(cc, rr)
-
-        def render_Section(self, section):
-            acc = []
-            for c in section.children:
-                acc.append(self.render(c))
-                # acc.append(Text("<Section Blank>"))
-                acc.append(blank)
-
-            return urwid.Padding(
-                urwid.Pile(dedup(acc)),
-                left=2,
-                right=2,
-            )
-
-        def render_DefList(self, deflist):
-            p = [blank]
-            for c in deflist.children:
-                assert c.__class__.__name__ == "DefListItem", c.__class__.__name__
-                res = self.render(c)
-                assert isinstance(res, list)
-                p.extend(res)
-            return urwid.Pile(p)
-
-        def render_DefListItem(self, item):
-            return [
-                self.render(item.dt),
-                # urwid.Button(str(item.dt)),
-                urwid.Padding(
-                    urwid.Pile([self.render(p) for p in item.dd]),
-                    left=2,
-                ),
-                blank,
-            ]
-
-        def render_Fig(self, code):
-            return TextWithLink(
-                [
-                    ("", "Figure not available in terminal : "),
-                    Link(
-                        "verbatim",
-                        "Open in os window",
-                        lambda: self.cb("Not Implemented"),
-                    ),
-                ]
-            )
-
-        def render_Code2(self, code):
-            # entries/out/ce_status
-
-            def insert_prompt(entries):
-                yield Link(
-                    "verbatim",
-                    ">>>",
-                    lambda: self.cb("likely copy content to clipboard"),
-                )
-                yield (None, " ")
-                for e in entries:
-                    type_ = e.type
-                    maybe_link = e.link
-                    if maybe_link.__class__.__name__ == "Link":
-                        yield ("pyg-" + str(type_), maybe_link.value)
-                    else:
-                        if maybe_link == "\n":
-                            yield (None, "\n")
-                            yield ("verbatim", "... ")
-                        else:
-                            yield ("pyg-" + str(type_), f"{maybe_link}")
-
-            return urwid.Padding(
-                urwid.Pile(
-                    [TextWithLink([x for x in insert_prompt(code.entries)])]
-                    + ([Text(code.out)] if code.out else []),
-                ),
-                left=2,
-            )
-
-        def render_Code(self, code):
-            # entries/out/ce_status
-
-            def insert_prompt(entries):
-                yield Link(
-                    "verbatim",
-                    ">>>",
-                    lambda: self.cb("likely copy content to clipboard"),
-                )
-                yield (None, " ")
-                for txt, ref, css in entries:
-                    if txt == "\n":
-                        yield (None, "\n")
-                        yield ("verbatim", "... ")
-                    else:
-                        yield ("pyg-" + str(css), f"{txt}")
-
-            return urwid.Padding(
-                urwid.Pile(
-                    [TextWithLink([x for x in insert_prompt(code.entries)])]
-                    + ([Text(code.out)] if code.out else []),
-                ),
-                left=2,
-            )
-
-        def render_Param(self, param):
-            return urwid.Pile(
-                [
-                    TextWithLink(
-                        [
-                            Link("param", param.param, lambda: None),
-                            # ("param", param.param),
-                            " : ",
-                            ("type", param.type_),
-                        ]
-                    ),
-                    urwid.Padding(
-                        urwid.Pile([self.render(d) for d in param.desc]),
-                        left=3,
-                        right=2,
-                        min_width=20,
-                    ),
-                ]
-            )
-
-    def dedup(l):
-        acc = []
-        bk = False
-        for item in l:
-            if item is blank:
-                if bk is not True:
-                    acc.append(item)
-                else:
-                    acc.append(Text("<...>"))
-
-                bk = True
-            else:
-                bk = False
-                acc.append(item)
-        return acc
 
     def gen_content(blob, frame):
-        R = Renderer(frame)
+        R = Renderer(frame, walk, gen_content, stack)
         doc = []
         doc.append(blank)
         if blob.signature:
@@ -541,32 +572,14 @@ def main(qualname: str):
 
     stack = []
 
-    def guess_load(rough):
-        stack.append(rough)
-        from papyri.config import ingest_dir
-
-        candidates = list(ingest_dir.glob(f"*/*/module/{rough}"))
-        if candidates:
-            for q in range(len(walk)):
-                walk.pop()
-            try:
-                load(candidates[0], walk, rough)
-            except Exception as e:
-                raise ValueError(str(candidates)) from e
 
     walk = urwid.SimpleListWalker([])
     listbox = urwid.ListBox(walk)
     frame = urwid.Frame(urwid.AttrWrap(listbox, "body"))  # , header=header)
 
-    def load(file_path, walk, qa):
-        p = file_path
-        br = p.parent / (p.stem + ".br")
-        blob = load_one(file_path.read_text(), None)
-        assert hasattr(blob, "arbitrary")
-        for i in gen_content(blob, frame):
-            walk.append(i)
-
-    guess_load(qualname)
+    found = guess_load(qualname, walk, gen_content, stack, frame)
+    if not found:
+        return False
 
     # header = urwid.AttrWrap(Text("numpy.geomspace"), "header")
 
@@ -613,17 +626,22 @@ def main(qualname: str):
         screen = urwid.web_display.Screen()
     else:
         screen = urwid.raw_display.Screen()
-
+    found = True
     def unhandled(key):
-        if key == "q":
+        nonlocal found
+        if key == "?":
+            found = False
+            raise urwid.ExitMainLoop()
+        elif key == "q":
             raise urwid.ExitMainLoop()
         elif key == "backspace":
             if len(stack) >= 2:
                 stack.pop()
                 old = stack.pop()
-                guess_load(old)
+                guess_load(old, walk, gen_content, stack, frame)
 
     urwid.MainLoop(frame, palette, screen, unhandled_input=unhandled).run()
+    return found
 
 
 def setup():
@@ -636,7 +654,8 @@ def setup():
     target: str
     target = sys.argv[1]
     assert isinstance(target, str)
-    main(target)
+    res = main(target)
+    print(res)
 
 
 if "__main__" == __name__ or urwid.web_display.is_web_request():
