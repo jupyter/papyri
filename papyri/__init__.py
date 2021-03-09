@@ -104,6 +104,10 @@ Of Interest
 from pathlib import Path
 from typing import List
 from . import examples
+from functools import lru_cache
+
+import zipfile
+import io
 
 
 import typer
@@ -170,6 +174,32 @@ def ingest(paths: List[Path], check: bool = False):
 
     for p in paths:
         cr.main(Path(p), check)
+    cr.relink()
+
+
+@app.command()
+def install(names: List[str], check: bool = False):
+
+    from tempfile import TemporaryDirectory
+    from . import crosslink as cr
+
+    _intro()
+
+    @lru_cache
+    def get(name):
+        import requests
+
+        r = requests.get(f"https://pydocs.github.io/pkg/{name}.zip")
+        return r.content
+
+    for name in names:
+        data = get(name)
+        print(len(data))
+
+        zf = zipfile.ZipFile(io.BytesIO(data), "r")
+        with TemporaryDirectory() as d:
+            zf.extractall(d)
+            cr.main(next(iter([x for x in Path(d).iterdir() if x.is_dir()])), check)
     cr.relink()
 
 
