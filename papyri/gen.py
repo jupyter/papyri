@@ -42,7 +42,7 @@ from .vref import NumpyDocString
 
 try:
     from .ts import tsparse
-except ImportError:
+except (ImportError, OSError):
     print("TREE SITTER IMPORTING FAILED, will return empty on parse")
     tsparse = lambda x: []
 

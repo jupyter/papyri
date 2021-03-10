@@ -428,10 +428,10 @@ class Renderer:
         # entries/out/ce_status
 
         def insert_prompt(entries):
-            yield Link(
+            yield (
                 "verbatim",
                 ">>>",
-                lambda: self.cb("likely copy content to clipboard"),
+                # lambda: self.cb("likely copy content to clipboard"),
             )
             yield (None, " ")
             for e in entries:
@@ -482,9 +482,9 @@ class Renderer:
     def render_Param(self, param):
         return urwid.Pile(
             [
-                TextWithLink(
+                Text(
                     [
-                        Link("param", param.param, lambda: None),
+                        ("param", param.param),
                         # ("param", param.param),
                         " : ",
                         ("type", param.type_),
@@ -525,7 +525,7 @@ def main(qualname: str):
 
             if not v.empty():
                 if k not in ["Summary", "Extended Summary"]:
-                    doc.append(TextWithLink([Link("section", k, lambda: None)]))
+                    doc.append(Text([("section", k)]))
                 # doc.append(Text("<Blank InnerSec>"))
                 doc.append(blank)
                 doc.append(R.render(v))
