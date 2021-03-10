@@ -112,7 +112,7 @@ import io
 
 import typer
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 logo = r"""
   ___                    _
