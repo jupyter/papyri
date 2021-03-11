@@ -22,6 +22,7 @@
 """
 Urwid tour.  Shows many of the standard widget types and features.
 """
+import sys
 
 import urwid
 import urwid.raw_display
@@ -424,13 +425,36 @@ class Renderer:
         ]
 
     def render_Fig(self, fig):
+        def show_fig(name):
+            cand = next(ingest_dir.glob(f"*/*/assets/{name}"))
+            import subprocess
+
+            subprocess.Popen(
+                ["qlmanage", "-p", cand],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+        if sys.platform == "darwin":
+
+            def _cb():
+                show_fig(fig.value)
+
+            msg = "Open with quicklook"
+        else:
+
+            def _cb():
+                None
+
+            msg = "Open in separate window (Not implemented on this platform)"
+
         return TextWithLink(
             [
                 ("", "Figure not available in terminal : "),
                 Link(
                     "verbatim",
-                    "Open in os window (NotImplemented)",
-                    lambda: self.cb("Not Implemented"),
+                    msg,
+                    _cb,
                 ),
             ]
         )
