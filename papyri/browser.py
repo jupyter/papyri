@@ -312,6 +312,15 @@ class Renderer:
             urwid.Pile([urwid.Text(x) for x in quote.value]), left=4, right=4
         )
 
+    def render_Admonition(self, adm):
+        return urwid.Padding(
+            urwid.LineBox(
+                urwid.Pile([self.render(c) for c in adm.children]),
+                title=f"{adm.kind} : {adm.title}",
+                title_align="left",
+            ),
+        )
+
     def render_BlockDirective(self, directive):
         if directive.directive_name == "note":
             return urwid.Padding(
@@ -327,7 +336,7 @@ class Renderer:
             inner = directive.inner
             content = " ".join(directive.args0)
             if content:
-                assert not inner
+                assert not inner, (directive.args0, inner)
             else:
                 assert len(inner.children) == 1
 
@@ -386,8 +395,10 @@ class Renderer:
             return urwid.Text("EMPTY")
 
         try:
-            rr = [self.render(o) for o in paragraph.children]
-            return TextWithLink([self.render(o) for o in paragraph.children])
+            rr = [TextWithLink([self.render(o) for o in paragraph.inline])]
+            for inl in paragraph.inner:
+                rr.append(self.render(inl))
+            return urwid.Pile(rr)
         except Exception:
             raise ValueError(cc, rr)
 
@@ -576,6 +587,10 @@ def main(qualname: str):
             doc.append(blank)
             doc.append(R.render(blob.example_section_data))
 
+        if blob.item_type and ("module" in blob.item_type):
+            for s in blob.arbitrary:
+                doc.append(R.render(s))
+
         if blob.backrefs:
             doc.append(Text(("section", "Back References")))
             doc.append(Text("All the following items Refer to this page:"))
@@ -589,10 +604,6 @@ def main(qualname: str):
                         left=2,
                     )
                 )
-        if blob.item_type and ("module" in blob.item_type):
-            for s in blob.arbitrary:
-                doc.append(R.render(s))
-
         doc = dedup(doc)
 
         doc.append(blank)
