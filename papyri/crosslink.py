@@ -26,6 +26,7 @@ from .take2 import (
     SeeAlsoItem,
     Code2,
     Token,
+    Verbatim,
 )
 from .utils import progress
 
@@ -587,7 +588,16 @@ class DirectiveVisiter(TreeReplacer):
         )
 
     def replace_Directive(self, directive: Directive):
-        if (directive.domain is not None) or (
+        if (directive.domain, directive.role) == ("py", "func"):
+            pass
+        elif (directive.domain, directive.role) == (None, None) and directive.text in (
+            # TODO: link to stdlib
+            "None",
+            "True",
+            "False",
+        ):
+            return [Verbatim([directive.text])]
+        elif (directive.domain is not None) or (
             directive.role not in (None, "mod", "class", "func", "meth", "any")
         ):
             # TODO :many of these directive need to be implemented
@@ -618,19 +628,32 @@ class DirectiveVisiter(TreeReplacer):
             loc = frozenset()
         else:
             loc = self.local_refs
-        r = self._resolve(loc, directive.text)
+        text = directive.text
+        # TODO: wrong, there should not be any ` left that is likely a
+        # verbatim vs directive parsing issue.
+        text = text.strip("`")
+        to_resolve = text
+        if " <" in text and text.endswith(">"):
+            try:
+                text, to_resolve = text.split(" <")
+            except Exception:
+                assert False, directive.text
+            assert to_resolve.endswith(">"), (text, to_resolve)
+            to_resolve = to_resolve.rstrip(">")
+
+        r = self._resolve(loc, to_resolve)
         # this is now likely incorrect as Ref kind should not be exists,
         # but things like "local", "api", "gallery..."
         ref, exists = r.path, r.kind
         if exists != "missing":
             if exists == "local":
-                self.local.append(directive.text)
+                self.local.append(text)
             else:
-                self.total.append((directive.text, ref))
+                self.total.append((text, ref))
             if r.kind != "local":
                 assert None not in r, r
                 self._targets.add(r)
-            return [Link(directive.text, r, exists, exists != "missing")]
+            return [Link(text, r, exists, exists != "missing")]
         return [directive]
 
 
@@ -773,7 +796,7 @@ class Ingester:
                     rev_aliases=rev_aliases,
                 )
                 resolved, exists = r.path, r.kind
-                if exists == "exists":
+                if exists == "module":
                     sa.name.exists = True
                     sa.name.ref = resolved
         for _, f2 in progress(
@@ -842,6 +865,7 @@ class Ingester:
             "Relinking is safe to cancel, but some back references may be broken...."
         )
         builtins.print("Press Ctrl-C to abort...")
+
         for _, key in progress(
             gstore.glob((None, None, "module", None)), description="Relinking..."
         ):
@@ -859,6 +883,9 @@ class Ingester:
             # TODO: Move this into process ?
 
             for sa in doc_blob.see_also:
+                if sa.name.exists:
+                    continue
+                old = sa.name.ref
                 r = resolve_(
                     key.path,
                     known_refs,
@@ -867,7 +894,7 @@ class Ingester:
                     rev_aliases=rev_aliases,
                 )
                 resolved, exists = r.path, r.kind
-                if exists == "exists":
+                if exists == "module":
                     sa.name.exists = True
                     sa.name.ref = resolved
 

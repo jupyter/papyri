@@ -40,9 +40,12 @@ from urwid.command_map import (
 from urwid.widget import CENTER, LEFT, RIGHT, SPACE
 
 from papyri.crosslink import load_one
+from papyri.take2 import RefInfo
 from urwid.text_layout import calc_pos, calc_coords
 
 from there import syslogprint as LOG
+import json
+import pathlib
 
 class Link:
     def __init__(self, attr, text, cb):
@@ -231,8 +234,16 @@ def dedup(l):
 
 def load(file_path, walk, qa, gen_content, frame):
     p = file_path
-    br = p.parent / (p.stem + ".br")
-    blob = load_one(file_path.read_text(), None)
+    br = pathlib.Path(str(p) + ".br")
+    if br.exists():
+        br_data = br.read_text()
+
+        br_bytes = json.dumps(
+            [RefInfo(*x).to_json() for x in json.loads(br_data)]
+        ).encode()
+    else:
+        br_bytes = None
+    blob = load_one(file_path.read_text(), br_bytes)
     assert hasattr(blob, "arbitrary")
     for i in gen_content(blob, frame):
         walk.append(i)
@@ -543,10 +554,15 @@ def main(qualname: str):
 
         if blob.backrefs:
             doc.append(Text(("section", "Back References")))
+            doc.append(Text("All the following items Refer to this page:"))
             for b in blob.backrefs:
                 doc.append(
                     urwid.Padding(
-                        TextWithLink([Link("param", b, lambda: R.cb(b))]), left=2
+                        TextWithLink(
+                            [Link("link", b.path, (lambda x: lambda: R.cb(x))(b))]
+                        ),
+                        # TextWithLink([Link("param", b, lambda: R.cb(b))]),
+                        left=2,
                     )
                 )
         if blob.item_type and ("module" in blob.item_type):

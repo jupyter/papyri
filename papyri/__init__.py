@@ -141,7 +141,7 @@ Ingesting Docs:
 
     $ papyri ingest numpy_$numpyversion [....]
 
-Generating standalone HTML for all the kown docs
+Generating standalone HTML for all the known docs
 
     $ papyri render
 
