@@ -303,7 +303,7 @@ class Renderer:
 
     def render_Link(self, link):
         if link.reference.kind == "local":
-            return ("link", link.value)
+            return ("local", link.value)
         return Link("link", link.value, lambda: self.cb(link.reference))
 
     def render_BlockQuote(self, quote):
@@ -592,17 +592,39 @@ def main(qualname: str):
     walk = urwid.SimpleListWalker([])
     listbox = urwid.ListBox(walk)
     frame = urwid.Frame(urwid.AttrWrap(listbox, "body"))  # , header=header)
+    frame.footer = urwid.AttrWrap(
+        urwid.Text(
+            "q: quit | ?: classic IPython help screen | Arrow/Click: focus links & navigate | enter: follow link"
+        ),
+        "header",
+    )
 
     found = guess_load(qualname, walk, gen_content, stack, frame)
     if not found:
         return False
 
     # header = urwid.AttrWrap(Text("numpy.geomspace"), "header")
+    #    'black'
+    #    'dark red'
+    #    'dark green'
+    #    'brown'
+    #    'dark blue'
+    #    'dark magenta'
+    #    'dark cyan'
+    #    'light gray'
+    #    'dark gray'
+    #    'light red'
+    #    'light green'
+    #    'yellow'
+    #    'light blue'
+    #    'light magenta'
+    #    'light cyan'
+    #    'white'
 
     palette = [
         ("body", "default", "default", "standout"),
         ("reverse", "light gray", "black"),
-        ("header", "white", "dark red", "bold"),
+        ("header", "white", "dark blue", "bold"),
         ("bb", "bold", "default", ("standout", "underline")),
         ("important", "dark red,bold", "default", ("standout", "underline")),
         ("editfc", "white", "dark blue", "bold"),
@@ -613,8 +635,8 @@ def main(qualname: str):
         ("buttnf", "white", "dark blue", "bold"),
         ("verbatim", "brown", "", "bold"),
         # ("link", "dark red,bold", "default", ("standout", "underline")),
-        ("link", "dark green", "", "bold"),
-        ("link", "dark green", "", "bold"),
+        ("local", "light magenta", "", "bold"),
+        ("link", "dark green,underline", "", "bold"),
         ("link_selected", "dark green,bold", "", "bold"),
         ("link_selected", "black,bold", "white"),
         ("link-broken", "dark red,strikethrough", "", "bold"),

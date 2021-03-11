@@ -43,8 +43,7 @@ from .vref import NumpyDocString
 try:
     from .ts import tsparse
 except (ImportError, OSError):
-    print("TREE SITTER IMPORTING FAILED, will return empty on parse")
-    tsparse = lambda x: []
+    tsparse = None
 
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
@@ -1006,6 +1005,10 @@ class Gen:
 
                 # progress.console.print(qa)
                 try:
+                    if tsparse is None:
+                        print(
+                            "please see how to install Tree-sitter in the readme to parse complex RST documents"
+                        )
                     arbitrary = tsparse(dedent_but_first(item_docstring).encode())
                 except Exception as e:
                     print(f"TS could not parse: {qa}")
