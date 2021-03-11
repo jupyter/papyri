@@ -24,7 +24,13 @@ class Papyri(Magics):
         if res := main(parameter_s):
             return
         else:
-            obj = self.shell.user_ns.get(oname, None)
+            parts_1 = oname.split(".")
+            other = []
+            name, *other = parts_1
+
+            obj = self.shell.user_ns.get(name, None)
+            for o in other:
+                obj = getattr(obj, o)
             if obj is not None:
                 qa = full_qual(obj)
                 if res := main(qa):

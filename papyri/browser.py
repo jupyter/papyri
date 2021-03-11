@@ -423,13 +423,13 @@ class Renderer:
             blank,
         ]
 
-    def render_Fig(self, code):
+    def render_Fig(self, fig):
         return TextWithLink(
             [
                 ("", "Figure not available in terminal : "),
                 Link(
                     "verbatim",
-                    "Open in os window",
+                    "Open in os window (NotImplemented)",
                     lambda: self.cb("Not Implemented"),
                 ),
             ]
