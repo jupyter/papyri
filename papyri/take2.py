@@ -530,7 +530,6 @@ class Param(Node):
             BlockDirective,
             Example,
             BlockVerbatim,
-            Math,
             Admonition,
         ]
     ]
@@ -656,7 +655,6 @@ class Paragraph(Node):
             Word,
             Words,
             Directive,
-            Admonition,
             Verbatim,
             Link,
             Math,
