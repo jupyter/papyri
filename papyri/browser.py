@@ -302,6 +302,17 @@ class Renderer:
     def render_Words(self, words):
         return words.value
 
+    def render_Example(self, ex):
+        acc = []
+        for line in ex.lines:
+            acc.append(Text(line._line))
+        a = urwid.Pile(acc)
+        acc = []
+        for line in ex.ind:
+            acc.append(Text(line._line))
+        b = urwid.Padding(urwid.Pile(acc), left=4)
+        return urwid.Pile([a, b])
+
     def render_Link(self, link):
         if link.reference.kind == "local":
             return ("local", link.value)

@@ -182,19 +182,28 @@ def install(names: List[str], check: bool = False):
 
     from tempfile import TemporaryDirectory
     from . import crosslink as cr
+    import trio
+    import asks
+    from rich.console import Console
+
+    console = Console()
 
     _intro()
 
-    @lru_cache
-    def get(name):
+    async def get(name):
         import requests
 
-        r = requests.get(f"https://pydocs.github.io/pkg/{name}.zip")
+        r = await asks.get(f"https://pydocs.github.io/pkg/{name}.zip")
         return r.content
 
     for name in names:
-        data = get(name)
-        print(len(data))
+
+        with console.status(f"Downloading documentation for {name}") as status:
+            import time
+
+            time.sleep(1)
+            data = trio.run(get, name)
+            print("Downloaded", name, len(data) // 1024, "kb")
 
         zf = zipfile.ZipFile(io.BytesIO(data), "r")
         with TemporaryDirectory() as d:
