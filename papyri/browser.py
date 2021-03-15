@@ -67,6 +67,7 @@ class TextWithLink(urwid.Text):
         >>> Edit("? ","yes").get_cursor_coords((10,))
         (5, 0)
         """
+        from there import syslogprint as LOG
         if not self._focusable:
             return None
 
@@ -92,6 +93,10 @@ class TextWithLink(urwid.Text):
                         for it in item:
                             assert isinstance(it, str)
                         current_len += sum([len(x) for x in item])
+                    elif isinstance(item, str):
+                        current_len += len(item)
+                    else:
+                        assert False, (repr(item), repr(self.markup))
 
                 elif isinstance(item, str):
                     current_len += len(item)
@@ -347,7 +352,9 @@ class Renderer:
             inner = directive.inner
             content = " ".join(directive.args0)
             if content:
-                assert not inner, (directive.args0, inner)
+                if inner:
+                    assert len(inner.children) == 1
+                    content = content + inner.children[0].value
             else:
                 assert len(inner.children) == 1
 
@@ -495,7 +502,12 @@ class Renderer:
                 type_ = e.type
                 maybe_link = e.link
                 if maybe_link.__class__.__name__ == "Link":
-                    yield ("pyg-" + str(type_), maybe_link.value)
+                    assert isinstance(maybe_link.reference, RefInfo)
+                    yield Link(
+                        "pyg-" + str(type_),
+                        maybe_link.value,
+                        (lambda m: (lambda: self.cb(m.reference)))(maybe_link),
+                    )
                 else:
                     if maybe_link == "\n":
                         yield (None, "\n")
