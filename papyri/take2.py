@@ -197,7 +197,7 @@ class Verbatim(Node):
         if len(tokens) < 5:
             return None
         if (tokens[0], tokens[1]) == ("`", "`") and tokens[2].strip():
-            for i, t in enumerate(tokens[2:-2]):
+            for i, t in enumerate(tokens[2:]):
                 if t == "`" and tokens[i + 2] == "`":
                     return cls(acc), tokens[i + 4 :]
                 else:
@@ -719,7 +719,7 @@ class Paragraph(Node):
 
         rest = tokens
         acc = []
-        parser = FirstCombinator([Directive, Verbatim, Word])
+        parser = FirstCombinator([Verbatim, Directive, Word])
         while rest:
             parsed, rest = parser.parse(rest)
             acc.append(parsed)
