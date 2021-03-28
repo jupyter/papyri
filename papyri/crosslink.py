@@ -609,6 +609,7 @@ class DirectiveVisiter(TreeReplacer):
             "inheritance-diagram",
             "table",
         ]:
+            # print("TODO:", block_directive.directive_name)
             return [block_directive]
         print(block_directive.directive_name, self.qa)
         return [block_directive]
@@ -779,7 +780,7 @@ class Ingester:
             s = Section.from_json(json.loads(fe.read_text()))
             gstore.put(
                 (root, version, "examples", fe.name),
-                json.dumps(s.to_json()).encode(),
+                json.dumps(s.to_json(), indent=2).encode(),
                 [],
             )
 
@@ -839,7 +840,9 @@ class Ingester:
         ):
             gstore.put((root, version, "assets", f2.name), f2.read_bytes(), [])
 
-        gstore.put((root, version, "papyri.json"), json.dumps(aliases).encode(), [])
+        gstore.put(
+            (root, version, "papyri.json"), json.dumps(aliases, indent=2).encode(), []
+        )
 
         for _, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."
@@ -940,7 +943,7 @@ class Ingester:
                 (b["module"], b["version"], b["kind"], b["path"])
                 for b in data.get("refs", [])
             ]
-            gstore.put(key, json.dumps(data).encode(), refs)
+            gstore.put(key, json.dumps(data, indent=2).encode(), refs)
 
 
 def main(path, check):

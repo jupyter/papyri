@@ -465,6 +465,13 @@ class Renderer:
             p.extend(res)
         return urwid.Pile(p)
 
+    def render_EnumeratedList(self, elist):
+        p = [blank]
+        for i, c in enumerate(elist.children, start=1):
+            res = self.render(c)
+            p.extend([urwid.Columns([(3, urwid.Text(f"{i}.")), res])])
+        return urwid.Pile(p)
+
     def render_DefListItem(self, item):
         return [
             self.render(item.dt),
