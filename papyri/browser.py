@@ -294,9 +294,17 @@ class Renderer:
 
         return method(obj)
 
+    def render_Math(self, d):
+        cont = "".join(d.value)
+        from flatlatex import converter
+
+        c = converter()
+        return ("math", c.convert(cont))
+
     def render_Directive(self, d):
         cont = "".join(d.value)
         if d.role == "math":
+            assert False
             from flatlatex import converter
 
             c = converter()
@@ -329,13 +337,27 @@ class Renderer:
         )
 
     def render_Admonition(self, adm):
+        kind = adm.kind
+        title = (f"{kind} : {adm.title}",)
+        if kind == "versionchanged":
+            title = "Changed in Version " + adm.title
+        if kind == "versionadded":
+            title = "Added in Version " + adm.title
+        if kind == "deprecated":
+            title = "Deprecated since " + adm.title
         return urwid.Padding(
             urwid.LineBox(
                 urwid.Pile([self.render(c) for c in adm.children]),
-                title=f"{adm.kind} : {adm.title}",
+                title=title,
                 title_align="left",
             ),
         )
+
+    def render_BlockMath(self, math):
+        from flatlatex import converter
+
+        c = converter()
+        return urwid.Padding(urwid.Text(("math", c.convert(math.value))), left=2)
 
     def render_BlockDirective(self, directive):
         if directive.directive_name == "note":
@@ -348,6 +370,7 @@ class Renderer:
             )
 
         elif directive.directive_name == "math":
+            assert False
             args0 = [a for a in directive.args0 if a]
             inner = directive.inner
             content = " ".join(directive.args0)

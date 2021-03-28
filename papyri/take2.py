@@ -346,6 +346,10 @@ class Directive(Node):
         return "<Directive " + prefix + "`" + "".join(self.value) + "`>"
 
 
+class BlockMath(Node):
+    value: str
+
+
 class Math(Node):
     value: List[str]  # list of tokens not list of lines.
 
@@ -466,6 +470,7 @@ class Section(Node):
             Paragraph,
             DefList,
             BlockDirective,
+            BlockMath,
             Example,
             BlockVerbatim,
             Param,
@@ -528,6 +533,7 @@ class Param(Node):
             DefListItem,
             DefList,
             BlockDirective,
+            BlockMath,
             Example,
             BlockVerbatim,
             Admonition,

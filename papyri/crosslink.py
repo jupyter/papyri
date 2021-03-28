@@ -15,9 +15,11 @@ from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore
 from .take2 import (
+    Math,
     Admonition,
     Directive,
     BlockDirective,
+    BlockMath,
     Link,
     Node,
     Param,
@@ -491,6 +493,7 @@ class TreeReplacer:
                 "Directive",
                 "SeeAlsoItems",
                 "Code2",
+                "BlockMath",
             ]:
                 return [node]
             elif name in ["Text"]:
@@ -503,6 +506,11 @@ class TreeReplacer:
                     assert c is not None, f"{node=} has a None child"
                     assert isinstance(c, Node), node
                     replacement = self.generic_visit(c)
+                    # if node.__class__.__name__ == "Param":
+                    #    print(
+                    #        "Param has children",
+                    #        [x.__class__.__name__ for x in replacement],
+                    #    )
                     assert isinstance(replacement, list)
                     new_children.extend(replacement)
                 node.children = new_children
@@ -530,7 +538,36 @@ class DirectiveVisiter(TreeReplacer):
 
     def replace_BlockDirective(self, block_directive: BlockDirective):
         block_directive.children = [self.visit(c) for c in block_directive.children]
-        if block_directive.directive_name in ["warning", "notes"]:
+
+        if block_directive.directive_name in [
+            "versionchanged",
+            "versionadded",
+            "deprecated",
+        ]:
+            assert len(block_directive.args0) == 1
+            version = block_directive.args0[0].strip()
+            return [
+                Admonition(
+                    block_directive.directive_name,
+                    version,
+                    block_directive.children,
+                )
+            ]
+
+        elif block_directive.directive_name in ["math"]:
+            assert len(block_directive.args0) == 1
+            if ch := block_directive.children:
+                assert len(ch) == 1
+                assert not ch[0].inner
+                res = BlockMath(
+                    " ".join(block_directive.args0 + [w.value for w in ch[0].inline])
+                )
+
+            else:
+                res = BlockMath(block_directive.args0[0])
+
+            return [res]
+        elif block_directive.directive_name in ["warning", "note"]:
             title = None
             args0 = block_directive.args0
             args0 = [a.strip() for a in args0 if a.strip()]
@@ -553,14 +590,10 @@ class DirectiveVisiter(TreeReplacer):
                 )
             ]
         if block_directive.directive_name in [
-            "deprecated",
             "code",
-            "versionchanged",
             "autosummary",
             "note",
             "warning",
-            "math",
-            "versionadded",
             "attribute",
             "hint",
             "plot",
@@ -578,7 +611,6 @@ class DirectiveVisiter(TreeReplacer):
         ]:
             return [block_directive]
         print(block_directive.directive_name, self.qa)
-
         return [block_directive]
 
     def _resolve(self, loc, text):
@@ -601,13 +633,15 @@ class DirectiveVisiter(TreeReplacer):
             directive.role not in (None, "mod", "class", "func", "meth", "any")
         ):
             # TODO :many of these directive need to be implemented
+            if directive.role == "math":
+                m = Math(directive.value)
+                return [m]
             if directive.role not in (
                 "attr",
                 "meth",
                 "doc",
                 "ref",
                 "func",
-                "math",
                 "mod",
                 "class",
                 "term",
