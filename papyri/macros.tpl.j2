@@ -84,7 +84,7 @@
 
 {% macro block_admonition(adm) -%}
 <div class='admonition'>
-    <div class='head'> {{adm.kind}}</div>
+    <div>{{adm.kind}}</div>
     {% for it in adm.children %}
         {{render_II(it)}}
     {% endfor %}
@@ -155,6 +155,8 @@
                <li>{{render_II(item)}}</li>
                {% endfor %}
             <ol>
+       {% elif type == 'BlockMath' %}
+        <span class="tex2jax_process">$${{obj.value}}$$</span>
        {% elif type == 'BlockQuote' %}
             # TODO : finish blockquote rendering
             <pre>

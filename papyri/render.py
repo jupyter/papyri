@@ -895,9 +895,9 @@ async def main(ascii, html, dry_run):
                 with (output_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                     f.write(data)
 
-    key = Key("papyri", "0.0.2", "module", "papyri")
+    key = Key("papyri", "0.0.6", "module", "papyri")
 
-    module, v = "papyri", "0.0.2"
+    module, v = "papyri", "0.0.6"
     if html:
         doc_blob, qa, siblings, parts_links = await loc(
             key,
