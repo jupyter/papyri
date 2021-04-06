@@ -185,54 +185,67 @@ def install(names: List[str], check: bool = False):
     import trio
     import httpx
     from rich.console import Console
+    from io import BytesIO
+    import rich
 
     console = Console()
 
     _intro()
 
-    async def get(name, version):
-        from io import BytesIO
-        import rich
+    async def get(name, version, results, progress):
 
         buf = BytesIO()
 
-        with httpx.stream(
+        client = httpx.AsyncClient()
+
+        async with client.stream(
             "GET", f"https://pydocs.github.io/pkg/{name}-{version}.zip"
         ) as response:
             total = int(response.headers["Content-Length"])
 
-            with rich.progress.Progress(
-                "[progress.percentage]{task.percentage:>3.0f}%",
-                rich.progress.BarColumn(bar_width=None),
-                rich.progress.DownloadColumn(),
-                rich.progress.TransferSpeedColumn(),
-            ) as progress:
-                download_task = progress.add_task("Download", total=total)
-                for chunk in response.iter_bytes():
-                    buf.write(chunk)
-                    progress.update(
-                        download_task, completed=response.num_bytes_downloaded
-                    )
+            download_task = progress.add_task(f"Download {name} {version}", total=total)
+            async for chunk in response.aiter_bytes():
+                buf.write(chunk)
+                progress.update(download_task, completed=response.num_bytes_downloaded)
 
             if response.status_code != 200:
-                return None
+                results[(name, version)] = None
             else:
                 buf.seek(0)
-                return buf.read()
+                results[(name, version)] = buf.read()
 
-    for name in names:
+    async def m_():
+        results = {}
+        with rich.progress.Progress(
+            "{task.description}",
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            rich.progress.BarColumn(bar_width=None),
+            rich.progress.DownloadColumn(),
+            rich.progress.TransferSpeedColumn(),
+        ) as progress:
+            async with trio.open_nursery() as nursery:
+                for name in names:
 
-        if "==" in name:
-            name, version = name.split("==")
-        else:
-            mod = __import__(name)
-            version = mod.__version__
-            print(
-                f"Autodetecting version for {name}:{version}, use {name}==<version> if incorrect."
-            )
-        # with console.status(f"Downloading documentation for {name}") as status:
+                    if "==" in name:
+                        name, version = name.split("==")
+                    else:
+                        try:
+                            mod = __import__(name)
+                            version = mod.__version__
+                            print(
+                                f"Autodetecting version for {name}:{version}, use {name}==<version> if incorrect."
+                            )
+                        except Exception:
+                            print(
+                                f"Could not detect version for {name} use {name}==<version> if incorrect."
+                            )
+                            continue
+                    # with console.status(f"Downloading documentation for {name}") as status:
+                    nursery.start_soon(get, name, version, results, progress)
+        return results
 
-        data = trio.run(get, name, version)
+    datas = trio.run(m_)
+    for (name, version), data in datas.items():
         if data is not None:
             # print("Downloaded", name, version, len(data) // 1024, "kb")
             zf = zipfile.ZipFile(io.BytesIO(data), "r")
