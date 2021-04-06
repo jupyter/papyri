@@ -183,32 +183,64 @@ def install(names: List[str], check: bool = False):
     from tempfile import TemporaryDirectory
     from . import crosslink as cr
     import trio
-    import asks
+    import httpx
     from rich.console import Console
 
     console = Console()
 
     _intro()
 
-    async def get(name):
-        import requests
+    async def get(name, version):
+        from io import BytesIO
+        import rich
 
-        r = await asks.get(f"https://pydocs.github.io/pkg/{name}.zip")
-        return r.content
+        buf = BytesIO()
+
+        with httpx.stream(
+            "GET", f"https://pydocs.github.io/pkg/{name}-{version}.zip"
+        ) as response:
+            total = int(response.headers["Content-Length"])
+
+            with rich.progress.Progress(
+                "[progress.percentage]{task.percentage:>3.0f}%",
+                rich.progress.BarColumn(bar_width=None),
+                rich.progress.DownloadColumn(),
+                rich.progress.TransferSpeedColumn(),
+            ) as progress:
+                download_task = progress.add_task("Download", total=total)
+                for chunk in response.iter_bytes():
+                    buf.write(chunk)
+                    progress.update(
+                        download_task, completed=response.num_bytes_downloaded
+                    )
+
+            if response.status_code != 200:
+                return None
+            else:
+                buf.seek(0)
+                return buf.read()
 
     for name in names:
 
-        with console.status(f"Downloading documentation for {name}") as status:
-            import time
+        if "==" in name:
+            name, version = name.split("==")
+        else:
+            mod = __import__(name)
+            version = mod.__version__
+            print(
+                f"Autodetecting version for {name}:{version}, use {name}==<version> if incorrect."
+            )
+        # with console.status(f"Downloading documentation for {name}") as status:
 
-            time.sleep(1)
-            data = trio.run(get, name)
-            print("Downloaded", name, len(data) // 1024, "kb")
-
-        zf = zipfile.ZipFile(io.BytesIO(data), "r")
-        with TemporaryDirectory() as d:
-            zf.extractall(d)
-            cr.main(next(iter([x for x in Path(d).iterdir() if x.is_dir()])), check)
+        data = trio.run(get, name, version)
+        if data is not None:
+            # print("Downloaded", name, version, len(data) // 1024, "kb")
+            zf = zipfile.ZipFile(io.BytesIO(data), "r")
+            with TemporaryDirectory() as d:
+                zf.extractall(d)
+                cr.main(next(iter([x for x in Path(d).iterdir() if x.is_dir()])), check)
+        else:
+            print("Could not find docs for ", name, version)
     cr.relink()
 
 

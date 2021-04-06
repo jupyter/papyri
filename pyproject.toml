@@ -12,7 +12,7 @@ description-file="Readme.md"
 requires-python=">=3.8"
 requires=[
     "urwid",
-    "asks",
+    "httpx",
     "numpydoc",
     "cachetools",
     "pygments",
