@@ -17,7 +17,31 @@ project and _efficient_ page rebuild.
 This should also allow to reader documentation on _non html_ backend (think terminal), or provide documentation if
 IDE (Spyder/Jupyterlab), without having to iframe it. 
 
-## install 
+
+# install:
+
+Pip install from Pypi:
+
+```bash
+$ pip isntall papyri
+````
+
+Install given package documentation:
+
+```bash
+$ papyri install package_name [package_name [package_name [...]]]
+```
+
+Run terminal IPython with Papyri as an extension:
+
+```
+$ ipython --ext papyri.ipython
+```
+
+This will augment the `?` operator to show better documentation (when install with `papyri install ...`
+
+
+## dev install 
 
 You may need to get a modified version of numpydoc depending on the stage of development.
 
