@@ -48,6 +48,7 @@ from there import syslogprint as LOG
 import json
 import pathlib
 
+
 class Link:
     def __init__(self, attr, text, cb):
         self.attr = attr
@@ -68,6 +69,7 @@ class TextWithLink(urwid.Text):
         (5, 0)
         """
         from there import syslogprint as LOG
+
         if not self._focusable:
             return None
 
@@ -597,6 +599,8 @@ class Renderer:
                 ),
             ]
         )
+
+
 def main(qualname: str):
     if not isinstance(qualname, str):
         from types import ModuleType
@@ -609,9 +613,6 @@ def main(qualname: str):
     # import json
     # data = json.loads(file_path.read_text())
     # data
-
-
-
 
     def gen_content(blob, frame):
         R = Renderer(frame, walk, gen_content, stack)
@@ -675,7 +676,6 @@ def main(qualname: str):
         return doc
 
     stack = []
-
 
     walk = urwid.SimpleListWalker([])
     listbox = urwid.ListBox(walk)
@@ -753,6 +753,7 @@ def main(qualname: str):
     else:
         screen = urwid.raw_display.Screen()
     found = True
+
     def unhandled(key):
         nonlocal found
         if key == "?":

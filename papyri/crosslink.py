@@ -773,7 +773,6 @@ class Ingester:
         aliases: Dict[str, str] = data.get("aliases", {})
         rev_aliases = {v: k for k, v in aliases.items()}
 
-
         for _, fe in progress(
             (path / "examples/").glob("*"), description=f"Reading {path.name} Examples"
         ):
@@ -887,7 +886,6 @@ class Ingester:
 
             except Exception as e:
                 raise RuntimeError(f"error writing to {path}") from e
-
 
     def relink(self):
         gstore = self.gstore
