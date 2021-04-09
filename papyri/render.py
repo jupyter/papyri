@@ -897,6 +897,8 @@ async def main(ascii, html, dry_run):
                 with (output_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                     f.write(data)
 
+    import papyri
+
     key = Key("papyri", str(papyri.__version__), "module", "papyri")
 
     module, v = "papyri", str(papyri.__version__)
