@@ -32,6 +32,10 @@ Install given package documentation:
 $ papyri install package_name [package_name [package_name [...]]]
 ```
 
+Only numpy 1.20.0, scipy_1.5.0 are currently installable and published. 
+For other packages you will need to build locally which is a much more involved
+process.
+
 Run terminal IPython with Papyri as an extension:
 
 ```
