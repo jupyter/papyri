@@ -446,7 +446,10 @@ class Renderer:
             raise ValueError(cc, rr)
 
     def render_Section(self, section):
-        acc = []
+        if section.title:
+            acc = [Text(("section", section.title))]
+        else:
+            acc = []
         for c in section.children:
             acc.append(self.render(c))
             # acc.append(Text("<Section Blank>"))
