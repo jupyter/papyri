@@ -554,7 +554,9 @@ def serve():
         return await gallery("*", store, gstore=gstore)
 
     async def index():
-        return redirect("/p/papyri/0.0.2/api/papyri")
+        import papyri
+        v = str(papyri.__version__)
+        return redirect(f"/p/papyri/{v}/api/papyri")
 
     async def ex(module, version, subpath):
         return await examples(
@@ -895,9 +897,9 @@ async def main(ascii, html, dry_run):
                 with (output_dir / module / v / "api" / f"{qa}.html").open("w") as f:
                     f.write(data)
 
-    key = Key("papyri", "0.0.6", "module", "papyri")
+    key = Key("papyri", str(papyri.__version__), "module", "papyri")
 
-    module, v = "papyri", "0.0.6"
+    module, v = "papyri", str(papyri.__version__)
     if html:
         doc_blob, qa, siblings, parts_links = await loc(
             key,
