@@ -36,6 +36,8 @@ submodules = [
  "dviread",
  "image"
 ]
+
+
 [papyri]
 logo = 'papyri-logo.png'
 examples_folder = '~/dev/papyri/examples/'
@@ -52,6 +54,19 @@ exclude = ['dask.utils.Dispatch']
 [skimage]
 logo = 'skimage-logo.png'
 exec_failure = "fallback"
+submodules = [
+ "morphology", 
+ "color",
+ "data",
+ "draw",
+ "exposure",
+ "io",
+ "graph",
+ "segmentation",
+ "transform",
+ "util",
+ "viewer"
+]
 
 
 
