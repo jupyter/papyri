@@ -23,7 +23,7 @@ IDE (Spyder/Jupyterlab), without having to iframe it.
 Pip install from Pypi:
 
 ```bash
-$ pip isntall papyri
+$ pip install papyri
 ````
 
 Install given package documentation:
