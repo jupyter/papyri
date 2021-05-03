@@ -425,7 +425,10 @@ def gen_main(names, infer, exec_):
         conf = {}
 
     global_conffile = Path("~/.papyri/config.toml").expanduser()
-    global_conf = toml.loads(global_conffile.read_text())
+    if conffile.exists():
+        global_conf = toml.loads(global_conffile.read_text())
+    else:
+        global_conf = {}
 
     # tp = global_conf.get("global", {}).get("target_path", ".")
     tp = os.path.expanduser("~/.papyri/data")
