@@ -555,6 +555,7 @@ def serve():
 
     async def index():
         import papyri
+
         v = str(papyri.__version__)
         return redirect(f"/p/papyri/{v}/api/papyri")
 

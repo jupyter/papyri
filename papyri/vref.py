@@ -34,7 +34,7 @@ class NumpyDocString(nds.NumpyDocString):
         """
         Apply a bunch of heuristic that try to normalise the data.
         """
-        if (params := self["Parameters"]) :
+        if params := self["Parameters"]:
             for i, p in enumerate(params):
                 if not p.type and ":" in p.name:
                     if p.name.startswith(".."):

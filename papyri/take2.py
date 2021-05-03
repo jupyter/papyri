@@ -816,7 +816,7 @@ def with_indentation(lines, start_indent=0):
 
     indent = start_indent
     for l in lines:
-        if (ls := l.lstrip()) :
+        if ls := l.lstrip():
             yield (indent := len(l) - len(ls)), l
         else:
             yield indent, l

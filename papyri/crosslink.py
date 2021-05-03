@@ -366,10 +366,9 @@ def resolve_(
         # return RefInfo(None, None, "exists", attempts[0])
         return k_path_map[attempts[0]]
     else:
-        trail = [q for q in attempts if q.split('.')[-1] == ref]
+        trail = [q for q in attempts if q.split(".")[-1] == ref]
         if len(trail) == 1:
             return k_path_map[trail[0]]
-
 
     return RefInfo(None, None, "missing", ref)
 

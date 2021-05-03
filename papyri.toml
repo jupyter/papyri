@@ -67,6 +67,14 @@ submodules = [
  "util",
  "viewer"
 ]
+[astropy]
+submodules = [
+ "io", 
+ "io.fits"
+]
+
+
+
 
 
 

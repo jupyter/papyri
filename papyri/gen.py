@@ -415,7 +415,14 @@ def gen_main(names, infer, exec_):
     import os
 
     conffile = Path("~/.papyri/papyri.toml").expanduser()
-    conf = toml.loads(conffile.read_text())
+    if conffile.exists():
+        conf = toml.loads(conffile.read_text())
+    else:
+        print(
+            "Per library configuration not implmented yet, you may want to symlink"
+            " ./papyri.toml at the root of the papyri repo to ~/.papyri/papyri.toml "
+        )
+        conf = {}
 
     global_conffile = Path("~/.papyri/config.toml").expanduser()
     global_conf = toml.loads(global_conffile.read_text())
@@ -1121,7 +1128,7 @@ class Gen:
                         doc_blob.content[s] = new_content
 
                 doc_blob.see_also = []
-                if (see_also := doc_blob.content.get("See Also", None)) :
+                if see_also := doc_blob.content.get("See Also", None):
                     for nts, d0 in see_also:
                         try:
                             d = d0
