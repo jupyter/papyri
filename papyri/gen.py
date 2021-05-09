@@ -440,6 +440,10 @@ def gen_main(names, infer, exec_):
     print(target_dir)
     g = Gen()
     g.do_one_mod(names, infer, exec_, conf)
+    docs_path: str = conf.get(names[0]).get("docs_path", None)
+    if docs_path is not None:
+        path = Path(docs_path).expanduser()
+        g.do_docs(path)
     p = target_dir / (g.root + "_" + g.version)
     p.mkdir(exist_ok=True)
 
@@ -758,6 +762,7 @@ class Gen:
         self.bdata = {}
         self.metadata = {}
         self.examples = {}
+        self.docs = {}
 
     def clean(self, where: Path):
         for _, path in progress(
@@ -775,12 +780,48 @@ class Gen:
             (where / "assets").rmdir()
         if (where / "papyri.json").exists():
             (where / "papyri.json").unlink()
+        if (where / "docs").exists():
+            (where / "docs").rmdir()
+
+    def do_docs(self, path):
+        """
+        Crawl the filesystem for all docs/rst files
+
+        """
+        print("scaraping documentation")
+        for p in path.glob("**/*"):
+            if p.is_file():
+                parts = p.relative_to(path).parts
+                if parts[-1].endswith("rst"):
+                    data = tsparse(p.read_bytes())
+                    blob = DocBlob()
+                    blob.arbitrary = data
+                    blob.content = {}
+
+                    blob.ordered_sections = []
+                    blob.item_file = None
+                    blob.item_line = None
+                    blob.item_type = None
+                    blob.aliases = []
+                    blob.example_section_data = Section()
+                    blob.see_also = []
+                    blob.signature = None
+                    blob.references = None
+                    blob.refs = []
+
+                    self.docs[parts] = json.dumps(blob.to_json(), indent=2)
+                else:
+                    pass
+                # data = p.read_bytes()
 
     def write(self, where: Path):
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
             with (where / "module" / k).open("w") as f:
                 f.write(v)
+
+        for k, v in self.docs.items():
+            pass
 
         (where / "examples").mkdir(exist_ok=True)
         for k, v in self.examples.items():
