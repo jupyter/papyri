@@ -766,11 +766,16 @@ class Gen:
 
     def clean(self, where: Path):
         for _, path in progress(
-            (where / "module").glob("*.json"), description="cleaning previous bundle"
+            (where / "module").glob("*.json"),
+            description="cleaning previous bundle 1/3",
         ):
             path.unlink()
         for _, path in progress(
-            (where / "assets").glob("*"), description="cleaning previous bundle"
+            (where / "assets").glob("*"), description="cleaning previous bundle 2/3"
+        ):
+            path.unlink()
+        for _, path in progress(
+            (where / "docs").glob("*"), description="cleaning previous bundle 3/3"
         ):
             path.unlink()
 
@@ -820,8 +825,15 @@ class Gen:
             with (where / "module" / k).open("w") as f:
                 f.write(v)
 
+        (where / "docs").mkdir(exist_ok=True)
         for k, v in self.docs.items():
-            pass
+            subf = where / "docs"
+            for s in k[:-1]:
+                subf = subf / s
+            file = k[-1]
+            subf.mkdir(exist_ok=True)
+            with (subf / file).open("w") as f:
+                f.write(v)
 
         (where / "examples").mkdir(exist_ok=True)
         for k, v in self.examples.items():
