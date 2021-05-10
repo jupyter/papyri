@@ -440,7 +440,7 @@ def gen_main(names, infer, exec_):
     print(target_dir)
     g = Gen()
     g.do_one_mod(names, infer, exec_, conf)
-    docs_path: str = conf.get(names[0]).get("docs_path", None)
+    docs_path: str = conf.get(names[0], {}).get("docs_path", None)
     if docs_path is not None:
         path = Path(docs_path).expanduser()
         g.do_docs(path)
