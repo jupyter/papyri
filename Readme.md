@@ -16,7 +16,7 @@ See some of the reason behind it  on [this blog post](https://labs.quansight.org
 Navigating astropy's documentation from within IPython, note that this include
 forward ref but also backward reference (which pages link to current page)
 
-![](astropy.gif)
+![](assets/astropy.gif)
 
 Type inference and keyboard navigation in terminal: Directive are properly
 rendered in terminal, examples are type inferred, clicking (or pressing enter)
@@ -40,7 +40,7 @@ numpy functions; Blue skimage functions, orange: scipy, red: xarray. Arrow
 between dots indicate those pages link each other (for example ndarray is linked
 from xarray.cos), and dot size represent the popularity of a page.
 
-![](local_graph_zeroes.png)
+![](https://github.com/Carreau/papyri/raw/master/assets/local_graph_zeroes.png)
 
 Math are properly rendered even in terminal, here `polyfit` in IPyhton with
 papyri enabled (left) and disabled (right).
