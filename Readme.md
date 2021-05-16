@@ -1,5 +1,18 @@
 # Papyri
 
+
+Papery is a set of tools to build, publish (to be done), install and render
+documentation within IPython and Jupyter.
+
+It allows bidirectional crosslink across libraries, navigation, proper reflow of
+user docstrings text, inline images (when rendered to html), proper math
+rendering (both in terminal and html) and many other things.
+
+![]()
+
+
+## why the name
+
 See the legendary [Villa of Papyri](https://en.wikipedia.org/wiki/Villa_of_the_Papyri), who get its name from it's
 collection of many papyrus scrolls.
 
