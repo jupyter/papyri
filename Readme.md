@@ -22,14 +22,14 @@ Type inference and keyboard navigation in terminal: Directive are properly
 rendered in terminal, examples are type inferred, clicking (or pressing enter)
 on highlighted token would open said page (backspace navigate back).
 
-![](papyri-nav.gif)
+![](assets/papyri-nav.gif)
 
 Jupyter Notebook and Lab pager can render HTML it should be possible to have
 inline graph and images when using jupyter inline help (to be implemented), in
 terminals we replace inline images with a button/link to open images in an
 external viewer (quicklook, evince, paint...)
 
-![](inline_graph.png)
+![](assets/inline_graph.png)
 
 Papyri has complete information about which page link to which page; this allows
 to create local graph of which page mention each other to find related topics.
@@ -40,12 +40,12 @@ numpy functions; Blue skimage functions, orange: scipy, red: xarray. Arrow
 between dots indicate those pages link each other (for example ndarray is linked
 from xarray.cos), and dot size represent the popularity of a page.
 
-![](https://github.com/Carreau/papyri/raw/master/assets/local_graph_zeroes.png)
+![](assets/local_graph_zeroes.png)
 
 Math are properly rendered even in terminal, here `polyfit` in IPyhton with
 papyri enabled (left) and disabled (right).
 
-![](vs_math.png)
+![](assets/vs_math.png)
 
 
 
