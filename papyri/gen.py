@@ -3,17 +3,17 @@ from __future__ import annotations
 import inspect
 import io
 import json
+import os
 import time
 from collections import defaultdict
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 from pathlib import Path
-
-# from numpydoc.docscrape import NumpyDocString
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, Optional, Tuple
 
 import jedi
+import toml
 from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -23,7 +23,6 @@ from rich.progress import TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
-from .take2 import main as t2main
 from .take2 import (
     Code,
     Fig,
@@ -35,8 +34,9 @@ from .take2 import (
     Section,
     SeeAlsoItem,
     Text,
-    make_block_3,
 )
+from .take2 import main as t2main
+from .take2 import make_block_3
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 
@@ -407,22 +407,17 @@ def normalise_ref(ref):
     return ref
 
 
-def gen_main(names, infer, exec_):
+def gen_main(infer, exec_, target_file):
     """
     main entry point
     """
-    import toml
-    import os
-
-    conffile = Path("~/.papyri/papyri.toml").expanduser()
+    conffile = Path(target_file).expanduser()
     if conffile.exists():
         conf = toml.loads(conffile.read_text())
+        names = list(conf.keys())
+
     else:
-        print(
-            "Per library configuration not implmented yet, you may want to symlink"
-            " ./papyri.toml at the root of the papyri repo to ~/.papyri/papyri.toml "
-        )
-        conf = {}
+        sys.exit("invalid conf file")
 
     global_conffile = Path("~/.papyri/config.toml").expanduser()
     if conffile.exists():

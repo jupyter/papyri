@@ -70,9 +70,13 @@ This should also allow to reader documentation on _non html_ backend (think term
 IDE (Spyder/Jupyterlab), without having to iframe it. 
 
 
-# install:
+# install (not fully functional):
+
+Some functionality are not yet available when installing from PyPI, 
+For now you need a dev-install to access all features.
 
 Pip install from Pypi:
+
 
 ```bash
 $ pip install papyri
@@ -108,8 +112,19 @@ pip install flit
 flit install --symlink
 ```
 
+Build the TreeSitter rst parser:
+
 Some functionality require tree_sitter_rst, see build_tree_sitter.py, and CI config file on how to build the tree-sitter
 shared object locally.
+
+```bash
+$ python build_tree_sitter.py
+```
+
+
+Note that papyri still uses a custom parser which will be removed in the future to rely mostly on TreeSitter.
+
+
 
 ## Instructions / Overview
 

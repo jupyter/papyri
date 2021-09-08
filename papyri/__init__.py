@@ -112,6 +112,8 @@ import io
 
 import typer
 
+import toml
+
 __version__ = "0.0.7"
 
 logo = r"""
@@ -267,7 +269,7 @@ def relink():
 
 @app.command()
 def gen(
-    names: List[str],
+    file: str,
     infer: bool = typer.Option(
         True, help="Whether to run type inference on code examples."
     ),
@@ -285,7 +287,18 @@ def gen(
     _intro()
     from papyri.gen import gen_main
 
-    gen_main(names, infer=infer, exec_=exec)
+    gen_main(infer=infer, exec_=exec, target_file=file)
+
+
+@app.command()
+def bootstrap(file: str):
+    p = Path(file)
+    if p.exists():
+        sys.exit(f"{p} already exists")
+    name = input(f"package name [{p.stem}]:")
+    if not name:
+        name = p.stem
+    p.write_text(toml.dumps(dict(name={"module": [name]})))
 
 
 @app.command()
