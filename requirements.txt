@@ -4,6 +4,7 @@ there
 rich
 jedi
 typer
+click<8
 velin
 quart-trio
 flit

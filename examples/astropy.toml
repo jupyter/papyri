@@ -1,0 +1,2 @@
+[astropy]
+submodules = [ "io", "io.fits",]

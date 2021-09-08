@@ -1,0 +1,7 @@
+[scipy]
+logo = "scipy_logo.png"
+submodules = [ "signal",]
+exclude = [ "scipy.signal.spectral._spectral_helper",]
+exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]
+execute_exclude_patterns = []
+exec_failure = "fallback"
