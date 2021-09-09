@@ -4,9 +4,10 @@ import inspect
 import io
 import json
 import os
+import sys
 import time
 from collections import defaultdict
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
@@ -178,13 +179,13 @@ class BlockExecutor:
         pass
 
     def __enter__(self):
-        assert (len(self.fig_man())) == 0, f"init fail in {qa} {len(fig_managers)}"
+        assert (len(self.fig_man())) == 0, f"init fail in {len(self.fig_man())}"
 
     def __exit__(self, *args, **kwargs):
         import matplotlib.pyplot as plt
 
         plt.close("all")
-        assert (len(self.fig_man())) == 0, f"init fail in {qa} {len(fig_managers)}"
+        assert (len(self.fig_man())) == 0, f"init fail in {len(self.fig_man())}"
 
     def fig_man(self):
         from matplotlib import _pylab_helpers
@@ -422,13 +423,6 @@ def gen_main(infer, exec_, target_file):
     else:
         sys.exit("invalid conf file")
 
-    global_conffile = Path("~/.papyri/config.toml").expanduser()
-    if global_conffile.exists():
-        global_conf = toml.loads(global_conffile.read_text())
-    else:
-        global_conf = {}
-
-    # tp = global_conf.get("global", {}).get("target_path", ".")
     tp = os.path.expanduser("~/.papyri/data")
 
     target_dir = Path(tp).expanduser()
@@ -719,7 +713,6 @@ class DocBlob(Node):
         self.item_type = None
         self.aliases = []
         self.signature = None
-        arbitrary = []
 
     @property
     def content(self):

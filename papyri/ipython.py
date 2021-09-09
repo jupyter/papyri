@@ -5,6 +5,7 @@ from IPython.core.magic import (
 )
 import re
 
+
 # The class MUST call this class decorator at creation time
 @magics_class
 class Papyri(Magics):
@@ -21,7 +22,7 @@ class Papyri(Magics):
             r"(pinfo )?(\?*)(.*?)(\??$)", parameter_s
         ).groups()
 
-        if res := main(parameter_s):
+        if _ := main(parameter_s):
             return
         else:
             parts_1 = oname.split(".")
@@ -33,7 +34,7 @@ class Papyri(Magics):
                 obj = getattr(obj, o)
             if obj is not None:
                 qa = full_qual(obj)
-                if res := main(qa):
+                if _ := main(qa):
                     return
 
         # print 'pinfo par: <%s>' % parameter_s  # dbg

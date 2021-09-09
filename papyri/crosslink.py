@@ -924,7 +924,6 @@ class Ingester:
             for sa in doc_blob.see_also:
                 if sa.name.exists:
                     continue
-                old = sa.name.ref
                 r = resolve_(
                     key.path,
                     known_refs,

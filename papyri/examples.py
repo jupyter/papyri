@@ -4,7 +4,7 @@ Examples Modules
 ----------------
 
 This module contains examples, none of the functions, classes or other attribute
-should have any effects when called. 
+should have any effects when called.
 
 """
 

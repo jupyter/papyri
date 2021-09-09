@@ -32,17 +32,14 @@ from urwid.canvas import CompositeCanvas, apply_text_layout
 from urwid.command_map import (
     CURSOR_DOWN,
     CURSOR_LEFT,
-    CURSOR_MAX_LEFT,
-    CURSOR_MAX_RIGHT,
     CURSOR_RIGHT,
     CURSOR_UP,
-    command_map,
 )
-from urwid.widget import CENTER, LEFT, RIGHT, SPACE
+from urwid.widget import LEFT, SPACE
 
 from papyri.crosslink import load_one
 from papyri.take2 import RefInfo
-from urwid.text_layout import calc_pos, calc_coords
+from urwid.text_layout import calc_coords
 
 from there import syslogprint as LOG
 import json
@@ -68,7 +65,6 @@ class TextWithLink(urwid.Text):
         >>> Edit("? ","yes").get_cursor_coords((10,))
         (5, 0)
         """
-        from there import syslogprint as LOG
 
         if not self._focusable:
             return None
@@ -373,7 +369,7 @@ class Renderer:
 
         elif directive.directive_name == "math":
             assert False
-            args0 = [a for a in directive.args0 if a]
+            # args0 = [a for a in directive.args0 if a]
             inner = directive.inner
             content = " ".join(directive.args0)
             if content:
@@ -427,7 +423,7 @@ class Renderer:
         return urwid.Pile(acc)
 
     def render_Paragraph(self, paragraph):
-        from .take2 import Words, Paragraph, Verbatim
+        from .take2 import Paragraph
 
         if any([isinstance(x, Paragraph) for x in paragraph.children]):
             assert len(paragraph.children) == 1

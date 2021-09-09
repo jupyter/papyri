@@ -1,7 +1,6 @@
 from pathlib import Path as _Path
 
 from collections import namedtuple
-from dataclasses import dataclass
 import json
 from typing import Tuple
 

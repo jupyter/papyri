@@ -7,10 +7,8 @@ RST = Language(pth, "rst")
 parser = Parser()
 parser.set_language(RST)
 
-from textwrap import indent
 
 from papyri.take2 import (
-    Text,
     Verbatim,
     Paragraph,
     compress_word,
@@ -22,7 +20,6 @@ from papyri.take2 import (
     DefList,
     DefListItem,
     Lines,
-    Words,
     Directive,
     BlockVerbatim,
 )
@@ -238,9 +235,9 @@ class TSW:
                 term, definition = list_item.children
                 assert term.type == "term"
                 assert definition.type == "definition"
-                dl = Paragraph(
-                    [Words(self.bytes[term.start_byte : term.end_byte].decode())], []
-                )
+                # dl = Paragraph(
+                #     [Words(self.bytes[term.start_byte : term.end_byte].decode())], []
+                # )
                 _dd = self.visit(definition)
                 acc.append(
                     DefListItem(

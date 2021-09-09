@@ -352,7 +352,6 @@ def compute_graph(gs, blob, key):
         if key[3] in (to, from_):
             continue
         data["links"].append({"source": nums[from_], "target": nums[to], "id": i})
-    x = nums.keys()
 
     for node in nodes:
         diam = 8

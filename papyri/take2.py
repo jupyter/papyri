@@ -870,12 +870,14 @@ def make_blocks_2(lines):
 
 def make_block_3(lines: "Lines"):
     """
-    I think the correct alternative is that each block may get an indented children, and that a block is thus:
+    I think the correct alternative is that each block may get an indented children,
+    and that a block is thus:
 
         - a) The sequence of consecutive non blank lines with 0 indentation
         - b) The (potentially absent) blank lines leading to the indent block
         - c) The Raw indent block (we can decide to recurse, or not later)
-        - d?) The trailing blank line at the end of the block leading to the next one. I think the blank line will be in the
+        - d?) The trailing blank line at the end of the block leading to the next one.
+                I think the blank line will be in the
         raw indent block
 
     """
@@ -1514,7 +1516,7 @@ def block_comment(block):
     if not type(block) == Block:
         return [block]
     if len(block.lines) >= 1 and (block.lines[0].startswith(".. ")):
-        assert not "::" in block.lines[0].text
+        assert "::" not in block.lines[0].text
         return [BlockDirective(block.lines, block.wh, block.ind)]
     return [block]
 
