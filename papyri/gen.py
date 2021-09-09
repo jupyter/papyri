@@ -423,7 +423,7 @@ def gen_main(infer, exec_, target_file):
         sys.exit("invalid conf file")
 
     global_conffile = Path("~/.papyri/config.toml").expanduser()
-    if conffile.exists():
+    if global_conffile.exists():
         global_conf = toml.loads(global_conffile.read_text())
     else:
         global_conf = {}
