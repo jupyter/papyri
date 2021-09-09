@@ -368,8 +368,8 @@ def compute_graph(gs, blob, key):
         if not candidates:
             uu = None
         else:
-            assert len(candidates) == 1, (candidates, node)
-            uu = url(RefInfo(*candidates[0]))
+            # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
+            uu = url(RefInfo(*list(sorted(candidates[0]))[-1])
 
         data["nodes"].append(
             {
