@@ -369,7 +369,8 @@ def compute_graph(gs, blob, key):
             uu = None
         else:
             # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
-            uu = url(RefInfo(*list(sorted(candidates[0]))[-1])
+            latest_version = list(sorted(candidates))[-1]
+            uu = url(RefInfo(*latest_version))
 
         data["nodes"].append(
             {
