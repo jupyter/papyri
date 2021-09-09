@@ -26,7 +26,8 @@ requires=[
     "quart<0.14",
     "toml",
     "flatlatex",
-    "tree_sitter"
+    "tree_sitter", 
+    "matplotlib",
 ]
 
 [tool.flit.scripts]

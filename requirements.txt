@@ -1,4 +1,5 @@
 numpydoc
+matplotlib
 tree_sitter
 pygments
 there
