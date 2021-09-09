@@ -208,6 +208,22 @@ is of interest to you. This will likely be done by your favorite IDE, probably
 just in time when you explore documentation for you. Nonetheless we've
 implemented a couple of external render to help debug issues.
 
+WARNING:
+
+Many render methods current require papyri own docs to be build and ingested
+first. 
+
+```
+$ papyri gen examples/papyri.toml
+$ papyri ingest ~/.papyri/data/papyri_0.0.7  # or any current version
+```
+
+Or you can try to pre-install an old papyri doc bundle
+
+```
+$ papyri install papyri
+```
+
 
 ## Standalone Html rendering
 

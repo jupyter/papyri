@@ -434,7 +434,7 @@ def gen_main(infer, exec_, target_file):
 
     print(target_dir)
     g = Gen()
-    g.do_one_mod(names, infer, exec_, conf)
+    g.do_one_mod(names, infer, exec_, conf, relative_dir=Path(target_file).parent)
     docs_path: str = conf.get(names[0], {}).get("docs_path", None)
     if docs_path is not None:
         path = Path(docs_path).expanduser()
@@ -961,7 +961,9 @@ class Gen:
                 )
         return acc
 
-    def do_one_mod(self, names: List[str], infer: bool, exec_: bool, conf: dict):
+    def do_one_mod(
+        self, names: List[str], infer: bool, exec_: bool, conf: dict, relative_dir: Path
+    ):
         """
         Crawl one modules and stores resulting docbundle in self.store.
 
@@ -1023,6 +1025,9 @@ class Gen:
             modules.append(n0)
 
         # print(modules)
+
+        if logo := module_conf.get("logo", None):
+            self.put_raw("logo.png", (relative_dir / Path(logo)).read_bytes())
 
         collector = DFSCollector(modules[0], modules[1:])
         collected: Dict[str, Any] = collector.items()
@@ -1224,8 +1229,6 @@ class Gen:
                     else:
                         not_found.append((k, v))
 
-            if logo := module_conf.get("logo", None):
-                self.put_raw("logo.png", Path(logo).read_bytes())
             self.metadata = {
                 "version": version,
                 "logo": "logo.png",
