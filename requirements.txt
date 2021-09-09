@@ -1,4 +1,5 @@
 numpydoc
+tree_sitter
 pygments
 there
 rich

@@ -26,6 +26,7 @@ requires=[
     "quart<0.14",
     "toml",
     "flatlatex",
+    "tree_sitter"
 ]
 
 [tool.flit.scripts]
