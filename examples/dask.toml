@@ -1,4 +1,4 @@
 [dask]
-logo = "dask-logo.png"
+logo = "../dask-logo.png"
 exclude = [ "dask.utils.Dispatch",]
 docs_path = "~/dev/dask/docs/source"

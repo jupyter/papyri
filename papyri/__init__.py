@@ -114,7 +114,7 @@ import typer
 
 import toml
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 logo = r"""
   ___                    _
