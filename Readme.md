@@ -114,11 +114,12 @@ flit install --symlink
 
 Build the TreeSitter rst parser:
 
-Some functionality require tree_sitter_rst, see build_tree_sitter.py, and CI config file on how to build the tree-sitter
+Some functionality require ``tree_sitter_rst``, see run `papyri build-parser`, and CI config file on how to build the tree-sitter
 shared object locally.
 
 ```bash
-$ python build_tree_sitter.py
+$ git clone https://github.com/stsewd/tree-sitter-rst
+$ papyri build-parser
 ```
 
 

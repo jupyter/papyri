@@ -355,6 +355,24 @@ def browse(qualname: str):
 
 
 @app.command()
+def build_parser():
+    from tree_sitter import Language, Parser
+
+    pth = str(Path(__file__).parent / "rst.so")
+
+    Language.build_library(
+        # Store the library in the `build` directory
+        pth,
+        # Include one or more languages
+        [
+            "tree-sitter-rst",
+        ],
+    )
+
+    PY_LANGUAGE = Language(pth, "rst")
+
+
+@app.command()
 def open(qualname: str):
     _intro()
     import webbrowser

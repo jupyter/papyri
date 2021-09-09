@@ -43,6 +43,9 @@ from .vref import NumpyDocString
 try:
     from .ts import tsparse
 except (ImportError, OSError):
+    print(
+        "Tree Sitter RST parser not available, you may need to do `papyri build-parser`"
+    )
     tsparse = None
 
 
