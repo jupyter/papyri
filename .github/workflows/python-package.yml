@@ -38,7 +38,7 @@ jobs:
         papyri build-parser
     - name: Misc cli
       run: |
-        coverage run -m papyri
+        coverage run -m papyri --help
     - name: Lint with black
       run: |
         black --check .

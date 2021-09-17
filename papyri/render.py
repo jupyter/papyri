@@ -771,9 +771,10 @@ async def loc(document: Store, *, store: GraphStore, tree, known_refs, ref_map):
 
     """
     if isinstance(document, tuple):
-        qa = document.path
-        version = document.version
-        root = document.module
+        assert False
+    #        qa = document.path
+    #        version = document.version
+    #        root = document.module
     else:
         qa = document.name[:-5]
         version = document.path.parts[-3]

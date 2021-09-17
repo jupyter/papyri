@@ -24,6 +24,8 @@ Urwid tour.  Shows many of the standard widget types and features.
 """
 import sys
 
+from typing import List
+
 import urwid
 import urwid.raw_display
 import urwid.web_display
@@ -674,7 +676,7 @@ def main(qualname: str):
 
         return doc
 
-    stack = []
+    stack: List[str] = []
 
     walk = urwid.SimpleListWalker([])
     listbox = urwid.ListBox(walk)
