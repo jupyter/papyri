@@ -257,11 +257,6 @@ class Link(Node):
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
 
-    def __hash__(self):
-        assert False
-        return hash((self.value, self.reference, self.kind, self.exists))
-
-
 class Directive(Node):
 
     value: List[str]
