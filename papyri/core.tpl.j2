@@ -95,9 +95,9 @@
                 <div><img src="/p/{{module}}/{{version}}/img/{{data.value}}"/></div>
             {% elif type == 'Code2' %}
                 {% if data.ce_status == 'syntax_error' -%}
-                    <span class='warning'>This example raised an error at execution time but compiled correctly</span>
+                    <span class='warning'>This example does not not appear to be valid Python Syntax</span>
                 {%-elif data.ce_status == 'exception_in_exec' -%}
-                    <span class='warning'>This example is valid syntax, but raise an exception at execution</span>
+                    <span class='error'>This example is valid syntax, but raise an exception at execution</span>
                 {%-elif data.ce_status == 'compiled' -%}
                     <span class='note'>This example is valid syntax, but we were not able to check execution</span>
                 {%-endif-%}

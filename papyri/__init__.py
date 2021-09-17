@@ -171,13 +171,14 @@ def main():
 
 
 @app.command()
-def ingest(paths: List[Path], check: bool = False):
+def ingest(paths: List[Path], check: bool = False, relink: bool= True):
     _intro()
     from . import crosslink as cr
 
     for p in paths:
         cr.main(Path(p), check)
-    cr.relink()
+    if relink:
+        cr.relink()
 
 
 @app.command()

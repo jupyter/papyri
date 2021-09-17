@@ -7,7 +7,7 @@ import numpydoc.docscrape as nds
 from numpydoc.docscrape import Parameter
 from velin.examples_section_utils import reformat_example_lines
 
-BLACK_REFORMAT = True
+BLACK_REFORMAT = False
 
 
 class NumpyDocString(nds.NumpyDocString):

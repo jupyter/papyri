@@ -37,6 +37,7 @@ from .take2 import (
     Text,
 )
 from .take2 import main as t2main
+from .take2 import Node
 from .take2 import make_block_3
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
@@ -85,15 +86,15 @@ def paragraphs(lines) -> List[Any]:
     # blocks_data = t2main("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
+    for pre_blank_lines, blank_lines, post_blank_lines in blocks_data:
         # pre_blank_lines = block.lines
         # blank_lines = block.wh
         # post_black_lines = block.ind
         if pre_blank_lines:
             acc.append(paragraph([x._line for x in pre_blank_lines]))
         ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
-        if post_black_lines:
-            acc.append(paragraph([x._line for x in post_black_lines]))
+        if post_blank_lines:
+            acc.append(paragraph([x._line for x in post_blank_lines]))
         # print(block)
     return acc
 
@@ -217,7 +218,7 @@ class BlockExecutor:
         return res, fig_managers
 
 
-def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None):
+def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -236,10 +237,41 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
     infer : bool
         whether to run type inference; which can be time consuming.
 
+
+    Examples
+    --------
+
+    Those are self examples, generating papyri documentation with papyri should
+    be able to handle the following
+
+    A simple input, should be execute and output should be shown if --exec option is set
+
+    >>> 1+1
+
+    >>> 2+2
+    4
+
+    Output with Syntax error should be marked as so.
+
+    >>> [this is syntax error]
+
+    if matplotlib and numpy available, we shoudl show graph
+
+    >>> import matplotlib.pyplot as plt
+    ... import numpy as np
+    ... x = np.arange(0, 10, 0.1)
+    ... plt.plot(x, np.sin(x))
+    ... plt.show()
+
+    Note that in the above we use `plt.show`,
+    but we can configure papyri to automatically detect 
+    when figures are created.
+
+
+
+
     """
     assert qa is not None
-    if not config:
-        config = {}
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     example_section_data = Section()
     import matplotlib.pyplot as plt
@@ -270,7 +302,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, config=None
                         pass
                     raise_in_fig = "?"
                     did_except = False
-                    if exec_:
+                    if exec_ and ce_status == 'compiled':
                         try:
                             if not wait_for_show:
                                 assert len(fig_managers) == 0
@@ -447,20 +479,6 @@ def gen_main(infer, exec_, target_file):
     g.write(p)
 
 
-def timer(progress, task):
-    c = 0
-
-    @contextmanager
-    def timeit():
-        now = time.monotonic()
-        yield
-        nonlocal c
-        c += time.monotonic() - now
-        progress.update(task, ctime=c)
-
-    return timeit
-
-
 class TimeElapsedColumn(ProgressColumn):
     """Renders estimated time remaining."""
 
@@ -564,73 +582,6 @@ class DFSCollector:
         pass
 
 
-class Collector:
-    def __init__(self, root):
-        assert isinstance(root, ModuleType), root
-        self.root = root
-        self.obj = dict()
-        self.aliases = defaultdict(lambda: [])
-        self.stack = [self.root.__name__]
-        self._open_list = []
-
-    def visit_ModuleType(self, mod):
-        for k in dir(mod):
-            self.stack.append(k)
-            self.visit(getattr(mod, k))
-            self.stack.pop()
-
-    def visit_ClassType(self, klass):
-        for k, v in klass.__dict__.items():
-            self.stack.append(k)
-            self.visit(v)
-            self.stack.pop()
-
-    def visit_FunctionType(self, fun):
-        pass
-
-    def visit(self, obj):
-        pp = False
-        if self.stack == ["scipy", "fft", "set_workers"]:
-            pp = True
-        try:
-            qa = full_qual(obj)
-        except Exception as e:
-            raise RuntimeError(f"error visiting {'.'.join(self.stack)}") from e
-        if not qa:
-            return
-        if not qa.startswith(self.root.__name__):
-            return
-        if obj in self.obj.values():
-            fq = [k for k, v in self.obj.items() if obj is v][0]
-            sn = ".".join(self.stack)
-            if fq != sn:
-                self.aliases[qa].append(sn)
-            if pp:
-                print("SKIP", obj, fq, qa)
-            return
-        if (qa in self.obj) and self.obj[qa] != obj:
-            pass
-        self.obj[qa] = obj
-
-        if (sn := ".".join(self.stack)) != qa:
-            self.aliases[qa].append(sn)
-
-        if isinstance(obj, ModuleType):
-            return self.visit_ModuleType(obj)
-        elif isinstance(obj, FunctionType):
-            return self.visit_FunctionType(obj)
-        elif isinstance(obj, type):
-            return self.visit_ClassType(obj)
-        else:
-            pass
-            # print('Dont know haw to visit {type(obj)=}, {obj =}')
-
-    def items(self):
-        self.visit(self.root)
-        return self.obj
-
-
-from .take2 import Node
 
 
 class DocBlob(Node):
@@ -851,7 +802,7 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, infer: bool, exec_: bool, qa: str, config=None
+        self, target_item: Any, ndoc, infer: bool, exec_: bool, qa: str, *, config
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
@@ -863,9 +814,11 @@ class Gen:
             DocBundle with info for current object.
         figs:
             dict mapping figure names to figure data.
+
+        See Also
+        --------
+        do_one_mod
         """
-        if config is None:
-            config = {}
         blob = DocBlob()
 
         blob.content = {k: v for k, v in ndoc._parsed_data.items()}
@@ -878,8 +831,8 @@ class Gen:
             item_type = str(type(target_item))
         except (AttributeError, TypeError):
             pass
-        except OSError:
-            pass
+        #except OSError:
+        #    pass
 
         if not blob.content["Signature"]:
             sig = None

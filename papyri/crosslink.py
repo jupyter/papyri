@@ -274,7 +274,6 @@ def _into(known_refs: FrozenSet[RefInfo]) -> Tuple[Dict[str, RefInfo], FrozenSet
 
     _m2 : Dict[str, RefInfo]= {}
     for kk, v in _map.items():
-        assert False
         cand = list(sorted(v, key=lambda x: x.version))
         assert len(set(c.module for c in cand)) == 1, cand
         _m2[kk] = cand[-1]
@@ -292,7 +291,7 @@ def endswith(end, refs):
     return frozenset(r for r in refs if r.endswith(end))
 
 
-_cache = {}
+_cache: Dict[str, RefInfo] = {}
 
 
 def resolve_(
