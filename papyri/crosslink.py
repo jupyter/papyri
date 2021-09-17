@@ -40,7 +40,7 @@ def g_find_all_refs(graph_store):
 
     # TODO
     # here we can't compute just the dictionary and use frozenset(....values())
-    # as we may have multiple version of libraries; this is something that will
+    # as we may have multiple version of lisbraries; this is something that will
     # need to be fixed in the long run
     known_refs = []
     ref_map = {}
@@ -257,7 +257,7 @@ def _into(known_refs: FrozenSet[RefInfo]) -> Tuple[Dict[str, RefInfo], FrozenSet
 
     _m2: Dict[str, RefInfo] = {}
     for kk, v in _map.items():
-        cand = list(sorted(v, key=lambda x: x.version))
+        cand = list(sorted(v, key=lambda x: '' if x.version is None else x.version))
         assert len(set(c.module for c in cand)) == 1, cand
         _m2[kk] = cand[-1]
 
@@ -274,7 +274,7 @@ def endswith(end, refs):
     return frozenset(r for r in refs if r.endswith(end))
 
 
-_cache: Dict[str, RefInfo] = {}
+_cache: Dict[int, Tuple[Dict[str, RefInfo], FrozenSet[str]]] = {}
 
 
 def resolve_(
