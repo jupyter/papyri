@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, List, Optional, Tuple, Union
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple, Union, Set
 
 from there import print
 
@@ -248,23 +248,36 @@ class IngestedBlobs(Node):
 
 
 # @lru_cache(maxsize=100000)
-def _into(known_refs: List[Union[RefInfo, str]]) -> Dict[str, RefInfo]:
-    # Tuple[FrozenSet[RefInfo], FrozenSet[str]]:
-    # global iii
-    # iii += 1
-    # print("III", iii)
+def _into(known_refs: FrozenSet[RefInfo]) -> Tuple[Dict[str, RefInfo], FrozenSet[str]]:
+    """
+    
+    Parameters
+    ----------
+
+    know_refs: (frozen) set of RefInfo
+
+    Returns
+    -------
+    mapping:  
+        Mapping from path to a RefInfo, this allows to quickly compute 
+        what is the actual refinfo for a give path/qualname
+    keyset:
+        Frozenset of the map keys.
+    
+    """
 
     _map: Dict[str, List[RefInfo]] = defaultdict(lambda: [])
     assert isinstance(known_refs, frozenset)
-    # k_path_map = frozenset({k.path for k in known_refs})
     for k in known_refs:
+        assert isinstance(k, RefInfo)
         _map[k.path].append(k)
 
-    _m2 = {}
-    for k, v in _map.items():
+    _m2 : Dict[str, RefInfo]= {}
+    for kk, v in _map.items():
+        assert False
         cand = list(sorted(v, key=lambda x: x.version))
         assert len(set(c.module for c in cand)) == 1, cand
-        _m2[k] = cand[-1]
+        _m2[kk] = cand[-1]
 
     return _m2, frozenset(_m2.keys())
 
@@ -309,6 +322,15 @@ def resolve_(
     # those may have been muted.
     if hk not in _cache:
         _cache[hk] = _into(known_refs)
+
+    # this is a mappign from the key to the most relevant 
+    # Refinfo to a document
+    k_path_map : Dict[str, RefInfo] 
+
+
+    # hashable for cachign /optimisation.
+    keyset: FrozenSet[str]
+
 
     k_path_map, keyset = _cache[hk]
 
@@ -538,7 +560,7 @@ class DirectiveVisiter(TreeReplacer):
         self.aliases: Dict[str, str] = aliases
         # short -> long
         self.rev_aliases = {v: k for k, v in aliases.items()}
-        self._targets = set()
+        self._targets: Set[Any] = set()
 
     def replace_BlockDirective(self, block_directive: BlockDirective):
         block_directive.children = [self.visit(c) for c in block_directive.children]
@@ -865,10 +887,10 @@ class Ingester:
             # as we don't know the version number.
             # fix it at serialisation time.
             rr = []
-            for r in js["refs"]:
-                if r["version"] == "??":
-                    r["version"] = version
-                rr.append(r)
+            for rq in js["refs"]:
+                if rq["version"] == "??":
+                    rq["version"] = version
+                rr.append(rq)
             js["refs"] = rr
 
             refs = [

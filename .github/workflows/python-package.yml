@@ -32,10 +32,13 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest flit flake8 black scipy numpy matplotlib 'velin>=0.0.5' pytest-trio mypy tree_sitter
+        pip install pytest flit flake8 black scipy numpy matplotlib 'velin>=0.0.5' pytest-trio mypy tree_sitter coverage
         flit install --symlink
         git clone https://github.com/stsewd/tree-sitter-rst
         papyri build-parser
+    - name: Misc cli
+      run: |
+        coverage run -m papyri
     - name: Lint with black
       run: |
         black --check .
@@ -45,6 +48,7 @@ jobs:
         true
     - name: Test with mypy
       run: |
+        python3 -m pip install types-requests types-cachetools types-toml
         mypy papyri
     - name: "Upload coverage to Codecov"
       uses: codecov/codecov-action@v2

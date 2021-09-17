@@ -108,6 +108,7 @@ from functools import lru_cache
 
 import zipfile
 import io
+import sys
 
 
 import typer

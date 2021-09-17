@@ -41,6 +41,10 @@ from .take2 import make_block_3
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 
+from typing import Optional, Callable, Any
+
+tsparse: Optional[Callable[[Any], Any]]
+
 try:
     from .ts import tsparse
 except (ImportError, OSError):
@@ -1068,7 +1072,8 @@ class Gen:
                         print(
                             "please see how to install Tree-sitter in the readme to parse complex RST documents"
                         )
-                    arbitrary = tsparse(dedent_but_first(item_docstring).encode())
+                    else:
+                        arbitrary = tsparse(dedent_but_first(item_docstring).encode())
                 except Exception as e:
                     print(f"TS could not parse: {qa}")
                     raise ValueError(f"from {qa}") from e
