@@ -233,7 +233,7 @@ class IngestedBlobs(Node):
 # @lru_cache(maxsize=100000)
 def _into(known_refs: FrozenSet[RefInfo]) -> Tuple[Dict[str, RefInfo], FrozenSet[str]]:
     """
-    
+
     Parameters
     ----------
 
@@ -241,12 +241,12 @@ def _into(known_refs: FrozenSet[RefInfo]) -> Tuple[Dict[str, RefInfo], FrozenSet
 
     Returns
     -------
-    mapping:  
-        Mapping from path to a RefInfo, this allows to quickly compute 
+    mapping:
+        Mapping from path to a RefInfo, this allows to quickly compute
         what is the actual refinfo for a give path/qualname
     keyset:
         Frozenset of the map keys.
-    
+
     """
 
     _map: Dict[str, List[RefInfo]] = defaultdict(lambda: [])
@@ -255,7 +255,7 @@ def _into(known_refs: FrozenSet[RefInfo]) -> Tuple[Dict[str, RefInfo], FrozenSet
         assert isinstance(k, RefInfo)
         _map[k.path].append(k)
 
-    _m2 : Dict[str, RefInfo]= {}
+    _m2: Dict[str, RefInfo] = {}
     for kk, v in _map.items():
         cand = list(sorted(v, key=lambda x: x.version))
         assert len(set(c.module for c in cand)) == 1, cand
@@ -305,14 +305,12 @@ def resolve_(
     if hk not in _cache:
         _cache[hk] = _into(known_refs)
 
-    # this is a mappign from the key to the most relevant 
+    # this is a mappign from the key to the most relevant
     # Refinfo to a document
-    k_path_map : Dict[str, RefInfo] 
-
+    k_path_map: Dict[str, RefInfo]
 
     # hashable for cachign /optimisation.
     keyset: FrozenSet[str]
-
 
     k_path_map, keyset = _cache[hk]
 

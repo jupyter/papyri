@@ -171,7 +171,7 @@ def main():
 
 
 @app.command()
-def ingest(paths: List[Path], check: bool = False, relink: bool= True):
+def ingest(paths: List[Path], check: bool = False, relink: bool = True):
     _intro()
     from . import crosslink as cr
 

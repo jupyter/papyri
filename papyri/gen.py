@@ -264,7 +264,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
     ... plt.show()
 
     Note that in the above we use `plt.show`,
-    but we can configure papyri to automatically detect 
+    but we can configure papyri to automatically detect
     when figures are created.
 
 
@@ -302,7 +302,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
                         pass
                     raise_in_fig = "?"
                     did_except = False
-                    if exec_ and ce_status == 'compiled':
+                    if exec_ and ce_status == "compiled":
                         try:
                             if not wait_for_show:
                                 assert len(fig_managers) == 0
@@ -582,8 +582,6 @@ class DFSCollector:
         pass
 
 
-
-
 class DocBlob(Node):
     """
     An object containing information about the documentation of an arbitrary object.
@@ -831,7 +829,7 @@ class Gen:
             item_type = str(type(target_item))
         except (AttributeError, TypeError):
             pass
-        #except OSError:
+        # except OSError:
         #    pass
 
         if not blob.content["Signature"]:
