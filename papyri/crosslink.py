@@ -52,8 +52,25 @@ def g_find_all_refs(graph_store):
 
 
 def find_all_refs(store):
-    assert isinstance(store, GraphStore)
-    return g_find_all_refs(store)
+    if isinstance(store, GraphStore):
+        return g_find_all_refs(store)
+
+    o_family = sorted(
+        list(r for r in store.glob("*/*/module/*") if not r.path.name.endswith(".br"))
+    )
+
+    # TODO
+    # here we can't compute just the dictionary and use frozenset(....values())
+    # as we may have multiple version of libraries; this is something that will
+    # need to be fixed in the long run
+    known_refs = []
+    ref_map = {}
+    for item in o_family:
+        module, v = item.path.parts[-4:-2]
+        r = RefInfo(module, v, "module", item.name)
+        known_refs.append(r)
+        ref_map[r.path] = r
+    return frozenset(known_refs), ref_map
 
 
 @dataclass
