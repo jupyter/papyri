@@ -47,6 +47,7 @@ jobs:
         coverage run -a -m papyri render --ascii
         # coverage html
         # papyri serve
+        bash <(curl -s https://codecov.io/bash) -- -f .coverage
     - name: Lint with black
       run: |
         black --check .
