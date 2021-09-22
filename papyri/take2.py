@@ -104,13 +104,8 @@ class Node(Base):
     def __eq__(self, other):
         if not (type(self) == type(other)):
             return False
+        raise NotImplementedError
 
-        tt = get_type_hints(type(self))
-        for attr in tt:
-            if not getattr(self, attr) == getattr(other, attr):
-                return False
-
-        return True
 
     @classmethod
     def _instance(cls):
@@ -186,6 +181,7 @@ class Verbatim(Node):
     value: List[str]
 
     def __hash__(self):
+        assert False
         return hash(tuple(self.value))
 
     def __init__(self, value=None):
@@ -209,6 +205,7 @@ class Verbatim(Node):
         return "".join(self.value)
 
     def __len__(self):
+        assert False
         return sum(len(x) for x in self.value) + 4
 
     def __repr__(self):
@@ -353,6 +350,7 @@ class Math(Node):
         return "".join(self.value)
 
     def __hash__(self):
+        assert False
         return hash(tuple(self.value))
 
     def _validate(self):
@@ -366,15 +364,19 @@ class Word(Node):
 
     @classmethod
     def _instance(cls):
+        assert False
         return cls("")
 
     def __repr__(self):
+        assert False
         return UNDERLINE(self.value)
 
     def __len__(self):
+        assert False
         return len(self.value)
 
     def __hash__(self):
+        assert False
         return hash(self.value)
 
 
@@ -583,9 +585,6 @@ class Code2(Node):
         self.out = out
         self.ce_status = ce_status
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
-
 
 class Code(Node):
     entries: List[Tuple[Optional[str]]]
@@ -596,9 +595,6 @@ class Code(Node):
         self.entries = entries
         self.out = out
         self.ce_status = ce_status
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
     def _validate(self):
         for e in self.entries:
@@ -702,12 +698,6 @@ class Paragraph(Node):
         self.inner = inner
         self.inline = inline
 
-    def __hash__(self):
-        return hash((tuple(self.children), self.width))
-
-    def __eq__(self, other):
-        return (type(self) == type(other)) and (self.children == other.children)
-
     @classmethod
     def _instance(cls):
         return cls([], [])
@@ -726,14 +716,6 @@ class Paragraph(Node):
             acc.append(parsed)
 
         return cls(compress_word(acc), [])
-
-    @property
-    def references(self):
-        refs = []
-        for c in self.children:
-            if isinstance(c, Directive) and c.role != "math":
-                refs.append(c.text)
-        return refs
 
     def __repr__(self):
 
