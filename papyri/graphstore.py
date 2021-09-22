@@ -2,7 +2,7 @@ from pathlib import Path as _Path
 
 from collections import namedtuple
 import json
-from typing import Tuple
+from typing import Tuple, List
 
 
 class Path:
@@ -162,7 +162,7 @@ class GraphStore:
         for ref in removed_refs:
             self._remove_edge(key, ref)
 
-    def glob(self, pattern):
+    def glob(self, pattern) -> List[Key]:
         acc = ""
         for p in pattern:
             if p is None:

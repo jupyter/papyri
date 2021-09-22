@@ -7,6 +7,7 @@ import shutil
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
@@ -494,9 +495,11 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
         return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
 
 
-async def img(package, version, subpath=None):
-    with open(ingest_dir / package / version / "assets" / subpath, "rb") as f:
-        return f.read()
+async def img(package, version, subpath=None) -> Optional[bytes]:
+    file = ingest_dir / package / version / "assets" / subpath
+    if file.exists():
+        return file.read_bytes()
+    return None
 
 
 def static(name):
@@ -508,7 +511,7 @@ def static(name):
     return f
 
 
-def logo():
+def logo() -> bytes:
 
     path = os.path.abspath(__file__)
     dir_path = Path(os.path.dirname(path))
@@ -708,7 +711,7 @@ async def ascii_render(name, store=None):
     builtins.print(await _ascii_render(name, store))
 
 
-async def loc(document: Store, *, store: GraphStore, tree, known_refs, ref_map):
+async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
     """
     return data for rendering in the templates
 
@@ -752,17 +755,23 @@ async def loc(document: Store, *, store: GraphStore, tree, known_refs, ref_map):
     these heuristics break down.
 
     """
-    if isinstance(document, tuple):
-        # assert False # happens in render.
+    assert isinstance(document, Key), type(document)
+    if isinstance(document, Key):
+        qa = document.path
+        version = document.version
+        root = document.module
+        # qa = document.name[:-5]
+        # version = document.path.parts[-3]
+        # help to keep ascii bug free.
+        # await _ascii_render(qa, store, known_refs=known_refs)
+        root = qa.split(".")[0]
+    elif isinstance(document, tuple):
+        assert False, f"Document is {document}" # happens in render.
         qa = document.path
         version = document.version
         root = document.module
     else:
-        qa = document.name[:-5]
-        version = document.path.parts[-3]
-        # help to keep ascii bug free.
-        # await _ascii_render(qa, store, known_refs=known_refs)
-        root = qa.split(".")[0]
+        assert False
     try:
         if isinstance(document, tuple):
             assert isinstance(store, GraphStore)
