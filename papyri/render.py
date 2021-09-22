@@ -766,7 +766,7 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
         # await _ascii_render(qa, store, known_refs=known_refs)
         root = qa.split(".")[0]
     elif isinstance(document, tuple):
-        assert False, f"Document is {document}" # happens in render.
+        assert False, f"Document is {document}"  # happens in render.
         qa = document.path
         version = document.version
         root = document.module
