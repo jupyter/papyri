@@ -106,7 +106,6 @@ class Node(Base):
             return False
         raise NotImplementedError
 
-
     @classmethod
     def _instance(cls):
         return cls()
@@ -253,6 +252,7 @@ class Link(Node):
 
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
+
 
 class Directive(Node):
 

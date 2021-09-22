@@ -276,7 +276,7 @@ def _into(known_refs: FrozenSet[RefInfo]) -> Tuple[Dict[str, RefInfo], FrozenSet
 
     _m2: Dict[str, RefInfo] = {}
     for kk, v in _map.items():
-        cand = list(sorted(v, key=lambda x: '' if x.version is None else x.version))
+        cand = list(sorted(v, key=lambda x: "" if x.version is None else x.version))
         assert len(set(c.module for c in cand)) == 1, cand
         _m2[kk] = cand[-1]
 

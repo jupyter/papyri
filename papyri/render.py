@@ -103,9 +103,7 @@ async def examples(module, store, version, subpath, ext=""):
     )
 
 
-async def gallery(module, store, version=None, ext="", gstore=None):
-    if version is None:
-        version = "*"
+async def gallery(module, store, version, ext="", gstore=None):
     assert gstore is not None
 
     m = defaultdict(lambda: [])
@@ -201,28 +199,6 @@ async def gallery(module, store, version=None, ext="", gstore=None):
 # doable after purely as frontend thing.
 
 
-def compute_siblings(ref, family):
-    parts = ref.split(".") + ["+"]
-    siblings = OrderedDict()
-    cpath = ""
-    # TODO: move this at ingestion time for all the non-top-level.
-    for i, part in enumerate(parts):
-        sib = list(
-            sorted(
-                {
-                    ".".join(s.split(".")[: i + 1])
-                    for s in family
-                    if s.startswith(cpath) and "." in s
-                },
-            )
-        )
-        siblings[part] = [(s, s.split(".")[-1]) for s in sib]
-        cpath += part + "."
-    if not siblings["+"]:
-        del siblings["+"]
-    return siblings
-
-
 def compute_siblings_II(ref, family):
     parts = ref.split(".") + ["+"]
     siblings = OrderedDict()
@@ -259,6 +235,12 @@ def make_tree(names):
 
 
 def cs2(ref, tree, ref_map):
+    """
+    IIRC this is quite similar to compute_siblings(_II),
+    but more efficient as we know we are going to compute
+    all the siblings and not just the local one when rendering a single page.
+
+    """
     parts = ref.split(".") + ["+"]
     siblings = OrderedDict()
     cpath = ""
@@ -652,7 +634,7 @@ def render_one(
 
 
 @lru_cache
-def _ascci_env():
+def _ascii_env():
     env = Environment(
         loader=CleanLoader(os.path.dirname(__file__)),
         lstrip_blocks=True,
@@ -685,18 +667,18 @@ def _ascci_env():
     return env, template
 
 
-async def _ascii_render(name, store, known_refs=None, template=None, version=None):
+async def _ascii_render(key, store, known_refs=None, template=None):
     if store is None:
         store = GraphStore(ingest_dir)
     assert isinstance(store, GraphStore)
-    ref = name
-    root = name.split(".")[0]
+    ref = key.path
+    root = key.path.split(".")[0]
 
-    keys = store.glob((root, None))
-    version = keys[0][-1]
+    # keys = store.glob((root, None))
+    # version = keys[0][-1]
 
-    env, template = _ascci_env()
-    bytes_ = store.get((root, version, "module", ref)).decode()
+    env, template = _ascii_env()
+    bytes_ = store.get(key).decode()
 
     # TODO:
     # brpath = store / root / rsion / "module" / f"{ref}.br"
@@ -708,7 +690,7 @@ async def _ascii_render(name, store, known_refs=None, template=None, version=Non
     br = None
 
     doc_blob = load_one(bytes_, br, strict=True)
-    data = compute_graph(store, doc_blob, (root, version, "module", ref))
+    data = compute_graph(store, doc_blob, key)
     json_str = json.dumps(data)
     return render_one(
         template=template,
@@ -869,10 +851,10 @@ async def main(ascii, html, dry_run):
             f.write(data)
 
     for p, key in progress(gfiles, description="Rendering..."):
-        module, v = key.module, key.version
+        module, version = key.module, key.version
         if ascii:
-            qa = key.path
-            await _ascii_render(qa, store=gstore, version=v)
+            # qa = key.path
+            await _ascii_render(key, store=gstore)
         if html:
             doc_blob, qa, siblings, parts_links = await loc(
                 key,
@@ -895,15 +877,19 @@ async def main(ascii, html, dry_run):
                 graph=json_str,
             )
             if not dry_run:
-                (output_dir / module / v / "api").mkdir(parents=True, exist_ok=True)
-                with (output_dir / module / v / "api" / f"{qa}.html").open("w") as f:
+                (output_dir / module / version / "api").mkdir(
+                    parents=True, exist_ok=True
+                )
+                with (output_dir / module / version / "api" / f"{qa}.html").open(
+                    "w"
+                ) as f:
                     f.write(data)
 
     import papyri
 
     key = Key("papyri", str(papyri.__version__), "module", "papyri")
 
-    module, v = "papyri", str(papyri.__version__)
+    module, version = "papyri", str(papyri.__version__)
     if html:
         doc_blob, qa, siblings, parts_links = await loc(
             key,
