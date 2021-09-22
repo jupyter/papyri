@@ -87,7 +87,7 @@ class GraphStore:
 
     """
 
-    def __init__(self, root : _Path, link_finder=None):
+    def __init__(self, root: _Path, link_finder=None):
 
         # assert isinstance(link_finder, dict)
         assert isinstance(root, _Path)

@@ -7,6 +7,7 @@ import numpydoc.docscrape as nds
 from numpydoc.docscrape import Parameter
 from velin.examples_section_utils import reformat_example_lines
 
+
 class NumpyDocString(nds.NumpyDocString):
     """
     subclass a littel bit more lenient on parsing
@@ -26,7 +27,6 @@ class NumpyDocString(nds.NumpyDocString):
         ),
         "Yields": ("signals",),
     }
-
 
     def __init__(self, *args, **kwargs):
         self.ordered_sections = []
