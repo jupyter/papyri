@@ -55,6 +55,8 @@ def find_all_refs(store):
     if isinstance(store, GraphStore):
         return g_find_all_refs(store)
 
+    # Used in render. need to split somewhere else.
+
     o_family = sorted(
         list(r for r in store.glob("*/*/module/*") if not r.path.name.endswith(".br"))
     )
