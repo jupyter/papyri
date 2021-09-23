@@ -3,3 +3,4 @@ logo = "../papyri-logo.png"
 examples_folder = "~/dev/papyri/examples/"
 exec = true
 exec_failure = 'fallback'
+submodules = [ "edgecases"]

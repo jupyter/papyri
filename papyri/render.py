@@ -693,6 +693,10 @@ async def _ascii_render(key, store, known_refs=None, template=None):
     br = None
 
     doc_blob = load_one(bytes_, br, strict=True)
+
+    # exercise the reprs
+    assert str(doc_blob)
+
     data = compute_graph(store, doc_blob, key)
     json_str = json.dumps(data)
     return render_one(

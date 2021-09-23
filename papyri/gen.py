@@ -927,6 +927,13 @@ class Gen:
             Wether to run type inference with jedi.
         exec_ : bool
             Wether to try to execute the code blocks and embed resulting values like plots.
+
+
+        See Also
+        --------
+        do_one_item, do_one_iteration
+
+
         """
 
         p = lambda: Progress(

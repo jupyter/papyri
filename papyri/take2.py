@@ -104,7 +104,12 @@ class Node(Base):
     def __eq__(self, other):
         if not (type(self) == type(other)):
             return False
-        raise NotImplementedError
+        tt = get_type_hints(type(self))
+        for attr in tt:
+            if not getattr(self, attr) == getattr(other, attr):
+                return False
+
+        return True
 
     @classmethod
     def _instance(cls):
@@ -180,7 +185,6 @@ class Verbatim(Node):
     value: List[str]
 
     def __hash__(self):
-        assert False
         return hash(tuple(self.value))
 
     def __init__(self, value=None):
@@ -204,7 +208,6 @@ class Verbatim(Node):
         return "".join(self.value)
 
     def __len__(self):
-        assert False
         return sum(len(x) for x in self.value) + 4
 
     def __repr__(self):
