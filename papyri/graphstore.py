@@ -3,6 +3,7 @@ from pathlib import Path as _Path
 from collections import namedtuple
 import json
 from typing import Tuple, List
+import sqlite3
 
 
 class Path:
@@ -93,6 +94,8 @@ class GraphStore:
         # for now we are going to try to do in-memory operation, just to
         # see how we can handle that with SQL, and move to on-disk later.
         self.table = sqlite3.connect(":memory:")
+
+        self.table.cursor().execute("CREATE TABLE links (source, dest, reason)")
 
         # assert isinstance(link_finder, dict)
         assert isinstance(root, _Path)
@@ -189,10 +192,18 @@ class GraphStore:
         removed_refs = old_refs - new_refs
         added_refs = new_refs - old_refs
 
-        for ref in added_refs:
-            self._add_edge(key, ref)
-        for ref in removed_refs:
-            self._remove_edge(key, ref)
+        with self.table:
+            for ref in added_refs:
+                self._add_edge(key, ref)
+                self.table.execute(
+                    "insert into links values (?,?,?)", (str(key), str(ref), "debug")
+                )
+            for ref in removed_refs:
+                self._remove_edge(key, ref)
+                self.table.execute(
+                    "delete from links where source=? and dest=? and reason=?",
+                    (str(key), str(ref), "debug"),
+                )
 
     def glob(self, pattern) -> List[Key]:
         acc = ""
