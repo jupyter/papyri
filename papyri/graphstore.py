@@ -83,18 +83,37 @@ class GraphStore:
     document with all the back references; but maybe sqlite is a better
     approach.
 
-    One more question is about the dangling documents; can we
+    One more question is about the dangling documents? Like document we have references to,
+    but do not exist yet, and a bunch of other stuff.
 
     """
 
     def __init__(self, root: _Path, link_finder=None):
+
+        # for now we are going to try to do in-memory operation, just to
+        # see how we can handle that with SQL, and move to on-disk later.
+        self.table = sqlite3.connect(":memory:")
 
         # assert isinstance(link_finder, dict)
         assert isinstance(root, _Path)
         self._root = Path(root)
         self._link_finder = link_finder
 
-    def _key_to_paths(self, key) -> Tuple[Path, Path]:
+    def _key_to_paths(self, key: Key) -> Tuple[Path, Path]:
+        """
+        Given A key, return path to the current file
+        and the back referenced.
+
+        Parameters
+        ----------
+        key: Key
+
+        Returns
+        -------
+        data_path:  _Path
+        backref_path : _Path
+
+        """
         path = self._root
         assert None not in key, key
         for k in key[:-1]:
@@ -104,6 +123,19 @@ class GraphStore:
         return path0, path_br
 
     def _path_to_key(self, path):
+        """
+        Given a path, return the key for the document.
+
+        Opposite of _key_to_path
+
+        Parameters
+        ----------
+        path : Path
+
+        Returns
+        -------
+        key : Key
+        """
         path = path.relative_to(self._root.path)
         if len(path.parts) == 4:
             a, b, c, d = path.parts
@@ -112,10 +144,10 @@ class GraphStore:
             return path.parts
 
     def remove(self, key) -> None:
-        a, b = self._key_to_paths(key)
-        a.unlink()
+        data, backrefs = self._key_to_paths(key)
+        data.unlink()
         #  this is likely incorrect if we want to deal with dangling links.
-        b.unlink()
+        backrefs.unlink()
 
     def get(self, key) -> bytes:
         path, _ = self._key_to_paths(key)
