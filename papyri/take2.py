@@ -757,6 +757,12 @@ class Paragraph(Node):
             pass
         return acc
 
+    def __hash__(self):
+        return hash((tuple(self.children), self.width))
+
+    def __eq__(self, other):
+        return (type(self) == type(other)) and (self.children == other.children)
+
 
 def indent(text, marker="   |"):
     """
