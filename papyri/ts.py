@@ -25,80 +25,99 @@ from papyri.take2 import (
 )
 
 
-class TSW:
+class TSVisitor:
+    """
+    Tree sitter Visitor,
+
+    Walk the tree sitter tree and convert each node into our kind of internal node.
+
+    """
     def __init__(self, bytes, root):
         self.bytes = bytes
         self.root = root
         self.depth = 0
 
     def visit(self, node):
-
         self.depth += 1
         acc = []
+        prev_end = None
         for c in node.children:
             kind = c.type
             # print(f'({kind})')
             if kind == "::":
+                word = acc.pop()
+                assert isinstance(word, Word)
+                acc.append(Word(word.value + "::"))
                 continue
             if not hasattr(self, "visit_" + kind):
                 raise ValueError(
                     f"visit_{kind} not found while visiting {node}::\n{self.bytes[c.start_byte: c.end_byte].decode()!r}"
                 )
             meth = getattr(self, "visit_" + kind, self.generic_visit)
-            acc.extend(meth(c))
+            acc.extend(meth(c, prev_end=prev_end))
+            prev_end = c.end_point
         self.depth -= 1
         return acc
 
-    def visit_citation(self, node):
+    def visit_citation(self, node, prev_end=None):
+        assert False
         # just hlines, like ------
         return []
 
-    def visit_citation_reference(self, node):
+    def visit_citation_reference(self, node, prev_end=None):
+        assert False
         # just hlines, like ------
         return []
 
-    def visit_transition(self, node):
+    def visit_transition(self, node, prev_end=None):
         # just hlines, like ------
+        assert False
         return []
 
-    def visit_reference(self, node):
+    def visit_reference(self, node, prev_end=None):
         t = Directive(
             [self.bytes[node.start_byte : node.end_byte - 1].decode()], None, None
         )
         # print(' '*self.depth*4, t)
         return [t]
 
-    def visit_interpreted_text(self, node):
+    def visit_interpreted_text(self, node, prev_end=None):
         t = Directive(
             [self.bytes[node.start_byte + 1 : node.end_byte - 1].decode()], None, None
         )
         # print(' '*self.depth*4, t)
         return [t]
 
-    def visit_standalone_hyperlink(self, node):
+    def visit_standalone_hyperlink(self, node, prev_end=None):
         return self.visit_text(node)
 
-    def visit_text(self, node):
+    def visit_text(self, node, prev_end=None):
         t = Word(self.bytes[node.start_byte : node.end_byte].decode())
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
         return [t]
 
-    def visit_literal(self, node):
+    def visit_literal(self, node, prev_end=None):
         t = Verbatim([self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()])
         # print(' '*self.depth*4, t)
         return [t]
 
-    def visit_literal_block(self, node):
+    def visit_literal_block(self, node, prev_end=None):
         data = self.bytes[node.start_byte : node.end_byte].decode().splitlines()
         ded = node.start_point[1]
         acc = [data[0]]
         for x in data[1:]:
             acc.append(x[ded:])
-        b = BlockVerbatim(Lines(acc))
+        lines = Lines(acc)
+        if prev_end is not None:
+            for l in lines:
+                l._number += node.start_point[0] - prev_end[0]
+
+        b = BlockVerbatim(lines)
+
         # print(' '*self.depth*4, b)
         return [b]
 
-    def visit_bullet_list(self, node):
+    def visit_bullet_list(self, node, prev_end=None):
         acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
@@ -113,7 +132,7 @@ class TSW:
         # print(' '*self.depth*4, t)
         # return [t]
 
-    def visit_section(self, node):
+    def visit_section(self, node, prev_end=None):
         # print(' '*self.depth*4, '->', node)
         # print(' '*self.depth*4, '::',self.bytes[node.start_byte: node.end_byte].decode())
         if node.children[0].type == "adornment":
@@ -131,7 +150,7 @@ class TSW:
         # print(' '*self.depth*4, '->', node)
         return [Section([], title)]
 
-    def visit_block_quote(self, node):
+    def visit_block_quote(self, node, prev_end=None):
         # print(indent(self.bytes[node.start_byte: node.end_byte].decode(), '> '))
         data = self.bytes[node.start_byte : node.end_byte].decode().splitlines()
         ded = node.start_point[1]
@@ -142,8 +161,14 @@ class TSW:
         # print(' '*self.depth*4, b)
         return [b]
 
-    def visit_paragraph(self, node):
+    def visit_paragraph(self, node, prev_end=None):
         sub = self.visit(node)
+        # if Word("Example") in sub:
+        # import ipdb
+
+        # ipdb.set_trace()
+        # sub = self.visit(node)
+        # print("SUB,", sub, node)
         acc = []
         acc2 = []
         for item in sub:
@@ -152,12 +177,12 @@ class TSW:
                 continue
             acc.append(item)
             acc.append(Word(" "))
+        if acc[-1] == Word(" "):
+            acc.pop()
         assert len(acc2) < 2
-        p = Paragraph(compress_word(acc), acc2)
+        p = Paragraph(compress_word(acc), [])
         p.to_json()
-        # print(' '*self.depth*4, '-- Paragraph --')
-        # print(indent(self.bytes[node.start_byte: node.end_byte].decode(), '| '))
-        return [p]
+        return [p, *acc2]
 
     def generic_visit(self, node):
         print("G" + " " * (self.depth * 4 - 1), node)
@@ -165,23 +190,27 @@ class TSW:
         return []
         return self.visit(node)
 
-    def visit_line_block(self, node):
+    def visit_line_block(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_substitution_reference(self, node):
+    def visit_substitution_reference(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_doctest_block(self, node):
+    def visit_doctest_block(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_field_list(self, node):
+    def visit_field_list(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_enumerated_list(self, node):
+    def visit_enumerated_list(self, node, prev_end=None):
         acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
@@ -189,43 +218,52 @@ class TSW:
             acc.extend(self.visit(body))
         return [EnumeratedList(acc)]
 
-    def visit_target(self, node):
+    def visit_target(self, node, prev_end=None):
         # TODO:
+        assert False
         return []
 
-    def visit_directive(self, node):
+    def visit_directive(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_footnote_reference(self, node):
+    def visit_footnote_reference(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_emphasis(self, node):
+    def visit_emphasis(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_substitution_definition(self, node):
+    def visit_substitution_definition(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_comment(self, node):
+    def visit_comment(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_strong(self, node):
+    def visit_strong(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_footnote(self, node):
+    def visit_footnote(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_ERROR(self, node):
+    def visit_ERROR(self, node, prev_end=None):
         # TODO
+        assert False
         return []
 
-    def visit_definition_list(self, node):
+    def visit_definition_list(self, node, prev_end=None):
 
         acc = []
         for list_item in node.children:
@@ -289,8 +327,10 @@ def nest_sections(items):
     return acc
 
 
-def tsparse(text):
-    # bytes_ = text.encode()
+def parse(text: str):
+    """
+    Parse text using Tree sitter RST, and return a list of serialised section I guess ?
+    """
 
     tree = parser.parse(text)
-    return nest_sections(TSW(text, tree.root_node).visit(tree.root_node))
+    return nest_sections(TSVisitor(text, tree.root_node).visit(tree.root_node))

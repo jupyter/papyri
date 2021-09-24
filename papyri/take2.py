@@ -106,7 +106,8 @@ class Node(Base):
             return False
         tt = get_type_hints(type(self))
         for attr in tt:
-            if not getattr(self, attr) == getattr(other, attr):
+            a, b = getattr(self, attr), getattr(other, attr)
+            if a != b:
                 return False
 
         return True
@@ -192,6 +193,7 @@ class Verbatim(Node):
 
     @classmethod
     def parse(cls, tokens):
+        # assert False
         acc = []
         if len(tokens) < 5:
             return None
@@ -371,7 +373,6 @@ class Word(Node):
         return cls("")
 
     def __repr__(self):
-        assert False
         return UNDERLINE(self.value)
 
     def __len__(self):
@@ -482,6 +483,9 @@ class Section(Node):
     ]
     # might need to be more complicated like verbatim.
     title: Optional[str]
+
+    def __eq__(self, other):
+        return super().__eq__(other)
 
     def __init__(self, children=None, title=None):
         if children is None:

@@ -44,15 +44,13 @@ from .vref import NumpyDocString
 
 from typing import Optional, Callable, Any
 
-tsparse: Optional[Callable[[Any], Any]]
-
 try:
-    from .ts import tsparse
+    from . import ts
 except (ImportError, OSError):
     print(
         "Tree Sitter RST parser not available, you may need to do `papyri build-parser`"
     )
-    tsparse = None
+    ts
 
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
@@ -457,7 +455,7 @@ def gen_main(infer, exec_, target_file):
         names = list(conf.keys())
 
     else:
-        sys.exit("invalid conf file")
+        sys.exit(f"{conffile!r} does not exists.")
 
     tp = os.path.expanduser("~/.papyri/data")
 
@@ -737,12 +735,14 @@ class Gen:
         Crawl the filesystem for all docs/rst files
 
         """
-        print("scaraping documentation")
+        assert ts is not None, "cannot parse rst files without tree sitter being built."
+
+        print("Scraping Documentation")
         for p in path.glob("**/*"):
             if p.is_file():
                 parts = p.relative_to(path).parts
                 if parts[-1].endswith("rst"):
-                    data = tsparse(p.read_bytes())
+                    data = ts.parse(p.read_bytes())
                     blob = DocBlob()
                     blob.arbitrary = data
                     blob.content = {}
@@ -943,6 +943,25 @@ class Gen:
             "[progress.completed]{task.completed} / {task.total}",
             TimeElapsedColumn(),
         )
+
+        class DummyP:
+            def add_task(*args, **kwargs):
+                pass
+
+            def advance(*args, **kwargs):
+                pass
+
+            def update(*args, **kwargs):
+                pass
+
+            def __enter__(self, *args, **kwargs):
+                return self
+
+            def __exit__(self, *args, **kwargs):
+                pass
+
+        p = DummyP
+
         # step one collect all the modules instances we want to analyse.
 
         modules = []
@@ -1015,7 +1034,7 @@ class Gen:
                 p2.advance(taskp)
                 item_docstring = target_item.__doc__
 
-                # TODO: we may not want tosip items as they may have children
+                # TODO: we may not want to skip items as they may have children
                 # right now keep modules, but we may want to keep classes if
                 # they have documented descendants.
 
@@ -1026,12 +1045,12 @@ class Gen:
 
                 # progress.console.print(qa)
                 try:
-                    if tsparse is None:
+                    if ts is None:
                         print(
                             "please see how to install Tree-sitter in the readme to parse complex RST documents"
                         )
                     else:
-                        arbitrary = tsparse(dedent_but_first(item_docstring).encode())
+                        arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
                 except Exception as e:
                     print(f"TS could not parse: {qa}")
                     raise ValueError(f"from {qa}") from e
@@ -1047,8 +1066,7 @@ class Gen:
                             target_item.__name__,
                         )
                     if isinstance(target_item, ModuleType):
-                        # from .take2 import main
-                        # main(item_docstring)
+                        # TODO: ndoc-placeholder : remove placeholder here
                         ndoc = NumpyDocString(
                             f"Was not able to parse docstring for {qa}"
                         )
@@ -1069,6 +1087,7 @@ class Gen:
                 #    print("will run", qa)
 
                 try:
+                    # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
                     doc_blob, figs = self.do_one_item(
                         target_item, ndoc, infer, ex, qa, config=module_conf
                     )
@@ -1078,6 +1097,7 @@ class Gen:
                     if module_conf.get("exec_failure", None) == "fallback":
                         print("Re-analysing ", qa, "without execution")
                         # debug:
+                        # TODO: ndoc-placeholder : make sure ndoc placeholder handled here as well.
                         doc_blob, figs = self.do_one_item(
                             target_item, ndoc, infer, False, qa, config=module_conf
                         )
@@ -1089,12 +1109,27 @@ class Gen:
                     for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
                         if section in doc_blob.content:
                             if data := doc_blob.content[section]:
+                                # assert (
+                                #    False
+                                # ), "will get 'Was not able to parse docstring for ...'"
+                                # TODO : the following is in progress as we try to move away from custom parsing and use
+                                # tree_ssitter.
+                                tsc = ts.parse("\n".join(data).encode())
+                                assert len(tsc) == 1
+                                tsc = tsc[0]
                                 PX = P2(data)
-                                doc_blob.content[section] = Section(PX)
+                                SPX = Section(PX)
+                                if SPX != tsc:
+                                    print()
+                                    import ipdb
+
+                                    ipdb.set_trace()
+                                    SPX == tsc
+                                doc_blob.content[section] = SPX
                             else:
                                 doc_blob.content[section] = Section()
                 except Exception as e:
-                    raise type(e)(f"during {qa}")
+                    raise type(e)(f"during {qa}") from e
 
                 doc_blob.references = doc_blob.content.pop("References")
                 if isinstance(doc_blob.references, str):

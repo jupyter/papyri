@@ -49,17 +49,17 @@ Example::
 Unlike other similar libraries that automatically serialise/deserialise it has
 the following properties:
 
-    - object do not need to have a give baseclass, they need to have an __init__
-      or _deserialise class method that takes each parameter as kwargs.
-    - Subclass or isomorphic classes are kept in the de-serialisation, in
-      particular in Union and List of Unions. That is to say it will properly
-      de-serialise and heterogenous list or dict, as long as those respect the
-      type annotation.
+- object do not need to have a give baseclass, they need to have an __init__
+  or _deserialise class method that takes each parameter as kwargs.
+- Subclass or isomorphic classes are kept in the de-serialisation, in
+  particular in Union and List of Unions. That is to say it will properly
+  de-serialise and heterogenous list or dict, as long as those respect the
+  type annotation.
 
 Both Pydantic and Jetblack-serialize would have erased the types and returned
 either 2 Authors or 2 Reviewers.
 
-    - it is also compatible with Rust Serde with adjacently tagged Unions (not
+- it is also compatible with Rust Serde with adjacently tagged Unions (not
       critical but nice to have)
 
 """
