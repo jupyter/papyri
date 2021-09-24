@@ -1119,12 +1119,12 @@ class Gen:
                                 tsc = tsc[0]
                                 PX = P2(data)
                                 SPX = Section(PX)
-                                if SPX != tsc:
-                                    print()
-                                    import ipdb
+                                # if SPX != tsc:
+                                # print()
+                                # import ipdb
 
-                                    ipdb.set_trace()
-                                    SPX == tsc
+                                # ipdb.set_trace()
+                                # SPX == tsc
                                 doc_blob.content[section] = SPX
                             else:
                                 doc_blob.content[section] = Section()
