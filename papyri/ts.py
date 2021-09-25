@@ -322,7 +322,7 @@ class TSVisitor:
         return [DefList(acc)]
 
 
-def nest_sections(items):
+def nest_sections(items) -> List[Section]:
     if not items:
         return []
     acc = []
@@ -333,12 +333,15 @@ def nest_sections(items):
             acc.append(item)
         else:
             acc[-1].children.append(item)
+    # just validation
+    # that it's serialisable
+    # no side effects.
     for a in acc:
         a.to_json()
     return acc
 
 
-def parse(text: str):
+def parse(text: str) -> List[Section]:
     """
     Parse text using Tree sitter RST, and return a list of serialised section I guess ?
     """

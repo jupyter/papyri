@@ -36,9 +36,7 @@ from .take2 import (
     SeeAlsoItem,
     Text,
 )
-from .take2 import main as t2main
-from .take2 import Node
-from .take2 import make_block_3
+from .take2 import parse_rst_to_papyri_tree, Node, make_block_3
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 
@@ -81,7 +79,7 @@ def paragraphs(lines) -> List[Any]:
     blocks_data = make_block_3(Lines(lines))
     acc = []
 
-    # blocks_data = t2main("\n".join(lines))
+    # blocks_data = parse_rst_to_papyri_tree("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
     for pre_blank_lines, blank_lines, post_blank_lines in blocks_data:
@@ -378,7 +376,7 @@ def P2(lines) -> List[Node]:
         else:
             assert "\n" not in l._line
     assert lines, lines
-    blocks_data = t2main("\n".join(lines))
+    blocks_data = parse_rst_to_papyri_tree("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
     for block in blocks_data:
@@ -1118,15 +1116,9 @@ class Gen:
                                 assert len(tsc) in (0, 1), (tsc, data)
                                 if tsc:
                                     tsc = tsc[0]
-                                PX = P2(data)
-                                SPX = Section(PX)
-                                # if SPX != tsc:
-                                # print()
-                                # import ipdb
-
-                                # ipdb.set_trace()
-                                # SPX == tsc
-                                doc_blob.content[section] = SPX
+                                else:
+                                    tsc = Section()
+                                doc_blob.content[section] = tsc
                             else:
                                 doc_blob.content[section] = Section()
                 except Exception as e:

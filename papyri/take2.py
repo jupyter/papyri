@@ -1568,7 +1568,10 @@ def assert_block_lines(blocks):
         assert b.lines
 
 
-def main(text):
+def parse_rst_to_papyri_tree(text):
+    """
+
+    """
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
     assert_block_lines(doc), "raw blocks"

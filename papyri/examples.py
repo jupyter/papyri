@@ -69,3 +69,24 @@ def example2():
 #     This will fail
 #
 #     """
+
+def dummy():
+    """
+    I have no docs.
+    """
+    pass
+
+
+def test_duplicate_see_also():
+    """
+
+    There are cases where see also has two identical elements
+
+    See https://github.com/numpy/numpy/pull/19929
+
+    See Also
+    --------
+    dummy, dummy
+
+    """
+    pass
