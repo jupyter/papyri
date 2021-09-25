@@ -200,7 +200,18 @@ async def gallery(module, store, version, ext="", gstore=None):
 # doable after purely as frontend thing.
 
 
-def compute_siblings_II(ref, family):
+def compute_siblings_II(ref, family: set):
+    """ """
+    from collections import defaultdict
+
+    module_versions = defaultdict(lambda: set())
+    for f in family:
+        module_versions[f.module].add(f.version)
+
+    module_versions_max = {k: max(v) for k, v in module_versions.items()}
+
+    family = {f for f in family if f.version == module_versions_max[f.module]}
+
     parts = ref.split(".") + ["+"]
     siblings = OrderedDict()
     cpath = ""
@@ -396,6 +407,7 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
     #    aliases = json.loads(await p.read_text())
 
     known_refs, ref_map = find_all_refs(store)
+
     x_, y_ = find_all_refs(gstore)
     assert x_ == known_refs
     assert y_ == ref_map

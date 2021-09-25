@@ -53,3 +53,19 @@ def example2():
 
     """
     pass
+
+
+# TODO: uncomment once implemented<D-{>
+# def transition_block_Not_implemented():
+#     """
+#     Tree sitter supports RST transitions with multiple dashes,
+#
+#     we don't handle them yet:
+#
+#
+#     -----
+#
+#
+#     This will fail
+#
+#     """

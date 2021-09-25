@@ -1115,8 +1115,9 @@ class Gen:
                                 # TODO : the following is in progress as we try to move away from custom parsing and use
                                 # tree_ssitter.
                                 tsc = ts.parse("\n".join(data).encode())
-                                assert len(tsc) == 1
-                                tsc = tsc[0]
+                                assert len(tsc) in (0, 1), (tsc, data)
+                                if tsc:
+                                    tsc = tsc[0]
                                 PX = P2(data)
                                 SPX = Section(PX)
                                 # if SPX != tsc:

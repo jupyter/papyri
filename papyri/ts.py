@@ -7,6 +7,8 @@ RST = Language(pth, "rst")
 parser = Parser()
 parser.set_language(RST)
 
+from typing import List
+
 
 from papyri.take2 import (
     Verbatim,
@@ -22,6 +24,7 @@ from papyri.take2 import (
     Lines,
     Directive,
     BlockVerbatim,
+    Words,
 )
 
 
@@ -32,6 +35,7 @@ class TSVisitor:
     Walk the tree sitter tree and convert each node into our kind of internal node.
 
     """
+
     def __init__(self, bytes, root):
         self.bytes = bytes
         self.root = root
@@ -70,9 +74,9 @@ class TSVisitor:
         return []
 
     def visit_transition(self, node, prev_end=None):
-        # just hlines, like ------
-        assert False
-        return []
+        # assert False, self.bytes[node.start_byte - 10 : node.end_byte + 10].decode()
+        data = self.bytes[node.start_byte : node.end_byte].decode()
+        return [Paragraph([Words(data)], [])]
 
     def visit_reference(self, node, prev_end=None):
         t = Directive(
@@ -200,10 +204,14 @@ class TSVisitor:
         assert False
         return []
 
-    def visit_doctest_block(self, node, prev_end=None):
+    def visit_doctest_block(self, node, prev_end=None) -> List[BlockVerbatim]:
         # TODO
-        assert False
-        return []
+        # likely want to dispatch to the parse example routine.
+        return [
+            BlockVerbatim(
+                Lines(self.bytes[node.start_byte : node.end_byte].decode().splitlines())
+            )
+        ]
 
     def visit_field_list(self, node, prev_end=None):
         # TODO
@@ -259,6 +267,9 @@ class TSVisitor:
         return []
 
     def visit_ERROR(self, node, prev_end=None):
+        """
+        Called with parsing error nodes.
+        """
         # TODO
         assert False
         return []
