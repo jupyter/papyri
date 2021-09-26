@@ -591,6 +591,9 @@ class Code2(Node):
         self.out = out
         self.ce_status = ce_status
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
+
 
 class Code(Node):
     entries: List[Tuple[Optional[str]]]
