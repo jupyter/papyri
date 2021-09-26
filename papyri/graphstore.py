@@ -100,7 +100,10 @@ class GraphStore:
         if not p.exists():
             self.table = sqlite3.connect(str(p))
             print("Creating link table")
-            self.table.cursor().execute("CREATE TABLE links (source, dest, reason)")
+            self.table.cursor().execute(
+                "CREATE TABLE links(source, dest, reason)"
+                # "CREATE TABLE links(source, dest, reason, unique(source, dest, reason))"
+            )
         else:
             self.table = sqlite3.connect(str(p))
 
@@ -164,8 +167,36 @@ class GraphStore:
             (str(key),),
         )
 
-    def get(self, key) -> bytes:
+    def get(self, key: Key) -> bytes:
+        assert isinstance(key, Key)
         path, _ = self._key_to_paths(key)
+
+        ## Verification block
+        path_br = _
+
+        if path_br.path.exists():
+            xx = path_br.read_json()
+            backrefs = set([Key(*item) for item in xx])
+        else:
+            backrefs = set([])
+
+        if "ConvexHull" in str(key):
+            print(str(key))
+        sql_backref_unparsed = self.table.execute(
+            "select source from links where dest=?", (str(key),)
+        )
+
+        sql_backrefs = {eval(s[0]) for s in sql_backref_unparsed}
+
+        if not sql_backrefs == backrefs:
+            print(f"Backreferences for {key} differ:")
+            print(f"    there are {len(sql_backrefs)=}")
+            print(f"    and {len(backrefs)=}")
+            print(" + sql : ", sql_backrefs - backrefs)
+            print(" - json:", backrefs - sql_backrefs)
+
+        ## end verification block
+
         return path.read_bytes()
 
     def get_backref(self, key):
@@ -176,10 +207,6 @@ class GraphStore:
             "select source, reason from links where dest=?",
             (str(key),),
         )
-
-        res = list(sres)
-        if res:
-            print(res)
 
         if pathbr.path.exists():
             return pathbr.read_json()
@@ -219,37 +246,28 @@ class GraphStore:
         TODO: refs is forward refs, and we are updating backward believe
         """
         assert isinstance(key, Key)
-        path, path_br = self._key_to_paths(key)
+        path, _ = self._key_to_paths(key)
         path.path.parent.mkdir(parents=True, exist_ok=True)
 
-        # working on BUG
-        __obj = []
         if "assets" not in key and path.exists():
             __tmp = json.loads(path.read_bytes().decode())
 
-            __obj = [
+            old_refs = {
                 (b["module"], b["version"], b["kind"], b["path"])
                 for b in __tmp.get("refs", [])
-            ]
-        path.write_bytes(bytes_)
-        if path_br.path.exists():
-            old_backrefs = set(tuple(x) for x in path_br.read_json())
+            }
         else:
-            old_backrefs = set()
+            old_refs = set()
+
+        path.write_bytes(bytes_)
+
         new_refs = set(refs)
 
-        # this is completely wrong
-        # old backrefs are object that refer to key
-        # new_refs are object we refer to.
-        # the logic is incorrect.
-        # most likely want to use __obj
-        if "assets" not in key:
-            old_backrefs = set(__obj)
 
-        removed_refs = old_backrefs - new_refs
-        added_refs = new_refs - old_backrefs
+        removed_refs = old_refs - new_refs
+        added_refs = new_refs - old_refs
 
-        #        if "assets" not in key:
+        #        if removed_refs or added_refs:
         #            print(key)
         #            for o in sorted(removed_refs):
         #                print("    -", o)
@@ -259,14 +277,17 @@ class GraphStore:
         with self.table:
             for ref in added_refs:
                 self._add_edge(key, ref)
+                refkey = Key(*ref)
                 self.table.execute(
-                    "insert into links values (?,?,?)", (str(key), str(ref), "debug")
+                    "insert into links values (?,?,?)",
+                    (str(key), str(refkey), "debug"),
                 )
             for ref in removed_refs:
                 self._remove_edge(key, ref)
+                refkey = Key(*ref)
                 self.table.execute(
                     "delete from links where source=? and dest=? and reason=?",
-                    (str(key), str(ref), "debug"),
+                    (str(key), str(refkey), "debug"),
                 )
 
     def glob(self, pattern) -> List[Key]:

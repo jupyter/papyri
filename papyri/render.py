@@ -117,7 +117,7 @@ async def gallery(module, store, version, ext="", gstore=None):
             backrefs = backrefs.union(brs)
 
     for key in backrefs:
-        data = json.loads(gstore.get(key).decode())
+        data = json.loads(gstore.get(Key(*key)).decode())
         data["backrefs"] = []
 
         i = IngestedBlobs.from_json(data)
