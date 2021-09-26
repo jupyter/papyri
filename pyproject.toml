@@ -31,7 +31,7 @@ requires=[
 ]
 
 [tool.flit.scripts]
-papyri = "papyri:main"
+papyri = "papyri:app"
 
 [tool.pytest.ini_options]
 addopts = "--durations=10"

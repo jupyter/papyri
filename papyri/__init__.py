@@ -290,9 +290,11 @@ def install(names: List[str], check: bool = False):
 
 @app.command()
 def relink():
+    """
+    Rescan all the documentation to find potential new crosslinks.
+    """
     _intro()
     from . import crosslink as cr
-
     cr.relink()
 
 
