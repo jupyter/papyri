@@ -7,7 +7,7 @@ from ..take2 import (
     Example,
     Header,
     Lines,
-    main,
+    parse_rst_to_papyri_tree,
     make_block_3,
 )
 
@@ -64,7 +64,7 @@ def test_make_block(example, nblocks):
     ],
 )
 def test_parse_headers(target, expected):
-    doc = main(target)
+    doc = parse_rst_to_papyri_tree(target)
     levels = tuple([h.level for h in doc if isinstance(h, Header)])
     assert levels == expected
 
@@ -82,6 +82,6 @@ def test_parse_headers(target, expected):
     ],
 )
 def test_parse_blocks(target, type_, number):
-    blocks = main(target)
+    blocks = parse_rst_to_papyri_tree(target)
     filtered = [b for b in blocks if type(b) == type_]
     assert len(filtered) == number

@@ -341,7 +341,7 @@ def nest_sections(items) -> List[Section]:
     return acc
 
 
-def parse(text: str) -> List[Section]:
+def parse(text: bytes) -> List[Section]:
     """
     Parse text using Tree sitter RST, and return a list of serialised section I guess ?
     """

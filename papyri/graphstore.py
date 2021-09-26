@@ -225,11 +225,11 @@ class GraphStore:
         # working on BUG
         __obj = []
         if "assets" not in key and path.exists():
-            __obj = json.loads(path.read_bytes().decode())
+            __tmp = json.loads(path.read_bytes().decode())
 
             __obj = [
                 (b["module"], b["version"], b["kind"], b["path"])
-                for b in __obj.get("refs", [])
+                for b in __tmp.get("refs", [])
             ]
         path.write_bytes(bytes_)
         if path_br.path.exists():

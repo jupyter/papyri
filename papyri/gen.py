@@ -934,7 +934,7 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        class DummyP:
+        class DummyP(Progress):
             def add_task(*args, **kwargs):
                 pass
 
@@ -950,7 +950,7 @@ class Gen:
             def __exit__(self, *args, **kwargs):
                 pass
 
-        p = DummyP
+        p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
         # step one collect all the modules instances we want to analyse.
 
@@ -1107,10 +1107,10 @@ class Gen:
                                 tsc = ts.parse("\n".join(data).encode())
                                 assert len(tsc) in (0, 1), (tsc, data)
                                 if tsc:
-                                    tsc = tsc[0]
+                                    tssc = tsc[0]
                                 else:
-                                    tsc = Section()
-                                doc_blob.content[section] = tsc
+                                    tssc = Section()
+                                doc_blob.content[section] = tssc
                             else:
                                 doc_blob.content[section] = Section()
                 except Exception as e:
