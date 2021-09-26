@@ -231,10 +231,8 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
     infer : bool
         whether to run type inference; which can be time consuming.
 
-
     Examples
     --------
-
     Those are self examples, generating papyri documentation with papyri should
     be able to handle the following
 
@@ -260,9 +258,6 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
     Note that in the above we use `plt.show`,
     but we can configure papyri to automatically detect
     when figures are created.
-
-
-
 
     """
     assert qa is not None
@@ -924,11 +919,9 @@ class Gen:
         exec_ : bool
             Wether to try to execute the code blocks and embed resulting values like plots.
 
-
         See Also
         --------
         do_one_item, do_one_iteration
-
 
         """
 

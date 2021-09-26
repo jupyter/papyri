@@ -252,11 +252,9 @@ class IngestedBlobs(Node):
 # @lru_cache(maxsize=100000)
 def _into(known_refs: FrozenSet[RefInfo]) -> Tuple[Dict[str, RefInfo], FrozenSet[str]]:
     """
-
     Parameters
     ----------
-
-    know_refs: (frozen) set of RefInfo
+    known_refs : (frozen) set of RefInfo
 
     Returns
     -------

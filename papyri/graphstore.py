@@ -109,7 +109,7 @@ class GraphStore:
 
         Parameters
         ----------
-        key: Key
+        key : Key
 
         Returns
         -------

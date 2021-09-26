@@ -80,7 +80,6 @@ def dummy():
 
 def test_duplicate_see_also():
     """
-
     There are cases where see also has two identical elements
 
     See https://github.com/numpy/numpy/pull/19929
