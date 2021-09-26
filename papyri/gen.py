@@ -5,9 +5,7 @@ import io
 import json
 import os
 import sys
-import time
 from collections import defaultdict
-from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
@@ -40,7 +38,7 @@ from .take2 import parse_rst_to_papyri_tree, Node, make_block_3
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 
-from typing import Optional, Callable, Any
+from typing import Optional, Any
 
 try:
     from . import ts

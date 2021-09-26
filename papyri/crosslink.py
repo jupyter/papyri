@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, List, Optional, Tuple, Union, Set
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple, Set
 
 from there import print
 

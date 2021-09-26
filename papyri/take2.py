@@ -1600,6 +1600,6 @@ if __name__ == "__main__":
         what = "numpy"
     ex = get_object(what).__doc__
     ex = dedent_but_first(ex)
-    doc = main(ex)
+    doc = parse_rst_to_papyri_tree(ex)
     for b in doc:
         print(b)

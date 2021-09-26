@@ -687,7 +687,6 @@ async def _ascii_render(key, store, known_refs=None, template=None):
         store = GraphStore(ingest_dir)
     assert isinstance(store, GraphStore)
     ref = key.path
-    root = key.path.split(".")[0]
 
     # keys = store.glob((root, None))
     # version = keys[0][-1]
