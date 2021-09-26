@@ -1,3 +1,3 @@
-from papyri import main
+from papyri import app
 
-main()
+app()

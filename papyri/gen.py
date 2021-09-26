@@ -145,6 +145,7 @@ def parse_script(script, ns=None, infer=None, prev="", config=None):
                     if infer and (text not in (" .=()[],")) and text.isidentifier():
                         inf = jed.infer(line_n + 1, col_n)
                         if inf:
+                            # TODO: we might want the qualname to be module_name:name for disambiguation.
                             ref = inf[0].full_name
                             # if ref.startswith('builtins'):
                             #    ref = ''
