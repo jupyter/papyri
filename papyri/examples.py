@@ -70,6 +70,7 @@ def example2():
 #
 #     """
 
+
 def dummy():
     """
     I have no docs.
