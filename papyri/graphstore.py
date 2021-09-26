@@ -183,7 +183,7 @@ class GraphStore:
         if "ConvexHull" in str(key):
             print(str(key))
         sql_backref_unparsed = self.table.execute(
-            "select source from links where dest=?", (str(key),)
+            "select distinct source from links where dest=?", (str(key),)
         )
 
         sql_backrefs = {eval(s[0]) for s in sql_backref_unparsed}
