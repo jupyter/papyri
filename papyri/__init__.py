@@ -3,7 +3,9 @@ Papyri – in progress
 
 Here are a couple of documents, or docstrings that are of interest to see how
 papyri works, generally because they crashed papyri at some point during the
-developement, and/or do not work yet.:: 
+development, and/or do not work yet.:: 
+
+You likely want to see the readme.md file for now which is kept up do date more often.
 
 
 Installation
@@ -14,7 +16,7 @@ pip install papyri
 Usage
 -----
 
-  $ papyri gen <module name>
+  $ papyri gen <config file>
 
   $ papyri ingest ...
 
@@ -27,6 +29,8 @@ Usage
 
 Of Interest
 -----------
+
+Here are a couple of function that are of interest to explore what papyri can do and render.
 
 `dask.delayed.delayed`
     one of the parameter of the docstring has multiple paragraphs.
@@ -134,9 +138,9 @@ Generating Docs:
 
     To generate documentation IR for publishing.
 
-    $ papyri gen numpy
+    $ papyri gen examples/numpy.toml
 
-    Will generate in CWD the folder `numpy_$numpyversion`.
+    Will generate in ~/.papayri/data/ the folder `numpy_$numpyversion`.
 
 Ingesting Docs:
 
@@ -152,7 +156,7 @@ To start a server that generate html on the fly
 
     $ papyri serve
 
-View w given function docs in text with ansi coloring
+View given function docs in text with ANSI coloring
 
     $ papyri ascii numpy.linspace
 
@@ -162,16 +166,28 @@ View w given function docs in text with ansi coloring
 
 
 def _intro():
+    """
+    Prints the logo and current version to stdout.
+
+    """
+    # TODO: should we print to stderr ?
     print(logo)
     print(__version__)
 
 
-def main():
-    app()
-
-
 @app.command()
 def ingest(paths: List[Path], check: bool = False, relink: bool = True):
+    """
+    Given paths to a docbundle folder, ingest it into the known libraries.
+
+    Parameters
+    ----------
+    paths : List of Path
+        list of paths (directories) to ingest. Maybe later we want to support zipped bundled but it's the not the case
+        yet.
+    relink : bool
+        after ingesting all the path, should we rescan the whole library to find new crosslinks ?
+    """
     _intro()
     from . import crosslink as cr
 
@@ -183,6 +199,9 @@ def ingest(paths: List[Path], check: bool = False, relink: bool = True):
 
 @app.command()
 def install(names: List[str], check: bool = False):
+    """
+    WIP, download and install a remote docbundle
+    """
 
     from tempfile import TemporaryDirectory
     from . import crosslink as cr
@@ -197,6 +216,11 @@ def install(names: List[str], check: bool = False):
     _intro()
 
     async def get(name, version, results, progress):
+        """
+        Utility to download a single docbundle and
+        put it into result.
+
+        """
 
         buf = BytesIO()
 
@@ -218,7 +242,11 @@ def install(names: List[str], check: bool = False):
                 buf.seek(0)
                 results[(name, version)] = buf.read()
 
-    async def m_():
+    async def trio_main():
+        """
+        Main trio routine to download docbundles concurently.
+
+        """
         results = {}
         with rich.progress.Progress(
             "{task.description}",
@@ -229,7 +257,6 @@ def install(names: List[str], check: bool = False):
         ) as progress:
             async with trio.open_nursery() as nursery:
                 for name in names:
-
                     if "==" in name:
                         name, version = name.split("==")
                     else:
@@ -248,7 +275,7 @@ def install(names: List[str], check: bool = False):
                     nursery.start_soon(get, name, version, results, progress)
         return results
 
-    datas = trio.run(m_)
+    datas = trio.run(trio_main)
     for (name, version), data in datas.items():
         if data is not None:
             # print("Downloaded", name, version, len(data) // 1024, "kb")
@@ -257,7 +284,7 @@ def install(names: List[str], check: bool = False):
                 zf.extractall(d)
                 cr.main(next(iter([x for x in Path(d).iterdir() if x.is_dir()])), check)
         else:
-            print("Could not find docs for ", name, version)
+            print(f"Could not find docs for {name}=={version}")
     cr.relink()
 
 
@@ -391,4 +418,4 @@ def open(qualname: str):
 
 
 if __name__ == "__main__":
-    main()
+    app()
