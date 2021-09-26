@@ -13,7 +13,7 @@ from there import print
 
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
-from .graphstore import GraphStore
+from .graphstore import GraphStore, Key
 from .take2 import (
     Math,
     Admonition,
@@ -209,8 +209,8 @@ class IngestedBlobs(Node):
         local_refs = frozenset(flat(local_refs))
 
         assert isinstance(known_refs, frozenset)
-
-        visitor = DVR(self.qa, known_refs, local_refs, aliases)
+        assert self.version not in ("", "??"), self.version
+        visitor = DVR(self.qa, known_refs, local_refs, aliases, version=self.version)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
@@ -393,7 +393,7 @@ def resolve_(
 
 
 def load_one_uningested(
-    bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs, aliases
+    bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs, aliases, *, version
 ) -> IngestedBlobs:
     """
     Load the json from a DocBlob and make it an ingested blob.
@@ -419,7 +419,8 @@ def load_one_uningested(
     else:
         backrefs = []
     blob.backrefs = backrefs
-    blob.version = data.pop("version", "")
+    blob.version = data.pop("version", version)
+    assert blob.version == version
 
     blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.name))
     blob.example_section_data = blob.example_section_data
@@ -467,6 +468,8 @@ def load_one_uningested(
     for sec in blob.arbitrary:
         acc1.append(visitor.visit(sec))
     blob.arbitrary = acc1
+
+    assert blob.version not in ("", "??"), blob.version
 
     blob.process(known_refs=known_refs, aliases=aliases, verbose=False)
     # if targets:
@@ -716,6 +719,12 @@ class DirectiveVisiter(TreeReplacer):
 
 
 class DVR(DirectiveVisiter):
+    def __init__(self, *args, version="??", **kwargs):
+        self.version = version
+        assert version != "??"
+        assert version != ""
+        super().__init__(*args, **kwargs)
+
     def replace_Code(self, code):
         """
         Here we'll crawl example data and convert code entries so that each token contain a link to the object they
@@ -749,7 +758,10 @@ class DVR(DirectiveVisiter):
 
     def replace_Fig(self, fig):
 
-        self._targets.add(RefInfo(self.qa.split(".")[0], "??", "assets", fig.value))
+        # todo: add version number here
+        self._targets.add(
+            RefInfo(self.qa.split(".")[0], self.version, "assets", fig.value)
+        )
 
         return [fig]
 
@@ -801,7 +813,7 @@ class Ingester:
         ):
             s = Section.from_json(json.loads(fe.read_text()))
             gstore.put(
-                (root, version, "examples", fe.name),
+                Key(root, version, "examples", fe.name),
                 json.dumps(s.to_json(), indent=2).encode(),
                 [],
             )
@@ -820,12 +832,14 @@ class Ingester:
                     continue
                 assert rqa == qa, f"{rqa} !+ {qa}"
             try:
+                # TODO: version issue
                 nvisited_items[qa] = load_one_uningested(
                     f1.read_text(),
                     None,
                     qa=qa,
                     known_refs=known_refs,
                     aliases=aliases,
+                    version=version,
                 )
                 assert hasattr(nvisited_items[qa], "arbitrary")
             except Exception as e:
@@ -860,15 +874,18 @@ class Ingester:
             (path / "assets").glob("*"),
             description=f"Reading {path.name} image files ...",
         ):
-            gstore.put((root, version, "assets", f2.name), f2.read_bytes(), [])
+            gstore.put(Key(root, version, "assets", f2.name), f2.read_bytes(), [])
 
         gstore.put(
-            (root, version, "papyri.json"), json.dumps(aliases, indent=2).encode(), []
+            Key(root, version, "meta", "papyri.json"),
+            json.dumps(aliases, indent=2).encode(),
+            [],
         )
 
         for _, (qa, doc_blob) in progress(
             nvisited_items.items(), description="Writing..."
         ):
+            # for qa, doc_blob in nvisited_items.items():
             # we might update other modules with backrefs
             for k, v in doc_blob.content.items():
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
@@ -885,6 +902,7 @@ class Ingester:
             # fix it at serialisation time.
             rr = []
             for rq in js["refs"]:
+                assert rq["version"] != "??"
                 if rq["version"] == "??":
                     rq["version"] = version
                 rr.append(rq)
@@ -897,7 +915,7 @@ class Ingester:
             for r in refs:
                 assert None not in r
             try:
-                key = (mod_root, version, "module", qa)
+                key = Key(mod_root, version, "module", qa)
                 assert mod_root is not None
                 assert version is not None
                 assert None not in key
@@ -914,7 +932,7 @@ class Ingester:
         gstore = self.gstore
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}
-        for key in gstore.glob((None, None, "papyri.json")):
+        for key in gstore.glob((None, None, "meta", "papyri.json")):
             aliases.update(json.loads(gstore.get(key)))
 
         rev_aliases = {v: k for k, v in aliases.items()}

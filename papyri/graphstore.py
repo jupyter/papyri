@@ -7,6 +7,8 @@ import sqlite3
 
 
 class Path:
+    """just a path wrapper that has a conveninent `.read_json` and `.write_json` method"""
+
     def __init__(self, path):
         assert isinstance(path, _Path), path
         self.path = path
@@ -28,7 +30,7 @@ class Path:
         return self.path.parent
 
     def exists(self, *args, **kwargs):
-        self.path.exists(*args, **kwargs)
+        return self.path.exists(*args, **kwargs)
 
     def mkdir(self, *args, **kwargs):
         self.path.mkdir(*args, **kwargs)
@@ -93,9 +95,14 @@ class GraphStore:
 
         # for now we are going to try to do in-memory operation, just to
         # see how we can handle that with SQL, and move to on-disk later.
-        self.table = sqlite3.connect(":memory:")
-
-        self.table.cursor().execute("CREATE TABLE links (source, dest, reason)")
+        p = _Path("~/.papyri/papyri.db")
+        p = p.expanduser()
+        if not p.exists():
+            self.table = sqlite3.connect(str(p))
+            print("Creating link table")
+            self.table.cursor().execute("CREATE TABLE links (source, dest, reason)")
+        else:
+            self.table = sqlite3.connect(str(p))
 
         # assert isinstance(link_finder, dict)
         assert isinstance(root, _Path)
@@ -151,6 +158,11 @@ class GraphStore:
         data.unlink()
         #  this is likely incorrect if we want to deal with dangling links.
         backrefs.unlink()
+        print("Removign link from table")
+        self.table.execute(
+            "delete from links where source=?",
+            (str(key),),
+        )
 
     def get(self, key) -> bytes:
         path, _ = self._key_to_paths(key)
@@ -158,12 +170,26 @@ class GraphStore:
 
     def get_backref(self, key):
         _, pathbr = self._key_to_paths(key)
+
+        # print("getting backrefs from table")
+        sres = self.table.execute(
+            "select source, reason from links where dest=?",
+            (str(key),),
+        )
+
+        res = list(sres)
+        if res:
+            print(res)
+
         if pathbr.path.exists():
             return pathbr.read_json()
         else:
             return []
 
     def _add_edge(self, source, dest):
+        """
+        Add a backward edge from source to dest in dest br file.
+        """
         _, p = self._key_to_paths(dest)
         if p.path.exists():
             data = set([tuple(x) for x in p.read_json()])
@@ -174,23 +200,61 @@ class GraphStore:
         p.write_json(list(sorted(data)))
 
     def _remove_edge(self, source, dest):
+        """
+        Remove the edge from `source` to `dest`,
+        that is to say, goes in to `dest` backrefs and remove it.
+        """
         _, p = self._key_to_paths(dest)
         if p.exists():
             data = set(p.read_json())
             data = data.discard(source)
             p.write_json(list(sorted(data)))
 
-    def put(self, key, bytes_, refs) -> None:
+    def put(self, key: Key, bytes_, refs) -> None:
+        """
+        Store object ``bytes``, as path ``key`` with the corresponding
+        links to other objects.
+
+
+        TODO: refs is forward refs, and we are updating backward believe
+        """
+        assert isinstance(key, Key)
         path, path_br = self._key_to_paths(key)
         path.path.parent.mkdir(parents=True, exist_ok=True)
+
+        # working on BUG
+        __obj = []
+        if "assets" not in key and path.exists():
+            __obj = json.loads(path.read_bytes().decode())
+
+            __obj = [
+                (b["module"], b["version"], b["kind"], b["path"])
+                for b in __obj.get("refs", [])
+            ]
         path.write_bytes(bytes_)
         if path_br.path.exists():
-            old_refs = set(tuple(x) for x in path_br.read_json())
+            old_backrefs = set(tuple(x) for x in path_br.read_json())
         else:
-            old_refs = set()
+            old_backrefs = set()
         new_refs = set(refs)
-        removed_refs = old_refs - new_refs
-        added_refs = new_refs - old_refs
+
+        # this is completely wrong
+        # old backrefs are object that refer to key
+        # new_refs are object we refer to.
+        # the logic is incorrect.
+        # most likely want to use __obj
+        if "assets" not in key:
+            old_backrefs = set(__obj)
+
+        removed_refs = old_backrefs - new_refs
+        added_refs = new_refs - old_backrefs
+
+        #        if "assets" not in key:
+        #            print(key)
+        #            for o in sorted(removed_refs):
+        #                print("    -", o)
+        #            for n in sorted(added_refs):
+        #                print("    +", n)
 
         with self.table:
             for ref in added_refs:

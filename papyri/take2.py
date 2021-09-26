@@ -355,7 +355,6 @@ class Math(Node):
         return "".join(self.value)
 
     def __hash__(self):
-        assert False
         return hash(tuple(self.value))
 
     def _validate(self):
