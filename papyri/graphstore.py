@@ -254,7 +254,6 @@ class GraphStore:
 
         new_refs = set(refs)
 
-
         removed_refs = old_refs - new_refs
         added_refs = new_refs - old_refs
 
