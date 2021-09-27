@@ -274,8 +274,8 @@ class GraphStore:
                     (str(key), str(refkey), "debug"),
                 )
             for ref in removed_refs:
-                self._remove_edge(key, ref)
                 refkey = Key(*ref)
+                self._remove_edge(key, refkey)
                 self.table.execute(
                     "delete from links where source=? and dest=? and reason=?",
                     (str(key), str(refkey), "debug"),
