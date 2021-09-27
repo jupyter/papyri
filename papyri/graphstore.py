@@ -42,14 +42,6 @@ class Path:
 Key = namedtuple("Key", ["module", "version", "kind", "path"])
 
 
-class Node:
-    pass
-
-
-class Edge:
-    pass
-
-
 class GraphStore:
     """
     Class abstraction over the filesystem to store documents in a graph-like
@@ -101,8 +93,7 @@ class GraphStore:
             self.table = sqlite3.connect(str(p))
             print("Creating link table")
             self.table.cursor().execute(
-                "CREATE TABLE links(source, dest, reason)"
-                # "CREATE TABLE links(source, dest, reason, unique(source, dest, reason))"
+                "CREATE TABLE links(source, dest, reason, unique(source, dest, reason))"
             )
         else:
             self.table = sqlite3.connect(str(p))
@@ -135,7 +126,7 @@ class GraphStore:
         path_br = path / (key[-1] + ".br")
         return path0, path_br
 
-    def _path_to_key(self, path):
+    def _path_to_key(self, path: Path):
         """
         Given a path, return the key for the document.
 
@@ -156,7 +147,7 @@ class GraphStore:
         else:
             return path.parts
 
-    def remove(self, key) -> None:
+    def remove(self, key: Key) -> None:
         data, backrefs = self._key_to_paths(key)
         data.unlink()
         #  this is likely incorrect if we want to deal with dangling links.
@@ -197,7 +188,7 @@ class GraphStore:
 
         return path.read_bytes()
 
-    def get_backref(self, key):
+    def get_backref(self, key: Key):
         _, pathbr = self._key_to_paths(key)
 
         # print("getting backrefs from table")
@@ -211,7 +202,7 @@ class GraphStore:
         else:
             return []
 
-    def _add_edge(self, source, dest):
+    def _add_edge(self, source: Key, dest: Key):
         """
         Add a backward edge from source to dest in dest br file.
         """
@@ -224,14 +215,16 @@ class GraphStore:
         data.add(source)
         p.write_json(list(sorted(data)))
 
-    def _remove_edge(self, source, dest):
+    def _remove_edge(self, source: Key, dest: Key):
         """
         Remove the edge from `source` to `dest`,
         that is to say, goes in to `dest` backrefs and remove it.
         """
+        assert isinstance(source, Key)
+        assert isinstance(dest, Key)
         _, p = self._key_to_paths(dest)
         if p.exists():
-            data = set(p.read_json())
+            data = set(Key(*x) for x in p.read_json())
             data = data.discard(source)
             p.write_json(list(sorted(data)))
 

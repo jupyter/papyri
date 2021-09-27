@@ -853,7 +853,7 @@ class Ingester:
         ).union(known_refs)
 
         for _, (qa, doc_blob) in progress(
-            nvisited_items.items(), description="{path.name} Cross referencing"
+            nvisited_items.items(), description=f"{path.name} Cross referencing"
         ):
             refs = doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
             doc_blob.logo = logo
@@ -992,7 +992,7 @@ def main(path, check):
     Ingester().ingest(path, check)
     delta = perf_counter() - now
 
-    builtins.print(f"Ingesting {path.name} done in {delta:0.2f}s")
+    builtins.print(f"{path.name} Ingesting done in {delta:0.2f}s")
 
 
 def relink():
