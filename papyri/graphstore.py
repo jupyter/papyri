@@ -95,7 +95,7 @@ class GraphStore:
 
         # for now we are going to try to do in-memory operation, just to
         # see how we can handle that with SQL, and move to on-disk later.
-        p = _Path("~/.papyri/papyri.db")
+        p = _Path("~/.papyri/ingest/papyri.db")
         p = p.expanduser()
         if not p.exists():
             self.table = sqlite3.connect(str(p))
@@ -279,7 +279,7 @@ class GraphStore:
                 self._add_edge(key, ref)
                 refkey = Key(*ref)
                 self.table.execute(
-                    "insert into links values (?,?,?)",
+                    "insert or ignore into links values (?,?,?)",
                     (str(key), str(refkey), "debug"),
                 )
             for ref in removed_refs:

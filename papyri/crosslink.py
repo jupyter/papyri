@@ -809,7 +809,7 @@ class Ingester:
         rev_aliases = {v: k for k, v in aliases.items()}
 
         for _, fe in progress(
-            (path / "examples/").glob("*"), description=f"Reading {path.name} Examples"
+            (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
         ):
             s = Section.from_json(json.loads(fe.read_text()))
             gstore.put(
@@ -820,7 +820,7 @@ class Ingester:
 
         for _, f1 in progress(
             (path / "module").glob("*"),
-            description=f"Reading {path.name} doc bundle files ...",
+            description=f"{path.name} Reading doc bundle files ...",
         ):
             assert f1.name.endswith(".json")
             qa = f1.name[:-5]
@@ -853,7 +853,7 @@ class Ingester:
         ).union(known_refs)
 
         for _, (qa, doc_blob) in progress(
-            nvisited_items.items(), description="Cross referencing"
+            nvisited_items.items(), description="{path.name} Cross referencing"
         ):
             refs = doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
             doc_blob.logo = logo
@@ -872,7 +872,7 @@ class Ingester:
                     sa.name.ref = resolved
         for _, f2 in progress(
             (path / "assets").glob("*"),
-            description=f"Reading {path.name} image files ...",
+            description=f"{path.name} Reading image files ...",
         ):
             gstore.put(Key(root, version, "assets", f2.name), f2.read_bytes(), [])
 
@@ -883,7 +883,7 @@ class Ingester:
         )
 
         for _, (qa, doc_blob) in progress(
-            nvisited_items.items(), description="Writing..."
+            nvisited_items.items(), description=f"{path.name} Writing..."
         ):
             # for qa, doc_blob in nvisited_items.items():
             # we might update other modules with backrefs
