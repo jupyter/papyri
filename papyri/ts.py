@@ -25,6 +25,8 @@ from papyri.take2 import (
     Directive,
     BlockVerbatim,
     Words,
+    FieldList,
+    FieldListItem,
 )
 
 
@@ -49,9 +51,11 @@ class TSVisitor:
             kind = c.type
             # print(f'({kind})')
             if kind == "::":
-                word = acc.pop()
-                assert isinstance(word, Word)
-                acc.append(Word(word.value + "::"))
+                if isinstance(acc[-1], Word):
+                    word = acc.pop()
+                    acc.append(Word(word.value + "::"))
+                # else:
+                #    acc.append(Word("::"))
                 continue
             if not hasattr(self, "visit_" + kind):
                 raise ValueError(
@@ -213,9 +217,17 @@ class TSVisitor:
             )
         ]
 
+    def visit_field(self, node, prev_end=None):
+        return []
+
     def visit_field_list(self, node, prev_end=None):
-        # TODO
-        assert False
+        acc = []
+        for list_item in node.children:
+            assert list_item.type == "field"
+            _, name, _, body = list_item.children
+            f = FieldListItem(self.visit(name), self.visit(body))
+            acc.append(f)
+        return [FieldList(acc)]
         return []
 
     def visit_enumerated_list(self, node, prev_end=None):
