@@ -79,6 +79,7 @@ def get_type_hints(type_):
 
 def serialize(instance, annotation):
     # print("will serialise", type(instance), "as", annotation)
+    exception_already_desribed = False
     try:
         if (annotation in base_types) and (isinstance(instance, annotation)):
             return instance
@@ -113,7 +114,7 @@ def serialize(instance, annotation):
                     return serialize(instance, inner_annotation[0])
             assert (
                 type(instance) in inner_annotation
-            ), f"{type(instance)} not in {inner_annotation}, {instance}"
+            ), f"{type(instance)} not in {inner_annotation}, {instance} or type {type(instance)}"
             ma = [x for x in inner_annotation if type(instance) is x]
             # assert len(ma) == 1
             ann_ = ma[0]
@@ -131,7 +132,8 @@ def serialize(instance, annotation):
                 try:
                     data[k] = serialize(getattr(instance, k), v)
                 except Exception as e:
-                    raise type(e)(f"Error serializing field {k!r}")
+                    exception_already_desribed = True
+                    raise type(e)(f"Error serializing field {k!r} of {instance!r}")
             assert data, (
                 f"Error serializing {instance=}, of type {type(instance)}, "
                 "no data found. Did you type annotate?"
@@ -144,6 +146,8 @@ def serialize(instance, annotation):
                 f"expected  {annotation}, got {type(instance)}"
             )
     except Exception as e:
+        if exception_already_desribed:
+            raise
         raise type(e)(
             f"Error serialising {instance!r}, of type {type(instance)} "
             f"expecting {annotation}, got {type(instance)}"

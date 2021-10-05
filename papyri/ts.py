@@ -24,6 +24,7 @@ from papyri.take2 import (
     Lines,
     Directive,
     BlockVerbatim,
+    BlockDirective,
     Words,
     FieldList,
     FieldListItem,
@@ -243,14 +244,49 @@ class TSVisitor:
         assert False
         return []
 
+    # def visit_arguments(self, node, prev_end=None):
+    #    assert False
+    #    return []
+
     def visit_directive(self, node, prev_end=None):
-        # TODO
-        assert False
-        return []
+
+        # directive_name: str
+        # args0: List[str]
+        ## TODO : this is likely wrong...
+        # inner: Optional[Paragraph]
+
+        _, _role, _, body = node.children
+        role = self.bytes[_role.start_byte : _role.end_byte].decode()
+
+        if len(body.children) == 2:
+            arguments, content = body.children
+            args0 = (
+                self.bytes[
+                    arguments.children[0].start_byte : arguments.children[-1].end_byte
+                ]
+                .decode()
+                .splitlines()
+            )
+        else:
+            [content] = body.children
+            args0 = []
+
+        #        import ipdb
+        #
+        #        ipdb.set_trace()
+
+        directive = BlockDirective()
+        directive.args0 = args0
+        directive.directive_name = role
+        directive.inner = Paragraph(compress_word(self.visit(content)), [])
+        directive.lines = Lines()
+        directive.wh = Lines()
+        directive.ind = Lines()
+        return [directive]
 
     def visit_footnote_reference(self, node, prev_end=None):
         # TODO
-        assert False
+        # assert False, self.bytes[node.start_byte : node.end_byte].decode()
         return []
 
     def visit_emphasis(self, node, prev_end=None):
@@ -275,7 +311,8 @@ class TSVisitor:
 
     def visit_footnote(self, node, prev_end=None):
         # TODO
-        assert False
+        # that is actually used for references
+        # assert False, self.bytes[node.start_byte : node.end_byte].decode()
         return []
 
     def visit_ERROR(self, node, prev_end=None):
@@ -283,7 +320,7 @@ class TSVisitor:
         Called with parsing error nodes.
         """
         # TODO
-        assert False
+        # raise TreeSitterParseError()
         return []
 
     def visit_definition_list(self, node, prev_end=None):
@@ -360,3 +397,7 @@ def parse(text: bytes) -> List[Section]:
 
     tree = parser.parse(text)
     return nest_sections(TSVisitor(text, tree.root_node).visit(tree.root_node))
+
+
+class TreeSitterParseError(Exception):
+    pass

@@ -268,11 +268,17 @@ class Directive(Node):
         return hash((tuple(self.value), self.domain, self.role))
 
     def __init__(self, value, domain, role):
+        for l in value:
+            assert isinstance(l, str), l
         self.value = value
         self.domain = domain
+        if domain is not None:
+            assert isinstance(domain, str), domain
         if domain:
             assert role
         self.role = role
+        if role is not None:
+            assert isinstance(role, str), role
 
     @classmethod
     def _instance(cls):
@@ -477,6 +483,7 @@ class Section(Node):
             EnumeratedList,
             BlockQuote,
             Admonition,
+            FieldList,
         ]
     ]
     # might need to be more complicated like verbatim.
@@ -1306,10 +1313,12 @@ class FieldList(Block):
 
 
 class FieldListItem(Block):
-    name: List[Union[Words]]
-    body: Words
+    name: List[Union[Paragraph, Word]]
+    body: List[Union[Words, Paragraph]]
 
     def __init__(self, name, body):
+        for p in body:
+            assert isinstance(p, Paragraph), p
         self.name = name
         self.body = body
 

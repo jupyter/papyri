@@ -822,7 +822,7 @@ class Gen:
         except (AttributeError, TypeError):
             pass
         except OSError:
-            print("Could not find source for {target_item}")
+            print(f"Could not find source for {target_item}")
 
         if not blob.content["Signature"]:
             sig = None
