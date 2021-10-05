@@ -225,7 +225,7 @@ class GraphStore:
         _, p = self._key_to_paths(dest)
         if p.exists():
             data = set(Key(*x) for x in p.read_json())
-            data = data.discard(source)
+            data.discard(source)
             p.write_json(list(sorted(data)))
 
     def put(self, key: Key, bytes_, refs) -> None:

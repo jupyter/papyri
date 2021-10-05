@@ -61,7 +61,6 @@ import sys
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
-from there import print
 
 from papyri.utils import dedent_but_first
 
@@ -1292,6 +1291,27 @@ class DefList(Block):
         return f"<{self.__class__.__name__} '{len(self.children)}'> with\n" + indent(
             "\n".join([str(l) for l in self.children]), "    "
         )
+
+
+class FieldList(Block):
+    children: List[FieldListItem]
+
+    def __init__(self, children=None):
+        self.children = children
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} '{len(self.children)}'> with\n" + indent(
+            "\n".join([str(l) for l in self.children]), "    "
+        )
+
+
+class FieldListItem(Block):
+    name: List[Union[Words]]
+    body: Words
+
+    def __init__(self, name, body):
+        self.name = name
+        self.body = body
 
 
 class DefListItem(Block):

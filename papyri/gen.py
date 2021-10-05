@@ -821,8 +821,8 @@ class Gen:
             item_type = str(type(target_item))
         except (AttributeError, TypeError):
             pass
-        # except OSError:
-        #    pass
+        except OSError:
+            print("Could not find source for {target_item}")
 
         if not blob.content["Signature"]:
             sig = None

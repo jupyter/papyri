@@ -6,7 +6,7 @@ execute_exclude_patterns = ['numpy._', 'numpy.testing._priv', 'numpy.errstate', 
 'numpy.datetime_as_string', 'numpy.shares_memory', 'numpy.squeeze',
 'numpy.average',
 'numpy.ctypeslib', 'numpy.append', 'numpy.ma.core']
-exclude = ['numpy.testing._private.nosetester.NoseTester', 'numpy._pytesttester', 'numpy.all']
+exclude = ['numpy.testing._private.nosetester.NoseTester', 'numpy._pytesttester', 'numpy.all', 'numpy.bytes_']
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
 homepage = 'https://numpy.org'
