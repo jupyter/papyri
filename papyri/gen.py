@@ -437,7 +437,7 @@ def normalise_ref(ref):
     return ref
 
 
-def gen_main(infer, exec_, target_file):
+def gen_main(infer, exec_, target_file, experimental):
     """
     main entry point
     """
@@ -457,7 +457,14 @@ def gen_main(infer, exec_, target_file):
 
     print(target_dir)
     g = Gen()
-    g.do_one_mod(names, infer, exec_, conf, relative_dir=Path(target_file).parent)
+    g.do_one_mod(
+        names,
+        infer,
+        exec_,
+        conf,
+        relative_dir=Path(target_file).parent,
+        experimental=experimental,
+    )
     docs_path: str = conf.get(names[0], {}).get("docs_path", None)
     if docs_path is not None:
         path = Path(docs_path).expanduser()
@@ -905,7 +912,14 @@ class Gen:
         return acc
 
     def do_one_mod(
-        self, names: List[str], infer: bool, exec_: bool, conf: dict, relative_dir: Path
+        self,
+        names: List[str],
+        infer: bool,
+        exec_: bool,
+        conf: dict,
+        relative_dir: Path,
+        *,
+        experimental,
     ):
         """
         Crawl one modules and stores resulting docbundle in self.store.
@@ -1043,7 +1057,8 @@ class Gen:
                         arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
                 except Exception as e:
                     print(f"TS could not parse: {qa}")
-                    raise ValueError(f"from {qa}") from e
+                    if experimental:
+                        raise ValueError(f"from {qa}") from e
                     arbitrary = []
                     # raise
                 try:
@@ -1095,6 +1110,8 @@ class Gen:
 
                 # processing....
                 doc_blob.signature = doc_blob.content.pop("Signature")
+
+                ## TODO: here type instability of Summary, and other stuff convert before.
                 try:
                     for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
                         if section in doc_blob.content:
@@ -1110,11 +1127,17 @@ class Gen:
                                     tssc = tsc[0]
                                 else:
                                     tssc = Section()
+                                assert isinstance(tssc, Section)
                                 doc_blob.content[section] = tssc
                             else:
                                 doc_blob.content[section] = Section()
                 except Exception as e:
-                    raise type(e)(f"during {qa}") from e
+                    if experimental:
+                        raise type(e)(f"during {qa}") from e
+                if "Summary" in doc_blob.content:
+                    assert isinstance(
+                        doc_blob.content["Summary"], list
+                    ), doc_blob.content["Summary"]
 
                 doc_blob.references = doc_blob.content.pop("References")
                 if isinstance(doc_blob.references, str):
