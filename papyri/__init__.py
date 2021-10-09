@@ -355,11 +355,11 @@ def ascii(name: str):
 
 
 @app.command()
-def serve():
+def serve(sidebar: bool = True):
     _intro()
     from .render import serve
 
-    serve()
+    serve(sidebar=sidebar)
 
 
 @app.command()

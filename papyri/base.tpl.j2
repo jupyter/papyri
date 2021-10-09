@@ -61,6 +61,7 @@ body{
               top: 30px;
               left:0; 
               width: 100%;
+              height: 42px;
               backdrop-filter: blur(5px);
               background-color: rgba(255, 255, 255, .15);
           }
@@ -75,6 +76,9 @@ body{
               padding-bottom: 0.5rem;
               display: inline-block; 
               width: 167px;
+              {% if not sidebar %}
+                  display: none;
+            {% endif %}
 
           }
           brand > a {color:#606c76}
@@ -82,8 +86,10 @@ body{
               padding-right: 0.5rem;
 
         }
-          nav{display:inline;
-          padding-left: 1rem;
+          nav{display:inline-block;
+              padding: 10px;
+              padding-left: 1rem;
+
           }
 
           dd {
@@ -106,6 +112,9 @@ body{
                 padding-top: 3rem;
  
                 box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+                {% if not sidebar %}
+                    display: none;
+                {% endif%}
           }
 
           .sidenav a {
@@ -132,6 +141,9 @@ body{
           }
           .container {
               padding-left: 210px;
+              {% if not sidebar %}
+                  padding-left: 10px;
+            {% endif %}
               padding-top: 30px;
 
           }
@@ -166,6 +178,12 @@ body{
   position: relative;
   display: inline-block;
   margin-left: -4px;
+}
+
+nav  a {
+    color: #606c76;
+    text-decoration: none;
+
 }
 
 /* Dropdown Content (Hidden by Default) */
@@ -235,8 +253,8 @@ user-select: none;
 </head>
 <body class="tex2jax_ignore">
     <header>
-        <brand><i class="fab fa-python"></i><a href='/'>Home</a></brand>
-        <nav> <a href='/' >/ p</a>  / 
+            <brand><i class="fab fa-python"></i><a href='/'>Home</a></brand>
+        <nav> / <a href='/' >p</a>  &nbsp;/&nbsp; 
                 <div class="dropdown">
                 <a href={{module}}>{{module}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">

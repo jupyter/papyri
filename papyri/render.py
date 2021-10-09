@@ -104,7 +104,7 @@ async def examples(module, store, version, subpath, ext=""):
     )
 
 
-async def gallery(module, store, version, ext="", gstore=None):
+async def gallery(module, store, version, ext="", gstore=None, *, sidebar):
     assert gstore is not None
 
     m = defaultdict(lambda: [])
@@ -156,6 +156,7 @@ async def gallery(module, store, version, ext="", gstore=None):
     )
     env.globals["len"] = len
     env.globals["url"] = url
+    env.globals["sidebar"] = sidebar
 
     class D:
         pass
@@ -377,7 +378,9 @@ def compute_graph(gs, blob, key):
     return data
 
 
-async def _route(ref, store, version=None, env=None, template=None, gstore=None):
+async def _route(
+    ref, store, version=None, env=None, template=None, gstore=None, *, sidebar
+):
     assert not ref.endswith(".html")
     if env is None:
         env = Environment(
@@ -388,6 +391,7 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
         env.globals["len"] = len
         env.globals["url"] = url
         env.globals["unreachable"] = unreachable
+    env.globals["sidebar"] = sidebar
         # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
     if template is None:
@@ -427,8 +431,8 @@ async def _route(ref, store, version=None, env=None, template=None, gstore=None)
         # The reference we are trying to view exists;
         # we will now just render it.
         # bytes_ = await file_.read_text()
-        key = (root, version, "module", ref)
-        gbytes = gstore.get((root, version, "module", ref)).decode()
+        key = Key(root, version, "module", ref)
+        gbytes = gstore.get(key).decode()
         # assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
         # assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
         assert root is not None
@@ -531,7 +535,7 @@ def logo() -> bytes:
         return f.read()
 
 
-def serve():
+def serve(*, sidebar):
 
     app = QuartTrio(__name__)
 
@@ -539,16 +543,16 @@ def serve():
     gstore = GraphStore(ingest_dir)
 
     async def full(package, version, sub, ref):
-        return await _route(ref, store, version, gstore=gstore)
+        return await _route(ref, store, version, gstore=gstore, sidebar=sidebar)
 
     async def full_gallery(module, version):
-        return await gallery(module, store, version, gstore=gstore)
+        return await gallery(module, store, version, gstore=gstore, sidebar=sidebar)
 
     async def g(module):
-        return await gallery(module, store, gstore=gstore)
+        return await gallery(module, store, gstore=gstore, sidebar=sidebar)
 
     async def gr():
-        return await gallery("*", store, gstore=gstore)
+        return await gallery("*", store, gstore=gstore, sidebar=sidebar)
 
     async def index():
         import papyri
@@ -558,7 +562,11 @@ def serve():
 
     async def ex(module, version, subpath):
         return await examples(
-            module=module, store=store, version=version, subpath=subpath
+            module=module,
+            store=store,
+            version=version,
+            subpath=subpath,
+            sidebar=sidebar,
         )
 
     # return await _route(ref, GHStore(Path('.')))
