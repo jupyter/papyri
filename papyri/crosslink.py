@@ -530,7 +530,7 @@ class TreeReplacer:
                     raise ValueError(f"{node.__class__} has no children {node}")
                 for c in node.children:
                     assert c is not None, f"{node=} has a None child"
-                    assert isinstance(c, Node), node
+                    assert isinstance(c, Node), c
                     replacement = self.generic_visit(c)
                     # if node.__class__.__name__ == "Param":
                     #    print(
