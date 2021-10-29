@@ -43,10 +43,15 @@ from typing import Optional, Any
 try:
     from . import ts
 except (ImportError, OSError):
-    print(
-        "Tree Sitter RST parser not available, you may need to do `papyri build-parser`"
+    import sys
+    sys.exit(
+            """
+            Tree Sitter RST parser not available, you may need to:
+
+            $ git clone https://github.com/stsewd/tree-sitter-rst
+            $ papyri build-parser
+            """
     )
-    ts
 
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
