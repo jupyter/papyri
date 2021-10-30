@@ -98,7 +98,10 @@
     {% else %}
        {%- set type = obj.__class__.__name__ -%}
        {%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim','Words') -%}
-            {{unreachable()}}
+           {# {{unreachable(obj)}} #}
+           {{obj.value}}  {# TODO : likely smth wrong with field list #}
+        
+
        {%- elif type == 'Directive' -%}
            {{unreachable()}}
        {% elif type == 'Math' %}
@@ -155,6 +158,22 @@
                <li>{{render_II(item)}}</li>
                {% endfor %}
             <ol>
+       {% elif type == 'FieldList' %}
+           # TODO : finish FieldList rendering
+           <ol>
+               {%- for item in obj.children %}
+               <li>{{render_II(item)}}</li>
+               {% endfor %}
+               <ol>
+
+        {% elif type == 'FieldListItem' %}
+           # TODO : finish FieldListItem rendering
+           <ol>
+               {%- for item in obj.children %}
+               <li>{{render_II(item)}}</li>
+               {% endfor %}
+            <ol>
+
        {% elif type == 'BlockMath' %}
         <span class="tex2jax_process">$${{obj.value}}$$</span>
        {% elif type == 'BlockQuote' %}

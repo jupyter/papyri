@@ -373,7 +373,6 @@ class Word(Node):
 
     @classmethod
     def _instance(cls):
-        assert False
         return cls("")
 
     def __repr__(self):
@@ -1313,14 +1312,27 @@ class FieldList(Block):
 
 
 class FieldListItem(Block):
-    name: List[Union[Paragraph, Word]]
-    body: List[Union[Words, Paragraph]]
+    name: List[Union[Paragraph, Words, Word]]
+    body: List[Union[Words, Paragraph, Word]]
 
-    def __init__(self, name, body):
+    def __init__(self, name=None, body=None):
+        if body is None:
+            body = []
         for p in body:
             assert isinstance(p, Paragraph), p
         self.name = name
         self.body = body
+
+    @property
+    def children(self):
+        return [*self.name, *self.body]
+
+    @children.setter
+    def children(self, value):
+        x,*y = value
+        self.name = [x]
+        self.body = y
+
 
 
 class DefListItem(Block):

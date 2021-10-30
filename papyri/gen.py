@@ -460,7 +460,7 @@ def gen_main(infer, exec_, target_file, experimental):
     if not target_dir.exists():
         target_dir.mkdir(parents=True, exist_ok=True)
 
-    print(target_dir)
+    print('Writing data in', target_dir)
     g = Gen()
     g.do_one_mod(
         names,
@@ -987,7 +987,7 @@ class Gen:
         root = names[0].split(".")[0]
         module_conf = conf.get(root, {})
         examples_folder = module_conf.get("examples_folder", None)
-        print("EF", examples_folder)
+        print("Example Folder", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(examples_folder)
@@ -1117,8 +1117,8 @@ class Gen:
                 doc_blob.signature = doc_blob.content.pop("Signature")
 
                 ## TODO: here type instability of Summary, and other stuff convert before.
-                try:
-                    for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
+                for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
+                    try:
                         if section in doc_blob.content:
                             if data := doc_blob.content[section]:
                                 # assert (
@@ -1136,12 +1136,24 @@ class Gen:
                                 doc_blob.content[section] = tssc
                             else:
                                 doc_blob.content[section] = Section()
-                except Exception as e:
-                    if experimental:
-                        raise type(e)(f"during {qa}") from e
+                    except Exception as e:
+                        print(f'Skipping section {section} in {qa}')
+                        doc_blob.content[section] = ts.parse(b'Parsing not NotImplemented for this section.')[0]
+                        if experimental:
+                            raise type(e)(f"during {qa}") from e
+                    
+                if not isinstance(doc_blob.content["Summary"], Section):
+                    assert isinstance(doc_blob.content["Summary"], list) 
+                    assert len(doc_blob.content["Summary"]) == 1
+                    #doc_blob.content["Summary"] = ts.parse(
+
+                    for s in doc_blob.content["Summary"]:
+                        assert isinstance(s, str)
+
+
                 if "Summary" in doc_blob.content:
                     assert isinstance(
-                        doc_blob.content["Summary"], list
+                        doc_blob.content["Summary"], Section
                     ), doc_blob.content["Summary"]
 
                 doc_blob.references = doc_blob.content.pop("References")
