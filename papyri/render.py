@@ -471,6 +471,7 @@ async def _route(
             backrefs=doc_blob.backrefs,
             pygment_css=css_data,
             graph=json_str,
+            sidebar=sidebar,
         )
     else:
         # The reference we are trying to render does not exists
@@ -581,7 +582,7 @@ def serve(*, sidebar):
     app.route("/gallery/")(gr)
     app.route("/gallery/<module>")(g)
     app.route("/")(index)
-    port = os.environ.get("PORT", 5000)
+    port = os.environ.get("PORT", 1234)
     print("Seen config port ", port)
     prod = os.environ.get("PROD", None)
     if prod:

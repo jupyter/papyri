@@ -12,7 +12,7 @@ class Papyri(Magics):
 
         version = sys.modules[root].__version__
         return IFrame(
-            f"http://127.0.0.1:5000/p/{root}/{version}/api/{fq}", "100%", "100%"
+            f"http://127.0.0.1:1234/p/{root}/{version}/api/{fq}", "100%", "100%"
         )
 
     @line_magic
