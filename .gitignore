@@ -1,5 +1,8 @@
 .pytest_cache/
 cache
+htmlcov
+.hypothesis
+.coverage
 html
 build
 *.lprof
