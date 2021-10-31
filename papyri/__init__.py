@@ -335,13 +335,13 @@ def bootstrap(file: str):
 
 
 @app.command()
-def render(ascii: bool = False, html: bool = True, dry_run: bool = False):
+def render(ascii: bool = False, html: bool = True, dry_run: bool = False, sidebar: bool=True):
     _intro()
     import trio
 
     from .render import main as m2
 
-    trio.run(m2, ascii, html, dry_run)
+    trio.run(m2, ascii, html, dry_run, sidebar)
 
 
 @app.command()

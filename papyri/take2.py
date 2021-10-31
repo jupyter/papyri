@@ -1315,7 +1315,9 @@ class FieldListItem(Block):
     name: List[Union[Paragraph, Word, Words]]
     body: List[Union[Words, Paragraph, Word]]
 
-    def __init__(self, name=None, body=()):
+    def __init__(self, name=None, body=None):
+        if body is None:
+            body = []
         for p in body:
             assert isinstance(p, Paragraph), p
         if name:
@@ -1332,9 +1334,9 @@ class FieldListItem(Block):
 
     @children.setter
     def children(self, value):
-        self.name, *self.body = value
-        if not isinstance(self.name, list):
-            self.name = [self.name]
+        x, *y = value
+        self.name = [x]
+        self.body = y
 
 
 class DefListItem(Block):

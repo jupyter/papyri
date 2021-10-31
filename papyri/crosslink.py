@@ -570,18 +570,24 @@ class DirectiveVisiter(TreeReplacer):
             "versionadded",
             "deprecated",
         ]:
-            assert len(block_directive.args0) == 1
-            version = block_directive.args0[0].strip()
+            # TODO:
+            if len(block_directive.args0) == 1:
+                title, children = block_directive.args0[0], block_directive.children
+            else:
+                title, children = 'TODO', block_directive.children
+
             return [
                 Admonition(
                     block_directive.directive_name,
-                    version,
-                    block_directive.children,
+                    title,
+                    children,
                 )
             ]
 
         elif block_directive.directive_name in ["math"]:
-            assert len(block_directive.args0) == 1
+            #assert len(block_directive.args0) == 1
+            if not block_directive.children:
+                assert len(block_directive.args0) == 1, (block_directive.args0, block_directive.children)
             if ch := block_directive.children:
                 assert len(ch) == 1
                 assert not ch[0].inner

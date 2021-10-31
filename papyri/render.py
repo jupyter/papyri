@@ -601,6 +601,7 @@ def render_one(
     parts={},
     parts_links={},
     graph="{}",
+    sidebar
 ):
     """
     Return the rendering of one document
@@ -651,6 +652,7 @@ def render_one(
             parts_links=parts_links,
             pygment_css=pygment_css,
             graph=graph,
+            sidebar=sidebar,
         )
     except Exception as e:
         raise ValueError("qa=", qa) from e
@@ -832,7 +834,7 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
         raise type(e)(f"Error in {qa}") from e
 
 
-async def main(ascii, html, dry_run):
+async def main(ascii, html, dry_run, sidebar):
 
     gstore = GraphStore(ingest_dir, {})
     store = Store(ingest_dir)
@@ -877,7 +879,7 @@ async def main(ascii, html, dry_run):
         set(mv2), description="Rendering galleries..."
     ):
         # version, module = item.path.name, item.path.parent.name
-        data = await gallery(module, store, version, ext=".html", gstore=gstore)
+        data = await gallery(module, store, version, ext=".html", gstore=gstore, sidebar=sidebar)
         (output_dir / module / version / "gallery").mkdir(parents=True, exist_ok=True)
         with (output_dir / module / version / "gallery" / "index.html").open("w") as f:
             f.write(data)
@@ -907,6 +909,7 @@ async def main(ascii, html, dry_run):
                 backrefs=doc_blob.backrefs,
                 pygment_css=css_data,
                 graph=json_str,
+                sidebar=sidebar
             )
             if not dry_run:
                 (output_dir / module / version / "api").mkdir(
@@ -931,6 +934,7 @@ async def main(ascii, html, dry_run):
             ref_map=ref_map,
         )
         data = render_one(
+            sidebar=sidebar,
             template=template,
             doc=doc_blob,
             qa=qa,
