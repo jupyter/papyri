@@ -703,7 +703,7 @@ class DirectiveVisiter(TreeReplacer):
         if " <" in text and text.endswith(">"):
             try:
                 text, to_resolve = text.split(" <")
-            except Exception:
+            except ValueError:
                 assert False, directive.text
             assert to_resolve.endswith(">"), (text, to_resolve)
             to_resolve = to_resolve.rstrip(">")

@@ -1060,11 +1060,13 @@ class Gen:
                         )
                     else:
                         arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
-                except Exception as e:
+                except AssertionError as e:
                     print(f"TS could not parse: {qa}")
                     if experimental:
                         raise ValueError(f"from {qa}") from e
                     arbitrary = []
+                except Exception as e:
+                    raise type(e)(f"from {qa}")
                     # raise
                 try:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
