@@ -342,7 +342,9 @@ def bootstrap(file: str):
 
 
 @app.command()
-def render(ascii: bool = False, html: bool = True, dry_run: bool = False, sidebar: bool=True):
+def render(
+    ascii: bool = False, html: bool = True, dry_run: bool = False, sidebar: bool = True
+):
     _intro()
     import trio
 

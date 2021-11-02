@@ -392,7 +392,7 @@ async def _route(
         env.globals["url"] = url
         env.globals["unreachable"] = unreachable
     env.globals["sidebar"] = sidebar
-        # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
+    # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
     if template is None:
         template = env.get_template("core.tpl.j2")
@@ -602,7 +602,7 @@ def render_one(
     parts={},
     parts_links={},
     graph="{}",
-    sidebar
+    sidebar,
 ):
     """
     Return the rendering of one document
@@ -729,6 +729,7 @@ async def _ascii_render(key, store, known_refs=None, template=None):
         backrefs=doc_blob.backrefs,
         pygment_css=None,
         graph=json_str,
+        sidebar=False,  # no effects
     )
 
 
@@ -880,7 +881,9 @@ async def main(ascii, html, dry_run, sidebar):
         set(mv2), description="Rendering galleries..."
     ):
         # version, module = item.path.name, item.path.parent.name
-        data = await gallery(module, store, version, ext=".html", gstore=gstore, sidebar=sidebar)
+        data = await gallery(
+            module, store, version, ext=".html", gstore=gstore, sidebar=sidebar
+        )
         (output_dir / module / version / "gallery").mkdir(parents=True, exist_ok=True)
         with (output_dir / module / version / "gallery" / "index.html").open("w") as f:
             f.write(data)
@@ -910,7 +913,7 @@ async def main(ascii, html, dry_run, sidebar):
                 backrefs=doc_blob.backrefs,
                 pygment_css=css_data,
                 graph=json_str,
-                sidebar=sidebar
+                sidebar=sidebar,
             )
             if not dry_run:
                 (output_dir / module / version / "api").mkdir(

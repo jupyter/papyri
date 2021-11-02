@@ -44,13 +44,13 @@ import logging
 from rich.logging import RichHandler
 
 
-
 try:
     from . import ts
 except (ImportError, OSError):
     import sys
+
     sys.exit(
-            """
+        """
             Tree Sitter RST parser not available, you may need to:
 
             $ git clone https://github.com/stsewd/tree-sitter-rst
@@ -1162,15 +1162,14 @@ class Gen:
                         )[0]
                         if experimental:
                             raise type(e)(f"during {qa}") from e
-                    
+
                 if not isinstance(doc_blob.content["Summary"], Section):
-                    assert isinstance(doc_blob.content["Summary"], list) 
+                    assert isinstance(doc_blob.content["Summary"], list)
                     assert len(doc_blob.content["Summary"]) == 1
-                    #doc_blob.content["Summary"] = ts.parse(
+                    # doc_blob.content["Summary"] = ts.parse(
 
                     for s in doc_blob.content["Summary"]:
                         assert isinstance(s, str)
-
 
                 if "Summary" in doc_blob.content:
                     assert isinstance(
