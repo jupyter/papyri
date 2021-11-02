@@ -309,6 +309,7 @@ def gen(
         False, help="Whether to attempt to execute doctring code."
     ),
     experimental: bool = typer.Option(False, help="Use experimental Ts parsing"),
+    debug: bool = False,
 ):
     """
     Generate documentation for a given package.
@@ -320,7 +321,13 @@ def gen(
     _intro()
     from papyri.gen import gen_main
 
-    gen_main(infer=infer, exec_=exec, target_file=file, experimental=experimental)
+    gen_main(
+        infer=infer,
+        exec_=exec,
+        target_file=file,
+        experimental=experimental,
+        debug=debug,
+    )
 
 
 @app.command()

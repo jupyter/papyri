@@ -40,6 +40,11 @@ from .vref import NumpyDocString
 
 from typing import Optional, Any
 
+import logging
+from rich.logging import RichHandler
+
+
+
 try:
     from . import ts
 except (ImportError, OSError):
@@ -442,7 +447,7 @@ def normalise_ref(ref):
     return ref
 
 
-def gen_main(infer, exec_, target_file, experimental):
+def gen_main(infer, exec_, target_file, experimental, debug):
     """
     main entry point
     """
@@ -460,8 +465,11 @@ def gen_main(infer, exec_, target_file, experimental):
     if not target_dir.exists():
         target_dir.mkdir(parents=True, exist_ok=True)
 
-    print('Writing data in', target_dir)
     g = Gen()
+    g.log.info("Will write data to %s", target_dir)
+    if debug:
+        g.log.setLevel("DEBUG")
+        g.log.debug("Log level set to debug")
     g.do_one_mod(
         names,
         infer,
@@ -477,6 +485,7 @@ def gen_main(infer, exec_, target_file, experimental):
     p = target_dir / (g.root + "_" + g.version)
     p.mkdir(exist_ok=True)
 
+    g.log.info("Saving current Doc bundle to  %s", p)
     g.clean(p)
     g.write(p)
 
@@ -704,6 +713,14 @@ class DocBlob(Node):
 
 class Gen:
     def __init__(self):
+
+        FORMAT = "%(message)s"
+        logging.basicConfig(
+            level="INFO", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+        )
+
+        self.log = logging.getLogger("papyri")
+
         self.data = {}
         self.bdata = {}
         self.metadata = {}
@@ -834,7 +851,7 @@ class Gen:
         except (AttributeError, TypeError):
             pass
         except OSError:
-            print(f"Could not find source for {target_item}")
+            self.log.warn("Could not find source for %s", target_item)
 
         if not blob.content["Signature"]:
             sig = None
@@ -987,7 +1004,7 @@ class Gen:
         root = names[0].split(".")[0]
         module_conf = conf.get(root, {})
         examples_folder = module_conf.get("examples_folder", None)
-        print("Example Folder", examples_folder)
+        self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(examples_folder)
@@ -998,7 +1015,7 @@ class Gen:
                 for name, data in figs:
                     print("put one fig", name)
                     self.put_raw(name, data)
-        print("Configuration:", json.dumps(module_conf, indent=2))
+        self.log.debug("Configuration: %s", module_conf)
         self.root = root
         self.version = version
         subs = module_conf.get("submodules", [])
@@ -1029,7 +1046,7 @@ class Gen:
                     print("differs: {item} != {other}")
 
         for target in module_conf.get("exclude", []):
-            print("exclude tgt:", target)
+            self.log.info("exclude target: %s", target)
             del collected[target]
         # p = nullcontext
         with p() as p2:
@@ -1061,7 +1078,7 @@ class Gen:
                     else:
                         arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
                 except AssertionError as e:
-                    print(f"TS could not parse: {qa}")
+                    self.log.warning(f"TS could not parse %s", qa)
                     if experimental:
                         raise ValueError(f"from {qa}") from e
                     arbitrary = []
@@ -1139,8 +1156,10 @@ class Gen:
                             else:
                                 doc_blob.content[section] = Section()
                     except Exception as e:
-                        print(f'Skipping section {section} in {qa}')
-                        doc_blob.content[section] = ts.parse(b'Parsing not NotImplemented for this section.')[0]
+                        self.log.warning(f"Skipping section {section} in {qa}")
+                        doc_blob.content[section] = ts.parse(
+                            b"Parsing not NotImplemented for this section."
+                        )[0]
                         if experimental:
                             raise type(e)(f"during {qa}") from e
                     

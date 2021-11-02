@@ -31,8 +31,18 @@ from .take2 import (
     Verbatim,
 )
 from .utils import progress
+import logging
+from rich.logging import RichHandler
 
 warnings.simplefilter("ignore", UserWarning)
+
+
+FORMAT = "%(message)s"
+logging.basicConfig(
+    level="INFO", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+)
+
+log = logging.getLogger("papyri")
 
 
 def g_find_all_refs(graph_store):
@@ -216,9 +226,9 @@ class IngestedBlobs(Node):
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
             # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {self.qa}"
-            print(f"Newly found {len(visitor.total)} links in {self.qa}:")
+            log.info(f"Newly found %s links in %s", len(visitor.total), self.qa)
             for a, b in visitor.total:
-                print("     ", repr(a), "refers to", repr(b))
+                log.info("     %s refers to %s", repr(a), repr(b))
 
         self.example_section_data = visitor.visit(self.example_section_data)
 
@@ -643,7 +653,6 @@ class DirectiveVisiter(TreeReplacer):
         ]:
             # print("TODO:", block_directive.directive_name)
             return [block_directive]
-        print(block_directive.directive_name, self.qa)
         return [block_directive]
 
     def _resolve(self, loc, text):
