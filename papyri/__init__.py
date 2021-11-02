@@ -105,19 +105,17 @@ Here are a couple of function that are of interest to explore what papyri can do
 """
 
 
-from pathlib import Path
-from typing import List
-from . import examples
-from functools import lru_cache
-
-import zipfile
 import io
 import sys
-
-
-import typer
+import zipfile
+from functools import lru_cache
+from pathlib import Path
+from typing import List
 
 import toml
+import typer
+
+from . import examples
 
 __version__ = "0.0.8"
 
@@ -203,13 +201,15 @@ def install(names: List[str], check: bool = False):
     WIP, download and install a remote docbundle
     """
 
-    from tempfile import TemporaryDirectory
-    from . import crosslink as cr
-    import trio
-    import httpx
-    from rich.console import Console
     from io import BytesIO
+    from tempfile import TemporaryDirectory
+
+    import httpx
     import rich
+    import trio
+    from rich.console import Console
+
+    from . import crosslink as cr
 
     console = Console()
 

@@ -22,30 +22,23 @@
 """
 Urwid tour.  Shows many of the standard widget types and features.
 """
+import json
+import pathlib
 import sys
-
 from typing import List
 
 import urwid
 import urwid.raw_display
 import urwid.web_display
+from there import syslogprint as LOG
 from urwid import Text
 from urwid.canvas import CompositeCanvas, apply_text_layout
-from urwid.command_map import (
-    CURSOR_DOWN,
-    CURSOR_LEFT,
-    CURSOR_RIGHT,
-    CURSOR_UP,
-)
+from urwid.command_map import CURSOR_DOWN, CURSOR_LEFT, CURSOR_RIGHT, CURSOR_UP
+from urwid.text_layout import calc_coords
 from urwid.widget import LEFT, SPACE
 
 from papyri.crosslink import load_one
 from papyri.take2 import RefInfo
-from urwid.text_layout import calc_coords
-
-from there import syslogprint as LOG
-import json
-import pathlib
 
 
 class Link:

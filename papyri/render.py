@@ -12,14 +12,14 @@ from typing import Optional
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pygments.formatters import HtmlFormatter
+from quart import redirect
 from quart_trio import QuartTrio
 from there import print
-from quart import redirect
 
 from .config import html_dir, ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
-from .stores import Store
 from .graphstore import GraphStore, Key
+from .stores import Store
 from .take2 import RefInfo
 from .utils import progress
 

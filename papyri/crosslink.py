@@ -2,37 +2,37 @@ from __future__ import annotations
 
 import builtins
 import json
+import logging
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, List, Optional, Tuple, Set
+from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple
 
+from rich.logging import RichHandler
 from there import print
 
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
 from .take2 import (
-    Math,
     Admonition,
-    Directive,
     BlockDirective,
     BlockMath,
+    Code2,
+    Directive,
     Link,
+    Math,
     Node,
     Param,
     RefInfo,
     Section,
     SeeAlsoItem,
-    Code2,
     Token,
     Verbatim,
 )
 from .utils import progress
-import logging
-from rich.logging import RichHandler
 
 warnings.simplefilter("ignore", UserWarning)
 

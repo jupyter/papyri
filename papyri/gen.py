@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import io
 import json
+import logging
 import os
 import sys
 from collections import defaultdict
@@ -16,6 +17,7 @@ import toml
 from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
+from rich.logging import RichHandler
 from rich.progress import BarColumn, Progress, ProgressColumn
 from rich.progress import Text as RichText
 from rich.progress import TextColumn
@@ -33,16 +35,11 @@ from .take2 import (
     Section,
     SeeAlsoItem,
     Text,
+    make_block_3,
+    parse_rst_to_papyri_tree,
 )
-from .take2 import parse_rst_to_papyri_tree, Node, make_block_3
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
-
-from typing import Optional, Any
-
-import logging
-from rich.logging import RichHandler
-
 
 try:
     from . import ts

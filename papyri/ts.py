@@ -1,5 +1,6 @@
-from tree_sitter import Language, Parser
 from pathlib import Path
+
+from tree_sitter import Language, Parser
 
 pth = str(Path(__file__).parent / "rst.so")
 
@@ -9,25 +10,24 @@ parser.set_language(RST)
 
 from typing import List
 
-
 from papyri.take2 import (
-    Verbatim,
-    Paragraph,
-    compress_word,
-    Word,
+    BlockDirective,
     BlockQuote,
-    Section,
+    BlockVerbatim,
     BulletList,
-    EnumeratedList,
     DefList,
     DefListItem,
-    Lines,
     Directive,
-    BlockVerbatim,
-    BlockDirective,
-    Words,
+    EnumeratedList,
     FieldList,
     FieldListItem,
+    Lines,
+    Paragraph,
+    Section,
+    Verbatim,
+    Word,
+    Words,
+    compress_word,
 )
 
 

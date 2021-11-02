@@ -61,7 +61,6 @@ import sys
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
-
 from papyri.utils import dedent_but_first
 
 # 3x -> 9x for bright

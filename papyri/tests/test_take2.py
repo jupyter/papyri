@@ -7,8 +7,8 @@ from ..take2 import (
     Example,
     Header,
     Lines,
-    parse_rst_to_papyri_tree,
     make_block_3,
+    parse_rst_to_papyri_tree,
 )
 
 examples = [

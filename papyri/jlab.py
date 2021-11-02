@@ -1,6 +1,8 @@
-from IPython.core.magic import Magics, magics_class, line_magic
-from IPython.display import IFrame
 import sys
+
+from IPython.core.magic import Magics, line_magic, magics_class
+from IPython.display import IFrame
+
 
 # The class MUST call this class decorator at creation time
 @magics_class

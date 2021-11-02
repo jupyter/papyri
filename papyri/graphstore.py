@@ -1,9 +1,8 @@
-from pathlib import Path as _Path
-
-from collections import namedtuple
 import json
-from typing import Tuple, List
 import sqlite3
+from collections import namedtuple
+from pathlib import Path as _Path
+from typing import List, Tuple
 
 
 class Path:
