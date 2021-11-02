@@ -613,7 +613,6 @@ class DirectiveVisiter(TreeReplacer):
 
             return [res]
         elif block_directive.directive_name in ["warning", "note"]:
-            title = None
             args0 = block_directive.args0
             args0 = [a.strip() for a in args0 if a.strip()]
             if args0:
@@ -627,6 +626,8 @@ class DirectiveVisiter(TreeReplacer):
                 #    repr(block_directive.children),
                 # )
                 title = args0[0]
+            else:
+                title = ""
 
             assert block_directive.children is not None, block_directive
             return [

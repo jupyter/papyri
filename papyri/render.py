@@ -536,7 +536,7 @@ def logo() -> bytes:
         return f.read()
 
 
-def serve(*, sidebar):
+def serve(*, sidebar: bool):
 
     app = QuartTrio(__name__)
 
@@ -582,7 +582,7 @@ def serve(*, sidebar):
     app.route("/gallery/")(gr)
     app.route("/gallery/<module>")(g)
     app.route("/")(index)
-    port = os.environ.get("PORT", 1234)
+    port = int(os.environ.get("PORT", 1234))
     print("Seen config port ", port)
     prod = os.environ.get("PROD", None)
     if prod:
