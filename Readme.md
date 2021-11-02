@@ -10,6 +10,8 @@ rendering (both in terminal and html) and many other things.
 
 See some of the reason behind it  on [this blog post](https://labs.quansight.org/blog/2021/05/rethinking-jupyter-documentation/)
 
+And this [small presentation at CZI EOSS4 meeting in early november 2021](https://docs.google.com/presentation/d/1sSh44smooCiOlj0-Zrac9n5KX0K_ABBFznDmMIwUnbM/edit?usp=sharing)
+
 # screenshots
 
 
