@@ -1,7 +1,7 @@
 # Papyri
 
 
-Papery is a set of tools to build, publish (to be done), install and render
+Papyri is a set of tools to build, publish (to be done), install and render
 documentation within IPython and Jupyter.
 
 It allows bidirectional crosslink across libraries, navigation, proper reflow of
