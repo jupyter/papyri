@@ -170,7 +170,8 @@ class TSVisitor:
         self.depth = 0
 
     def visit_document(self, node):
-        items = self.visit(node.without_whitespace())
+        new_node = node.without_whitespace()
+        items = self.visit(new_node)
         res =  [x for x in items if not isinstance(x, Whitespace)]
         return res
 

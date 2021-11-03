@@ -662,7 +662,11 @@ def compress_word(stream):
             if type(item).__name__ == "Whitespace":
                 acc.append(Words(item.value))
                 wds = ""
-            acc.append(item)
+            else:
+                if wds:
+                    acc.append(Words(wds))
+                    wds = ''
+                acc.append(item)
     if wds:
         acc.append(Words(wds))
     return acc
