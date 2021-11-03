@@ -180,10 +180,8 @@
        {% elif type == 'BlockMath' %}
         <span class="tex2jax_process">$${{obj.value}}$$</span>
        {% elif type == 'BlockQuote' %}
-            # TODO : finish blockquote rendering
             <pre>
-               {%- for line in obj.value %}{{line}}
-               {% endfor %}
+               {%- for line in obj.value %}{{line}}{{'\n'}}{% endfor -%}
             </pre>
 
        {% else %}

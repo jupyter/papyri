@@ -18,7 +18,7 @@ Usage
 
   $ papyri gen <config file>
 
-  $ papyri ingest ...
+  $ papyri ingest ~/.papyri/data/library_version/
 
   $ papyri render
 

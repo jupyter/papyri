@@ -1123,9 +1123,7 @@ class Gen:
                         )
                     if isinstance(target_item, ModuleType):
                         # TODO: ndoc-placeholder : remove placeholder here
-                        ndoc = NumpyDocString(
-                            f"Was not able to parse docstring for {qa}"
-                        )
+                        ndoc = NumpyDocString(f"To remove in the future –– {qa}")
                     else:
                         continue
                 if not isinstance(target_item, ModuleType):
