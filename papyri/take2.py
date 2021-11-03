@@ -291,7 +291,12 @@ class Directive(Node):
         return cls("", "", "")
 
     def __eq__(self, other):
-        return (type(self) == type(other)) and (self.role == other.role) and (other.domain == self.domain) and (self.text == other.text)
+        return (
+            (type(self) == type(other))
+            and (self.role == other.role)
+            and (other.domain == self.domain)
+            and (self.text == other.text)
+        )
 
     @property
     def text(self):
@@ -398,6 +403,7 @@ class Word(Node):
         assert False
         return hash(self.value)
 
+
 class Words(Node):
     """A sequence of words that does not start not ends with spaces"""
 
@@ -411,7 +417,7 @@ class Words(Node):
         return cls("")
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.value.strip() ==other.value.strip()
+        return type(self) == type(other) and self.value.strip() == other.value.strip()
 
     def __repr__(self):
         return UNDERLINE(self.value)
@@ -712,7 +718,7 @@ def compress_word(stream):
             else:
                 if wds:
                     acc.append(Words(wds))
-                    wds = ''
+                    wds = ""
                 acc.append(item)
     if wds:
         acc.append(Words(wds))

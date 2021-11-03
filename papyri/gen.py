@@ -84,9 +84,6 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
     return p2
 
 
-
-
-
 def paragraphs(lines) -> List[Any]:
     assert isinstance(lines, list)
     for l in lines:

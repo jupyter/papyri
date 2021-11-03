@@ -21,17 +21,17 @@ from papyri.take2 import (
     DefList,
     DefListItem,
     Directive,
+    Emph,
     EnumeratedList,
     FieldList,
     FieldListItem,
     Lines,
     Paragraph,
     Section,
+    Strong,
     Verbatim,
     Word,
     Words,
-    Strong,
-    Emph,
     compress_word,
 )
 
@@ -174,7 +174,7 @@ class TSVisitor:
     def visit_document(self, node):
         new_node = node.without_whitespace()
         items = self.visit(new_node)
-        res =  [x for x in items if not isinstance(x, Whitespace)]
+        res = [x for x in items if not isinstance(x, Whitespace)]
         return res
 
     def visit(self, node):
@@ -217,7 +217,7 @@ class TSVisitor:
 
     def visit_reference(self, node, prev_end=None):
         t = Directive(
-            [self.bytes[node.start_byte+1 : node.end_byte - 2].decode()], None, None
+            [self.bytes[node.start_byte + 1 : node.end_byte - 2].decode()], None, None
         )
         return [t]
 
@@ -269,8 +269,8 @@ class TSVisitor:
 
     def visit_whitespace(self, node, prev_end=None):
         content = self.bytes[node.start_byte : node.end_byte].decode()
-        #assert set(content) == {' '}, repr(content)
-        t = Word(' '*len(content))
+        # assert set(content) == {' '}, repr(content)
+        t = Word(" " * len(content))
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
