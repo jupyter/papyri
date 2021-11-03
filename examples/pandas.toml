@@ -1,0 +1,3 @@
+[pandas]
+exec_failure = "fallback"
+submodules = []
