@@ -184,7 +184,7 @@ class TSVisitor:
         for c in node.children:
             kind = c.type
             if kind == "::":
-                if isinstance(acc[-1], Word):
+                if acc and isinstance(acc[-1], Word):
                     word = acc.pop()
                     acc.append(Word(word.value + "::"))
                 # else:
