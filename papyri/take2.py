@@ -183,6 +183,12 @@ class RefInfo(Node):
 class Verbatim(Node):
     value: List[str]
 
+    def __eq__(self, other):
+        if not type(self) == type(other):
+            return False
+
+        return self.text == other.text
+
     def __hash__(self):
         return hash(tuple(self.value))
 
@@ -282,6 +288,9 @@ class Directive(Node):
     @classmethod
     def _instance(cls):
         return cls("", "", "")
+
+    def __eq__(self, other):
+        return (type(self) == type(other)) and (self.role == other.role) and (other.domain == self.domain) and (self.text == other.text)
 
     @property
     def text(self):
@@ -397,6 +406,9 @@ class Words(Node):
     @classmethod
     def _instance(cls):
         return cls("")
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self.value.strip() ==other.value.strip()
 
     def __repr__(self):
         return UNDERLINE(self.value)

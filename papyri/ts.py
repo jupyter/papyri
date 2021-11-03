@@ -169,6 +169,11 @@ class TSVisitor:
         self.root = root
         self.depth = 0
 
+    def visit_document(self, node):
+        items = self.visit(node.without_whitespace())
+        res =  [x for x in items if not isinstance(x, Whitespace)]
+        return res
+
     def visit(self, node):
         self.depth += 1
         acc = []
@@ -209,7 +214,7 @@ class TSVisitor:
 
     def visit_reference(self, node, prev_end=None):
         t = Directive(
-            [self.bytes[node.start_byte : node.end_byte - 1].decode()], None, None
+            [self.bytes[node.start_byte+1 : node.end_byte - 2].decode()], None, None
         )
         return [t]
 
@@ -231,8 +236,8 @@ class TSVisitor:
 
     def visit_whitespace(self, node, prev_end=None):
         content = self.bytes[node.start_byte : node.end_byte].decode()
-        assert content.isspace()
-        t = Word(content)
+        #assert set(content) == {' '}, repr(content)
+        t = Word(' '*len(content))
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
@@ -263,6 +268,7 @@ class TSVisitor:
         acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
+            assert len(list_item.children) == 2, list_item.children
             _bullet, body = list_item.children
             # assert len(body.children) == 1
             # parg = body.children[0]
@@ -304,7 +310,7 @@ class TSVisitor:
         return [b]
 
     def visit_paragraph(self, node, prev_end=None):
-        sub = self.visit(node)
+        sub = self.visit(node.with_whitespace())
         # if Word("Example") in sub:
         # import ipdb
 
@@ -330,7 +336,9 @@ class TSVisitor:
         print("G" + " " * (self.depth * 4 - 1), node)
         assert False, node
         return []
-        return self.visit(node)
+        res =  self.visit(node)
+        res.to_json()
+        return res
 
     def visit_line_block(self, node, prev_end=None):
         # TODO
@@ -359,7 +367,10 @@ class TSVisitor:
         for list_item in node.children:
             assert list_item.type == "field"
             _, name, _, body = list_item.children
-            f = FieldListItem(self.visit(name), self.visit(body))
+            a,b = self.visit(name), self.visit(body)
+            [_.to_json()for _ in a]
+            [_.to_json() for _ in b]
+            f = FieldListItem(a,b)
             acc.append(f)
         return [FieldList(acc)]
         return []
@@ -388,6 +399,7 @@ class TSVisitor:
         ## TODO : this is likely wrong...
         # inner: Optional[Paragraph]
 
+        assert len(node.children) == 4, node.children
         _, _role, _, body = node.children
         role = self.bytes[_role.start_byte : _role.end_byte].decode()
 
@@ -514,9 +526,11 @@ def nest_sections(items) -> List[Section]:
         acc.append(Section([]))
     for item in items:
         if isinstance(item, Section):
+            item.to_json()
             acc.append(item)
         else:
             acc[-1].children.append(item)
+            acc[-1].to_json()
     # just validation
     # that it's serialisable
     # no side effects.
@@ -532,7 +546,7 @@ def parse(text: bytes) -> List[Section]:
 
     tree = parser.parse(text)
     root = Node(tree.root_node)
-    return nest_sections(TSVisitor(text, root).visit(root))
+    return nest_sections(TSVisitor(text, root).visit_document(root))
 
 
 class TreeSitterParseError(Exception):

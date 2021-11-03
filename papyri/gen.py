@@ -77,8 +77,14 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
     assert isinstance(res, Section), res
     assert len(res.children) == 1
     p2 = res.children[0]
-    assert p == p2, (p, p2)
+    if not p == p2:
+        import ipdb
+        ipdb.set_trace()
+    assert p == p2, (p.children, p2.children )
     return p
+
+
+
 
 
 def paragraphs(lines) -> List[Any]:
