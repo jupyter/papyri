@@ -2,3 +2,10 @@
 logo = "../skimage-logo.png"
 exec_failure = "fallback"
 submodules = [ "morphology", "color", "data", "draw", "exposure", "io", "graph", "segmentation", "transform", "util", "viewer",]
+exclude = ['skimage.transform.radon_transform.iradon',
+           'skimage.morphology._skeletonize.skeletonize_3d',
+           'skimage.morphology._skeletonize_3d_cy',
+           'skimage.feature.texture.greycoprops',
+           'skimage.util.dtype._convert',
+           'skimage.util.dtype.convert'
+           ]
