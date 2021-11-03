@@ -232,6 +232,10 @@ class TSVisitor:
             assert role_value.endswith(":")
             role_value = role_value[1:-1]
             domain = None
+            if ":" in role_value:
+                domain, role_value = role_value.split(":")
+                assert ":" not in role_value
+                assert ":" not in domain
 
         elif len(node.children) == 1:
             [text] = node.children
@@ -396,10 +400,10 @@ class TSVisitor:
         for list_item in node.children:
             assert list_item.type == "field"
             _, name, _, body = list_item.children
-            a,b = self.visit(name), self.visit(body)
-            [_.to_json()for _ in a]
-            [_.to_json() for _ in b]
-            f = FieldListItem(a,b)
+            a, b = compress_word(self.visit(name)), compress_word(self.visit(body))
+            # [_.to_json()for _ in a]
+            # [_.to_json() for _ in b]
+            f = FieldListItem(a, b)
             acc.append(f)
         return [FieldList(acc)]
         return []

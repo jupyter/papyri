@@ -284,6 +284,7 @@ class Directive(Node):
         self.role = role
         if role is not None:
             assert isinstance(role, str), role
+            assert ":" not in role
 
     @classmethod
     def _instance(cls):
@@ -327,6 +328,9 @@ class Directive(Node):
 
         if consume_start is None:
             return None
+
+        if role is not None:
+            assert ":" not in role
 
         for i, t in enumerate(tokens[consume_start:]):
             if t == "`":
@@ -422,8 +426,11 @@ class Words(Node):
 class Emph(Node):
     children: List[Words]
 
-    def __init__(self, value):
+    def __init__(self, value=None):
         self.value = value
+
+    def __hash__(self):
+        return hash(self.value)
 
     @property
     def children(self):
@@ -434,13 +441,13 @@ class Emph(Node):
         [self.value] = children
 
     def __repr__(self):
-        return "*" + repr(self.value) + "*"
+        return hash(repr(self))
 
 
 class Strong(Node):
     children: List[Words]
 
-    def __init__(self, value):
+    def __init__(self, value=None):
         self.value = value
 
     @property
@@ -453,6 +460,9 @@ class Strong(Node):
 
     def __repr__(self):
         return "**" + repr(self.value) + "**"
+
+    def __hash__(self):
+        return hash(repr(self))
 
 
 def lex(lines):
@@ -475,7 +485,9 @@ def lex(lines):
 
 
 class _XList(Node):
-    value: List[Union[Paragraph, EnumeratedList, BulletList, DefList, BlockQuote]]
+    value: List[
+        Union[Paragraph, EnumeratedList, BulletList, DefList, BlockQuote, BlockVerbatim]
+    ]
 
     @property
     def children(self):
@@ -754,7 +766,9 @@ class Paragraph(Node):
         inner = []
         inline = []
         for n in new:
-            if isinstance(n, (Word, Words, Directive, Verbatim, Link, Math)):
+            if isinstance(
+                n, (Word, Words, Directive, Verbatim, Link, Math, Strong, Emph)
+            ):
                 inline.append(n)
             else:
                 break
@@ -763,6 +777,7 @@ class Paragraph(Node):
                 inner.append(n)
 
         assert len(inner) + len(inline) == len(new)
+
         self.inner = inner
         self.inline = inline
 
@@ -1375,7 +1390,7 @@ class FieldListItem(Block):
         for p in body:
             assert isinstance(p, Paragraph), p
         if name:
-            assert len(name) == 1, name
+            assert len(name) == 1, (name, [type(n) for n in name])
         self.name = name
         self.body = body
 
