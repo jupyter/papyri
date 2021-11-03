@@ -394,7 +394,6 @@ class Word(Node):
         assert False
         return hash(self.value)
 
-
 class Words(Node):
     """A sequence of words that does not start not ends with spaces"""
 
@@ -418,6 +417,42 @@ class Words(Node):
 
     def __hash__(self):
         return hash(self.value)
+
+
+class Emph(Node):
+    children: List[Words]
+
+    def __init__(self, value):
+        self.value = value
+
+    @property
+    def children(self):
+        return [self.value]
+
+    @children.setter
+    def children(self, children):
+        [self.value] = children
+
+    def __repr__(self):
+        return "*" + repr(self.value) + "*"
+
+
+class Strong(Node):
+    children: List[Words]
+
+    def __init__(self, value):
+        self.value = value
+
+    @property
+    def children(self):
+        return [self.value]
+
+    @children.setter
+    def children(self, children):
+        [self.value] = children
+
+    def __repr__(self):
+        return "**" + repr(self.value) + "**"
 
 
 def lex(lines):
@@ -680,6 +715,8 @@ class Paragraph(Node):
         Union[
             Word,
             Words,
+            Strong,
+            Emph,
             Directive,
             Verbatim,
             Link,
@@ -695,6 +732,8 @@ class Paragraph(Node):
                 i,
                 (
                     # Word,
+                    Strong,
+                    Emph,
                     Words,
                     Directive,
                     Verbatim,
@@ -1336,7 +1375,7 @@ class FieldListItem(Block):
         for p in body:
             assert isinstance(p, Paragraph), p
         if name:
-            assert len(name) == 1
+            assert len(name) == 1, name
         self.name = name
         self.body = body
 

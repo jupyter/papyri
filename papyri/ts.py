@@ -30,6 +30,8 @@ from papyri.take2 import (
     Verbatim,
     Word,
     Words,
+    Strong,
+    Emph,
     compress_word,
 )
 
@@ -220,8 +222,34 @@ class TSVisitor:
         return [t]
 
     def visit_interpreted_text(self, node, prev_end=None):
+        if len(node.children) == 2:
+            role, text = node.children
+            assert role.type == "role"
+            assert text.type == "interpreted_text"
+
+            role_value = self.bytes[role.start_byte : role.end_byte].decode()
+            assert role_value.startswith(":")
+            assert role_value.endswith(":")
+            role_value = role_value[1:-1]
+            domain = None
+
+        elif len(node.children) == 1:
+            [text] = node.children
+            assert text.type == "interpreted_text"
+            domain = None
+            role = None
+            role_value = None
+        else:
+            assert False
+
+        text_value = self.bytes[text.start_byte : text.end_byte].decode()
+        assert text_value.startswith("`")
+        assert text_value.endswith("`")
+
         t = Directive(
-            [self.bytes[node.start_byte + 1 : node.end_byte - 1].decode()], None, None
+            [text_value[1:-1]],
+            domain=None,
+            role=role_value,
         )
         return [t]
 
@@ -330,15 +358,15 @@ class TSVisitor:
             acc.pop()
         assert len(acc2) < 2
         p = Paragraph(compress_word(acc), [])
-        p.to_json()
+        # p.to_json()
         return [p, *acc2]
 
     def generic_visit(self, node):
         print("G" + " " * (self.depth * 4 - 1), node)
         assert False, node
         return []
-        res =  self.visit(node)
-        res.to_json()
+        res = self.visit(node)
+        # res.to_json()
         return res
 
     def visit_line_block(self, node, prev_end=None):
@@ -441,7 +469,9 @@ class TSVisitor:
 
     def visit_emphasis(self, node, prev_end=None):
         # TODO
-        return []
+        return [
+            Emph(Words(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode()))
+        ]
 
     def visit_substitution_definition(self, node, prev_end=None):
         # TODO
@@ -450,13 +480,13 @@ class TSVisitor:
 
     def visit_comment(self, node, prev_end=None):
         # TODO
-        assert False
+        raise NotImplementedError(self.bytes[node.start_byte : node.end_byte].decode())
         return []
 
     def visit_strong(self, node, prev_end=None):
-        # TODO
-        # assert False
-        return []
+        return [
+            Strong(Words(self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()))
+        ]
 
     def visit_footnote(self, node, prev_end=None):
         # TODO

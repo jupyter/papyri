@@ -60,28 +60,28 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
     """
     return container of (type, obj)
     """
-    p = Paragraph.parse_lines(lines)
-    acc = []
-    for c in p.children:
-        if type(c).__name__ == "Directive":
-            if c.role == "math":
-                acc.append(Math(c.value))
-            else:
-                acc.append(c)
-        else:
-            acc.append(c)
-    p.children = acc
+    #    p = Paragraph.parse_lines(lines)
+    #    acc = []
+    #    for c in p.children:
+    #        if type(c).__name__ == "Directive":
+    #            if c.role == "math":
+    #                acc.append(Math(c.value))
+    #            else:
+    #                acc.append(c)
+    #        else:
+    #            acc.append(c)
+    #    p.children = acc
     res = ts.parse("\n".join(lines).encode())
     assert len(res) == 1
     res = res[0]
-    assert isinstance(res, Section), res
-    assert len(res.children) == 1
+    #    assert isinstance(res, Section), res
+    #    assert len(res.children) == 1
     p2 = res.children[0]
-    if not p == p2:
-        import ipdb
-        ipdb.set_trace()
-    assert p == p2, (p.children, p2.children )
-    return p
+    #    if not p == p2:
+    #        import ipdb
+    #        ipdb.set_trace()
+    # assert p == p2, (p.children, p2.children )
+    return p2
 
 
 
@@ -856,12 +856,29 @@ class Gen:
         item_type = None
         try:
             item_file = inspect.getfile(target_item)
-            item_line = inspect.getsourcelines(target_item)[1]
             item_type = str(type(target_item))
         except (AttributeError, TypeError):
             pass
         except OSError:
-            self.log.warn("Could not find source for %s", target_item)
+            self.log.warn("Could not find source for %s, file=", target_item)
+            import ipdb
+
+            ipdb.set_trace()
+
+        try:
+            item_line = inspect.getsourcelines(target_item)[1]
+        except OSError:
+            self.log.debug("Could not find item_line for %s, (OSERROR)", target_item)
+        except TypeError:
+            if not "built-in" in str(target_item):
+                self.log.debug(
+                    "Could not find item_line for %s, (TYPEERROR), likely from a .so file",
+                    target_item,
+                )
+            else:
+                self.log.debug(
+                    "Could not find item_line for %s, (TYPEERROR)", target_item
+                )
 
         if not blob.content["Signature"]:
             sig = None
@@ -1099,8 +1116,8 @@ class Gen:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
                 except Exception:
                     if not isinstance(target_item, ModuleType):
-                        p2.console.print(
-                            "Unexpected error parsing",
+                        self.log.error(
+                            "Unexpected error parsing %s – %s",
                             target_item,
                             target_item.__name__,
                         )
@@ -1166,7 +1183,9 @@ class Gen:
                             else:
                                 doc_blob.content[section] = Section()
                     except Exception as e:
-                        self.log.warning(f"Skipping section {section} in {qa}")
+                        self.log.exception(
+                            f"Skipping section {section} in {qa} (Error)"
+                        )
                         doc_blob.content[section] = ts.parse(
                             b"Parsing not NotImplemented for this section."
                         )[0]

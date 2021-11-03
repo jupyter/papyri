@@ -3,7 +3,7 @@ Papyri – in progress
 
 Here are a couple of documents, or docstrings that are of interest to see how
 papyri works, generally because they crashed papyri at some point during the
-development, and/or do not work yet.:: 
+development, and/or do not work yet.::
 
 You likely want to see the readme.md file for now which is kept up do date more often.
 
@@ -50,13 +50,13 @@ Here are a couple of function that are of interest to explore what papyri can do
 `IPython.core.completer.Completion`
     item list
 
-`matplotlib.figure.Figure.add_subplot` 
+`matplotlib.figure.Figure.add_subplot`
     custom double dot example
 
 `matplotlib.colors`
     unnumbered list with indent.
 
-`matplotlib.colors` 
+`matplotlib.colors`
     contain a reference via ``.. _palettable: value`` and autolink ``paletable_``.
 
 `numpy.npv`
@@ -91,7 +91,7 @@ Here are a couple of function that are of interest to explore what papyri can do
     blockquote insted of enumerate list (to fix upstream)
 
 `scipy.optimize._lsq.trf`:
-    has lineblocks, which I belive is wrong. 
+    has lineblocks, which I belive is wrong.
 
 `scipy.signal.exponential`:
     multiple figures
@@ -100,6 +100,25 @@ Here are a couple of function that are of interest to explore what papyri can do
     one of the longest numpy docstring/document, or at least one of the longest to render, with
     `scipy.signal.windows.windows.dpss` , `scipy.optimize._minimize.minimize` and
     `scipy.optimize._basinhopping.basinhopping`
+
+
+Changes in behavior
+-------------------
+
+Papyri parsing might be a bit different from docutils/sphinx parsing. As
+docutils try to keep backward compatibility for historical reason, we may be a
+bit stricter on some of the syntax you use to. This allows us to catch more
+errors. Feel free to report differences in parsing, here we document the one we
+do on purpose.
+
+
+Directive must not have spaces before double colon.
+
+    .. directive :: will be seen as a comment.
+            and thus this will not appear in final output.
+
+    .. directive:: is the proper way to write block directive.
+            it will be properly interpreted.
 
 
 """
