@@ -1,4 +1,11 @@
 [dask]
 logo = "../dask-logo.png"
-exclude = [ "dask.utils.Dispatch",]
-docs_path = "~/dev/dask/docs/source"
+submodules = ["array"]
+exclude = [ "dask.utils.Dispatch",
+# target not implemented
+'dask.highlevelgraph.HighLevelGraph.visualize',
+'dask.order.graph_metrics'
+
+]
+#docs_path = "~/dev/dask/docs/source"
+exec_failure = 'fallback'

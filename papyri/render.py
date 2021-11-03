@@ -23,6 +23,17 @@ from .stores import Store
 from .take2 import RefInfo
 from .utils import progress
 
+import logging
+
+from rich.logging import RichHandler
+
+FORMAT = "%(message)s"
+logging.basicConfig(
+    level="INFO", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+)
+
+log = logging.getLogger("papyri")
+
 
 def url(info):
     assert isinstance(info, RefInfo)
@@ -320,9 +331,9 @@ def compute_graph(gs, blob, key):
 
     if len(weights) > 50:
         for thresh in sorted(set(weights.values())):
-            print(f"{len(weights)} items ; remove items {thresh} or lower")
+            log.info("%s items ; remove items %s or lower", len(weights), thresh)
             weights = {k: v for k, v in weights.items() if v > thresh}
-            print(f"down to {len(weights)} items")
+            log.info(f"down to %s items", len(weights))
             if len(weights) < 50:
                 break
 
@@ -870,7 +881,7 @@ async def main(ascii, html, dry_run, sidebar):
 
     tree = make_tree(family)
 
-    print("going to erase", html_dir)
+    log.info("going to erase %s", html_dir)
     # input("press enter to continue...")
     shutil.rmtree(html_dir)
     random.shuffle(files)

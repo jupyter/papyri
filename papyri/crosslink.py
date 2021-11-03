@@ -1008,6 +1008,10 @@ def main(path, check):
     from time import perf_counter
 
     now = perf_counter()
+    import os
+
+    assert path.exists(), f"{path} does not exists"
+    assert path.is_dir(), f"{path} is not a directory"
     Ingester().ingest(path, check)
     delta = perf_counter() - now
 

@@ -367,6 +367,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
     # TODO fix this if plt.close not called and still a ligering figure.
     fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     if len(fig_managers) != 0:
+        print(f"Unclosed figures in {qa}!!")
         plt.close("all")
     return processed_example_data(example_section_data), figs
 
@@ -1115,7 +1116,7 @@ class Gen:
                     if not isinstance(target_item, ModuleType):
                         self.log.error(
                             "Unexpected error parsing %s – %s",
-                            target_item,
+                            qa,
                             target_item.__name__,
                         )
                     if isinstance(target_item, ModuleType):
