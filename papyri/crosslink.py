@@ -226,7 +226,7 @@ class IngestedBlobs(Node):
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
             # TODO: reenable assert len(visitor.local) == 0, f"{visitor.local} | {self.qa}"
-            log.info(f"Newly found %s links in %s", len(visitor.total), self.qa)
+            log.info(f"Newly found %s links in %s", len(visitor.total), repr(self.qa))
             for a, b in visitor.total:
                 log.info("     %s refers to %s", repr(a), repr(b))
 
