@@ -1,6 +1,10 @@
 {% macro render_inner(type_, obj) -%}
     {%- if type_ == 'Words' -%}
         {{-obj.value-}}
+    {%- elif type_ == 'Emph' -%}
+       <em>{{render_inner('Words', obj.value)|safe}}</em>
+    {%- elif type_ == 'Strong' -%}
+       <b>{{render_inner('Words', obj.value)|safe}}</b>
     {%- elif type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
@@ -29,7 +33,7 @@
         <code class='verbatim'>{{obj.text}}</code>
     {% else %}
         <code>Some B |{{type_}}|</code>
-        {{unreachable(obj)}}
+        {{unreachable(obj, type_)}}
     {%- endif -%}
 {%- endmacro %}
 
@@ -101,7 +105,6 @@
            {# {{unreachable(obj)}} #}
            {{obj.value}}  {# TODO : likely smth wrong with field list #}
         
-
        {%- elif type == 'Directive' -%}
            {{unreachable()}}
        {% elif type == 'Math' %}

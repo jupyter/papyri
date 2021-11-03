@@ -430,7 +430,7 @@ class Emph(Node):
         self.value = value
 
     def __hash__(self):
-        return hash(self.value)
+        return hash(repr(self))
 
     @property
     def children(self):
@@ -441,7 +441,7 @@ class Emph(Node):
         [self.value] = children
 
     def __repr__(self):
-        return hash(repr(self))
+        return "*" + repr(self.value) + "*"
 
 
 class Strong(Node):
