@@ -3,10 +3,14 @@ import pytest
 from ..take2 import (
     Block,
     BlockDirective,
+    BlockVerbatim,
     DefListItem,
     Example,
     Header,
     Lines,
+    Paragraph,
+    dedent_but_first,
+    get_object,
     make_block_3,
     parse_rst_to_papyri_tree,
 )
@@ -64,7 +68,7 @@ def test_make_block(example, nblocks):
     ],
 )
 def test_parse_headers(target, expected):
-    doc = parse_rst_to_papyri_tree(target)
+    doc = parse_rst_to_papyri_tree(dedent_but_first(get_object(target).__doc__))
     levels = tuple([h.level for h in doc if isinstance(h, Header)])
     assert levels == expected
 
@@ -73,15 +77,16 @@ def test_parse_headers(target, expected):
     "target, type_, number",
     [
         ("numpy", BlockDirective, 0),
-        ("numpy.linspace", BlockDirective, 1),
+        ("numpy.linspace", BlockDirective, 2),
+        ("scipy.optimize._lsq.least_squares", Paragraph, 24),
         ("scipy.optimize._lsq.least_squares", Example, 14),
         ("scipy.optimize._lsq.least_squares", Header, 6),
-        ("scipy.optimize._lsq.least_squares", BlockDirective, 9),
-        ("scipy.optimize._lsq.least_squares", Block, 25),
-        ("scipy.optimize._lsq.least_squares", DefListItem, 30),
+        ("scipy.optimize._lsq.least_squares", BlockVerbatim, 1),
+        ("scipy.optimize._lsq.least_squares", BlockDirective, 1),
     ],
 )
 def test_parse_blocks(target, type_, number):
-    blocks = parse_rst_to_papyri_tree(target)
+
+    blocks = parse_rst_to_papyri_tree(dedent_but_first(get_object(target).__doc__))
     filtered = [b for b in blocks if type(b) == type_]
     assert len(filtered) == number

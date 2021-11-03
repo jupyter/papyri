@@ -71,6 +71,13 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
         else:
             acc.append(c)
     p.children = acc
+    res = ts.parse("\n".join(lines).encode())
+    assert len(res) == 1
+    res = res[0]
+    assert isinstance(res, Section), res
+    assert len(res.children) == 1
+    p2 = res.children[0]
+    assert p == p2, (p, p2)
     return p
 
 

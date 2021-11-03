@@ -8,7 +8,10 @@ RST = Language(pth, "rst")
 parser = Parser()
 parser.set_language(RST)
 
+from textwrap import indent
 from typing import List
+
+from there import print
 
 from papyri.take2 import (
     BlockDirective,
@@ -31,6 +34,128 @@ from papyri.take2 import (
 )
 
 
+class Node:
+    """
+    A wrapper around tree sitter Nodes to slightly modify behavior.
+
+    In particular we want to be able to extract whitespace information,
+    which is made hard by tree sitter.
+
+    So we intercept iterating through childrens, and if the bytes start/stop
+    don't match, we insert a fake Whitespace node that has similar api to tree
+    sitter official nodes.
+    """
+
+    def tree(self):
+        return (
+            repr(self)
+            + indent("\n" + "\n".join([x.tree() for x in self.children]), "   ")
+        ).rstrip()
+
+    @property
+    def children(self):
+        if not self._with_whitespace:
+            return [Node(n, _with_whitespace=False) for n in self.node.children]
+
+        self.node.children
+        current_byte = self.start_byte
+        current_point = self.start_point
+        new_nodes = []
+        if self.node.children:
+            for n in self.node.children:
+                if n.start_byte != current_byte:
+                    # value = self.bytes[current_byte:n.start_byte]
+                    # assert value == b' ', (value, b' ', n)
+                    new_nodes.append(
+                        Whitespace(
+                            current_byte, n.start_byte, current_point, n.start_point
+                        )
+                    )
+                current_byte = n.end_byte
+                current_point = n.end_point
+                new_nodes.append(Node(n))
+
+            if current_byte != self.end_byte:
+                new_nodes.append(
+                    Whitespace(
+                        current_byte, self.end_byte, self.start_point, self.end_point
+                    )
+                )
+        return new_nodes
+
+    def __repr__(self):
+        return repr(self.node)
+
+    def with_whitespace(self):
+        return Node(self.node, _with_whitespace=True)
+
+    def without_whitespace(self):
+        return Node(self.node, _with_whitespace=False)
+
+    @property
+    def start_point(self):
+        return self.node.start_point
+
+    @property
+    def end_point(self):
+        return self.node.end_point
+
+    @property
+    def start_byte(self):
+        return self.node.start_byte
+
+    @property
+    def end_byte(self):
+        return self.node.end_byte
+
+    @property
+    def type(self):
+        return self.node.type
+
+    @property
+    def bytes(self):
+        return self.node.bytes
+
+    def __init__(self, node, *, _with_whitespace=True):
+        self.node = node
+        self._with_whitespace = _with_whitespace
+
+
+class Whitespace(Node):
+    def __init__(self, byte_start, byte_end, start_point, end_point):
+        self._start_byte = byte_start
+        self._end_byte = byte_end
+        self._end_point = end_point
+        self._start_point = start_point
+
+    @property
+    def start_point(self):
+        return self._start_point
+
+    @property
+    def end_point(self):
+        return self._end_point
+
+    @property
+    def children(self):
+        return []
+
+    @property
+    def start_byte(self):
+        return self._start_byte
+
+    @property
+    def end_byte(self):
+        return self._end_byte
+
+    def __repr__(self):
+        return f'<Node kind="whitespace", start_point={self.start_point}, end_point={self.end_point}>'
+
+    @property
+    def type(self):
+        return "whitespace"
+
+
 class TSVisitor:
     """
     Tree sitter Visitor,
@@ -50,7 +175,6 @@ class TSVisitor:
         prev_end = None
         for c in node.children:
             kind = c.type
-            # print(f'({kind})')
             if kind == "::":
                 if isinstance(acc[-1], Word):
                     word = acc.pop()
@@ -87,14 +211,12 @@ class TSVisitor:
         t = Directive(
             [self.bytes[node.start_byte : node.end_byte - 1].decode()], None, None
         )
-        # print(' '*self.depth*4, t)
         return [t]
 
     def visit_interpreted_text(self, node, prev_end=None):
         t = Directive(
             [self.bytes[node.start_byte + 1 : node.end_byte - 1].decode()], None, None
         )
-        # print(' '*self.depth*4, t)
         return [t]
 
     def visit_standalone_hyperlink(self, node, prev_end=None):
@@ -102,6 +224,17 @@ class TSVisitor:
 
     def visit_text(self, node, prev_end=None):
         t = Word(self.bytes[node.start_byte : node.end_byte].decode())
+        t.start_byte = node.start_byte
+        t.end_byte = node.end_byte
+        # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
+        return [t]
+
+    def visit_whitespace(self, node, prev_end=None):
+        content = self.bytes[node.start_byte : node.end_byte].decode()
+        assert content.isspace()
+        t = Word(content)
+        t.start_byte = node.start_byte
+        t.end_byte = node.end_byte
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
         return [t]
 
@@ -180,12 +313,12 @@ class TSVisitor:
         # print("SUB,", sub, node)
         acc = []
         acc2 = []
+
         for item in sub:
             if isinstance(item, BlockVerbatim):
                 acc2.append(item)
                 continue
             acc.append(item)
-            acc.append(Word(" "))
         if acc[-1] == Word(" "):
             acc.pop()
         assert len(acc2) < 2
@@ -295,7 +428,6 @@ class TSVisitor:
 
     def visit_emphasis(self, node, prev_end=None):
         # TODO
-        assert False
         return []
 
     def visit_substitution_definition(self, node, prev_end=None):
@@ -310,7 +442,7 @@ class TSVisitor:
 
     def visit_strong(self, node, prev_end=None):
         # TODO
-        assert False
+        # assert False
         return []
 
     def visit_footnote(self, node, prev_end=None):
@@ -332,7 +464,6 @@ class TSVisitor:
         acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
-            # print(list_item.children)
             if len(list_item.children) == 2:
                 term, definition = list_item.children
                 assert term.type == "term"
@@ -400,7 +531,8 @@ def parse(text: bytes) -> List[Section]:
     """
 
     tree = parser.parse(text)
-    return nest_sections(TSVisitor(text, tree.root_node).visit(tree.root_node))
+    root = Node(tree.root_node)
+    return nest_sections(TSVisitor(text, root).visit(root))
 
 
 class TreeSitterParseError(Exception):
