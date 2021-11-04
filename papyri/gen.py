@@ -26,6 +26,7 @@ from velin.examples_section_utils import InOut, splitblank, splitcode
 
 from .take2 import (
     Code,
+    Param,
     Fig,
     Lines,
     Math,
@@ -340,6 +341,13 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
                         finally:
                             if not wait_for_show:
                                 if fig_managers:
+                                    for fig in executor.get_figs():
+                                        counter += 1
+                                        figname = f"fig-{qa}-{counter}.png"
+                                        figs.append((figname, fig))
+                                        print(
+                                            f"Still fig manager(s) open for {qa}: {figname}"
+                                        )
                                     plt.close("all")
                                 fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                                 assert len(fig_managers) == 0, fig_managers + [
@@ -347,7 +355,7 @@ def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
                                 ]
                     infer_exclude = config.get("exclude_jedi", frozenset())
                     if qa in infer_exclude:
-                        print("Turning off type inference for this function:", qa)
+                        print("Turning off type inference for func {qa!r}")
                         inf = False
                     else:
                         inf = infer
@@ -995,23 +1003,23 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        class DummyP(Progress):
-            def add_task(*args, **kwargs):
-                pass
+        # class DummyP(Progress):
+        #    def add_task(*args, **kwargs):
+        #        pass
 
-            def advance(*args, **kwargs):
-                pass
+        #    def advance(*args, **kwargs):
+        #        pass
 
-            def update(*args, **kwargs):
-                pass
+        #    def update(*args, **kwargs):
+        #        pass
 
-            def __enter__(self, *args, **kwargs):
-                return self
+        #    def __enter__(self, *args, **kwargs):
+        #        return self
 
-            def __exit__(self, *args, **kwargs):
-                pass
+        #    def __exit__(self, *args, **kwargs):
+        #        pass
 
-        p = lambda *args, **kwargs: DummyP(*args, **kwargs)
+        # p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
         # step one collect all the modules instances we want to analyse.
 
@@ -1070,7 +1078,7 @@ class Gen:
                 else:
                     print("differs: {item} != {other}")
 
-        for target in module_conf.get("exclude", []):
+        for target in sorted(module_conf.get("exclude", [])):
             self.log.info("exclude target: %s", target)
             del collected[target]
         # p = nullcontext
@@ -1078,6 +1086,8 @@ class Gen:
 
             # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
+
+            failure_collection = defaultdict(lambda: [])
 
             for qa, target_item in collected.items():
                 short_description = (qa[:19] + "..") if len(qa) > 21 else qa
@@ -1096,20 +1106,16 @@ class Gen:
 
                 # progress.console.print(qa)
                 try:
-                    if ts is None:
-                        print(
-                            "please see how to install Tree-sitter in the readme to parse complex RST documents"
-                        )
-                    else:
-                        arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
-                except AssertionError as e:
-                    self.log.warning(f"TS could not parse %s", qa)
+                    arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
+                except (AssertionError, NotImplementedError) as e:
+                    self.log.warning(f"TS could not parse %s, %s", repr(qa), e)
+                    failure_collection[type(e).__name__].append(qa)
                     if experimental:
-                        raise ValueError(f"from {qa}") from e
+                        raise type(e)(f"from {qa}") from e
                     arbitrary = []
                 except Exception as e:
                     raise type(e)(f"from {qa}")
-                    # raise
+
                 try:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
                 except Exception:
@@ -1180,8 +1186,9 @@ class Gen:
                                 doc_blob.content[section] = Section()
                     except Exception as e:
                         self.log.exception(
-                            f"Skipping section {section} in {qa} (Error)"
+                            f"Skipping section {section!r} in {qa!r} (Error)"
                         )
+                        failure_collection[type(e).__name__].append(qa)
                         doc_blob.content[section] = ts.parse(
                             b"Parsing not NotImplemented for this section."
                         )[0]
@@ -1226,7 +1233,6 @@ class Gen:
                     # "Summary",
                     "Receives",
                 ]
-                from .take2 import Param
 
                 #        new_doc_blob._content["Parameters"] = [
                 #            Parameter(a, b, c)
@@ -1283,7 +1289,11 @@ class Gen:
                 self.put(qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(name, data)
-
+            if failure_collection:
+                self.log.info(
+                    "The following parsing failed \n%s",
+                    json.dumps(failure_collection, indent=2),
+                )
             found = {}
             not_found = []
             for k, v in collector.aliases.items():

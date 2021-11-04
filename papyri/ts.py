@@ -2,6 +2,13 @@ from pathlib import Path
 
 from tree_sitter import Language, Parser
 
+from .errors import (
+    VisitTargetNotImplementedError,
+    VisitCommentNotImplementedError,
+    VisitCitationReferenceNotImplementedError,
+    VisitCitationNotImplementedError,
+)
+
 pth = str(Path(__file__).parent / "rst.so")
 
 RST = Language(pth, "rst")
@@ -201,12 +208,12 @@ class TSVisitor:
         return acc
 
     def visit_citation(self, node, prev_end=None):
-        assert False
+        raise VisitCitationNotImplementedError()
         # just hlines, like ------
         return []
 
     def visit_citation_reference(self, node, prev_end=None):
-        assert False
+        raise VisitCitationReferenceNotImplementedError()
         # just hlines, like ------
         return []
 
@@ -418,7 +425,7 @@ class TSVisitor:
 
     def visit_target(self, node, prev_end=None):
         # TODO:
-        assert False
+        raise VisitTargetNotImplementedError()
         return []
 
     # def visit_arguments(self, node, prev_end=None):
@@ -484,7 +491,9 @@ class TSVisitor:
 
     def visit_comment(self, node, prev_end=None):
         # TODO
-        raise NotImplementedError(self.bytes[node.start_byte : node.end_byte].decode())
+        raise VisitCommentNotImplementedError(
+            self.bytes[node.start_byte : node.end_byte].decode()
+        )
         return []
 
     def visit_strong(self, node, prev_end=None):
