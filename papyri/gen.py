@@ -252,7 +252,7 @@ class BlockExecutor:
         return res, fig_managers
 
 
-def get_example_data(doc, infer=True, obj=None, exec_=True, qa=None, *, config):
+def get_example_data(doc, infer=True, *, obj, exec_:bool, qa:str, config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -792,33 +792,30 @@ class Gen:
         Crawl the filesystem for all docs/rst files
 
         """
-        assert ts is not None, "cannot parse rst files without tree sitter being built."
-
         self.log.info("Scraping Documentation")
-        for p in path.glob("**/*"):
-            if p.is_file():
-                parts = p.relative_to(path).parts
-                if parts[-1].endswith("rst"):
-                    data = ts.parse(p.read_bytes())
-                    blob = DocBlob()
-                    blob.arbitrary = data
-                    blob.content = {}
+        for p in path.glob("**/*.rst"):
+            assert p.is_file()
+            parts = p.relative_to(path).parts
+            assert parts[-1].endswith("rst")
 
-                    blob.ordered_sections = []
-                    blob.item_file = None
-                    blob.item_line = None
-                    blob.item_type = None
-                    blob.aliases = []
-                    blob.example_section_data = Section()
-                    blob.see_also = []
-                    blob.signature = None
-                    blob.references = None
-                    blob.refs = []
+            data = ts.parse(p.read_bytes())
+            blob = DocBlob()
+            blob.arbitrary = data
+            blob.content = {}
 
-                    self.docs[parts] = json.dumps(blob.to_json(), indent=2)
-                else:
-                    pass
-                # data = p.read_bytes()
+            blob.ordered_sections = []
+            blob.item_file = None
+            blob.item_line = None
+            blob.item_type = None
+            blob.aliases = []
+            blob.example_section_data = Section()
+            blob.see_also = []
+            blob.signature = None
+            blob.references = None
+            blob.refs = []
+
+            self.docs[parts] = json.dumps(blob.to_json(), indent=2)
+            # data = p.read_bytes()
 
     def write(self, where: Path):
         (where / "module").mkdir(exist_ok=True)
@@ -1212,6 +1209,7 @@ class Gen:
 
                 doc_blob.references = doc_blob.content.pop("References")
                 if isinstance(doc_blob.references, str):
+                    assert False
                     assert doc_blob.references == ""
                     doc_blob.references = None
                 assert (
