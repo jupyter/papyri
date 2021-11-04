@@ -60,6 +60,10 @@ jobs:
       run: |
         python3 -m pip install types-requests types-cachetools types-toml
         mypy papyri
+    - name: Convert .coverage sql to xml for upload
+      run: |
+        converage xml
+        ls -la
     - name: "Upload coverage to Codecov"
       uses: codecov/codecov-action@v2
       with:
