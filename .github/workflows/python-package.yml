@@ -62,6 +62,7 @@ jobs:
         mypy papyri
     - name: Convert .coverage sql to xml for upload
       run: |
+        coverage report
         converage xml
         ls -la
     - name: "Upload coverage to Codecov"
