@@ -191,7 +191,7 @@ class GraphStore:
         _, pathbr = self._key_to_paths(key)
 
         # print("getting backrefs from table")
-        sres = self.table.execute(
+        self.table.execute(
             "select source, reason from links where dest=?",
             (str(key),),
         )

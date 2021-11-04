@@ -385,9 +385,9 @@ def ascii(name: str):
 @app.command()
 def serve(sidebar: bool = True):
     _intro()
-    from .render import serve
+    from .render import serve as s2
 
-    serve(sidebar=sidebar)
+    s2(sidebar=sidebar)
 
 
 @app.command()

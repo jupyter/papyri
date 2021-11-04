@@ -79,10 +79,7 @@ class DummyP(Progress):
         pass
 
 
-def paragraph(lines) -> List[Tuple[str, Any]]:
-    """
-    return container of (type, obj)
-    """
+def paragraph(lines) -> Any:
     #    p = Paragraph.parse_lines(lines)
     #    acc = []
     #    for c in p.children:
@@ -94,12 +91,10 @@ def paragraph(lines) -> List[Tuple[str, Any]]:
     #        else:
     #            acc.append(c)
     #    p.children = acc
-    res = ts.parse("\n".join(lines).encode())
-    assert len(res) == 1
-    res = res[0]
+    [section] = ts.parse("\n".join(lines).encode())
     #    assert isinstance(res, Section), res
     #    assert len(res.children) == 1
-    p2 = res.children[0]
+    p2 = section.children[0]
     #    if not p == p2:
     #        import ipdb
     #        ipdb.set_trace()
@@ -329,7 +324,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                     except SyntaxError:
                         ce_status = "syntax_error"
                         pass
-                    raise_in_fig = "?"
+                    raise_in_fig = None
                     did_except = False
                     if exec_ and ce_status == "compiled":
                         try:
@@ -1012,7 +1007,7 @@ class Gen:
 
         return collector, module_conf
 
-    def collect_examples(self, module_conf):
+    def collect_examples_out(self, module_conf):
         examples_folder = module_conf.get("examples_folder", None)
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
@@ -1065,14 +1060,12 @@ class Gen:
 
         # p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
-        # step one collect all the modules instances we want to analyse.
-
         collector, module_conf = self.configure(names, conf)
         collected: Dict[str, Any] = collector.items()
 
         self.log.debug("Configuration: %s", module_conf)
 
-        self.collect_examples(module_conf)
+        self.collect_examples_out(module_conf)
 
         if logo := module_conf.get("logo", None):
             self.put_raw("logo.png", (relative_dir / Path(logo)).read_bytes())
@@ -1219,7 +1212,11 @@ class Gen:
 
                 doc_blob.references = doc_blob.content.pop("References")
 
-                assert isinstance(doc_blob.references, str)
+                # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
+                assert isinstance(doc_blob.references, (list, str)), (
+                    repr(doc_blob.references),
+                    qa,
+                )
 
                 doc_blob.references = None
 

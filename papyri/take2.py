@@ -430,7 +430,7 @@ class Words(Node):
 
 
 class Emph(Node):
-    children: List[Words]
+    value: Words
 
     def __init__(self, value=None):
         self.value = value
@@ -451,18 +451,18 @@ class Emph(Node):
 
 
 class Strong(Node):
-    children: List[Words]
+    content: Words
 
-    def __init__(self, value=None):
-        self.value = value
+    def __init__(self, content=None):
+        self.content = content
 
     @property
     def children(self):
-        return [self.value]
+        return [self.content]
 
     @children.setter
     def children(self, children):
-        [self.value] = children
+        [self.content] = children
 
     def __repr__(self):
         return "**" + repr(self.value) + "**"

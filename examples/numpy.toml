@@ -6,9 +6,37 @@ execute_exclude_patterns = ['numpy._', 'numpy.testing._priv', 'numpy.errstate', 
 'numpy.datetime_as_string', 'numpy.shares_memory', 'numpy.squeeze',
 'numpy.average',
 'numpy.ctypeslib', 'numpy.append', 'numpy.ma.core']
-exclude = ['numpy.testing._private.nosetester.NoseTester', 'numpy._pytesttester', 'numpy.all', 'numpy.bytes_',
-'numpy.alltrue', 'numpy.ma.core.MaskedArray.resize', 'numpy.polynomial.hermite.hermmulx',
-'numpy.polynomial.hermite_e.hermemulx','numpy.polynomial.laguerre.lagmulx','numpy.polynomial.chebyshev','numpy.rot90','numpy.polynomial.polynomial.polyfit','numpy.rollaxis','numpy.ma.extras.polyfit','numpy.polyfit','numpy.polynomial.polyutils.mapdomain','numpy.isscalar','numpy.unique','numpy.histogram_bin_edges']
+exclude = [
+   'numpy.testing._private.nosetester.NoseTester',
+   'numpy._pytesttester',
+   'numpy.all',
+   'numpy.bytes_',
+   'numpy.alltrue',
+   'numpy.ma.core.MaskedArray.resize',
+   'numpy.polynomial.hermite.hermmulx',
+   'numpy.polynomial.hermite_e.hermemulx',
+   'numpy.polynomial.laguerre.lagmulx',
+   'numpy.polynomial.chebyshev',
+   'numpy.rot90',
+   'numpy.polynomial.polynomial.polyfit',
+   'numpy.rollaxis',
+   'numpy.ma.extras.polyfit',
+   'numpy.polyfit',
+   'numpy.polynomial.polyutils.mapdomain',
+   'numpy.isscalar',
+   'numpy.unique',
+   'numpy.histogram_bin_edges',
+   # Assertion Error (serialisation)
+   "numpy.clip",
+   "numpy.unwrap",
+   "numpy.polynomial.chebyshev.chebfit",
+   "numpy.polynomial.hermite.hermfit",
+   "numpy.polynomial.hermite_e.hermefit",
+   "numpy.polynomial.laguerre.lagfit",
+   "numpy.polynomial.legendre.legfit",
+   # Citation Reference not implemented
+   "numpy.fft"
+   ]
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
 homepage = 'https://numpy.org'

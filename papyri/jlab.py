@@ -26,4 +26,8 @@ class Papyri(Magics):
         return self.newhelp(obj)
 
 
-get_ipython().register_magics(Papyri)
+import IPython
+
+ip = IPython.get_ipython()
+if ip:
+    ip.register_magics(Papyri)
