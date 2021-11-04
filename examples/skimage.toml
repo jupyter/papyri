@@ -8,4 +8,20 @@ exclude = ['skimage.transform.radon_transform.iradon',
            'skimage.feature.texture.greycoprops',
            'skimage.util.dtype._convert',
            'skimage.util.dtype.convert'
+            # VisitCitationReferenceNotImplementedError": [
+           "skimage.morphology._skeletonize.skeletonize",
+           "skimage.morphology._skeletonize_3d_cy._compute_thin_image",
+           "skimage.morphology._skeletonize_3d_cy._compute_thin_image",
+           "skimage.morphology._skeletonize.skeletonize_2d",
+           "skimage.morphology._skeletonize.skeletonize_2d",
+           "skimage.morphology._skeletonize_3d_cy.fill_Euler_LUT",
+           "skimage.morphology._skeletonize_3d_cy.fill_Euler_LUT",
+            # serialisation Errors
+           "skimage.draw.draw.circle",
+           "skimage.segmentation.morphsnakes.circle_level_set",
+           "skimage.segmentation.slic_superpixels.slic",
+           "skimage.color.delta_e.get_dH2",
+           "skimage.color.delta_e.get_dH2",
+           "skimage.filters.rank.generic.bottomhat",
+           "skimage.filters.rank.generic.tophat"
            ]
