@@ -465,7 +465,7 @@ class Strong(Node):
         [self.content] = children
 
     def __repr__(self):
-        return "**" + repr(self.value) + "**"
+        return "**" + repr(self.content) + "**"
 
     def __hash__(self):
         return hash(repr(self))

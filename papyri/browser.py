@@ -408,6 +408,12 @@ class Renderer:
             ]
         )
 
+    def render_Emph(self, emph):
+        return ("emph", emph.value.value)
+
+    def render_Strong(self, strong):
+        return ("strong", strong.content.value)
+
     def render_Verbatim(self, verb):
         return ("verbatim", verb.value)
 
@@ -427,7 +433,7 @@ class Renderer:
         cc = paragraph.children
         if not cc:
             return urwid.Text("EMPTY")
-
+        rr = None
         try:
             rr = [TextWithLink([self.render(o) for o in paragraph.inline])]
             for inl in paragraph.inner:
@@ -716,6 +722,8 @@ def main(qualname: str):
         ("buttn", "black", "dark cyan"),
         ("buttnf", "white", "dark blue", "bold"),
         ("verbatim", "brown", "", "bold"),
+        ("emph", "dark blue", "", "underline"),
+        ("strgon", "dark blue", "", "bold"),
         # ("link", "dark red,bold", "default", ("standout", "underline")),
         ("local", "light magenta", "", "bold"),
         ("link", "dark green,underline", "", "bold"),
