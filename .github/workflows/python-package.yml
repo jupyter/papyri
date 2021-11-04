@@ -41,13 +41,12 @@ jobs:
         coverage run -m papyri --help
     - name: Self gen
       run: |
-        coverage run -m papyri gen examples/papyri.toml  --exec
+        coverage run -a -m papyri gen examples/papyri.toml  --exec
         sleep 1 # time for coverage to write its stuff
         coverage run -a -m papyri ingest  --no-relink ~/.papyri/data/papyri_0.0.8
         coverage run -a -m papyri render --ascii
         # coverage html
         # papyri serve
-        bash <(curl -s https://codecov.io/bash) -- -f .coverage
     - name: Lint with black
       run: |
         black --check .
