@@ -1208,13 +1208,11 @@ class Gen:
                     ), doc_blob.content["Summary"]
 
                 doc_blob.references = doc_blob.content.pop("References")
-                if isinstance(doc_blob.references, str):
-                    assert False
-                    assert doc_blob.references == ""
-                    doc_blob.references = None
-                assert (
-                    isinstance(doc_blob.references, list) or doc_blob.references is None
-                )
+
+                assert isinstance(doc_blob.references, str)
+
+                doc_blob.references = None
+
                 del doc_blob.content["Examples"]
                 del doc_blob.content["index"]
                 sections_ = [
