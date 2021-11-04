@@ -26,12 +26,12 @@ from velin.examples_section_utils import InOut, splitblank, splitcode
 
 from .take2 import (
     Code,
-    Param,
     Fig,
     Lines,
     Math,
     Node,
     Paragraph,
+    Param,
     Ref,
     Section,
     SeeAlsoItem,

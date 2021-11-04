@@ -1,5 +1,6 @@
 import builtins
 import json
+import logging
 import operator
 import os
 import random
@@ -14,6 +15,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoes
 from pygments.formatters import HtmlFormatter
 from quart import redirect
 from quart_trio import QuartTrio
+from rich.logging import RichHandler
 from there import print
 
 from .config import html_dir, ingest_dir
@@ -22,10 +24,6 @@ from .graphstore import GraphStore, Key
 from .stores import Store
 from .take2 import RefInfo
 from .utils import progress
-
-import logging
-
-from rich.logging import RichHandler
 
 FORMAT = "%(message)s"
 logging.basicConfig(

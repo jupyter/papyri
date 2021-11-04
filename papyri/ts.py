@@ -3,10 +3,10 @@ from pathlib import Path
 from tree_sitter import Language, Parser
 
 from .errors import (
-    VisitTargetNotImplementedError,
-    VisitCommentNotImplementedError,
-    VisitCitationReferenceNotImplementedError,
     VisitCitationNotImplementedError,
+    VisitCitationReferenceNotImplementedError,
+    VisitCommentNotImplementedError,
+    VisitTargetNotImplementedError,
 )
 
 pth = str(Path(__file__).parent / "rst.so")
