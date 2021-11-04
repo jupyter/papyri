@@ -2,10 +2,17 @@
 logo = "../dask-logo.png"
 submodules = ["array"]
 exclude = [ "dask.utils.Dispatch",
-# target not implemented
-'dask.highlevelgraph.HighLevelGraph.visualize',
-'dask.order.graph_metrics'
-
-]
+            # target not implemented
+            'dask.highlevelgraph.HighLevelGraph.visualize',
+            'dask.order.graph_metrics',
+            # AssertionError : Serialisation proble
+            "dask.array.routines.matmul",
+            "dask.array.routines.rot90",
+            # visit_target not implemented
+            "dask.array.reshape.reshape",
+            "dask.array.tiledb_io.to_tiledb",
+            # visit_comment not implemented
+            "dask.array.routines.unique",
+  ]
 #docs_path = "~/dev/dask/docs/source"
 exec_failure = 'fallback'
