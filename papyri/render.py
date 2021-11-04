@@ -743,8 +743,10 @@ async def _ascii_render(key, store, known_refs=None, template=None):
 
 
 async def ascii_render(name, store=None):
+    gstore = GraphStore(ingest_dir, {})
+    key = next(iter(gstore.glob((None, None, "module", "papyri.examples"))))
 
-    builtins.print(await _ascii_render(name, store))
+    builtins.print(await _ascii_render(key, store))
 
 
 async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):

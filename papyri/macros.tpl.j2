@@ -4,7 +4,7 @@
     {%- elif type_ == 'Emph' -%}
        <em>{{render_inner('Words', obj.value)|safe}}</em>
     {%- elif type_ == 'Strong' -%}
-       <b>{{render_inner('Words', obj.value)|safe}}</b>
+       <b>{{render_inner('Words', obj.content)|safe}}</b>
     {%- elif type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
@@ -148,26 +148,32 @@
                {{ render_II(item) }}
            {% endfor %}
        {% elif type == 'BulletList' %}
-           # TODO : finish BulletList rendering
            <ul>
                {%- for item in obj.value %}
                <li>{{render_II(item)}}</li>
                {% endfor %}
-            <ul>
+            </ul>
        {% elif type == 'EnumeratedList' %}
-           # TODO : finish EnumeratedList rendering
            <ol>
                {%- for item in obj.value %}
                <li>{{render_II(item)}}</li>
                {% endfor %}
-            <ol>
+            </ol>
        {% elif type == 'FieldList' %}
-           # TODO : finish FieldList rendering
-           <ol>
-               {%- for item in obj.children %}
-               <li>{{render_II(item)}}</li>
+           <dl>
+             {%- for item in obj.children %}
+               <dt>
+                {%- for x in item.name %}
+                {{render_II(x)}}
+                {% endfor %}
+               </dt>
+               <dd>
+                {%- for x in item.body %}
+                {{render_II(x)}}
+                {% endfor %}
+               </dd>
                {% endfor %}
-               <ol>
+               </dl>
 
         {% elif type == 'FieldListItem' %}
            # TODO : finish FieldListItem rendering
@@ -175,7 +181,7 @@
                {%- for item in obj.children %}
                <li>{{render_II(item)}}</li>
                {% endfor %}
-            <ol>
+            </ol>
 
        {% elif type == 'BlockMath' %}
         <span class="tex2jax_process">$${{obj.value}}$$</span>

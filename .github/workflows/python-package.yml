@@ -38,7 +38,7 @@ jobs:
         papyri build-parser
     - name: Test with pytest
       run: |
-        pytest --cov=papyri
+        pytest --cov=papyri --cov-append
         ls -al
     - name: Misc cli
       run: |

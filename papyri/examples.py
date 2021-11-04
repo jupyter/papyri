@@ -6,6 +6,37 @@ Examples Modules
 This module contains examples, none of the functions, classes or other attribute
 should have any effects when called.
 
+
+:fieldlistitem:
+    at least that the name tree sitter rst give it.
+:another: is a another fieldlistItem in this field list
+    and it's description
+
+
+Enumeration list. 
+
+1. item 1
+2. item 2
+3. item 3
+
+Unordered list
+
+- item 1
+- item 2
+- item 3
+
+
+Definition list (not sure about the difference with field lists...)
+
+term 1
+    Definition 1.
+
+term 2
+    Definition 2, paragraph 1.
+
+    Definition 2, paragraph 2.
+
+
 """
 
 
@@ -90,3 +121,32 @@ def test_duplicate_see_also():
 
     """
     pass
+
+
+def example_3():
+    """
+    This show that we support *emph* and **strong**.
+
+    This will be ``verbatim``, and this is `interpreted-text`.
+    Interpreted text can have domain and role :domain:role:`interpreted text`.
+
+    .. directive::
+
+        This will be a directive
+
+
+    .. math::
+
+        This will be interpreted at math.
+
+    .. note::
+
+        This directive will be turned into an admonition.
+
+    .. warning::
+
+        This directive will be turned into an admonition.
+
+
+
+    """

@@ -1,4 +1,5 @@
 [papyri]
+submodules = ['examples']
 logo = "../papyri-logo.png"
 exec = true
 exec_failure = 'fallback'
