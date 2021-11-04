@@ -56,15 +56,15 @@ jobs:
     - name: Lint with black
       run: |
         black --check papyri
+    - name: Convert .coverage sql to xml for upload
+      run: |
+        coverage report
+        coverage xml
+        ls -la
     - name: Test with mypy
       run: |
         python3 -m pip install types-requests types-cachetools types-toml
         mypy papyri
-    - name: Convert .coverage sql to xml for upload
-      run: |
-        coverage report
-        converage xml
-        ls -la
     - name: "Upload coverage to Codecov"
       uses: codecov/codecov-action@v2
       with:
