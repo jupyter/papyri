@@ -1,10 +1,8 @@
 import pytest
 
 from ..take2 import (
-    Block,
     BlockDirective,
     BlockVerbatim,
-    DefListItem,
     Example,
     Header,
     Lines,

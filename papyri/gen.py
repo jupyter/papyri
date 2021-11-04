@@ -28,9 +28,7 @@ from .take2 import (
     Code,
     Fig,
     Lines,
-    Math,
     Node,
-    Paragraph,
     Param,
     Ref,
     Section,
@@ -876,7 +874,7 @@ class Gen:
         except OSError:
             self.log.debug("Could not find item_line for %s, (OSERROR)", target_item)
         except TypeError:
-            if not "built-in" in str(target_item):
+            if "built-in" not in str(target_item):
                 self.log.debug(
                     "Could not find item_line for %s, (TYPEERROR), likely from a .so file",
                     target_item,
@@ -1108,7 +1106,7 @@ class Gen:
                 try:
                     arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
                 except (AssertionError, NotImplementedError) as e:
-                    self.log.warning(f"TS could not parse %s, %s", repr(qa), e)
+                    self.log.warning("TS could not parse %s, %s", repr(qa), e)
                     failure_collection[type(e).__name__].append(qa)
                     if experimental:
                         raise type(e)(f"from {qa}") from e

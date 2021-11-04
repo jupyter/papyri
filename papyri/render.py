@@ -331,7 +331,7 @@ def compute_graph(gs, blob, key):
         for thresh in sorted(set(weights.values())):
             log.info("%s items ; remove items %s or lower", len(weights), thresh)
             weights = {k: v for k, v in weights.items() if v > thresh}
-            log.info(f"down to %s items", len(weights))
+            log.info("down to %s items", len(weights))
             if len(weights) < 50:
                 break
 

@@ -463,7 +463,6 @@ class TSVisitor:
         directive = BlockDirective()
         directive.args0 = args0
         directive.directive_name = role
-        stream = self.visit(content)
         stream_with_spaces = [
             x for y in [(x, Word(" ")) for x in self.visit(content)] for x in y
         ]
