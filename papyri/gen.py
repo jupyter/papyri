@@ -300,9 +300,9 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
     example_section_data = Section()
     import matplotlib.pyplot as plt
     from matplotlib import _pylab_helpers
+    import numpy as np
 
     acc = ""
-    import numpy as np
 
     counter = 0
     ns = {"np": np, "plt": plt, obj.__name__: obj}
@@ -571,7 +571,7 @@ class DFSCollector:
         for o in others:
             self._open_list.append((o, o.__name__.split(".")))
 
-    def items(self):
+    def scan(self):
         while len(self._open_list) >= 1:
             current, stack = self._open_list.pop(0)
 
@@ -579,6 +579,19 @@ class DFSCollector:
             if id(current) not in [id(x) for x in self.obj.values()]:
                 self.visit(current, stack)
 
+    def prune(self):
+        for qa, item in self.obj.items():
+            if (nqa := full_qual(item)) != qa:
+                print("after import qa differs : {qa} -> {nqa}")
+                if self.obj[nqa] == item:
+                    print("present twice")
+                    del self.obj[nqa]
+                else:
+                    print("differs: {item} != {other}")
+
+    def items(self):
+        self.scan()
+        self.prune()
         return self.obj
 
     def visit(self, obj, stack):
@@ -1071,18 +1084,19 @@ class Gen:
             self.put_raw("logo.png", (relative_dir / Path(logo)).read_bytes())
 
         # collect all items we want to document.
-        for qa, item in collected.items():
-            if (nqa := full_qual(item)) != qa:
-                print("after import qa differs : {qa} -> {nqa}")
-                if collected[nqa] == item:
-                    print("present twice")
-                    del collected[nqa]
-                else:
-                    print("differs: {item} != {other}")
+        excluded = sorted(module_conf.get("exclude", []))
+        self.log.info(
+            "The following items will be excluded by the configurations:\n %s",
+            json.dumps(excluded, indent=2),
+        )
+        missing = list(set(excluded) - set(collected.keys()))
+        if missing:
+            self.log.warning(
+                "The following items have been excluded but were not found:\n %s",
+                json.dumps(missing, indent=2),
+            )
 
-        for target in sorted(module_conf.get("exclude", [])):
-            self.log.info("exclude target: %s", target)
-            del collected[target]
+        collected = {k: v for k, v in collected.items() if k not in excluded}
 
         with p() as p2:
 

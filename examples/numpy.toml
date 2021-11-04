@@ -22,6 +22,7 @@ exclude = [
    'numpy.rollaxis',
    'numpy.ma.extras.polyfit',
    'numpy.polyfit',
+   'numpy.rubrub',
    'numpy.polynomial.polyutils.mapdomain',
    'numpy.isscalar',
    'numpy.unique',
