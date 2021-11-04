@@ -252,7 +252,7 @@ class BlockExecutor:
         return res, fig_managers
 
 
-def get_example_data(doc, infer=True, *, obj, exec_:bool, qa:str, config):
+def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -1016,7 +1016,6 @@ class Gen:
             "[progress.completed]{task.completed} / {task.total}",
             TimeElapsedColumn(),
         )
-
 
         # p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
