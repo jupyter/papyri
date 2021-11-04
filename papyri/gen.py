@@ -1212,11 +1212,8 @@ class Gen:
 
                 doc_blob.references = doc_blob.content.pop("References")
                 if isinstance(doc_blob.references, str):
-                    if doc_blob.references == "":
-                        doc_blob.references = None
-                    else:
-                        assert False
-                        doc_blob.references = list(doc_blob.references)
+                    assert doc_blob.references == ""
+                    doc_blob.references = None
                 assert (
                     isinstance(doc_blob.references, list) or doc_blob.references is None
                 )
