@@ -507,6 +507,7 @@ def gen_main(infer, exec_, target_file, experimental, debug):
     if debug:
         g.log.setLevel("DEBUG")
         g.log.debug("Log level set to debug")
+
     g.do_one_mod(
         names,
         infer,
@@ -980,6 +981,51 @@ class Gen:
                 )
         return acc
 
+    def configure(self, names, conf):
+        modules = []
+        for name in names:
+            x, *r = name.split(".")
+            n0 = __import__(name)
+            for sub in r:
+                n0 = getattr(n0, sub)
+            modules.append(n0)
+
+        root = names[0].split(".")[0]
+        self.root = root
+
+        # step 2 try to guess the version number from the top module.
+        version = getattr(modules[0], "__version__", "???")
+        self.version = version
+
+        module_conf = conf.get(self.root, {})
+
+        subs = module_conf.get("submodules", [])
+        extra_from_conf = [self.root + "." + s for s in subs]
+        for name in extra_from_conf:
+            x, *r = name.split(".")
+            n0 = __import__(name)
+            for sub in r:
+                n0 = getattr(n0, sub)
+            modules.append(n0)
+
+        collector = DFSCollector(modules[0], modules[1:])
+
+        return collector, module_conf
+
+    def collect_examples(self, module_conf):
+        examples_folder = module_conf.get("examples_folder", None)
+        self.log.debug("Example Folder: %s", examples_folder)
+        if examples_folder is not None:
+            examples_folder = Path(examples_folder).expanduser()
+            examples_data = self.collect_examples(examples_folder)
+            for edoc, figs in examples_data:
+                self.examples.update(
+                    {k: json.dumps(v.to_json()) for k, v in edoc.items()}
+                )
+                for name, data in figs:
+                    print("put one fig", name)
+                    self.put_raw(name, data)
+
     def do_one_mod(
         self,
         names: List[str],
@@ -1021,50 +1067,15 @@ class Gen:
 
         # step one collect all the modules instances we want to analyse.
 
-        modules = []
-        for name in names:
-            x, *r = name.split(".")
-            n0 = __import__(name)
-            for sub in r:
-                n0 = getattr(n0, sub)
-            modules.append(n0)
+        collector, module_conf = self.configure(names, conf)
+        collected: Dict[str, Any] = collector.items()
 
-        # step 2 try to guess the version number from the top module.
-        version = getattr(modules[0], "__version__", "???")
-
-        root = names[0].split(".")[0]
-        module_conf = conf.get(root, {})
-        examples_folder = module_conf.get("examples_folder", None)
-        self.log.debug("Example Folder: %s", examples_folder)
-        if examples_folder is not None:
-            examples_folder = Path(examples_folder).expanduser()
-            examples_data = self.collect_examples(examples_folder)
-            for edoc, figs in examples_data:
-                self.examples.update(
-                    {k: json.dumps(v.to_json()) for k, v in edoc.items()}
-                )
-                for name, data in figs:
-                    print("put one fig", name)
-                    self.put_raw(name, data)
         self.log.debug("Configuration: %s", module_conf)
-        self.root = root
-        self.version = version
-        subs = module_conf.get("submodules", [])
-        extra_from_conf = [root + "." + s for s in subs]
-        for name in extra_from_conf:
-            x, *r = name.split(".")
-            n0 = __import__(name)
-            for sub in r:
-                n0 = getattr(n0, sub)
-            modules.append(n0)
 
-        # print(modules)
+        self.collect_examples(module_conf)
 
         if logo := module_conf.get("logo", None):
             self.put_raw("logo.png", (relative_dir / Path(logo)).read_bytes())
-
-        collector = DFSCollector(modules[0], modules[1:])
-        collected: Dict[str, Any] = collector.items()
 
         # collect all items we want to document.
         for qa, item in collected.items():
@@ -1079,7 +1090,7 @@ class Gen:
         for target in sorted(module_conf.get("exclude", [])):
             self.log.info("exclude target: %s", target)
             del collected[target]
-        # p = nullcontext
+
         with p() as p2:
 
             # just nice display of progression.
@@ -1298,10 +1309,10 @@ class Gen:
                         not_found.append((k, v))
 
             self.metadata = {
-                "version": version,
+                "version": self.version,
                 "logo": "logo.png",
                 "aliases": found,
-                "module": root,
+                "module": self.root,
             }
 
 
