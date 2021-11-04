@@ -6,7 +6,9 @@ import json
 import logging
 import os
 import sys
+import warnings
 from collections import defaultdict
+from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
@@ -53,6 +55,28 @@ except (ImportError, OSError):
             $ papyri build-parser
             """
     )
+
+
+class DummyP(Progress):
+    """
+    Rich progress bar can screw up ipdb, so it can be useful to have a dummy
+    replacement
+    """
+
+    def add_task(*args, **kwargs):
+        pass
+
+    def advance(*args, **kwargs):
+        pass
+
+    def update(*args, **kwargs):
+        pass
+
+    def __enter__(self, *args, **kwargs):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        pass
 
 
 def paragraph(lines) -> List[Tuple[str, Any]]:
@@ -139,7 +163,6 @@ def parse_script(script, ns=None, infer=None, prev="", config=None):
     """
 
     jeds = []
-    import warnings
 
     warnings.simplefilter("ignore", UserWarning)
 
@@ -512,7 +535,6 @@ class TimeElapsedColumn(ProgressColumn):
 
     def render(self, task) -> RichText:
         """Show time remaining."""
-        from datetime import timedelta
 
         ctime = task.fields.get("ctime", None)
         if ctime is None:
@@ -772,7 +794,7 @@ class Gen:
         """
         assert ts is not None, "cannot parse rst files without tree sitter being built."
 
-        print("Scraping Documentation")
+        self.log.info("Scraping Documentation")
         for p in path.glob("**/*"):
             if p.is_file():
                 parts = p.relative_to(path).parts
@@ -865,9 +887,6 @@ class Gen:
             pass
         except OSError:
             self.log.warn("Could not find source for %s, file=", target_item)
-            import ipdb
-
-            ipdb.set_trace()
 
         try:
             item_line = inspect.getsourcelines(target_item)[1]
@@ -910,7 +929,7 @@ class Gen:
             ndoc.figs = figs
         except Exception as e:
             ndoc.example_section_data = Section()
-            print("Error getting example data in ", qa)
+            self.log.error("Error getting example data in %s", repr(qa))
             raise ValueError("Error getting example data in ", qa) from e
             ndoc.figs = []
 
@@ -983,9 +1002,9 @@ class Gen:
             list of (sub)modules names to generate docbundle for.
             The first is considered the root module.
         infer : bool
-            Wether to run type inference with jedi.
+            Whether to run type inference with jedi.
         exec_ : bool
-            Wether to try to execute the code blocks and embed resulting values like plots.
+            Whether to try to execute the code blocks and embed resulting values like plots.
 
         See Also
         --------
@@ -1001,21 +1020,6 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        # class DummyP(Progress):
-        #    def add_task(*args, **kwargs):
-        #        pass
-
-        #    def advance(*args, **kwargs):
-        #        pass
-
-        #    def update(*args, **kwargs):
-        #        pass
-
-        #    def __enter__(self, *args, **kwargs):
-        #        return self
-
-        #    def __exit__(self, *args, **kwargs):
-        #        pass
 
         # p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
