@@ -897,12 +897,10 @@ class Gen:
             for s in site_package + [os.path.expanduser("~")]:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
-            item_type = str(type(target_item))
-        except (AttributeError, TypeError):
-            raise
-        except OSError:
-            self.log.warn("Could not find source for %s, file=", target_item)
+        except (AttributeError, TypeError, OSError):
+            self.log.warn("Could not find source for %s", target_item)
 
+        item_type = str(type(target_item))
         try:
             item_line = inspect.getsourcelines(target_item)[1]
         except OSError:
