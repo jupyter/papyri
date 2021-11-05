@@ -886,10 +886,19 @@ class Gen:
         item_file = None
         item_line = None
         item_type = None
+
+        import site
+        site_package = site.getsitepackages()
         try:
+            # try to find relative path WRT site package. 
+            # will not work for dev install. Maybe an option to set the root location ? 
             item_file = inspect.getfile(target_item)
+            for s in site_package + [os.path.expanduser('~')]:
+                if item_file.startswith(s):
+                    item_file = item_file[len(s):]
             item_type = str(type(target_item))
         except (AttributeError, TypeError):
+            raise
             pass
         except OSError:
             self.log.warn("Could not find source for %s, file=", target_item)
@@ -1120,7 +1129,6 @@ class Gen:
                 elif item_docstring is None and isinstance(target_item, ModuleType):
                     item_docstring = """This module has no documentation"""
 
-                # progress.console.print(qa)
                 try:
                     arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
                 except (AssertionError, NotImplementedError) as e:
