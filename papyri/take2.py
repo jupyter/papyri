@@ -1691,7 +1691,9 @@ def assert_block_lines(blocks):
 
 
 def parse_rst_to_papyri_tree(text):
-    """ """
+    """
+    This should at some point be completely replaced by tree sitter.
+    """
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
     assert_block_lines(doc), "raw blocks"
@@ -1705,13 +1707,23 @@ def parse_rst_to_papyri_tree(text):
     # TODO: third pass to set the header level for each header.
     # TODO: forth pass to make sections.
 
-    #    print(b)
-    # print(ex)
-    # for w in [80, 120]:
-    #    p = Paragraph.parse_lines(ex.split("\n"))
-    #    p.width = w
-    #    print(p)
-    #    print()
+    from .ts import parse
+
+    items = parse(text.encode())
+    if len(items) != 1:
+        pass
+        # import ipdb
+
+        # ipdb.set_trace()
+    else:
+        [section] = items
+        if section.children != doc:
+            pass
+            # import ipdb
+            # ipdb.set_trace()
+        else:
+            return section.children
+
     return doc
 
 

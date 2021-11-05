@@ -1,3 +1,14 @@
+"""
+
+Main module responsible from scrapping the code, docstrings, an (TBD) rst files,
+and turning that into intermediate representation files that can be published. 
+
+This also does some code execution, and inlining of figures, though that should
+likely be separated into a separate module at some point. 
+
+
+"""
+
 from __future__ import annotations
 
 import inspect
@@ -80,25 +91,13 @@ class DummyP(Progress):
 
 
 def paragraph(lines) -> Any:
-    #    p = Paragraph.parse_lines(lines)
-    #    acc = []
-    #    for c in p.children:
-    #        if type(c).__name__ == "Directive":
-    #            if c.role == "math":
-    #                acc.append(Math(c.value))
-    #            else:
-    #                acc.append(c)
-    #        else:
-    #            acc.append(c)
-    #    p.children = acc
+    """
+    Leftover rst parsing,
+
+    Remove at some point.
+    """
     [section] = ts.parse("\n".join(lines).encode())
-    #    assert isinstance(res, Section), res
-    #    assert len(res.children) == 1
     p2 = section.children[0]
-    #    if not p == p2:
-    #        import ipdb
-    #        ipdb.set_trace()
-    # assert p == p2, (p.children, p2.children )
     return p2
 
 
@@ -697,6 +696,9 @@ class DocBlob(Node):
         "arbitrary",
     )
 
+    def __repr__(self):
+        return "<DocBlob ...>"
+
     def slots(self):
         return [
             "_content",
@@ -1113,7 +1115,7 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        # p = lambda *args, **kwargs: DummyP(*args, **kwargs)
+        p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
         collector, module_conf = self.configure(names, conf)
         collected: Dict[str, Any] = collector.items()
