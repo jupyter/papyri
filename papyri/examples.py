@@ -13,7 +13,7 @@ should have any effects when called.
     and it's description
 
 
-Enumeration list. 
+Enumeration list.
 
 1. item 1
 2. item 2
