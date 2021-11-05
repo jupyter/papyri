@@ -569,16 +569,9 @@ def nest_sections(items) -> List[Section]:
         acc.append(Section([]))
     for item in items:
         if isinstance(item, Section):
-            item.to_json()
             acc.append(item)
         else:
             acc[-1].children.append(item)
-            acc[-1].to_json()
-    # just validation
-    # that it's serialisable
-    # no side effects.
-    for a in acc:
-        a.to_json()
     return acc
 
 
