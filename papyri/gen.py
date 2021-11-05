@@ -299,8 +299,8 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
     example_section_data = Section()
     import matplotlib.pyplot as plt
-    from matplotlib import _pylab_helpers
     import numpy as np
+    from matplotlib import _pylab_helpers
 
     acc = ""
 
@@ -888,18 +888,18 @@ class Gen:
         item_type = None
 
         import site
+
         site_package = site.getsitepackages()
         try:
-            # try to find relative path WRT site package. 
-            # will not work for dev install. Maybe an option to set the root location ? 
+            # try to find relative path WRT site package.
+            # will not work for dev install. Maybe an option to set the root location ?
             item_file = inspect.getfile(target_item)
-            for s in site_package + [os.path.expanduser('~')]:
+            for s in site_package + [os.path.expanduser("~")]:
                 if item_file.startswith(s):
-                    item_file = item_file[len(s):]
+                    item_file = item_file[len(s) :]
             item_type = str(type(target_item))
         except (AttributeError, TypeError):
             raise
-            pass
         except OSError:
             self.log.warn("Could not find source for %s, file=", target_item)
 
@@ -1043,6 +1043,41 @@ class Gen:
                     print("put one fig", name)
                     self.put_raw(name, data)
 
+    def helper_1(self, *, qa: str, experimental: bool, target_item):
+        """
+        Parameters
+        ----------
+        qa : str
+            fully qualified name of the object we are extracting the
+            documentation from .
+        experimental : bool
+            whether to try experimental features
+        p2: rich progress instance
+        """
+        short_description = (qa[:19] + "..") if len(qa) > 21 else qa
+        item_docstring = target_item.__doc__
+        # TODO: we may not want to skip items as they may have children
+        # right now keep modules, but we may want to keep classes if
+        # they have documented descendants.
+
+        if item_docstring is None and not isinstance(target_item, ModuleType):
+            return short_description, None, None
+
+        elif item_docstring is None and isinstance(target_item, ModuleType):
+            item_docstring = """This module has no documentation"""
+        try:
+            arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
+        except (AssertionError, NotImplementedError) as e:
+            self.log.warning("TS could not parse %s, %s", repr(qa), e)
+            failure_collection[type(e).__name__].append(qa)
+            if experimental:
+                raise type(e)(f"from {qa}") from e
+            arbitrary = []
+        except Exception as e:
+            raise type(e)(f"from {qa}")
+
+        return short_description, item_docstring, arbitrary
+
     def do_one_mod(
         self,
         names: List[str],
@@ -1115,30 +1150,14 @@ class Gen:
             failure_collection = defaultdict(lambda: [])
 
             for qa, target_item in collected.items():
-                short_description = (qa[:19] + "..") if len(qa) > 21 else qa
+                short_description, item_docstring, arbitrary = self.helper_1(
+                    qa=qa, experimental=experimental, target_item=target_item
+                )
                 p2.update(taskp, description=short_description.ljust(17))
                 p2.advance(taskp)
-                item_docstring = target_item.__doc__
 
-                # TODO: we may not want to skip items as they may have children
-                # right now keep modules, but we may want to keep classes if
-                # they have documented descendants.
-
-                if item_docstring is None and not isinstance(target_item, ModuleType):
+                if item_docstring is None:
                     continue
-                elif item_docstring is None and isinstance(target_item, ModuleType):
-                    item_docstring = """This module has no documentation"""
-
-                try:
-                    arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
-                except (AssertionError, NotImplementedError) as e:
-                    self.log.warning("TS could not parse %s, %s", repr(qa), e)
-                    failure_collection[type(e).__name__].append(qa)
-                    if experimental:
-                        raise type(e)(f"from {qa}") from e
-                    arbitrary = []
-                except Exception as e:
-                    raise type(e)(f"from {qa}")
 
                 try:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
