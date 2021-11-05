@@ -1043,7 +1043,7 @@ class Gen:
                     print("put one fig", name)
                     self.put_raw(name, data)
 
-    def helper_1(self, *, qa: str, experimental: bool, target_item):
+    def helper_1(self, *, qa: str, experimental: bool, target_item, failure_collection):
         """
         Parameters
         ----------
@@ -1147,11 +1147,15 @@ class Gen:
             # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
 
-            failure_collection = defaultdict(lambda: [])
+            failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
 
             for qa, target_item in collected.items():
                 short_description, item_docstring, arbitrary = self.helper_1(
-                    qa=qa, experimental=experimental, target_item=target_item
+                    qa=qa,
+                    experimental=experimental,
+                    target_item=target_item,
+                    # mutable, not great.
+                    failure_collection=failure_collection,
                 )
                 p2.update(taskp, description=short_description.ljust(17))
                 p2.advance(taskp)
