@@ -85,7 +85,7 @@ class TextWithLink(urwid.Text):
                     if isinstance(item, list):
                         for it in item:
                             assert isinstance(it, str)
-                        current_len += sum([len(x) for x in item])
+                        current_len += sum(len(x) for x in item)
                     elif isinstance(item, str):
                         current_len += len(item)
                     else:

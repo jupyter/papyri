@@ -940,7 +940,7 @@ def make_blocks_2(lines):
     return acc
 
 
-def make_block_3(lines: "Lines"):
+def make_block_3(lines: Lines):
     """
     I think the correct alternative is that each block may get an indented children,
     and that a block is thus:
@@ -1169,7 +1169,7 @@ class Lines(Node):
         return rep
 
     def dedented(self):
-        d = min([l.indent for l in self._lines if l.indent is not None])
+        d = min(l.indent for l in self._lines if l.indent is not None)
 
         new_lines = []
         for l in self._lines:

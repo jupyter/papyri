@@ -176,7 +176,7 @@ def deserialize(type_, annotation, data):
             inner_annotation = annotation.__args__
             # assert len(inner_annotation) == 1, inner_annotation
             return tuple(
-                [deserialize(inner_annotation[0], inner_annotation[0], x) for x in data]
+                deserialize(inner_annotation[0], inner_annotation[0], x) for x in data
             )
         elif orig is list:
             # assert isinstance(data, list)

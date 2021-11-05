@@ -122,7 +122,7 @@ async def gallery(module, store, version, ext="", gstore=None, *, sidebar):
         res = gstore.glob((module, version, "assets", None))
         backrefs = set()
         for key in res:
-            brs = set(tuple(x) for x in gstore.get_backref(key))
+            brs = {tuple(x) for x in gstore.get_backref(key)}
             backrefs = backrefs.union(brs)
 
     for key in backrefs:
@@ -293,7 +293,7 @@ def cs2(ref, tree, ref_map):
             return RefInfo("?", "?", "?", key)
 
     for p in parts:
-        res = list(sorted([(f"{cpath}{k}", k) for k in branch.keys() if k != "+"]))
+        res = list(sorted((f"{cpath}{k}", k) for k in branch.keys() if k != "+"))
         if res:
             siblings[p] = [
                 ##(ref_map.get(c, RINFO("?", "?", "?", c)), c.split(".")[-1])

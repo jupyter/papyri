@@ -166,9 +166,9 @@ class GraphStore:
 
         if path_br.path.exists():
             xx = path_br.read_json()
-            backrefs = set([Key(*item) for item in xx])
+            backrefs = {Key(*item) for item in xx}
         else:
-            backrefs = set([])
+            backrefs = set()
 
         sql_backref_unparsed = self.table.execute(
             "select distinct source from links where dest=?", (str(key),)
@@ -207,7 +207,7 @@ class GraphStore:
         """
         _, p = self._key_to_paths(dest)
         if p.path.exists():
-            data = set([tuple(x) for x in p.read_json()])
+            data = {tuple(x) for x in p.read_json()}
         else:
             p.parent.mkdir(parents=True, exist_ok=True)
             data = set()
@@ -223,7 +223,7 @@ class GraphStore:
         assert isinstance(dest, Key)
         _, p = self._key_to_paths(dest)
         if p.exists():
-            data = set(Key(*x) for x in p.read_json())
+            data = {Key(*x) for x in p.read_json()}
             data.discard(source)
             p.write_json(list(sorted(data)))
 
