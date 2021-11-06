@@ -27,9 +27,9 @@ exclude = [
    'numpy.isscalar',
    'numpy.unique',
    'numpy.histogram_bin_edges',
-   # Assertion Error (serialisation)
-   #"numpy.clip",
+   # missparsing of example sections.
    "numpy.percentile",
+   # Assertion Error (serialisation)
    "numpy.unwrap",
    "numpy.polynomial.chebyshev.chebfit",
    "numpy.polynomial.hermite.hermfit",

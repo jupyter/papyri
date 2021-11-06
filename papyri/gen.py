@@ -899,8 +899,21 @@ class Gen:
             for s in site_package + [os.path.expanduser("~")]:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
-        except (AttributeError, TypeError, OSError):
-            self.log.warn("Could not find source for %s", target_item)
+        except (TypeError) as e:
+            if type(target_item).__name__ == "builtin_function_or_method":
+                type(target_item),
+                self.log.debug(
+                    "Could not find source file for built-in function method. Likely compiled extension %s (%s), will not be able to link to it.",
+                    repr(qa),
+                    target_item,
+                )
+            else:
+
+                self.log.warn(
+                    "Could not find source file for %s (%s), will not be able to link to it.",
+                    repr(qa),
+                    target_item,
+                )
 
         item_type = str(type(target_item))
         try:
