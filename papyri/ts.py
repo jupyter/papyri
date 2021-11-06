@@ -485,14 +485,14 @@ class TSVisitor:
 
     def visit_substitution_definition(self, node, prev_end=None):
         # TODO
-        assert False
+        raise VisitSubstitutionDefinitionNotImplementedError(
+            self.bytes[node.start_byte : node.end_byte].decode()
+        )
         return []
 
     def visit_comment(self, node, prev_end=None):
         # TODO
-        raise VisitCommentNotImplementedError(
-            self.bytes[node.start_byte : node.end_byte].decode()
-        )
+        raise VisitCommentNotImplementedError()
         return []
 
     def visit_strong(self, node, prev_end=None):

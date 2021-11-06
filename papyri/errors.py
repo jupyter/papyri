@@ -1,3 +1,7 @@
+class VisitSubstitutionDefinitionNotImplementedError(NotImplementedError):
+    pass
+
+
 class VisitTargetNotImplementedError(NotImplementedError):
     pass
 
