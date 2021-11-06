@@ -90,6 +90,32 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             "scipy.sparse.csgraph._traversal.breadth_first_tree",
             "scipy.sparse.csgraph._traversal.depth_first_tree",
             "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree",
+            # ts parse error
+            'scipy.optimize.optimize.fmin',
+            'scipy.optimize.optimize.fmin_powell',
+            'scipy.integrate.quadpack.quad',
+            "scipy.optimize.optimize._minimize_scalar_bounded",
+            "scipy.optimize.optimize._line_for_search",
+            "scipy.optimize.optimize.fmin_bfgs",
+            "scipy.optimize.optimize.fminbound",
+            "scipy.fft._pocketfft.pypocketfft.PyCapsule.c2c",
+            "scipy.fft._pocketfft.pypocketfft.PyCapsule.c2r",
+            "scipy.fft._pocketfft.pypocketfft.PyCapsule.dct",
+            "scipy.fft._pocketfft.pypocketfft.PyCapsule.dst",
+            "scipy.fft._pocketfft.pypocketfft.PyCapsule.genuine_hartley",
+            "scipy.fft._pocketfft.pypocketfft.PyCapsule.r2c",
+            "scipy.fft._pocketfft.pypocketfft.PyCapsule.r2r_fftpack",
+            "scipy.fft._pocketfft.pypocketfft.PyCapsule.separable_hartley",
+            "scipy.sparse.linalg.isolve.iterative.bicg",
+            "scipy.sparse.linalg.isolve.iterative.bicgstab",
+            "scipy.sparse.linalg.isolve.iterative.cg",
+            "scipy.sparse.linalg.isolve.iterative.cgs",
+            'scipy.sparse.linalg.isolve.minres.minres',
+            'scipy.sparse.linalg.isolve.iterative.qmr',
+
+            # ts difference parse
+            'scipy.sparse.linalg.isolve.iterative.gmres',
+
             ]
 exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]
 execute_exclude_patterns = []

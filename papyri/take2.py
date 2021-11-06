@@ -1117,10 +1117,6 @@ class Block(Node):
     """
 
     def __init__(self, lines, wh, ind, *, reason=None):
-        if not lines:
-            lines = [
-                ":: workaround numpyoc summary/ext summary bug in take2::Line.__init__"
-            ]
         self.lines = Lines(lines)
         self.wh = Lines(wh)
         self.ind = Lines(ind)
@@ -1516,7 +1512,13 @@ class DefListItem(Block):
     # be a single term, (word, directive or link is my guess).
     dd: List[
         Union[
-            Paragraph, BulletList, EnumeratedList, BlockQuote, DefList, BlockDirective
+            Paragraph,
+            BulletList,
+            EnumeratedList,
+            BlockQuote,
+            DefList,
+            BlockDirective,
+            Admonition,
         ]
     ]
 
@@ -1794,7 +1796,7 @@ def parse_rst_to_papyri_tree(text):
     """
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
-    assert_block_lines(doc), "raw blocks"
+    # assert_block_lines(doc), "raw blocks"
     doc = [x for pairs in doc for x in header_pass(pairs)]
     doc = header_level_pass(doc)
     doc = [x for pairs in doc for x in example_pass(pairs)]
