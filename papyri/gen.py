@@ -945,7 +945,7 @@ class Gen:
         except Exception as e:
             ndoc.example_section_data = Section()
             self.log.error("Error getting example data in %s", repr(qa))
-            raise ValueError("Error getting example data in ", qa) from e
+            raise ValueError("Error getting example data in {qa!r}") from e
             ndoc.figs = []
 
         ndoc.refs = list(
@@ -1332,7 +1332,7 @@ class Gen:
                 for k, v in doc_blob.content.items():
                     assert isinstance(v, Section), f"{k} is not a section {v}"
                 # end processing
-
+                doc_blob.validate()
                 self.put(qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(name, data)

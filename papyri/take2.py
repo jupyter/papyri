@@ -75,10 +75,98 @@ BOLD = lambda x: "\033[1m" + x + "\033[0m"
 UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 
+from typing import get_type_hints
+from typing import List
+import typing
+
+
 from papyri.miniserde import deserialize, get_type_hints, serialize
 
 
+def not_type_check(item, annotation):
+
+    if not hasattr(annotation, "__origin__"):
+        if isinstance(item, annotation):
+            return None
+        else:
+            return f"expecting {annotation} got {type(item)}"
+    elif annotation.__origin__ is dict:
+        if not isinstance(item, dict):
+            return f"got  {type(item)}, Yexpecting list"
+        inner_type = annotation.__args__[0]
+        a = [not_type_check(i, inner_type) for i in item.keys()]
+        ax = [x for x in a if x is not None]
+        inner_type = annotation.__args__[1]
+        b = [not_type_check(i, inner_type) for i in item.values()]
+        bx = [x for x in b if x is not None]
+        if ax:
+            return ":invalid key type {ax[0]}"
+        if bx:
+            return bx[0]
+        return None
+    elif annotation.__origin__ in (list, tuple):
+        # technically incorrect
+        if not isinstance(item, (list, tuple)):
+            return f"got  {type(item)}, Yexpecting list"
+        assert len(annotation.__args__) == 1
+        inner_type = annotation.__args__[0]
+
+        b = [not_type_check(i, inner_type) for i in item]
+
+        bp = [x for x in b if x is not None]
+        if bp:
+            return bp[0]
+        else:
+            return None
+    elif annotation.__origin__ is typing.Union:
+        if any([not_type_check(item, arg) is None for arg in annotation.__args__]):
+            return None
+        return f"expecting one of {annotation}, got {item}"
+    raise ValueError(item, annotation)
+
+
+def _invalidate(obj, depth=0):
+    """
+    Recursively validate type anotated classes.
+    """
+
+    indent = "  " * depth
+    annotations = get_type_hints(type(obj))
+    for k, v in annotations.items():
+        item = getattr(obj, k)
+        res = not_type_check(item, v)
+        if res:
+            return f"{k} at {type(obj)} : {res}"
+
+        if isinstance(item, (list, tuple)):
+            for ii, i in enumerate(item):
+                sub = _invalidate(i, depth + 1)
+                if sub is not None:
+                    return f"{k}.{ii}." + sub
+        if isinstance(item, dict):
+            for ii, i in item.items():
+                sub = _invalidate(i, depth + 1)
+                if sub is not None:
+                    return f"{k}.{ii}." + sub
+        else:
+            sub = _invalidate(item, depth + 1)
+            if sub is not None:
+                return f"{k}.{ii}." + sub
+
+    # return outcome,s
+
+
+def validate(obj):
+    res = _invalidate(obj)
+    if res:
+        raise ValueError(f"{res}")
+
+
 class Base:
+    def validate(self):
+        validate(self)
+        return self
+
     @classmethod
     def _instance(cls):
         return cls()
@@ -609,6 +697,9 @@ class Param(Node):
             Example,
             BlockVerbatim,
             Admonition,
+            BulletList,
+            BlockQuote,
+            EnumeratedList,
         ]
     ]
 
@@ -687,6 +778,9 @@ class Code(Node):
             for t in e:
                 assert type(t) in (str, type(None)), inst.entries
         return inst
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
 
 class Text(Node):
@@ -1420,7 +1514,11 @@ class DefListItem(Block):
     ind: Lines
     dt: Paragraph  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
-    dd: List[Union[Paragraph, BulletList, EnumeratedList, BlockQuote, DefList]]
+    dd: List[
+        Union[
+            Paragraph, BulletList, EnumeratedList, BlockQuote, DefList, BlockDirective
+        ]
+    ]
 
     @property
     def children(self):
@@ -1718,6 +1816,7 @@ def parse_rst_to_papyri_tree(text):
     else:
         [section] = items
         if section.children != doc:
+            return section.children
             pass
             # import ipdb
             # ipdb.set_trace()

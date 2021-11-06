@@ -28,7 +28,8 @@ exclude = [
    'numpy.unique',
    'numpy.histogram_bin_edges',
    # Assertion Error (serialisation)
-   "numpy.clip",
+   #"numpy.clip",
+   "numpy.percentile",
    "numpy.unwrap",
    "numpy.polynomial.chebyshev.chebfit",
    "numpy.polynomial.hermite.hermfit",

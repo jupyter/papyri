@@ -147,6 +147,4 @@ def example_3():
 
         This directive will be turned into an admonition.
 
-
-
     """
