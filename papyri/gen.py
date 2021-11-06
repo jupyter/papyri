@@ -1128,7 +1128,7 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        # p = lambda *args, **kwargs: DummyP(*args, **kwargs)
+        p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
         collector, module_conf = self.configure(names, conf)
         collected: Dict[str, Any] = collector.items()

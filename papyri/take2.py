@@ -1809,17 +1809,13 @@ def parse_rst_to_papyri_tree(text):
 
     items = parse(text.encode())
     if len(items) != 1:
-        pass
-        # import ipdb
-
-        # ipdb.set_trace()
+        if text == "::":
+            return []
+        assert False
     else:
         [section] = items
         if section.children != doc:
             return section.children
-            pass
-            # import ipdb
-            # ipdb.set_trace()
         else:
             return section.children
 
