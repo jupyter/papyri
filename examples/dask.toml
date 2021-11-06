@@ -13,6 +13,8 @@ exclude = [ "dask.utils.Dispatch",
             "dask.array.tiledb_io.to_tiledb",
             # visit_comment not implemented
             "dask.array.routines.unique",
+            # misc aseert
+            "dask.base.replace_name_in_key",
   ]
 #docs_path = "~/dev/dask/docs/source"
 exec_failure = 'fallback'

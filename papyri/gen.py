@@ -1317,7 +1317,10 @@ class Gen:
                             assert isinstance(desc, list)
                             items = []
                             if desc:
-                                items = P2(desc)
+                                try:
+                                    items = P2(desc)
+                                except Exception as e:
+                                    raise type(e)(f"from {qa}")
                             new_content.append(Param(param, type_, items))
                         doc_blob.content[s] = new_content
 
