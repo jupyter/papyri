@@ -22,20 +22,12 @@ exclude = [
    'numpy.rollaxis',
    'numpy.ma.extras.polyfit',
    'numpy.polyfit',
-   'numpy.rubrub',
    'numpy.polynomial.polyutils.mapdomain',
    'numpy.isscalar',
    'numpy.unique',
    'numpy.histogram_bin_edges',
    # missparsing of example sections.
    "numpy.percentile",
-   # Assertion Error (serialisation)
-   "numpy.unwrap",
-   "numpy.polynomial.chebyshev.chebfit",
-   "numpy.polynomial.hermite.hermfit",
-   "numpy.polynomial.hermite_e.hermefit",
-   "numpy.polynomial.laguerre.lagfit",
-   "numpy.polynomial.legendre.legfit",
    # Citation Reference not implemented
    "numpy.fft"
    ]
