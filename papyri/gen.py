@@ -370,7 +370,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                                 ]
                     infer_exclude = config.get("exclude_jedi", frozenset())
                     if qa in infer_exclude:
-                        print("Turning off type inference for func {qa!r}")
+                        print(f"Turning off type inference for func {qa!r}")
                         inf = False
                     else:
                         inf = infer
@@ -1128,7 +1128,7 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        p = lambda *args, **kwargs: DummyP(*args, **kwargs)
+        # p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
         collector, module_conf = self.configure(names, conf)
         collected: Dict[str, Any] = collector.items()
@@ -1210,15 +1210,23 @@ class Gen:
                         target_item, ndoc, infer, ex, qa, config=module_conf
                     )
                     doc_blob.arbitrary = arbitrary
-                except Exception:
-                    raise
+                except Exception as e:
+                    self.log.error("Execution error in %s", repr(qa))
+                    failure_collection["ExecError-" + str(type(e))].append(qa)
                     if module_conf.get("exec_failure", None) == "fallback":
-                        print("Re-analysing ", qa, "without execution")
+                        print("Re-analysing ", qa, "without execution", type(e))
                         # debug:
                         # TODO: ndoc-placeholder : make sure ndoc placeholder handled here as well.
-                        doc_blob, figs = self.do_one_item(
-                            target_item, ndoc, infer, False, qa, config=module_conf
-                        )
+                        try:
+                            doc_blob, figs = self.do_one_item(
+                                target_item, ndoc, infer, False, qa, config=module_conf
+                            )
+                        except Exception as e:
+                            self.log.exception(
+                                "unexpected non-exec error in %s", repr(qa)
+                            )
+                            failure_collection["ErrorNoExec-" + str(type(e))].append(qa)
+                            continue
                 doc_blob.aliases = collector.aliases[qa]
 
                 # processing....
@@ -1345,7 +1353,10 @@ class Gen:
                 for k, v in doc_blob.content.items():
                     assert isinstance(v, Section), f"{k} is not a section {v}"
                 # end processing
-                doc_blob.validate()
+                try:
+                    doc_blob.validate()
+                except Exception as e:
+                    raise type(e)(f"Error in {qa}")
                 self.put(qa, json.dumps(doc_blob.to_json(), indent=2))
                 for name, data in figs:
                     self.put_raw(name, data)

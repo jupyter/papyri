@@ -439,7 +439,10 @@ class TSVisitor:
         ## TODO : this is likely wrong...
         # inner: Optional[Paragraph]
 
-        assert len(node.children) == 4, node.children
+        assert len(node.children) == 4, (
+            node.children,
+            self.bytes[node.start_byte : node.end_byte].decode(),
+        )
         _, _role, _, body = node.children
         role = self.bytes[_role.start_byte : _role.end_byte].decode()
 

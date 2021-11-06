@@ -40,6 +40,7 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             'scipy.special.orthogonal.roots_genlaguerre',
             'scipy.special.orthogonal',
             'scipy.special.orthogonal.roots_legendre',
+            'scipy.signal.lti_conversion.tf2ss',
             'scipy.special._basic.polygamma',
             'scipy.special.orthogonal.roots_sh_legendre',
             'scipy.optimize.nonlin.Anderson',
@@ -79,7 +80,16 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             "scipy.interpolate.interpolate.BPoly.extend",
             "scipy.spatial.qhull.Delaunay",
             "scipy.spatial.qhull.Voronoi",
-
+            # issue in parsing examples section that gets directive as output w/o
+            # body.
+            "scipy.signal.lti_conversion.ss2tf",
+            "scipy.interpolate.interpolate.interp1d",
+            "scipy.optimize._linprog.linprog",
+            "scipy.interpolate.interpolate.BPoly",
+             "scipy.interpolate.interpolate.lagrange",
+            "scipy.sparse.csgraph._traversal.breadth_first_tree",
+            "scipy.sparse.csgraph._traversal.depth_first_tree",
+            "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree",
             ]
 exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]
 execute_exclude_patterns = []
