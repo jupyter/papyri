@@ -1,0 +1,6 @@
+- check parsing of IPython.lib.display.audio to make sure bulllet list in param are ok.
+- numpy.core.shape_base._concatenate_shapes might not be complete.
+- numpy.errstate seem to have fileds alternating between "numpy._ErrDict" and "numpy.dict",
+- numpy.histogram_bin_edges has a block math in _content.Notes.children.2.children.0.dd
+- numpy.histogram_bin_edges has math not rendered.
+- `numpy.core.shape_base._concatenate_shapes` improperly parse

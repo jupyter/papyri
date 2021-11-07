@@ -6,6 +6,7 @@ from .errors import (
     VisitCitationNotImplementedError,
     VisitCitationReferenceNotImplementedError,
     VisitCommentNotImplementedError,
+    VisitSubstitutionDefinitionNotImplementedError,
     VisitTargetNotImplementedError,
 )
 

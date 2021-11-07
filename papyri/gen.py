@@ -1,10 +1,10 @@
 """
 
 Main module responsible from scrapping the code, docstrings, an (TBD) rst files,
-and turning that into intermediate representation files that can be published. 
+and turning that into intermediate representation files that can be published.
 
 This also does some code execution, and inlining of figures, though that should
-likely be separated into a separate module at some point. 
+likely be separated into a separate module at some point.
 
 
 """
@@ -16,6 +16,7 @@ import io
 import json
 import logging
 import os
+import site
 import sys
 import warnings
 from collections import defaultdict
@@ -66,6 +67,7 @@ except (ImportError, OSError):
             $ papyri build-parser
             """
     )
+SITE_PACKAGE = site.getsitepackages()
 
 
 class DummyP(Progress):
@@ -560,17 +562,45 @@ def full_qual(obj):
 
 
 class DFSCollector:
+    """
+    Depth first search collector.
+
+    Will scan documentation to find all reachable items in the namespace
+    of our root object (we don't want to go scan other libraries).
+
+    Three was some issues with BFS collector originally, I'm not sure I remember what.
+
+
+    """
+
     def __init__(self, root, others):
+        """
+        Parameters
+        ----------
+        root:
+            Base object, typically module we want to scan itself.
+            We will attempt to no scan any object which does not belong
+            to the root or one of its children.
+
+        others:
+            List of other objects to use a base to explore the object graph.
+            Typically this is because some packages do not import some
+            submodules by default, so we need to pass these submodules
+            explicitly.
+        """
         assert isinstance(root, ModuleType), root
         self.root = root.__name__
         assert "." not in self.root
-        self.obj = dict()
+        self.obj: Dict[str, Any] = dict()
         self.aliases = defaultdict(lambda: [])
         self._open_list = [(root, [root.__name__])]
         for o in others:
             self._open_list.append((o, o.__name__.split(".")))
 
-    def scan(self):
+    def scan(self) -> None:
+        """
+        Attempt to find all objects.
+        """
         while len(self._open_list) >= 1:
             current, stack = self._open_list.pop(0)
 
@@ -578,7 +608,18 @@ class DFSCollector:
             if id(current) not in [id(x) for x in self.obj.values()]:
                 self.visit(current, stack)
 
-    def prune(self):
+    def prune(self) -> None:
+        """
+        Some object can be reached many times via multiple path.
+        We try to remove duplicate path we use to reach given objects.
+
+        Note
+        ----
+
+        At some point we might want to save all objects aliases,
+        in order to extract the canonical import name (visible to users),
+        and to resolve references.
+        """
         for qa, item in self.obj.items():
             if (nqa := full_qual(item)) != qa:
                 print("after import qa differs : {qa} -> {nqa}")
@@ -588,12 +629,16 @@ class DFSCollector:
                 else:
                     print("differs: {item} != {other}")
 
-    def items(self):
+    def items(self) -> Dict[str, Any]:
         self.scan()
         self.prune()
         return self.obj
 
     def visit(self, obj, stack):
+        """
+        Recursively visit Module, Classes, and Functions by tracking which path
+        we took there.
+        """
         try:
             qa = full_qual(obj)
         except Exception as e:
@@ -759,6 +804,14 @@ class DocBlob(Node):
 
 
 class Gen:
+    """
+    Core class to generate docbundles for a given library.
+
+    This is responsible for finding all objects, extracting the doc, parsing it,
+    and saving that into the right folder.
+
+    """
+
     def __init__(self):
 
         FORMAT = "%(message)s"
@@ -775,6 +828,9 @@ class Gen:
         self.docs = {}
 
     def clean(self, where: Path):
+        """
+        Erase a doc bundle folder.
+        """
         for _, path in progress(
             (where / "module").glob("*.json"),
             description="cleaning previous bundle 1/3",
@@ -829,6 +885,9 @@ class Gen:
             # data = p.read_bytes()
 
     def write(self, where: Path):
+        """
+        Write a docbundle folder.
+        """
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
             with (where / "module" / k).open("w") as f:
@@ -859,9 +918,15 @@ class Gen:
             f.write(json.dumps(self.metadata, indent=2))
 
     def put(self, path: str, data):
+        """
+        put some json data at the given path
+        """
         self.data[path + ".json"] = data
 
     def put_raw(self, path: str, data):
+        """
+        put some rbinary data at the given path.
+        """
         self.bdata[path] = data
 
     def do_one_item(
@@ -889,21 +954,19 @@ class Gen:
         item_line = None
         item_type = None
 
-        import site
-
-        site_package = site.getsitepackages()
         try:
             # try to find relative path WRT site package.
             # will not work for dev install. Maybe an option to set the root location ?
             item_file = inspect.getfile(target_item)
-            for s in site_package + [os.path.expanduser("~")]:
+            for s in SITE_PACKAGE + [os.path.expanduser("~")]:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
-        except (TypeError) as e:
+        except TypeError:
             if type(target_item).__name__ == "builtin_function_or_method":
                 type(target_item),
                 self.log.debug(
-                    "Could not find source file for built-in function method. Likely compiled extension %s (%s), will not be able to link to it.",
+                    "Could not find source file for built-in function method."
+                    "Likely compiled extension %s (%s), will not be able to link to it.",
                     repr(qa),
                     target_item,
                 )
@@ -1321,7 +1384,11 @@ class Gen:
                                     items = P2(desc)
                                 except Exception as e:
                                     raise type(e)(f"from {qa}")
-                            new_content.append(Param(param, type_, items))
+                                for l in items:
+                                    assert not isinstance(l, Section)
+                            new_content.append(
+                                Param(param, type_, desc=items).validate()
+                            )
                         doc_blob.content[s] = new_content
 
                 doc_blob.see_also = []

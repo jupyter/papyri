@@ -59,7 +59,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Any
 
 from papyri.utils import dedent_but_first
 
@@ -75,10 +75,8 @@ BOLD = lambda x: "\033[1m" + x + "\033[0m"
 UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 
-from typing import get_type_hints
-from typing import List
 import typing
-
+from typing import List
 
 from papyri.miniserde import deserialize, get_type_hints, serialize
 
@@ -130,7 +128,6 @@ def _invalidate(obj, depth=0):
     Recursively validate type anotated classes.
     """
 
-    indent = "  " * depth
     annotations = get_type_hints(type(obj))
     for k, v in annotations.items():
         item = getattr(obj, k)
@@ -888,7 +885,6 @@ class Paragraph(Node):
     @classmethod
     def parse_lines(cls, lines):
         assert isinstance(lines, list), lines
-        assert lines
         tokens = list(lex(lines))
 
         rest = tokens
@@ -1519,6 +1515,7 @@ class DefListItem(Block):
             DefList,
             BlockDirective,
             Admonition,
+            BlockMath,
         ]
     ]
 
@@ -1813,7 +1810,8 @@ def parse_rst_to_papyri_tree(text):
     if len(items) != 1:
         if text == "::":
             return []
-        assert False
+        return items[0].children
+
     else:
         [section] = items
         if section.children != doc:

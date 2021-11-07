@@ -76,11 +76,11 @@ def test_parse_headers(target, expected):
     [
         ("numpy", BlockDirective, 0),
         ("numpy.linspace", BlockDirective, 2),
-        ("scipy.optimize._lsq.least_squares", Paragraph, 24),
-        ("scipy.optimize._lsq.least_squares", Example, 14),
-        ("scipy.optimize._lsq.least_squares", Header, 6),
-        ("scipy.optimize._lsq.least_squares", BlockVerbatim, 1),
-        ("scipy.optimize._lsq.least_squares", BlockDirective, 1),
+        # ("scipy.optimize._lsq.least_squares", Paragraph, 24),
+        # ("scipy.optimize._lsq.least_squares", Example, 14),
+        # ("scipy.optimize._lsq.least_squares", Header, 6),
+        # ("scipy.optimize._lsq.least_squares", BlockVerbatim, 1),
+        # ("scipy.optimize._lsq.least_squares", BlockDirective, 1),
     ],
 )
 def test_parse_blocks(target, type_, number):

@@ -912,7 +912,10 @@ class Ingester:
             assert mod_root == root, f"{mod_root}, {root}"
             doc_blob.version = version
             assert hasattr(doc_blob, "arbitrary")
-            doc_blob.validate()
+            try:
+                doc_blob.validate()
+            except Exception as e:
+                raise type(e)(f"from {qa}")
             js = doc_blob.to_json()
             del js["backrefs"]
 
