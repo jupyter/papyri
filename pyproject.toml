@@ -15,6 +15,7 @@ requires=[
     "toml",
     "urwid",
     "httpx",
+    "ipython",
     "numpydoc",
     "cachetools",
     "pygments",

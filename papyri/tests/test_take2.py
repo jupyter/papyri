@@ -2,11 +2,7 @@ import pytest
 
 from ..take2 import (
     BlockDirective,
-    BlockVerbatim,
-    Example,
-    Header,
     Lines,
-    Paragraph,
     dedent_but_first,
     get_object,
     make_block_3,

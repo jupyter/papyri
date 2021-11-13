@@ -2,6 +2,7 @@ from pathlib import Path
 
 from tree_sitter import Language, Parser
 
+from . import errors
 from .errors import (
     VisitCitationNotImplementedError,
     VisitCitationReferenceNotImplementedError,
@@ -9,8 +10,6 @@ from .errors import (
     VisitSubstitutionDefinitionNotImplementedError,
     VisitTargetNotImplementedError,
 )
-
-from . import errors
 
 pth = str(Path(__file__).parent / "rst.so")
 
