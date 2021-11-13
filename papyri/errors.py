@@ -1,3 +1,11 @@
+class StrictParsingError(Exception):
+    pass
+
+
+class SpaceAfterBlockDirectiveError(Exception):
+    pass
+
+
 class VisitSubstitutionDefinitionNotImplementedError(NotImplementedError):
     pass
 
