@@ -24,7 +24,7 @@ from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, MutableMapping, Optional, Tuple
 
 import jedi
 import toml
@@ -487,7 +487,7 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
     """
     conffile = Path(target_file).expanduser()
     if conffile.exists():
-        conf = toml.loads(conffile.read_text())
+        conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
         names = list(conf.keys())
 
     else:
@@ -1163,7 +1163,7 @@ class Gen:
         names: List[str],
         infer: bool,
         exec_: bool,
-        conf: dict,
+        conf: MutableMapping[str, Any],
         relative_dir: Path,
         *,
         experimental,
