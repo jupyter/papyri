@@ -57,21 +57,6 @@ def test_make_block(example, nblocks):
 
 
 @pytest.mark.parametrize(
-    "target, expected",
-    [
-        ("numpy", (0, 1, 1, 1, 1, 1)),
-        pytest.param("scipy", (0, 1, 2, 2, 2), marks=[pytest.mark.xfail]),
-        ("matplotlib", ()),
-        ("matplotlib.pyplot.hist", (0, 0, 0, 0, 0)),
-    ],
-)
-def test_parse_headers(target, expected):
-    doc = parse_rst_to_papyri_tree(dedent_but_first(get_object(target).__doc__))
-    levels = tuple([h.level for h in doc if isinstance(h, Header)])
-    assert levels == expected
-
-
-@pytest.mark.parametrize(
     "target, type_, number",
     [
         ("numpy", BlockDirective, 0),
