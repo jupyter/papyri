@@ -1,5 +1,25 @@
 from papyri.ts import parse
 
+import pytest
+from textwrap import dedent
+from papyri import errors
+
+# @pytest.mark.xfail(strict=True)
+def test_parse_space_in_directive_section():
+    data = dedent(
+        """
+
+    .. directive ::
+
+        this type of directive is supported by docutils but
+        should raise/warn in papyri.
+        It may depends on the tree-sitter rst version.
+
+
+    """
+    )
+    pytest.raises(errors.SpaceAfterBlockDirectiveError, parse, data.encode())
+
 
 def test_parse_space():
 

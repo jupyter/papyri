@@ -421,7 +421,7 @@ def build_parser():
 
     pth = Path(__file__).parent / "rst.so"
     if pth.exists():
-        print('parser exists, erasing to rebuild')
+        print("parser exists, erasing to rebuild")
         pth.unlink()
 
     spth = str(pth)

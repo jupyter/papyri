@@ -10,6 +10,8 @@ from .errors import (
     VisitTargetNotImplementedError,
 )
 
+from . import errors
+
 pth = str(Path(__file__).parent / "rst.so")
 
 RST = Language(pth, "rst")
@@ -444,7 +446,15 @@ class TSVisitor:
             node.children,
             self.bytes[node.start_byte : node.end_byte].decode(),
         )
-        _, _role, _, body = node.children
+
+        _, _role, cc, body = node.children
+
+        if _role.end_point != cc.start_point:
+            block_data = self.bytes[node.start_byte : node.end_byte].decode()
+            raise errors.SpaceAfterBlockDirectiveError(
+                f"space present in {block_data!r}"
+            )
+
         role = self.bytes[_role.start_byte : _role.end_byte].decode()
 
         if len(body.children) == 2:
