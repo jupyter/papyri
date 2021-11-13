@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import jedi
 import toml
+from IPython.core.oinspect import find_file
 from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -519,7 +520,7 @@ def gen_main(infer, exec_, target_file, experimental, debug):
     p = target_dir / (g.root + "_" + g.version)
     p.mkdir(exist_ok=True)
 
-    g.log.info("Saving current Doc bundle to  %s", p)
+    g.log.info("Saving current Doc bundle to %s", p)
     g.clean(p)
     g.write(p)
 
@@ -930,7 +931,7 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, infer: bool, exec_: bool, qa: str, *, config
+        self, target_item: Any, ndoc, *, infer: bool, exec_: bool, qa: str, config
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
@@ -954,14 +955,14 @@ class Gen:
         item_line = None
         item_type = None
 
-        try:
-            # try to find relative path WRT site package.
-            # will not work for dev install. Maybe an option to set the root location ?
-            item_file = inspect.getfile(target_item)
+        # try to find relative path WRT site package.
+        # will not work for dev install. Maybe an option to set the root location ?
+        item_file = find_file(target_item)
+        if item_file is not None:
             for s in SITE_PACKAGE + [os.path.expanduser("~")]:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
-        except TypeError:
+        else:
             if type(target_item).__name__ == "builtin_function_or_method":
                 type(target_item),
                 self.log.debug(
@@ -1205,10 +1206,13 @@ class Gen:
 
         # collect all items we want to document.
         excluded = sorted(module_conf.get("exclude", []))
-        self.log.info(
-            "The following items will be excluded by the configurations:\n %s",
-            json.dumps(excluded, indent=2),
-        )
+        if excluded:
+            self.log.info(
+                "The following items will be excluded by the configurations:\n %s",
+                json.dumps(excluded, indent=2),
+            )
+        else:
+            self.log.info("No items excluded by the configuration")
         missing = list(set(excluded) - set(collected.keys()))
         if missing:
             self.log.warning(
@@ -1270,7 +1274,12 @@ class Gen:
                 try:
                     # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
                     doc_blob, figs = self.do_one_item(
-                        target_item, ndoc, infer, ex, qa, config=module_conf
+                        target_item,
+                        ndoc,
+                        infer=infer,
+                        exec_=ex,
+                        qa=qa,
+                        config=module_conf,
                     )
                     doc_blob.arbitrary = arbitrary
                 except Exception as e:
@@ -1282,7 +1291,12 @@ class Gen:
                         # TODO: ndoc-placeholder : make sure ndoc placeholder handled here as well.
                         try:
                             doc_blob, figs = self.do_one_item(
-                                target_item, ndoc, infer, False, qa, config=module_conf
+                                target_item,
+                                ndoc,
+                                infer=infer,
+                                exec_=False,
+                                qa=qa,
+                                config=module_conf,
                             )
                         except Exception as e:
                             self.log.exception(

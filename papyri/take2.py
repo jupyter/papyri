@@ -59,7 +59,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union, Any
+from typing import List, Optional, Tuple, Union
 
 from papyri.utils import dedent_but_first
 

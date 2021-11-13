@@ -1,8 +1,10 @@
-from papyri.ts import parse
+from textwrap import dedent
 
 import pytest
-from textwrap import dedent
+
 from papyri import errors
+from papyri.ts import parse
+
 
 # @pytest.mark.xfail(strict=True)
 def test_parse_space_in_directive_section():
