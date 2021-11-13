@@ -24,7 +24,7 @@ from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, MutableMapping, Optional, Tuple
 
 import jedi
 import toml
@@ -481,13 +481,13 @@ def normalise_ref(ref):
     return ref
 
 
-def gen_main(infer, exec_, target_file, experimental, debug):
+def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: bool):
     """
     main entry point
     """
     conffile = Path(target_file).expanduser()
     if conffile.exists():
-        conf = toml.loads(conffile.read_text())
+        conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
         names = list(conf.keys())
 
     else:
@@ -512,6 +512,7 @@ def gen_main(infer, exec_, target_file, experimental, debug):
         conf,
         relative_dir=Path(target_file).parent,
         experimental=experimental,
+        dummy_progress=dummy_progress,
     )
     docs_path: str = conf.get(names[0], {}).get("docs_path", None)
     if docs_path is not None:
@@ -963,8 +964,10 @@ class Gen:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
         else:
-            if type(target_item).__name__ == "builtin_function_or_method":
-                type(target_item),
+            if type(target_item).__name__ in (
+                "builtin_function_or_method",
+                "fused_cython_function",
+            ):
                 self.log.debug(
                     "Could not find source file for built-in function method."
                     "Likely compiled extension %s (%s), will not be able to link to it.",
@@ -1160,10 +1163,11 @@ class Gen:
         names: List[str],
         infer: bool,
         exec_: bool,
-        conf: dict,
+        conf: MutableMapping[str, Any],
         relative_dir: Path,
         *,
         experimental,
+        dummy_progress: bool,
     ):
         """
         Crawl one modules and stores resulting docbundle in self.store.
@@ -1191,8 +1195,8 @@ class Gen:
             "[progress.completed]{task.completed} / {task.total}",
             TimeElapsedColumn(),
         )
-
-        p = lambda *args, **kwargs: DummyP(*args, **kwargs)
+        if dummy_progress:
+            p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
         collector, module_conf = self.configure(names, conf)
         collected: Dict[str, Any] = collector.items()
@@ -1247,7 +1251,7 @@ class Gen:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
                 except Exception:
                     if not isinstance(target_item, ModuleType):
-                        self.log.error(
+                        self.log.exception(
                             "Unexpected error parsing %s – %s",
                             qa,
                             target_item.__name__,

@@ -329,6 +329,7 @@ def gen(
     ),
     experimental: bool = typer.Option(False, help="Use experimental Ts parsing"),
     debug: bool = False,
+    dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
 ):
     """
     Generate documentation for a given package.
@@ -346,6 +347,7 @@ def gen(
         target_file=file,
         experimental=experimental,
         debug=debug,
+        dummy_progress=dummy_progress,
     )
 
 
