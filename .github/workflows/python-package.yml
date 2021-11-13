@@ -32,10 +32,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov flit flake8 black scipy numpy matplotlib 'velin>=0.0.5' pytest-trio mypy tree_sitter coverage
+        pip install pytest pytest-cov flit flake8 black scipy numpy matplotlib 'velin>=0.0.5' pytest-trio mypy tree_sitter coverage pipdeptree
         flit install --symlink
         git clone https://github.com/stsewd/tree-sitter-rst
         papyri build-parser
+    - name: dependency tree
+      run: |
+        pipdeptree
+    - name: dependency tree (reversed)
+      run: |
+        pipdeptree -r
     - name: Test with pytest
       run: |
         pytest --cov=papyri --cov-append
