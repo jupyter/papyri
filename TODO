@@ -4,3 +4,5 @@
 - numpy.histogram_bin_edges has a block math in _content.Notes.children.2.children.0.dd
 - numpy.histogram_bin_edges has math not rendered.
 - `numpy.core.shape_base._concatenate_shapes` improperly parse
+- Issues with `scipy.sparse.data._create_method.<locals>.method` that likely get conflicting canonical name with another
+  function tan/float

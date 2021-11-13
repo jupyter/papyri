@@ -116,6 +116,10 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             # ts difference parse
             'scipy.sparse.linalg.isolve.iterative.gmres',
 
+            # not numpydoc format
+            # See https://github.com/scipy/scipy/pull/15034
+            'scipy.sparse.linalg.dsolve._superlu.gstrf', 
+
             ]
 exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]
 execute_exclude_patterns = []
