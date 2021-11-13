@@ -419,18 +419,23 @@ def browse(qualname: str):
 def build_parser():
     from tree_sitter import Language, Parser
 
-    pth = str(Path(__file__).parent / "rst.so")
+    pth = Path(__file__).parent / "rst.so"
+    if pth.exists():
+        print('parser exists, erasing to rebuild')
+        pth.unlink()
+
+    spth = str(pth)
 
     Language.build_library(
         # Store the library in the `build` directory
-        pth,
+        spth,
         # Include one or more languages
         [
             "tree-sitter-rst",
         ],
     )
 
-    PY_LANGUAGE = Language(pth, "rst")
+    PY_LANGUAGE = Language(spth, "rst")
 
 
 @app.command()
