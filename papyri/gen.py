@@ -967,19 +967,22 @@ class Gen:
             if type(target_item).__name__ in (
                 "builtin_function_or_method",
                 "fused_cython_function",
+                "cython_function_or_method",
             ):
                 self.log.debug(
                     "Could not find source file for built-in function method."
-                    "Likely compiled extension %s (%s), will not be able to link to it.",
+                    "Likely compiled extension %s %s %s, will not be able to link to it.",
                     repr(qa),
                     target_item,
+                    repr(type(target_item).__name__),
                 )
             else:
 
                 self.log.warn(
-                    "Could not find source file for %s (%s), will not be able to link to it.",
+                    "Could not find source file for %s (%s) [%s], will not be able to link to it.",
                     repr(qa),
                     target_item,
+                    type(target_item).__name__,
                 )
 
         item_type = str(type(target_item))
@@ -988,7 +991,11 @@ class Gen:
         except OSError:
             self.log.debug("Could not find item_line for %s, (OSERROR)", target_item)
         except TypeError:
-            if "built-in" not in str(target_item):
+            if type(target_item).__name__ in (
+                "builtin_function_or_method",
+                "fused_cython_function",
+                "cython_function_or_method",
+            ):
                 self.log.debug(
                     "Could not find item_line for %s, (TYPEERROR), likely from a .so file",
                     target_item,
