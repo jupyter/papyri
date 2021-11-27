@@ -193,7 +193,12 @@ def _intro():
 
 
 @app.command()
-def ingest(paths: List[Path], check: bool = False, relink: bool = True):
+def ingest(
+    paths: List[Path],
+    check: bool = False,
+    relink: bool = True,
+    dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
+):
     """
     Given paths to a docbundle folder, ingest it into the known libraries.
 
@@ -209,13 +214,17 @@ def ingest(paths: List[Path], check: bool = False, relink: bool = True):
     from . import crosslink as cr
 
     for p in paths:
-        cr.main(Path(p), check)
+        cr.main(Path(p), check, dummy_progress=dummy_progress)
     if relink:
         cr.relink()
 
 
 @app.command()
-def install(names: List[str], check: bool = False):
+def install(
+    names: List[str],
+    check: bool = False,
+    dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
+):
     """
     WIP, download and install a remote docbundle
     """
@@ -301,7 +310,11 @@ def install(names: List[str], check: bool = False):
             zf = zipfile.ZipFile(io.BytesIO(data), "r")
             with TemporaryDirectory() as d:
                 zf.extractall(d)
-                cr.main(next(iter([x for x in Path(d).iterdir() if x.is_dir()])), check)
+                cr.main(
+                    next(iter([x for x in Path(d).iterdir() if x.is_dir()])),
+                    check,
+                    dummy_progress=dummy_progress,
+                )
         else:
             print(f"Could not find docs for {name}=={version}")
     cr.relink()
