@@ -1007,7 +1007,17 @@ class Ingester:
             gstore.put(key, json.dumps(data, indent=2).encode(), refs)
 
 
-def main(path, check):
+def main(path, check, *, dummy_progress):
+    """
+
+    Parameters
+    ----------
+
+    dummy_progress : bool
+        whether to use a dummy progress bar instead of the rich one.
+        Usefull when dropping into PDB.
+        To be implemented. See gen step.
+    """
     builtins.print("Ingesting", path.name, "...")
     from time import perf_counter
 
