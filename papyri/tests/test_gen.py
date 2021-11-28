@@ -13,7 +13,7 @@ def test_find_beyond_decorators():
 
     For example the lru_decorator.
     """
-    gen = Gen()
+    gen = Gen(dummy_progress=True)
     doc, figs = gen.do_one_item(
         ex1, NumpyDocString(""), infer=False, exec_=False, qa="irrelevant", config={}
     )

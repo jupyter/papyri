@@ -499,7 +499,9 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
     if not target_dir.exists():
         target_dir.mkdir(parents=True, exist_ok=True)
 
-    g = Gen()
+    g = Gen(
+        dummy_progress=dummy_progress,
+    )
     g.log.info("Will write data to %s", target_dir)
     if debug:
         g.log.setLevel("DEBUG")
@@ -512,7 +514,6 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         conf,
         relative_dir=Path(target_file).parent,
         experimental=experimental,
-        dummy_progress=dummy_progress,
     )
     docs_path: str = conf.get(names[0], {}).get("docs_path", None)
     if docs_path is not None:
@@ -814,8 +815,12 @@ class Gen:
 
     """
 
-    def __init__(self):
+    def __init__(self, dummy_progress):
 
+        if dummy_progress:
+            self.Progress = DummyP
+        else:
+            self.Progress = Progress
         FORMAT = "%(message)s"
         logging.basicConfig(
             level="INFO", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
@@ -1062,6 +1067,11 @@ class Gen:
     def collect_examples(self, folder):
         acc = []
         examples = list(folder.glob("*.py"))
+        # TODO: resolve this path with respect the configuration file.
+        # this is of course if we have configuration file.
+        # assert (
+        #    len(examples) > 0
+        # ), "we havent' found any examples, it is likely that the path is incorrect."
         for example in examples:
             executor = BlockExecutor({})
             with executor:
@@ -1117,18 +1127,33 @@ class Gen:
         return collector, module_conf
 
     def collect_examples_out(self, module_conf):
-        examples_folder = module_conf.get("examples_folder", None)
-        self.log.debug("Example Folder: %s", examples_folder)
-        if examples_folder is not None:
-            examples_folder = Path(examples_folder).expanduser()
-            examples_data = self.collect_examples(examples_folder)
-            for edoc, figs in examples_data:
-                self.examples.update(
-                    {k: json.dumps(v.to_json()) for k, v in edoc.items()}
+
+        p = lambda: self.Progress(
+            TextColumn("[progress.description]{task.description}", justify="right"),
+            BarColumn(bar_width=None),
+            "[progress.percentage]{task.percentage:>3.1f}%",
+            "[progress.completed]{task.completed} / {task.total}",
+            TimeElapsedColumn(),
+        )
+
+        with p() as p2:
+            examples_folder = module_conf.get("examples_folder", None)
+            self.log.debug("Example Folder: %s", examples_folder)
+            if examples_folder is not None:
+                examples_folder = Path(examples_folder).expanduser()
+                examples_data = self.collect_examples(examples_folder)
+                taskp = p2.add_task(
+                    description="Collecting examples", total=len(examples_data)
                 )
-                for name, data in figs:
-                    print("put one fig", name)
-                    self.put_raw(name, data)
+                for edoc, figs in examples_data:
+                    p2.update(taskp, description="placeholder".ljust(7))
+                    p2.advance(taskp)
+                    self.examples.update(
+                        {k: json.dumps(v.to_json()) for k, v in edoc.items()}
+                    )
+                    for name, data in figs:
+                        print("put one fig", name)
+                        self.put_raw(name, data)
 
     def helper_1(self, *, qa: str, experimental: bool, target_item, failure_collection):
         """
@@ -1136,7 +1161,7 @@ class Gen:
         ----------
         qa : str
             fully qualified name of the object we are extracting the
-            documentation from .
+        documentation from .
         experimental : bool
             whether to try experimental features
         p2: rich progress instance
@@ -1174,7 +1199,6 @@ class Gen:
         relative_dir: Path,
         *,
         experimental,
-        dummy_progress: bool,
     ):
         """
         Crawl one modules and stores resulting docbundle in self.store.
@@ -1195,15 +1219,13 @@ class Gen:
 
         """
 
-        p = lambda: Progress(
+        p = lambda: self.Progress(
             TextColumn("[progress.description]{task.description}", justify="right"),
             BarColumn(bar_width=None),
             "[progress.percentage]{task.percentage:>3.1f}%",
             "[progress.completed]{task.completed} / {task.total}",
             TimeElapsedColumn(),
         )
-        if dummy_progress:
-            p = lambda *args, **kwargs: DummyP(*args, **kwargs)
 
         collector, module_conf = self.configure(names, conf)
         collected: Dict[str, Any] = collector.items()

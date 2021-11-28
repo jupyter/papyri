@@ -1,5 +1,6 @@
 [papyri]
 submodules = ['examples']
+examples_folder = '~/dev/papyri/docs/examples/'
 logo = "../papyri-logo.png"
 exec = true
 exec_failure = 'fallback'
