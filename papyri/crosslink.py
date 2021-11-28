@@ -664,6 +664,10 @@ class DirectiveVisiter(TreeReplacer):
         return [block_directive]
 
     def _resolve(self, loc, text):
+        """
+        Resolve `text` within local references `loc`
+
+        """
         assert isinstance(text, str)
         return resolve_(
             self.qa, self.known_refs, loc, text, rev_aliases=self.rev_aliases
@@ -748,11 +752,37 @@ class DVR(DirectiveVisiter):
         assert version != ""
         super().__init__(*args, **kwargs)
 
+    def replace_Code2(self, code):
+        new_entries = []
+        for token in code.entries:
+            # TODO
+            if isinstance(token.link, str):
+                r = self._resolve(frozenset(), token.link)
+                if r.kind == "module":
+                    self._targets.add(r)
+                    new_entries.append(
+                        Token(
+                            Link(
+                                token.link,
+                                r,
+                                "module",
+                                True,
+                            ),
+                            token.type,
+                        )
+                    )
+                    continue
+            new_entries.append(token)
+
+        return [Code2(new_entries, code.out, code.ce_status)]
+
     def replace_Code(self, code):
         """
         Here we'll crawl example data and convert code entries so that each token contain a link to the object they
         refered to.
         """
+        # TODO: here we'll have a problem as we will love the content of entry[1]. This should really be resolved at gen
+        # time.
         new_entries = []
         for entry in code.entries:
             # TODO
@@ -1012,6 +1042,23 @@ class Ingester:
                 for b in data.get("refs", [])
             ]
             gstore.put(key, json.dumps(data, indent=2).encode(), refs)
+
+        for _, key in progress(
+            gstore.glob((None, None, "examples", None)),
+            description="Relinking Examples...",
+        ):
+            s = Section.from_json(json.loads(gstore.get(key)))
+            visitor = DVR(
+                "TBD, supposed to be QA", known_refs, {}, aliases, version="?"
+            )
+            s_code = visitor.visit(s)
+            refs = list(map(tuple, visitor._targets))
+            gstore.put(
+                key,
+                json.dumps(s_code.to_json(), indent=2).encode(),
+                refs,
+            )
+
 
 
 def main(path, check, *, dummy_progress):

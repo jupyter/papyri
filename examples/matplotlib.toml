@@ -2,7 +2,7 @@
 logo = "../matplotlib_logo.png"
 wait_for_plt_show = false
 exec_failure = "fallback"
-submodules = [ "image", "pyplot", "axes", "axes._base", "dviread", "image","figure"]
+submodules = [ "image", "pyplot", "axes", "axes._base", "dviread", "image","figure",'colors', 'transforms']
 examples_folder = '/Users/bussonniermatthias/dev/matplotlib/examples/'
 examples_exclude = [
 # jedi inference issue
