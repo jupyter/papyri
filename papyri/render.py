@@ -1006,6 +1006,40 @@ async def main(ascii: bool, html, dry_run, sidebar):
 
     await _write_gallery(store, gstore, sidebar, output_dir)
 
+    await _write_api_file(
+        gfiles,
+        output_dir,
+        gstore,
+        tree,
+        known_refs,
+        ref_map,
+        html,
+        template,
+        css_data,
+        sidebar,
+        ascii,
+    )
+
+    await _self_render_as_index_page(
+        html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
+    )
+    await copy_assets(output_dir, gstore)
+
+
+async def _write_api_file(
+    gfiles,
+    output_dir,
+    gstore,
+    tree,
+    known_refs,
+    ref_map,
+    html,
+    template,
+    css_data,
+    sidebar,
+    ascii,
+):
+
     for p, key in progress(gfiles, description="Rendering..."):
         module, version = key.module, key.version
         if ascii:
@@ -1038,9 +1072,6 @@ async def main(ascii: bool, html, dry_run, sidebar):
                 )
                 (output_dir / module / version / "api" / f"{qa}.html").write_text(data)
 
-    await _self_render_as_index_page(
-        html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
-    )
 
 async def copy_assets(output_dir, gstore):
     """
