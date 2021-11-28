@@ -946,7 +946,6 @@ async def main(ascii: bool, html, dry_run, sidebar):
 
     gstore = GraphStore(ingest_dir, {})
     store = Store(ingest_dir)
-    files = store.glob("*/*/module/*.json")
     gfiles = list(gstore.glob((None, None, "module", None)))
 
     css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
@@ -983,7 +982,8 @@ async def main(ascii: bool, html, dry_run, sidebar):
         shutil.rmtree(html_dir_)
     else:
         log.info("no output dir, we'll try not to touch the filesystem")
-    random.shuffle(files)
+
+    # shuffle files to detect bugs, just in case.
     random.shuffle(gfiles)
     # Gallery
     mv2 = gstore.glob((None, None))
@@ -998,15 +998,11 @@ async def main(ascii: bool, html, dry_run, sidebar):
             (output_dir / module / version / "gallery").mkdir(
                 parents=True, exist_ok=True
             )
-            with (output_dir / module / version / "gallery" / "index.html").open(
-                "w"
-            ) as f:
-                f.write(data)
+            (output_dir / module / version / "gallery" / "index.html").write_text(data)
 
     for p, key in progress(gfiles, description="Rendering..."):
         module, version = key.module, key.version
         if ascii:
-            # qa = key.path
             await _ascii_render(key, store=gstore)
         if html:
             doc_blob, qa, siblings, parts_links = await loc(
@@ -1034,10 +1030,7 @@ async def main(ascii: bool, html, dry_run, sidebar):
                 (output_dir / module / version / "api").mkdir(
                     parents=True, exist_ok=True
                 )
-                with (output_dir / module / version / "api" / f"{qa}.html").open(
-                    "w"
-                ) as f:
-                    f.write(data)
+                (output_dir / module / version / "api" / f"{qa}.html").write_text(data)
 
     await _self_render_as_index_page(
         html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
