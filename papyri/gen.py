@@ -302,7 +302,6 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
     example_section_data = Section()
     import matplotlib.pyplot as plt
     import numpy as np
-    from matplotlib import _pylab_helpers
 
     acc = ""
 
@@ -1106,7 +1105,7 @@ class Gen:
                         ]
                         entries = list(parse_script(script, ns={}, infer=True, prev=""))
                     except Exception as e:
-                        self.log.error(f"%s failed %s", example, type(e))
+                        self.log.error("%s failed %s", example, type(e))
                         failed.append(str(example))
                         continue
                         # raise type(e)(f"Within {example}")
@@ -1156,14 +1155,6 @@ class Gen:
         return collector, module_conf
 
     def collect_examples_out(self, module_conf):
-
-        p = lambda: self.Progress(
-            TextColumn("[progress.description]{task.description}", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "[progress.completed]{task.completed} / {task.total}",
-            TimeElapsedColumn(),
-        )
 
         examples_folder = module_conf.get("examples_folder", None)
         self.log.debug("Example Folder: %s", examples_folder)
