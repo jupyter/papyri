@@ -2,7 +2,81 @@
 logo = "../matplotlib_logo.png"
 wait_for_plt_show = false
 exec_failure = "fallback"
-submodules = [ "image", "pyplot", "axes", "axes._base", "dviread", "image","figure"]
+submodules = [ "image", "pyplot", "axes", "axes._base", "dviread", "image","figure",'colors', 'transforms']
+examples_folder = '/Users/bussonniermatthias/dev/matplotlib/examples/'
+examples_exclude = [
+# jedi inference issue
+"logos2.py",
+"multipage_pdf.py",
+"load_converter.py",
+"date_index_formatter2.py",
+# all sphinx gallery skip...
+"sgskip.py", 
+# other
+"pathpatch3d.py",
+"units/artist_tests.py",
+"units/bar_unit_demo.py",
+"units/radian_demo.py",
+"units/units_scatter.py",
+"units/ellipse_with_units.py",
+"units/units_sample.py",
+"units/annotate_with_units.py",
+"units/bar_demo2.py",
+"text_labels_and_annotations/usetex_baseline_test.py",
+"text_labels_and_annotations/usetex_fonteffects.py",
+"text_labels_and_annotations/tex_demo.py",
+"text_labels_and_annotations/demo_annotation_box.py",
+"text_labels_and_annotations/autowrap.py",
+"text_labels_and_annotations/fonts_demo.py",
+"text_labels_and_annotations/date_index_formatter.py",
+"text_labels_and_annotations/text_rotation.py",
+"text_labels_and_annotations/legend_demo.py",
+"text_labels_and_annotations/accented_text.py",
+"text_labels_and_annotations/date.py",
+"text_labels_and_annotations/watermark_text.py",
+"text_labels_and_annotations/font_file.py",
+"showcase/bachelors_degrees_by_gender.py",
+"showcase/integral.py",
+"showcase/anatomy.py",
+"showcase/xkcd.py",
+"axisartist/demo_parasite_axes2.py",
+"axisartist/demo_floating_axis.py",
+"axisartist/simple_axisline3.py",
+"axisartist/demo_parasite_axes.py",
+"axisartist/simple_axis_pad.py",
+"axisartist/simple_axisline.py",
+"axisartist/demo_axisline_style.py",
+"axisartist/simple_axis_direction03.py",
+"axisartist/demo_ticklabel_direction.py",
+"axisartist/simple_axis_direction01.py",
+"axisartist/simple_axisartist1.py",
+"axisartist/demo_ticklabel_alignment.py",
+"axisartist/demo_axis_direction.py",
+"axisartist/axis_direction.py",
+"axisartist/demo_floating_axes.py",
+"lines_bars_and_markers/curve_error_band.py",
+"lines_bars_and_markers/eventcollection_demo.py",
+"lines_bars_and_markers/multicolored_line.py",
+"lines_bars_and_markers/scatter_with_legend.py",
+"lines_bars_and_markers/linestyles.py",
+"lines_bars_and_markers/line_demo_dash_control.py",
+"lines_bars_and_markers/timeline.py",
+"lines_bars_and_markers/vline_hline_demo.py",
+"lines_bars_and_markers/categorical_variables.py",
+"lines_bars_and_markers/eventplot_demo.py",
+"lines_bars_and_markers/fill.py",
+"lines_bars_and_markers/span_regions.py",
+"lines_bars_and_markers/bar_stacked.py",
+"lines_bars_and_markers/gradient_bar.py",
+"lines_bars_and_markers/xcorr_acorr_demo.py",
+"lines_bars_and_markers/fill_betweenx_demo.py",
+"lines_bars_and_markers/scatter_symbol.py",
+"lines_bars_and_markers/scatter_custom_symbol.py",
+"lines_bars_and_markers/markevery_demo.py",
+"lines_bars_and_markers/joinstyle.py",
+"lines_bars_and_markers/marker_reference.py",
+"lines_bars_and_markers/multivariate_marker_plot.py",
+]
 exclude = ['matplotlib._api',
            'matplotlib.pyplot.step',
            'matplotlib.pyplot.subplot_mosaic',
@@ -25,6 +99,7 @@ exclude = ['matplotlib._api',
            # .. misc comments:
            'matplotlib.pyplot.fill_between',
            'matplotlib.pyplot.fill_betweenx',
+           "matplotlib.patches.FancyBboxPatch.set_boxstyle",
            # visit_targets:
            "matplotlib.dates",
            "matplotlib.image.thumbnail",
@@ -55,5 +130,15 @@ exclude = ['matplotlib._api',
            "matplotlib.cbook._array_perimeter",
            "matplotlib.axes._axes.Axes.eventplot",
            "matplotlib.axes._axes.Axes.errorbar",
-           "matplotlib.figure.FigureBase.colorbar"
+           "matplotlib.figure.FigureBase.colorbar",
+           # split blocks messes that up with warnings being alone.
+           "matplotlib.transforms.Bbox",
+           # directive len children 4
+           "matplotlib.axes._axes.Axes.secondary_xaxis",
+           "matplotlib.axes._axes.Axes.secondary_yaxis",
+           "matplotlib.dates.ConciseDateFormatter",
+           # index error
+           "matplotlib.backend_bases.ToolContainerBase.add_toolitem",
+           # Parso error
+           "matplotlib.widgets.SpanSelector"
            ]

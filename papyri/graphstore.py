@@ -232,10 +232,15 @@ class GraphStore:
         Store object ``bytes``, as path ``key`` with the corresponding
         links to other objects.
 
+        refs : List[Key] ?
+
 
         TODO: refs is forward refs, and we are updating backward believe
         """
         assert isinstance(key, Key)
+        for r in refs:
+            assert isinstance(r, tuple), r
+            assert len(r) == 4
         path, _ = self._key_to_paths(key)
         path.path.parent.mkdir(parents=True, exist_ok=True)
 
