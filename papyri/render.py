@@ -865,7 +865,7 @@ async def _self_render_as_indec_page(
     sidebar,
     template,
     css_data,
-):
+) -> None:
     """
     Currently we do not have any logic for an index page (we should).
     So we'll just render the documentation for the papyri module itself.
@@ -874,6 +874,21 @@ async def _self_render_as_indec_page(
     ----------
     html : bool
         whether we are building html docs.
+    html_dir: path
+        where should the index be writte
+    tree:
+    known_refs:
+    ref_map:
+    sidebar: bool
+        whether to render the sidebar.
+    template:
+        which template to use
+    css_data:
+
+
+    Returns
+    -------
+    None
 
 
 
