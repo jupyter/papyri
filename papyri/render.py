@@ -927,6 +927,23 @@ async def _self_render_as_index_page(
             f.write(data)
 
 
+async def _write_gallery(store, gstore, sidebar, output_dir):
+    """ """
+    mv2 = gstore.glob((None, None))
+    for _, (module, version) in progress(
+        set(mv2), description="Rendering galleries..."
+    ):
+        # version, module = item.path.name, item.path.parent.name
+        data = await gallery(
+            module, store, version, ext=".html", gstore=gstore, sidebar=sidebar
+        )
+        if output_dir:
+            (output_dir / module / version / "gallery").mkdir(
+                parents=True, exist_ok=True
+            )
+            (output_dir / module / version / "gallery" / "index.html").write_text(data)
+
+
 async def main(ascii: bool, html, dry_run, sidebar):
     """
     This does static rendering of all the given files.
@@ -986,19 +1003,42 @@ async def main(ascii: bool, html, dry_run, sidebar):
     # shuffle files to detect bugs, just in case.
     random.shuffle(gfiles)
     # Gallery
-    mv2 = gstore.glob((None, None))
-    for _, (module, version) in progress(
-        set(mv2), description="Rendering galleries..."
-    ):
-        # version, module = item.path.name, item.path.parent.name
-        data = await gallery(
-            module, store, version, ext=".html", gstore=gstore, sidebar=sidebar
-        )
-        if output_dir:
-            (output_dir / module / version / "gallery").mkdir(
-                parents=True, exist_ok=True
-            )
-            (output_dir / module / version / "gallery" / "index.html").write_text(data)
+
+    await _write_gallery(store, gstore, sidebar, output_dir)
+
+    await _write_api_file(
+        gfiles,
+        output_dir,
+        gstore,
+        tree,
+        known_refs,
+        ref_map,
+        html,
+        template,
+        css_data,
+        sidebar,
+        ascii,
+    )
+
+    await _self_render_as_index_page(
+        html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
+    )
+    await copy_assets(output_dir, gstore)
+
+
+async def _write_api_file(
+    gfiles,
+    output_dir,
+    gstore,
+    tree,
+    known_refs,
+    ref_map,
+    html,
+    template,
+    css_data,
+    sidebar,
+    ascii,
+):
 
     for p, key in progress(gfiles, description="Rendering..."):
         module, version = key.module, key.version
@@ -1032,10 +1072,13 @@ async def main(ascii: bool, html, dry_run, sidebar):
                 )
                 (output_dir / module / version / "api" / f"{qa}.html").write_text(data)
 
-    await _self_render_as_index_page(
-        html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
-    )
 
+async def copy_assets(output_dir, gstore):
+    """
+    Copy assets from to their final destination.
+
+    Assets are all the binary files that we don't want to change.
+    """
     if output_dir:
         assets_2 = gstore.glob((None, None, "assets", None))
         for _, asset in progress(assets_2, description="Copying assets"):
