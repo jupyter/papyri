@@ -1060,7 +1060,6 @@ class Ingester:
             )
 
 
-
 def main(path, check, *, dummy_progress):
     """
 
