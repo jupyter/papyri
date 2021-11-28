@@ -855,7 +855,7 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
         raise type(e)(f"Error in {qa}") from e
 
 
-async def _self_render_as_indec_page(
+async def _self_render_as_index_page(
     html: bool,
     html_dir: Optional[Path],
     gstore,
@@ -1039,7 +1039,7 @@ async def main(ascii: bool, html, dry_run, sidebar):
                 ) as f:
                     f.write(data)
 
-    await _self_render_as_indec_page(
+    await _self_render_as_index_page(
         html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
     )
 
