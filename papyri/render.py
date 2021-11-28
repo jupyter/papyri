@@ -18,7 +18,9 @@ from quart_trio import QuartTrio
 from rich.logging import RichHandler
 from there import print
 
-from .config import html_dir, ingest_dir
+from . import config
+
+from .config import ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
 from .graphstore import GraphStore, Key
 from .stores import Store
@@ -853,7 +855,79 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
         raise type(e)(f"Error in {qa}") from e
 
 
-async def main(ascii, html, dry_run, sidebar):
+async def _self_render_as_indec_page(
+    html: bool,
+    html_dir: Optional[Path],
+    gstore,
+    tree,
+    known_refs,
+    ref_map,
+    sidebar,
+    template,
+    css_data,
+):
+    """
+    Currently we do not have any logic for an index page (we should).
+    So we'll just render the documentation for the papyri module itself.
+
+    Parameters
+    ----------
+    html : bool
+        whether we are building html docs.
+
+
+
+    """
+
+    if html_dir is not None:
+        assert isinstance(html_dir, Path)
+
+    if not html:
+        return
+
+    import papyri
+
+    key = Key("papyri", str(papyri.__version__), "module", "papyri")
+
+    doc_blob, qa, siblings, parts_links = await loc(
+        key,
+        store=gstore,
+        tree=tree,
+        known_refs=known_refs,
+        ref_map=ref_map,
+    )
+    data = render_one(
+        sidebar=sidebar,
+        template=template,
+        doc=doc_blob,
+        qa=qa,
+        ext=".html",
+        parts=siblings,
+        parts_links=parts_links,
+        backrefs=doc_blob.backrefs,
+        pygment_css=css_data,
+    )
+    if html_dir:
+        with (html_dir / "index.html").open("w") as f:
+            f.write(data)
+
+
+async def main(ascii: bool, html, dry_run, sidebar):
+    """
+    This does static rendering of all the given files.
+
+    Parameters
+    ----------
+    ascii: bool
+        whether to render ascii files.
+    html: bool
+        whether to render the html
+    dry_run: bool
+        do not write the output.
+    Sidebar:bool
+        render the sidebar in html
+
+    """
 
     gstore = GraphStore(ingest_dir, {})
     store = Store(ingest_dir)
@@ -870,10 +944,13 @@ async def main(ascii, html, dry_run, sidebar):
     env.globals["unreachable"] = unreachable
     env.globals["url"] = url
     template = env.get_template("core.tpl.j2")
+    html_dir_: Optional[Path] = config.html_dir
     if dry_run:
         output_dir = None
+        html_dir_ = None
     else:
-        output_dir = html_dir / "p"
+        assert html_dir_ is not None
+        output_dir = html_dir_ / "p"
         output_dir.mkdir(exist_ok=True)
     document: Store
 
@@ -886,10 +963,11 @@ async def main(ascii, html, dry_run, sidebar):
     family = frozenset(_.path for _ in known_refs)
 
     tree = make_tree(family)
-
-    log.info("going to erase %s", html_dir)
-    # input("press enter to continue...")
-    shutil.rmtree(html_dir)
+    if html_dir_ is not None:
+        log.info("going to erase %s", html_dir_)
+        shutil.rmtree(html_dir_)
+    else:
+        log.info("no output dir, we'll try not to touch the filesystem")
     random.shuffle(files)
     random.shuffle(gfiles)
     # Gallery
@@ -901,9 +979,14 @@ async def main(ascii, html, dry_run, sidebar):
         data = await gallery(
             module, store, version, ext=".html", gstore=gstore, sidebar=sidebar
         )
-        (output_dir / module / version / "gallery").mkdir(parents=True, exist_ok=True)
-        with (output_dir / module / version / "gallery" / "index.html").open("w") as f:
-            f.write(data)
+        if output_dir:
+            (output_dir / module / version / "gallery").mkdir(
+                parents=True, exist_ok=True
+            )
+            with (output_dir / module / version / "gallery" / "index.html").open(
+                "w"
+            ) as f:
+                f.write(data)
 
     for p, key in progress(gfiles, description="Rendering..."):
         module, version = key.module, key.version
@@ -932,7 +1015,7 @@ async def main(ascii, html, dry_run, sidebar):
                 graph=json_str,
                 sidebar=sidebar,
             )
-            if not dry_run:
+            if output_dir:
                 (output_dir / module / version / "api").mkdir(
                     parents=True, exist_ok=True
                 )
@@ -941,38 +1024,14 @@ async def main(ascii, html, dry_run, sidebar):
                 ) as f:
                     f.write(data)
 
-    import papyri
+    await _self_render_as_indec_page(
+        html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
+    )
 
-    key = Key("papyri", str(papyri.__version__), "module", "papyri")
-
-    module, version = "papyri", str(papyri.__version__)
-    if html:
-        doc_blob, qa, siblings, parts_links = await loc(
-            key,
-            store=gstore,
-            tree=tree,
-            known_refs=known_refs,
-            ref_map=ref_map,
-        )
-        data = render_one(
-            sidebar=sidebar,
-            template=template,
-            doc=doc_blob,
-            qa=qa,
-            ext=".html",
-            parts=siblings,
-            parts_links=parts_links,
-            backrefs=doc_blob.backrefs,
-            pygment_css=css_data,
-        )
-        if not dry_run:
-            with (html_dir / "index.html").open("w") as f:
-                f.write(data)
-
-    if not dry_run:
+    if output_dir:
         assets_2 = gstore.glob((None, None, "assets", None))
         for _, asset in progress(assets_2, description="Copying assets"):
-            b = html_dir / "p" / asset.module / asset.version / "img"
+            b = output_dir / asset.module / asset.version / "img"
             b.mkdir(parents=True, exist_ok=True)
             data = gstore.get(asset)
             (b / asset.path).write_bytes(data)
