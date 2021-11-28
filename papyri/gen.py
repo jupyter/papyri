@@ -1165,7 +1165,7 @@ class Gen:
             )
             for edoc, figs in examples_data:
                 self.examples.update(
-                    {k: json.dumps(v.to_json()) for k, v in edoc.items()}
+                    {k: json.dumps(v.to_json(), indent=2) for k, v in edoc.items()}
                 )
                 for name, data in figs:
                     print("put one fig", name)

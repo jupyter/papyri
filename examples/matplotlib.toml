@@ -121,6 +121,12 @@ exclude = ['matplotlib._api',
            'matplotlib.axes._axes.Axes.fill_betweenx',
            'matplotlib.axes._axes.Axes.fill_between',
            'matplotlib.axes._axes.Axes._fill_between_x_or_y', 
+           "matplotlib.mlab",
+           "matplotlib.backends.backend_agg",
+           "matplotlib.backends.backend_agg",
+           # substitution reference
+           "matplotlib.pyplot.boxplot",
+           "matplotlib.axes._axes.Axes.boxplot",
            # serailisation error
            "matplotlib.pyplot.colorbar",
            "matplotlib.pyplot.errorbar",
