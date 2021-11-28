@@ -1042,6 +1042,12 @@ async def main(ascii: bool, html, dry_run, sidebar):
         html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
     )
 
+async def copy_assets(output_dir, gstore):
+    """
+    Copy assets from to their final destination.
+
+    Assets are all the binary files that we don't want to change.
+    """
     if output_dir:
         assets_2 = gstore.glob((None, None, "assets", None))
         for _, asset in progress(assets_2, description="Copying assets"):
