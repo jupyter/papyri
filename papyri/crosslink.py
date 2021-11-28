@@ -972,8 +972,8 @@ class Ingester:
                 (b["module"], b["version"], b["kind"], b["path"])
                 for b in js.get("refs", [])
             ]
-            for r in refs:
-                assert None not in r
+            for xr in refs:
+                assert None not in xr
             try:
                 key = Key(mod_root, version, "module", qa)
                 assert mod_root is not None
