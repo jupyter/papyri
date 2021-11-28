@@ -178,6 +178,9 @@ class IngestedBlobs(Node):
         self._content = new
 
     def process(self, known_refs, aliases, verbose=True):
+        """
+        Process a doc blob, to find all local and nonlocal references.
+        """
         local_refs = []
         sections_ = [
             "Parameters",
@@ -754,7 +757,6 @@ class DVR(DirectiveVisiter):
             # TODO
             if entry[1] and entry[1].strip():
                 r = self._resolve(frozenset(), entry[1])
-                # print(entry[1], r)
                 if r.kind == "module":
                     self._targets.add(r)
                     new_entries.append(
@@ -826,15 +828,19 @@ class Ingester:
         # long : short
         aliases: Dict[str, str] = data.get("aliases", {})
         rev_aliases = {v: k for k, v in aliases.items()}
-
         for _, fe in progress(
             (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
         ):
             s = Section.from_json(json.loads(fe.read_text()))
+            visitor = DVR(
+                "TBD, supposed to be QA", known_refs, {}, aliases, version=version
+            )
+            s_code = visitor.visit(s)
+            refs = list(map(tuple, visitor._targets))
             gstore.put(
                 Key(root, version, "examples", fe.name),
-                json.dumps(s.to_json(), indent=2).encode(),
-                [],
+                json.dumps(s_code.to_json(), indent=2).encode(),
+                refs,
             )
 
         for _, f1 in progress(

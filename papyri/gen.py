@@ -310,7 +310,8 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
     ns = {"np": np, "plt": plt, obj.__name__: obj}
     executor = BlockExecutor(ns)
     figs = []
-    fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+    # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+    fig_managers = executor.fig_man()
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
     wait_for_show = config.get("wait_for_plt_show", True)
     with executor:
@@ -353,7 +354,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                         except Exception:
                             did_except = True
                             print(f"exception executing... {qa}")
-                            fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                            fig_managers = executor.fig_man()
                             if raise_in_fig:
                                 raise
                         finally:
@@ -367,7 +368,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                                             f"Still fig manager(s) open for {qa}: {figname}"
                                         )
                                     plt.close("all")
-                                fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                                fig_managers = executor.fig_man
                                 assert len(fig_managers) == 0, fig_managers + [
                                     did_except,
                                 ]
@@ -391,7 +392,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                     example_section_data.append(Text("\n".join(item.out)))
 
     # TODO fix this if plt.close not called and still a ligering figure.
-    fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+    fig_managers = executor.fig_man()
     if len(fig_managers) != 0:
         print(f"Unclosed figures in {qa}!!")
         plt.close("all")

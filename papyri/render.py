@@ -35,11 +35,15 @@ log = logging.getLogger("papyri")
 
 def url(info):
     assert isinstance(info, RefInfo)
+    assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
     # assume same package/version for now.
     if info.module is None:
         assert info.version is None
         return info.path
-    return f"/p/{info.module}/{info.version}/api/{info.path}"
+    if info.kind == "examples":
+        return f"/p/{info.module}/{info.version}/examples/{info.path}"
+    else:
+        return f"/p/{info.module}/{info.version}/api/{info.path}"
 
 
 def unreachable(*obj):
@@ -73,7 +77,8 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-async def examples(module, store, version, subpath, ext=""):
+async def examples(module, store, version, subpath, ext="", sidebar=None):
+    assert sidebar is not None
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
@@ -110,6 +115,7 @@ async def examples(module, store, version, subpath, ext=""):
         parts_links=defaultdict(lambda: ""),
         doc=doc,
         ex=ex,
+        sidebar=sidebar,
     )
 
 
