@@ -315,6 +315,7 @@ def resolve_(
     rev_aliases=None,
 ) -> RefInfo:
     # RefInfo(module, version, kind, path)
+    # print('resolve', qa)
     hk = hash(known_refs)
     hash(local_refs)
     if rev_aliases is None:

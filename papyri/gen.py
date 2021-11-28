@@ -368,7 +368,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                                             f"Still fig manager(s) open for {qa}: {figname}"
                                         )
                                     plt.close("all")
-                                fig_managers = executor.fig_man
+                                fig_managers = executor.fig_man()
                                 assert len(fig_managers) == 0, fig_managers + [
                                     did_except,
                                 ]
@@ -1065,35 +1065,63 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder):
+    def collect_examples(self, folder, exclude):
         acc = []
-        examples = list(folder.glob("*.py"))
+        examples = list(folder.glob("**/*.py"))
+
+        valid_examples = []
+        for e in examples:
+            if any(str(e).endswith(p) for p in exclude):
+                continue
+            valid_examples.append(e)
+        examples = valid_examples
+
         # TODO: resolve this path with respect the configuration file.
         # this is of course if we have configuration file.
-        # assert (
-        #    len(examples) > 0
-        # ), "we havent' found any examples, it is likely that the path is incorrect."
-        for example in examples:
-            executor = BlockExecutor({})
-            with executor:
-                script = example.read_text()
-                executor.exec(script)
-                figs = [
-                    (f"ex-{example.name}-{i}.png", f)
-                    for i, f in enumerate(executor.get_figs())
-                ]
-                entries = list(parse_script(script, ns={}, infer=True, prev=""))
-                s = Section(
-                    [Code(entries, "", "execed")] + [Fig(name) for name, _ in figs]
-                )
-                s = processed_example_data(s)
+        assert (
+            len(examples) > 0
+        ), "we havent' found any examples, it is likely that the path is incorrect."
 
-                acc.append(
-                    (
-                        {example.name: s},
-                        figs,
+        p = lambda: self.Progress(
+            TextColumn("[progress.description]{task.description}", justify="right"),
+            BarColumn(bar_width=None),
+            "[progress.percentage]{task.percentage:>3.1f}%",
+            "[progress.completed]{task.completed} / {task.total}",
+            TimeElapsedColumn(),
+        )
+        with p() as p2:
+            failed = []
+            taskp = p2.add_task(description="Collecting examples", total=len(examples))
+            for example in examples:
+                p2.update(taskp, description=str(example).ljust(7))
+                p2.advance(taskp)
+                executor = BlockExecutor({})
+                with executor:
+                    script = example.read_text()
+                    try:
+                        executor.exec(script)
+                        figs = [
+                            (f"ex-{example.name}-{i}.png", f)
+                            for i, f in enumerate(executor.get_figs())
+                        ]
+                        entries = list(parse_script(script, ns={}, infer=True, prev=""))
+                    except Exception as e:
+                        self.log.error(f"%s failed %s", example, type(e))
+                        failed.append(str(example))
+                        continue
+                        # raise type(e)(f"Within {example}")
+                    s = Section(
+                        [Code(entries, "", "execed")] + [Fig(name) for name, _ in figs]
                     )
-                )
+                    s = processed_example_data(s)
+
+                    acc.append(
+                        (
+                            {example.name: s},
+                            figs,
+                        )
+                    )
+        assert len(failed) == 0, failed
         return acc
 
     def configure(self, names, conf):
@@ -1137,24 +1165,20 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        with p() as p2:
-            examples_folder = module_conf.get("examples_folder", None)
-            self.log.debug("Example Folder: %s", examples_folder)
-            if examples_folder is not None:
-                examples_folder = Path(examples_folder).expanduser()
-                examples_data = self.collect_examples(examples_folder)
-                taskp = p2.add_task(
-                    description="Collecting examples", total=len(examples_data)
+        examples_folder = module_conf.get("examples_folder", None)
+        self.log.debug("Example Folder: %s", examples_folder)
+        if examples_folder is not None:
+            examples_folder = Path(examples_folder).expanduser()
+            examples_data = self.collect_examples(
+                examples_folder, module_conf.get("examples_exclude", set())
+            )
+            for edoc, figs in examples_data:
+                self.examples.update(
+                    {k: json.dumps(v.to_json()) for k, v in edoc.items()}
                 )
-                for edoc, figs in examples_data:
-                    p2.update(taskp, description="placeholder".ljust(7))
-                    p2.advance(taskp)
-                    self.examples.update(
-                        {k: json.dumps(v.to_json()) for k, v in edoc.items()}
-                    )
-                    for name, data in figs:
-                        print("put one fig", name)
-                        self.put_raw(name, data)
+                for name, data in figs:
+                    print("put one fig", name)
+                    self.put_raw(name, data)
 
     def helper_1(self, *, qa: str, experimental: bool, target_item, failure_collection):
         """
@@ -1332,6 +1356,7 @@ class Gen:
                                 qa=qa,
                                 config=module_conf,
                             )
+                            doc_blob.arbitrary = arbitrary
                         except Exception as e:
                             self.log.exception(
                                 "unexpected non-exec error in %s", repr(qa)
