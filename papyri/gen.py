@@ -1078,9 +1078,9 @@ class Gen:
 
         # TODO: resolve this path with respect the configuration file.
         # this is of course if we have configuration file.
-        assert (
-            len(examples) > 0
-        ), "we havent' found any examples, it is likely that the path is incorrect."
+        #        assert (
+        #            len(examples) > 0
+        #        ), "we havent' found any examples, it is likely that the path is incorrect."
 
         p = lambda: self.Progress(
             TextColumn("[progress.description]{task.description}", justify="right"),
