@@ -129,7 +129,7 @@ import sys
 import zipfile
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import toml
 import typer
@@ -334,11 +334,11 @@ def relink():
 @app.command()
 def gen(
     file: str,
-    infer: bool = typer.Option(
+    infer: Optional[bool] = typer.Option(
         True, help="Whether to run type inference on code examples."
     ),
-    exec: bool = typer.Option(
-        False, help="Whether to attempt to execute doctring code."
+    exec: Optional[bool] = typer.Option(
+        None, help="Whether to attempt to execute doctring code."
     ),
     experimental: bool = typer.Option(False, help="Use experimental Ts parsing"),
     debug: bool = False,
