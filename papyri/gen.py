@@ -23,7 +23,7 @@ from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, List, MutableMapping, Optional, Tuple
+from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Sequence
 
 import jedi
 import toml
@@ -415,6 +415,26 @@ def normalise_ref(ref):
     return ref
 
 
+from dataclasses import dataclass
+
+
+@dataclass
+class Config:
+    dummy_progress: bool
+    exec_failure: str  # should move to enum
+    logo: str  # should change to path likely
+    execute_exclude_patterns: Sequence[str] = ()
+    infer: bool = True
+    exclude: Sequence[str] = ()  # list of dotted object name to exclude from collection
+    examples_folder: Optional[str] = None  # < to path ?
+    submodules: Sequence[str] = ()
+    exec: bool = False
+    source: Optional[str] = None
+    homepage: Optional[str] = None
+    docs: Optional[str] = None
+    docs_path: Optional[str] = None
+
+
 def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: bool):
     """
     main entry point
@@ -422,6 +442,18 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
     conffile = Path(target_file).expanduser()
     if conffile.exists():
         conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
+        k0 = next(iter(conf.keys()))
+        new_config = Config(**conf[k0], dummy_progress=dummy_progress)
+        if exec_ is not None:
+            new_config.exec = exec_
+        if infer is not None:
+            new_config.exec = infer
+
+        if len(conf.keys()) != 1:
+            raise ValueError(
+                f"We only support one library at a time for now {conf.keys()}"
+            )
+
         names = list(conf.keys())
 
     else:
@@ -449,8 +481,9 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         conf,
         relative_dir=Path(target_file).parent,
         experimental=experimental,
+        new_config=new_config,
     )
-    docs_path: str = conf.get(names[0], {}).get("docs_path", None)
+    docs_path: Optional[str] = new_config.docs_path
     if docs_path is not None:
         path = Path(docs_path).expanduser()
         g.do_docs(path)
@@ -899,7 +932,7 @@ class Gen:
         # that is not going to be the case because we fallback on execution failure.
         assert exec_ == config["exec"]
 
-        assert config["infer"] == infer
+        assert config["infer"] == infer, (config, infer)
 
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
@@ -1179,6 +1212,7 @@ class Gen:
         relative_dir: Path,
         *,
         experimental,
+        new_config: Config,
     ):
         """
         Crawl one modules and stores resulting docbundle in self.store.
@@ -1213,11 +1247,13 @@ class Gen:
 
         self.collect_examples_out(module_conf)
 
-        if logo := module_conf.get("logo", None):
-            self.put_raw("logo.png", (relative_dir / Path(logo)).read_bytes())
+        if new_config.logo:
+            self.put_raw(
+                "logo.png", (relative_dir / Path(new_config.logo)).read_bytes()
+            )
 
         # collect all items we want to document.
-        excluded = sorted(module_conf.get("exclude", []))
+        excluded = sorted(new_config.exclude)
         if excluded:
             self.log.info(
                 "The following items will be excluded by the configurations:\n %s",
@@ -1276,11 +1312,9 @@ class Gen:
                         continue
                 if not isinstance(target_item, ModuleType):
                     arbitrary = []
-                execute_exclude_patterns = module_conf.get(
-                    "execute_exclude_patterns", None
-                )
-                ex = module_conf["exec"]
-                if execute_exclude_patterns and module_conf["exec"]:
+                execute_exclude_patterns = new_config.execute_exclude_patterns
+                ex = new_config.exec
+                if execute_exclude_patterns and new_config.exec:
                     for pat in execute_exclude_patterns:
                         if qa.startswith(pat):
                             ex = False
@@ -1293,7 +1327,7 @@ class Gen:
                     doc_blob, figs = self.do_one_item(
                         target_item,
                         ndoc,
-                        infer=module_conf["infer"],
+                        infer=new_config.infer,
                         exec_=ex,
                         qa=qa,
                         config=module_conf,
@@ -1302,7 +1336,7 @@ class Gen:
                 except Exception as e:
                     self.log.error("Execution error in %s", repr(qa))
                     failure_collection["ExecError-" + str(type(e))].append(qa)
-                    if module_conf.get("exec_failure", None) == "fallback":
+                    if new_config.exec_failure == "fallback":
                         print("Re-analysing ", qa, "without execution", type(e))
                         # debug:
                         # TODO: ndoc-placeholder : make sure ndoc placeholder handled here as well.
@@ -1310,7 +1344,7 @@ class Gen:
                             doc_blob, figs = self.do_one_item(
                                 target_item,
                                 ndoc,
-                                infer=module_conf.infer,
+                                infer=new_config.infer,
                                 exec_=False,
                                 qa=qa,
                                 config=module_conf,
