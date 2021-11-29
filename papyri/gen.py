@@ -23,7 +23,7 @@ from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Sequence
+from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple
 
 import jedi
 import toml
@@ -38,6 +38,7 @@ from rich.progress import TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
+from .miscs import BlockExecutor, DummyP
 from .take2 import (
     Code,
     Fig,
@@ -45,17 +46,16 @@ from .take2 import (
     Node,
     Param,
     Ref,
+    RefInfo,
     Section,
     SeeAlsoItem,
     Text,
     make_block_3,
     parse_rst_to_papyri_tree,
-    RefInfo,
 )
+from .tree import DirectiveVisiter
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
-from .miscs import DummyP, BlockExecutor
-from .tree import DirectiveVisiter
 
 try:
     from . import ts
@@ -98,7 +98,7 @@ def paragraphs(lines) -> List[Any]:
     # blocks_data = parse_rst_to_papyri_tree("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for pre_blank_lines, blank_lines, post_blank_lines in blocks_data:
+    for pre_blank_lines, _blank_lines, post_blank_lines in blocks_data:
         # pre_blank_lines = block.lines
         # blank_lines = block.wh
         # post_black_lines = block.ind
@@ -111,7 +111,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns, infer, prev, config):
+def parse_script(script, ns, infer, prev, new_config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -139,7 +139,7 @@ def parse_script(script, ns, infer, prev, config):
         fully qualified name of the type of current token
 
     """
-    assert infer == config["infer"]
+    assert infer == new_config.infer
 
     jeds = []
 
@@ -152,7 +152,7 @@ def parse_script(script, ns, infer, prev, config):
     jeds.append(jedi.Script(prev + "\n" + script))
     P = PythonLexer()
 
-    for index, type_, text in P.get_tokens_unprocessed(script):
+    for index, _type, text in P.get_tokens_unprocessed(script):
         line_n, col_n = pos_to_nl(script, index)
         line_n += l_delta
         try:
@@ -169,7 +169,7 @@ def parse_script(script, ns, infer, prev, config):
                             #    ref = ''
                     else:
                         ref = ""
-                except (AttributeError, TypeError, Exception) as e:
+                except (AttributeError, TypeError) as e:
                     raise type(e)(
                         f"{contextscript}, {line_n=}, {col_n=}, {prev=}, {jed=}"
                     ) from e
@@ -183,7 +183,7 @@ def parse_script(script, ns, infer, prev, config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
+def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, new_config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -246,7 +246,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
     # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     fig_managers = executor.fig_man()
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
-    wait_for_show = config.get("wait_for_plt_show", True)
+    wait_for_show = new_config.wait_for_plt_show
     with executor:
         for b in blocks:
             for item in b:
@@ -271,7 +271,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                                 ce_status = "execed"
                             except Exception:
                                 ce_status = "exception_in_exec"
-                                if config.get("exec_failure", "") != "fallback":
+                                if new_config.exec_failure != "fallback":
                                     raise
                             if fig_managers and (
                                 ("plt.show" in script) or not wait_for_show
@@ -305,14 +305,20 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                                 assert len(fig_managers) == 0, fig_managers + [
                                     did_except,
                                 ]
-                    infer_exclude = config.get("exclude_jedi", frozenset())
+                    infer_exclude = new_config.exclude_jedi
                     if qa in infer_exclude:
                         print(f"Turning off type inference for func {qa!r}")
                         inf = False
                     else:
                         inf = infer
                     entries = list(
-                        parse_script(script, ns=ns, infer=inf, prev=acc, config=config)
+                        parse_script(
+                            script,
+                            ns=ns,
+                            infer=inf,
+                            prev=acc,
+                            new_config=new_config,
+                        )
                     )
                     acc += "\n" + script
                     example_section_data.append(
@@ -420,9 +426,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    dummy_progress: bool
-    exec_failure: str  # should move to enum
-    logo: str  # should change to path likely
+    dummy_progress: bool = False
+    exec_failure: Optional[str] = None  # should move to enum
+    logo: Optional[str] = None  # should change to path likely
     execute_exclude_patterns: Sequence[str] = ()
     infer: bool = True
     exclude: Sequence[str] = ()  # list of dotted object name to exclude from collection
@@ -433,6 +439,9 @@ class Config:
     homepage: Optional[str] = None
     docs: Optional[str] = None
     docs_path: Optional[str] = None
+    wait_for_plt_show: Optional[bool] = True
+    examples_exclude: Sequence[str] = ()
+    exclude_jedi: Sequence[str] = ()
 
 
 def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: bool):
@@ -447,7 +456,7 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         if exec_ is not None:
             new_config.exec = exec_
         if infer is not None:
-            new_config.exec = infer
+            new_config.infer = infer
 
         if len(conf.keys()) != 1:
             raise ValueError(
@@ -905,7 +914,15 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, *, infer: bool, exec_: bool, qa: str, config
+        self,
+        target_item: Any,
+        ndoc,
+        *,
+        infer: bool,
+        exec_: bool,
+        qa: str,
+        config,
+        new_config,
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
@@ -930,7 +947,7 @@ class Gen:
         item_type = None
 
         # that is not going to be the case because we fallback on execution failure.
-        assert exec_ == config["exec"]
+        assert exec_ == config["exec"], (exec_, config["exec"])
 
         assert config["infer"] == infer, (config, infer)
 
@@ -999,12 +1016,17 @@ class Gen:
             for line in new_see_also:
                 rt, desc = line
                 assert isinstance(desc, list), line
-                for ref, type_ in rt:
+                for ref, _type in rt:
                     refs.append(ref)
 
         try:
             ndoc.example_section_data, figs = get_example_data(
-                ndoc, infer, obj=target_item, exec_=exec_, qa=qa, config=config
+                ndoc,
+                infer,
+                obj=target_item,
+                exec_=exec_,
+                qa=qa,
+                new_config=new_config,
             )
             ndoc.figs = figs
         except Exception as e:
@@ -1037,7 +1059,7 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, exclude, config):
+    def collect_examples(self, folder, exclude, config, new_config):
         acc = []
         examples = list(folder.glob("**/*.py"))
 
@@ -1087,7 +1109,11 @@ class Gen:
                             # raise type(e)(f"Within {example}")
                 entries = list(
                     parse_script(
-                        script, ns={}, infer=config["infer"], prev="", config=config
+                        script,
+                        ns={},
+                        infer=config["infer"],
+                        prev="",
+                        new_config=new_config,
                     )
                 )
                 s = Section(
@@ -1150,14 +1176,17 @@ class Gen:
 
         return collector, module_conf
 
-    def collect_examples_out(self, module_conf):
+    def collect_examples_out(self, module_conf, new_config):
 
         examples_folder = module_conf.get("examples_folder", None)
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(
-                examples_folder, module_conf.get("examples_exclude", set()), module_conf
+                examples_folder,
+                module_conf.get("examples_exclude", set()),
+                module_conf,
+                new_config=new_config,
             )
             for edoc, figs in examples_data:
                 self.examples.update(
@@ -1245,7 +1274,7 @@ class Gen:
 
         self.log.debug("Configuration: %s", module_conf)
 
-        self.collect_examples_out(module_conf)
+        self.collect_examples_out(module_conf, new_config)
 
         if new_config.logo:
             self.put_raw(
@@ -1331,6 +1360,7 @@ class Gen:
                         exec_=ex,
                         qa=qa,
                         config=module_conf,
+                        new_config=new_config,
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
@@ -1348,6 +1378,7 @@ class Gen:
                                 exec_=False,
                                 qa=qa,
                                 config=module_conf,
+                                new_config=new_config,
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                         except Exception as e:

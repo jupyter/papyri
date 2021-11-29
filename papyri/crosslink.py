@@ -14,16 +14,9 @@ from there import print
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
-from .take2 import (
-    Node,
-    Param,
-    RefInfo,
-    Section,
-    SeeAlsoItem,
-)
+from .take2 import Node, Param, RefInfo, Section, SeeAlsoItem
+from .tree import DVR, DirectiveVisiter, resolve_
 from .utils import progress
-from .tree import DirectiveVisiter, resolve_, DVR
-
 
 warnings.simplefilter("ignore", UserWarning)
 

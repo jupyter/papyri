@@ -763,7 +763,7 @@ class Code(Node):
         self.ce_status = ce_status
 
     def _validate(self):
-        for e in self.entries:
+        for e in self.entries:  # noqa: B007
             pass
             # assert len(e) == 3
 
@@ -958,7 +958,7 @@ def header_lines(lines):
 
     indices = []
 
-    for i, l in enumerate(lines):
+    for i in range(len(lines)):
         if is_at_header(lines[i:]):
             indices.append(i)
     return indices
@@ -986,7 +986,7 @@ def with_indentation(lines, start_indent=0):
 
 def eat_while(lines, condition):
     acc = []
-    for i, l in enumerate(lines):
+    for i, l in enumerate(lines):  # noqa: B007
         if condition(l):
             acc.append(l)
             continue
