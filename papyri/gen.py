@@ -111,7 +111,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns, infer, prev, config):
+def parse_script(script, ns, infer, prev, config, new_config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -140,6 +140,7 @@ def parse_script(script, ns, infer, prev, config):
 
     """
     assert infer == config["infer"]
+    assert config["infer"] == new_config.infer
 
     jeds = []
 
@@ -183,7 +184,7 @@ def parse_script(script, ns, infer, prev, config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
+def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config, new_config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -312,7 +313,14 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
                     else:
                         inf = infer
                     entries = list(
-                        parse_script(script, ns=ns, infer=inf, prev=acc, config=config)
+                        parse_script(
+                            script,
+                            ns=ns,
+                            infer=inf,
+                            prev=acc,
+                            config=config,
+                            new_config=new_config,
+                        )
                     )
                     acc += "\n" + script
                     example_section_data.append(
@@ -433,6 +441,8 @@ class Config:
     homepage: Optional[str] = None
     docs: Optional[str] = None
     docs_path: Optional[str] = None
+    wait_for_plt_show: Optional[bool] = None
+    examples_exclude: Sequence[str] = ()
 
 
 def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: bool):
@@ -447,7 +457,7 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         if exec_ is not None:
             new_config.exec = exec_
         if infer is not None:
-            new_config.exec = infer
+            new_config.infer = infer
 
         if len(conf.keys()) != 1:
             raise ValueError(
@@ -905,7 +915,15 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, *, infer: bool, exec_: bool, qa: str, config
+        self,
+        target_item: Any,
+        ndoc,
+        *,
+        infer: bool,
+        exec_: bool,
+        qa: str,
+        config,
+        new_config,
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
@@ -930,7 +948,7 @@ class Gen:
         item_type = None
 
         # that is not going to be the case because we fallback on execution failure.
-        assert exec_ == config["exec"]
+        assert exec_ == config["exec"], (exec_, config["exec"])
 
         assert config["infer"] == infer, (config, infer)
 
@@ -1004,7 +1022,13 @@ class Gen:
 
         try:
             ndoc.example_section_data, figs = get_example_data(
-                ndoc, infer, obj=target_item, exec_=exec_, qa=qa, config=config
+                ndoc,
+                infer,
+                obj=target_item,
+                exec_=exec_,
+                qa=qa,
+                config=config,
+                new_config=new_config,
             )
             ndoc.figs = figs
         except Exception as e:
@@ -1037,7 +1061,7 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, exclude, config):
+    def collect_examples(self, folder, exclude, config, new_config):
         acc = []
         examples = list(folder.glob("**/*.py"))
 
@@ -1087,7 +1111,12 @@ class Gen:
                             # raise type(e)(f"Within {example}")
                 entries = list(
                     parse_script(
-                        script, ns={}, infer=config["infer"], prev="", config=config
+                        script,
+                        ns={},
+                        infer=config["infer"],
+                        prev="",
+                        config=config,
+                        new_config=new_config,
                     )
                 )
                 s = Section(
@@ -1150,14 +1179,17 @@ class Gen:
 
         return collector, module_conf
 
-    def collect_examples_out(self, module_conf):
+    def collect_examples_out(self, module_conf, new_config):
 
         examples_folder = module_conf.get("examples_folder", None)
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(
-                examples_folder, module_conf.get("examples_exclude", set()), module_conf
+                examples_folder,
+                module_conf.get("examples_exclude", set()),
+                module_conf,
+                new_config=new_config,
             )
             for edoc, figs in examples_data:
                 self.examples.update(
@@ -1245,7 +1277,7 @@ class Gen:
 
         self.log.debug("Configuration: %s", module_conf)
 
-        self.collect_examples_out(module_conf)
+        self.collect_examples_out(module_conf, new_config)
 
         if new_config.logo:
             self.put_raw(
@@ -1331,6 +1363,7 @@ class Gen:
                         exec_=ex,
                         qa=qa,
                         config=module_conf,
+                        new_config=new_config,
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
@@ -1348,6 +1381,7 @@ class Gen:
                                 exec_=False,
                                 qa=qa,
                                 config=module_conf,
+                                new_config=new_config,
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                         except Exception as e:
