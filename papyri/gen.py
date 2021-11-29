@@ -50,10 +50,12 @@ from .take2 import (
     Text,
     make_block_3,
     parse_rst_to_papyri_tree,
+    RefInfo,
 )
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 from .miscs import DummyP, BlockExecutor
+from .tree import DirectiveVisiter
 
 try:
     from . import ts
@@ -819,7 +821,7 @@ class Gen:
             blob.references = None
             blob.refs = []
 
-            self.docs[parts] = json.dumps(blob.to_json(), indent=2)
+            self.docs[parts] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
             # data = p.read_bytes()
 
     def write(self, where: Path):
@@ -853,7 +855,7 @@ class Gen:
                 f.write(v)
 
         with (where / "papyri.json").open("w") as f:
-            f.write(json.dumps(self.metadata, indent=2))
+            f.write(json.dumps(self.metadata, indent=2, sort_keys=True))
 
     def put(self, path: str, data):
         """
@@ -1107,7 +1109,10 @@ class Gen:
             )
             for edoc, figs in examples_data:
                 self.examples.update(
-                    {k: json.dumps(v.to_json(), indent=2) for k, v in edoc.items()}
+                    {
+                        k: json.dumps(v.to_json(), indent=2, sort_keys=True)
+                        for k, v in edoc.items()
+                    }
                 )
                 for name, data in figs:
                     print("put one fig", name)
@@ -1202,7 +1207,7 @@ class Gen:
         if excluded:
             self.log.info(
                 "The following items will be excluded by the configurations:\n %s",
-                json.dumps(excluded, indent=2),
+                json.dumps(excluded, indent=2, sort_keys=True),
             )
         else:
             self.log.info("No items excluded by the configuration")
@@ -1210,10 +1215,14 @@ class Gen:
         if missing:
             self.log.warning(
                 "The following items have been excluded but were not found:\n %s",
-                json.dumps(missing, indent=2),
+                json.dumps(missing, indent=2, sort_keys=True),
             )
 
         collected = {k: v for k, v in collected.items() if k not in excluded}
+
+        known_refs = frozenset(
+            {RefInfo(names[0], self.version, "module", qa) for qa in collected.keys()}
+        )
 
         with p() as p2:
 
@@ -1223,6 +1232,7 @@ class Gen:
             failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
 
             for qa, target_item in collected.items():
+                dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
                 short_description, item_docstring, arbitrary = self.helper_1(
                     qa=qa,
                     experimental=experimental,
@@ -1274,7 +1284,7 @@ class Gen:
                         qa=qa,
                         config=module_conf,
                     )
-                    doc_blob.arbitrary = arbitrary
+                    doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
                     self.log.error("Execution error in %s", repr(qa))
                     failure_collection["ExecError-" + str(type(e))].append(qa)
@@ -1291,13 +1301,14 @@ class Gen:
                                 qa=qa,
                                 config=module_conf,
                             )
-                            doc_blob.arbitrary = arbitrary
+                            doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                         except Exception as e:
                             self.log.exception(
                                 "unexpected non-exec error in %s", repr(qa)
                             )
                             failure_collection["ErrorNoExec-" + str(type(e))].append(qa)
                             continue
+                doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
                 doc_blob.aliases = collector.aliases[qa]
 
                 # processing....
@@ -1435,13 +1446,13 @@ class Gen:
                     doc_blob.validate()
                 except Exception as e:
                     raise type(e)(f"Error in {qa}")
-                self.put(qa, json.dumps(doc_blob.to_json(), indent=2))
+                self.put(qa, json.dumps(doc_blob.to_json(), indent=2, sort_keys=True))
                 for name, data in figs:
                     self.put_raw(name, data)
             if failure_collection:
                 self.log.info(
                     "The following parsing failed \n%s",
-                    json.dumps(failure_collection, indent=2),
+                    json.dumps(failure_collection, indent=2, sort_keys=True),
                 )
             found = {}
             not_found = []

@@ -17,7 +17,7 @@ from .take2 import (
     Link,
 )
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 from functools import lru_cache
 
 _cache: Dict[int, Tuple[Dict[str, RefInfo], FrozenSet[str]]] = {}
@@ -217,10 +217,16 @@ class TreeReplacer:
     define replace_XXX(xxx) that return a list of new nodes, and call visit(and the root tree)
     """
 
+    def __init__(self):
+        self._replacements = Counter()
+
     def visit(self, node):
+        self._replacements = Counter()
         assert not isinstance(node, list)
         res = self.generic_visit(node)
         assert len(res) == 1
+        if self._replacements:
+            print("Done ", self._replacements, "replacements")
         return res[0]
 
     def generic_visit(self, node) -> List[Node]:
@@ -228,6 +234,7 @@ class TreeReplacer:
         try:
             name = node.__class__.__name__
             if method := getattr(self, "replace_" + name, None):
+                self._replacements.update([name])
                 new_nodes = method(node)
             elif name in [
                 "Word",
@@ -279,6 +286,7 @@ class DirectiveVisiter(TreeReplacer):
     """
 
     def __init__(self, qa, known_refs: FrozenSet[RefInfo], local_refs, aliases):
+        super().__init__()
         assert isinstance(qa, str), qa
         assert isinstance(known_refs, (list, set, frozenset)), known_refs
         self.known_refs = frozenset(known_refs)

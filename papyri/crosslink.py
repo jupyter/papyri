@@ -6,7 +6,7 @@ import logging
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, FrozenSet, List, Optional
+from typing import Dict, FrozenSet, List, Optional, Tuple
 
 from rich.logging import RichHandler
 from there import print
@@ -39,7 +39,7 @@ logging.basicConfig(
 log = logging.getLogger("papyri")
 
 
-def g_find_all_refs(graph_store):
+def g_find_all_refs(graph_store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
     o_family = sorted(list(graph_store.glob((None, None, "module", None))))
 
     # TODO
@@ -55,7 +55,7 @@ def g_find_all_refs(graph_store):
     return frozenset(known_refs), ref_map
 
 
-def find_all_refs(store):
+def find_all_refs(store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
     if isinstance(store, GraphStore):
         return g_find_all_refs(store)
 
