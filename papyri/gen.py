@@ -50,10 +50,12 @@ from .take2 import (
     Text,
     make_block_3,
     parse_rst_to_papyri_tree,
+    RefInfo,
 )
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 from .miscs import DummyP, BlockExecutor
+from .tree import DirectiveVisiter
 
 try:
     from . import ts
@@ -109,7 +111,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns=None, infer=None, prev="", config=None):
+def parse_script(script, ns, infer, prev, config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -137,6 +139,7 @@ def parse_script(script, ns=None, infer=None, prev="", config=None):
         fully qualified name of the type of current token
 
     """
+    assert infer == config["infer"]
 
     jeds = []
 
@@ -438,10 +441,11 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         g.log.setLevel("DEBUG")
         g.log.debug("Log level set to debug")
 
+    conf[names[0]]["exec"] = exec_
+    conf[names[0]]["infer"] = infer
+
     g.do_one_mod(
         names,
-        infer,
-        exec_,
         conf,
         relative_dir=Path(target_file).parent,
         experimental=experimental,
@@ -819,7 +823,7 @@ class Gen:
             blob.references = None
             blob.refs = []
 
-            self.docs[parts] = json.dumps(blob.to_json(), indent=2)
+            self.docs[parts] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
             # data = p.read_bytes()
 
     def write(self, where: Path):
@@ -853,7 +857,7 @@ class Gen:
                 f.write(v)
 
         with (where / "papyri.json").open("w") as f:
-            f.write(json.dumps(self.metadata, indent=2))
+            f.write(json.dumps(self.metadata, indent=2, sort_keys=True))
 
     def put(self, path: str, data):
         """
@@ -1049,7 +1053,9 @@ class Gen:
                             continue
                             # raise type(e)(f"Within {example}")
                 entries = list(
-                    parse_script(script, ns={}, infer=config["infer"], prev="")
+                    parse_script(
+                        script, ns={}, infer=config["infer"], prev="", config=config
+                    )
                 )
                 s = Section(
                     [Code(entries, "", ce_status)] + [Fig(name) for name, _ in figs]
@@ -1065,7 +1071,22 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def configure(self, names, conf):
+    def configure(self, names: List[str], conf):
+        """
+        Configure current instance of gen
+
+        Parameters
+        ----------
+
+        names: List of str
+            modules and submodules to recursively crawl.
+            The first one is assumed to be the root, others, submodules not
+            reachable from the root.
+
+        conf: dict
+            mutated conf object
+
+        """
         modules = []
         for name in names:
             x, *r = name.split(".")
@@ -1107,7 +1128,10 @@ class Gen:
             )
             for edoc, figs in examples_data:
                 self.examples.update(
-                    {k: json.dumps(v.to_json(), indent=2) for k, v in edoc.items()}
+                    {
+                        k: json.dumps(v.to_json(), indent=2, sort_keys=True)
+                        for k, v in edoc.items()
+                    }
                 )
                 for name, data in figs:
                     print("put one fig", name)
@@ -1151,8 +1175,6 @@ class Gen:
     def do_one_mod(
         self,
         names: List[str],
-        infer: bool,
-        exec_: bool,
         conf: MutableMapping[str, Any],
         relative_dir: Path,
         *,
@@ -1166,8 +1188,6 @@ class Gen:
         names : List[str]
             list of (sub)modules names to generate docbundle for.
             The first is considered the root module.
-        infer : bool
-            Whether to run type inference with jedi.
         exec_ : bool
             Whether to try to execute the code blocks and embed resulting values like plots.
 
@@ -1186,9 +1206,8 @@ class Gen:
         )
 
         collector, module_conf = self.configure(names, conf)
+        assert "infer" in module_conf
         collected: Dict[str, Any] = collector.items()
-        module_conf["exec"] = exec_
-        module_conf["infer"] = infer
 
         self.log.debug("Configuration: %s", module_conf)
 
@@ -1202,7 +1221,7 @@ class Gen:
         if excluded:
             self.log.info(
                 "The following items will be excluded by the configurations:\n %s",
-                json.dumps(excluded, indent=2),
+                json.dumps(excluded, indent=2, sort_keys=True),
             )
         else:
             self.log.info("No items excluded by the configuration")
@@ -1210,10 +1229,14 @@ class Gen:
         if missing:
             self.log.warning(
                 "The following items have been excluded but were not found:\n %s",
-                json.dumps(missing, indent=2),
+                json.dumps(missing, indent=2, sort_keys=True),
             )
 
         collected = {k: v for k, v in collected.items() if k not in excluded}
+
+        known_refs = frozenset(
+            {RefInfo(names[0], self.version, "module", qa) for qa in collected.keys()}
+        )
 
         with p() as p2:
 
@@ -1223,6 +1246,7 @@ class Gen:
             failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
 
             for qa, target_item in collected.items():
+                dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
                 short_description, item_docstring, arbitrary = self.helper_1(
                     qa=qa,
                     experimental=experimental,
@@ -1269,12 +1293,12 @@ class Gen:
                     doc_blob, figs = self.do_one_item(
                         target_item,
                         ndoc,
-                        infer=infer,
+                        infer=module_conf["infer"],
                         exec_=ex,
                         qa=qa,
                         config=module_conf,
                     )
-                    doc_blob.arbitrary = arbitrary
+                    doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
                     self.log.error("Execution error in %s", repr(qa))
                     failure_collection["ExecError-" + str(type(e))].append(qa)
@@ -1286,18 +1310,19 @@ class Gen:
                             doc_blob, figs = self.do_one_item(
                                 target_item,
                                 ndoc,
-                                infer=infer,
+                                infer=module_conf.infer,
                                 exec_=False,
                                 qa=qa,
                                 config=module_conf,
                             )
-                            doc_blob.arbitrary = arbitrary
+                            doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                         except Exception as e:
                             self.log.exception(
                                 "unexpected non-exec error in %s", repr(qa)
                             )
                             failure_collection["ErrorNoExec-" + str(type(e))].append(qa)
                             continue
+                doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
                 doc_blob.aliases = collector.aliases[qa]
 
                 # processing....
@@ -1435,13 +1460,13 @@ class Gen:
                     doc_blob.validate()
                 except Exception as e:
                     raise type(e)(f"Error in {qa}")
-                self.put(qa, json.dumps(doc_blob.to_json(), indent=2))
+                self.put(qa, json.dumps(doc_blob.to_json(), indent=2, sort_keys=True))
                 for name, data in figs:
                     self.put_raw(name, data)
             if failure_collection:
                 self.log.info(
                     "The following parsing failed \n%s",
-                    json.dumps(failure_collection, indent=2),
+                    json.dumps(failure_collection, indent=2, sort_keys=True),
                 )
             found = {}
             not_found = []

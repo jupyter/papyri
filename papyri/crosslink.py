@@ -6,7 +6,7 @@ import logging
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, FrozenSet, List, Optional
+from typing import Dict, FrozenSet, List, Optional, Tuple
 
 from rich.logging import RichHandler
 from there import print
@@ -15,17 +15,14 @@ from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
 from .take2 import (
-    Code2,
-    Link,
     Node,
     Param,
     RefInfo,
     Section,
     SeeAlsoItem,
-    Token,
 )
 from .utils import progress
-from .tree import DirectiveVisiter, resolve_
+from .tree import DirectiveVisiter, resolve_, DVR
 
 
 warnings.simplefilter("ignore", UserWarning)
@@ -39,7 +36,7 @@ logging.basicConfig(
 log = logging.getLogger("papyri")
 
 
-def g_find_all_refs(graph_store):
+def g_find_all_refs(graph_store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
     o_family = sorted(list(graph_store.glob((None, None, "module", None))))
 
     # TODO
@@ -55,7 +52,7 @@ def g_find_all_refs(graph_store):
     return frozenset(known_refs), ref_map
 
 
-def find_all_refs(store):
+def find_all_refs(store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
     if isinstance(store, GraphStore):
         return g_find_all_refs(store)
 
@@ -353,79 +350,6 @@ def load_one_uningested(
     # if blob.refs:
     #    print("BLOB REFS:", blob.refs)
     return blob
-
-
-class DVR(DirectiveVisiter):
-    def __init__(self, *args, version="??", **kwargs):
-        self.version = version
-        assert version != "??"
-        assert version != ""
-        super().__init__(*args, **kwargs)
-
-    def replace_Code2(self, code):
-        new_entries = []
-        for token in code.entries:
-            # TODO
-            if isinstance(token.link, str):
-                r = self._resolve(frozenset(), token.link)
-                if r.kind == "module":
-                    self._targets.add(r)
-                    new_entries.append(
-                        Token(
-                            Link(
-                                token.link,
-                                r,
-                                "module",
-                                True,
-                            ),
-                            token.type,
-                        )
-                    )
-                    continue
-            new_entries.append(token)
-
-        return [Code2(new_entries, code.out, code.ce_status)]
-
-    def replace_Code(self, code):
-        """
-        Here we'll crawl example data and convert code entries so that each token contain a link to the object they
-        refered to.
-        """
-        # TODO: here we'll have a problem as we will love the content of entry[1]. This should really be resolved at gen
-        # time.
-        new_entries = []
-        for entry in code.entries:
-            # TODO
-            if entry[1] and entry[1].strip():
-                r = self._resolve(frozenset(), entry[1])
-                if r.kind == "module":
-                    self._targets.add(r)
-                    new_entries.append(
-                        Token(
-                            Link(
-                                str(entry[0]),
-                                r,
-                                "module",
-                                True,
-                            ),
-                            entry[2],
-                        )
-                    )
-                    continue
-            new_entries.append(
-                Token(str(entry[0]), entry[2]),
-            )
-
-        return [Code2(new_entries, code.out, code.ce_status)]
-
-    def replace_Fig(self, fig):
-
-        # todo: add version number here
-        self._targets.add(
-            RefInfo(self.qa.split(".")[0], self.version, "assets", fig.value)
-        )
-
-        return [fig]
 
 
 def load_one(
