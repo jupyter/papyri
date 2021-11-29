@@ -519,7 +519,7 @@ async def _route(
         for f in this_module_known_refs:
             sub = tree
             parts = f.split(".")[len(ref.split(".")) :]
-            for i, part in enumerate(parts):
+            for part in parts:
                 if part not in sub:
                     sub[part] = {}
                 sub = sub[part]
@@ -617,8 +617,8 @@ def render_one(
     *,
     backrefs,
     pygment_css=None,
-    parts={},
-    parts_links={},
+    parts=(),
+    parts_links=(),
     graph="{}",
     sidebar,
 ):
@@ -1057,7 +1057,7 @@ async def _write_example_files(gstore, config):
     env.globals["len"] = len
     env.globals["url"] = url
     env.globals["unreachable"] = unreachable
-    for p, example in progress(examples, description="Rendering Examples..."):
+    for _, example in progress(examples, description="Rendering Examples..."):
         module, version, _, path = example
         data = await render_single_examples(
             env,
@@ -1122,7 +1122,7 @@ async def _write_api_file(
     config,
 ):
 
-    for p, key in progress(gfiles, description="Rendering API..."):
+    for _, key in progress(gfiles, description="Rendering API..."):
         module, version = key.module, key.version
         if config.ascii:
             await _ascii_render(key, store=gstore)

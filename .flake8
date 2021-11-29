@@ -5,6 +5,7 @@
 # https://pycodestyle.pycqa.org/en/latest/intro.html#error-codes
 exclude = __init__.py,versioneer.py
 ignore =
+    B011,  # bug bear assert False
     E20,   # Extra space in brackets
     E231,E241,  # Multiple spaces around ","
     E26,   # Comments
@@ -17,4 +18,5 @@ ignore =
     W504,  # line break after binary operator
     F811,  # redefinition of unused 'loop' from line 10
 max-line-length = 120
+
 

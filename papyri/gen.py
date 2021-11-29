@@ -98,7 +98,7 @@ def paragraphs(lines) -> List[Any]:
     # blocks_data = parse_rst_to_papyri_tree("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for pre_blank_lines, blank_lines, post_blank_lines in blocks_data:
+    for pre_blank_lines, _blank_lines, post_blank_lines in blocks_data:
         # pre_blank_lines = block.lines
         # blank_lines = block.wh
         # post_black_lines = block.ind
@@ -111,7 +111,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns, infer, prev, config, new_config):
+def parse_script(script, ns, infer, prev, new_config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -139,8 +139,7 @@ def parse_script(script, ns, infer, prev, config, new_config):
         fully qualified name of the type of current token
 
     """
-    assert infer == config["infer"]
-    assert config["infer"] == new_config.infer
+    assert infer == new_config.infer
 
     jeds = []
 
@@ -153,7 +152,7 @@ def parse_script(script, ns, infer, prev, config, new_config):
     jeds.append(jedi.Script(prev + "\n" + script))
     P = PythonLexer()
 
-    for index, type_, text in P.get_tokens_unprocessed(script):
+    for index, _type, text in P.get_tokens_unprocessed(script):
         line_n, col_n = pos_to_nl(script, index)
         line_n += l_delta
         try:
@@ -170,7 +169,7 @@ def parse_script(script, ns, infer, prev, config, new_config):
                             #    ref = ''
                     else:
                         ref = ""
-                except (AttributeError, TypeError, Exception) as e:
+                except (AttributeError, TypeError) as e:
                     raise type(e)(
                         f"{contextscript}, {line_n=}, {col_n=}, {prev=}, {jed=}"
                     ) from e
@@ -184,7 +183,7 @@ def parse_script(script, ns, infer, prev, config, new_config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config, new_config):
+def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, new_config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -247,7 +246,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config, new_
     # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     fig_managers = executor.fig_man()
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
-    wait_for_show = config.get("wait_for_plt_show", True)
+    wait_for_show = new_config.wait_for_plt_show
     with executor:
         for b in blocks:
             for item in b:
@@ -272,7 +271,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config, new_
                                 ce_status = "execed"
                             except Exception:
                                 ce_status = "exception_in_exec"
-                                if config.get("exec_failure", "") != "fallback":
+                                if new_config.exec_failure != "fallback":
                                     raise
                             if fig_managers and (
                                 ("plt.show" in script) or not wait_for_show
@@ -306,7 +305,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config, new_
                                 assert len(fig_managers) == 0, fig_managers + [
                                     did_except,
                                 ]
-                    infer_exclude = config.get("exclude_jedi", frozenset())
+                    infer_exclude = new_config.exclude_jedi
                     if qa in infer_exclude:
                         print(f"Turning off type inference for func {qa!r}")
                         inf = False
@@ -318,7 +317,6 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config, new_
                             ns=ns,
                             infer=inf,
                             prev=acc,
-                            config=config,
                             new_config=new_config,
                         )
                     )
@@ -441,8 +439,9 @@ class Config:
     homepage: Optional[str] = None
     docs: Optional[str] = None
     docs_path: Optional[str] = None
-    wait_for_plt_show: Optional[bool] = None
+    wait_for_plt_show: Optional[bool] = True
     examples_exclude: Sequence[str] = ()
+    exclude_jedi: Sequence[str] = ()
 
 
 def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: bool):
@@ -1017,7 +1016,7 @@ class Gen:
             for line in new_see_also:
                 rt, desc = line
                 assert isinstance(desc, list), line
-                for ref, type_ in rt:
+                for ref, _type in rt:
                     refs.append(ref)
 
         try:
@@ -1027,7 +1026,6 @@ class Gen:
                 obj=target_item,
                 exec_=exec_,
                 qa=qa,
-                config=config,
                 new_config=new_config,
             )
             ndoc.figs = figs
@@ -1115,7 +1113,6 @@ class Gen:
                         ns={},
                         infer=config["infer"],
                         prev="",
-                        config=config,
                         new_config=new_config,
                     )
                 )

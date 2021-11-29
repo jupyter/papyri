@@ -253,7 +253,7 @@ def guess_load(rough, walk, gen_content, stack, frame):
 
     candidates = list(ingest_dir.glob(f"*/*/module/{rough}"))
     if candidates:
-        for q in range(len(walk)):
+        for _q in range(len(walk)):
             walk.pop()
         try:
             load(candidates[0], walk, rough, gen_content, frame)
@@ -505,7 +505,7 @@ class Renderer:
         else:
 
             def _cb():
-                None
+                pass
 
             msg = "Open in separate window (Not implemented on this platform)"
 
@@ -565,7 +565,7 @@ class Renderer:
                 lambda: self.cb("likely copy content to clipboard"),
             )
             yield (None, " ")
-            for txt, ref, css in entries:
+            for txt, _ref, css in entries:
                 if txt == "\n":
                     yield (None, "\n")
                     yield ("verbatim", "... ")
