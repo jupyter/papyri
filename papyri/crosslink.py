@@ -15,14 +15,11 @@ from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
 from .take2 import (
-    Code2,
-    Link,
     Node,
     Param,
     RefInfo,
     Section,
     SeeAlsoItem,
-    Token,
 )
 from .utils import progress
 from .tree import DirectiveVisiter, resolve_, DVR
@@ -353,8 +350,6 @@ def load_one_uningested(
     # if blob.refs:
     #    print("BLOB REFS:", blob.refs)
     return blob
-
-
 
 
 def load_one(

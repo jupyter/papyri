@@ -111,7 +111,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns=None, infer=None, prev="", config=None):
+def parse_script(script, ns, infer, prev, config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -139,6 +139,7 @@ def parse_script(script, ns=None, infer=None, prev="", config=None):
         fully qualified name of the type of current token
 
     """
+    assert infer == config["infer"]
 
     jeds = []
 
@@ -440,10 +441,11 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         g.log.setLevel("DEBUG")
         g.log.debug("Log level set to debug")
 
+    conf[names[0]]["exec"] = exec_
+    conf[names[0]]["infer"] = infer
+
     g.do_one_mod(
         names,
-        infer,
-        exec_,
         conf,
         relative_dir=Path(target_file).parent,
         experimental=experimental,
@@ -1051,7 +1053,9 @@ class Gen:
                             continue
                             # raise type(e)(f"Within {example}")
                 entries = list(
-                    parse_script(script, ns={}, infer=config["infer"], prev="")
+                    parse_script(
+                        script, ns={}, infer=config["infer"], prev="", config=config
+                    )
                 )
                 s = Section(
                     [Code(entries, "", ce_status)] + [Fig(name) for name, _ in figs]
@@ -1067,7 +1071,22 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def configure(self, names, conf):
+    def configure(self, names: List[str], conf):
+        """
+        Configure current instance of gen
+
+        Parameters
+        ----------
+
+        names: List of str
+            modules and submodules to recursively crawl.
+            The first one is assumed to be the root, others, submodules not
+            reachable from the root.
+
+        conf: dict
+            mutated conf object
+
+        """
         modules = []
         for name in names:
             x, *r = name.split(".")
@@ -1156,8 +1175,6 @@ class Gen:
     def do_one_mod(
         self,
         names: List[str],
-        infer: bool,
-        exec_: bool,
         conf: MutableMapping[str, Any],
         relative_dir: Path,
         *,
@@ -1171,8 +1188,6 @@ class Gen:
         names : List[str]
             list of (sub)modules names to generate docbundle for.
             The first is considered the root module.
-        infer : bool
-            Whether to run type inference with jedi.
         exec_ : bool
             Whether to try to execute the code blocks and embed resulting values like plots.
 
@@ -1191,9 +1206,8 @@ class Gen:
         )
 
         collector, module_conf = self.configure(names, conf)
+        assert "infer" in module_conf
         collected: Dict[str, Any] = collector.items()
-        module_conf["exec"] = exec_
-        module_conf["infer"] = infer
 
         self.log.debug("Configuration: %s", module_conf)
 
@@ -1279,7 +1293,7 @@ class Gen:
                     doc_blob, figs = self.do_one_item(
                         target_item,
                         ndoc,
-                        infer=infer,
+                        infer=module_conf["infer"],
                         exec_=ex,
                         qa=qa,
                         config=module_conf,
@@ -1296,7 +1310,7 @@ class Gen:
                             doc_blob, figs = self.do_one_item(
                                 target_item,
                                 ndoc,
-                                infer=infer,
+                                infer=module_conf.infer,
                                 exec_=False,
                                 qa=qa,
                                 config=module_conf,
