@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from papyri.gen import Gen, NumpyDocString
+from papyri.gen import Config, Gen, NumpyDocString
 
 
 @lru_cache
@@ -21,6 +21,7 @@ def test_find_beyond_decorators():
         exec_=True,
         qa="irrelevant",
         config={"exec": True, "infer": True},
+        new_config=Config(exec=True, infer=True),
     )
 
     assert doc.item_file.endswith("test_gen.py")

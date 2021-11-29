@@ -4,23 +4,23 @@ usually trees, and update nodes.
 
 """
 
-from typing import List, Any, Set, Tuple, Dict, FrozenSet
+from collections import Counter, defaultdict
+from functools import lru_cache
+from typing import Any, Dict, FrozenSet, List, Set, Tuple
+
 from .take2 import (
-    Node,
     Admonition,
     BlockDirective,
     BlockMath,
-    Directive,
-    Math,
-    Verbatim,
-    RefInfo,
-    Link,
-    Token,
     Code2,
+    Directive,
+    Link,
+    Math,
+    Node,
+    RefInfo,
+    Token,
+    Verbatim,
 )
-
-from collections import defaultdict, Counter
-from functools import lru_cache
 
 _cache: Dict[int, Tuple[Dict[str, RefInfo], FrozenSet[str]]] = {}
 

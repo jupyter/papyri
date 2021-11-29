@@ -23,7 +23,7 @@ from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Sequence
+from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple
 
 import jedi
 import toml
@@ -38,6 +38,7 @@ from rich.progress import TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
+from .miscs import BlockExecutor, DummyP
 from .take2 import (
     Code,
     Fig,
@@ -45,17 +46,16 @@ from .take2 import (
     Node,
     Param,
     Ref,
+    RefInfo,
     Section,
     SeeAlsoItem,
     Text,
     make_block_3,
     parse_rst_to_papyri_tree,
-    RefInfo,
 )
+from .tree import DirectiveVisiter
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
-from .miscs import DummyP, BlockExecutor
-from .tree import DirectiveVisiter
 
 try:
     from . import ts
@@ -426,9 +426,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    dummy_progress: bool
-    exec_failure: str  # should move to enum
-    logo: str  # should change to path likely
+    dummy_progress: bool = False
+    exec_failure: Optional[str] = None  # should move to enum
+    logo: Optional[str] = None  # should change to path likely
     execute_exclude_patterns: Sequence[str] = ()
     infer: bool = True
     exclude: Sequence[str] = ()  # list of dotted object name to exclude from collection

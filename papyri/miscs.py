@@ -2,8 +2,9 @@
 Misc helper functions
 """
 
-from rich.progress import Progress
 import io
+
+from rich.progress import Progress
 
 
 class DummyP(Progress):

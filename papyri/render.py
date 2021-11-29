@@ -20,7 +20,6 @@ from rich.logging import RichHandler
 from there import print
 
 from . import config as default_config
-
 from .config import ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
 from .graphstore import GraphStore, Key
