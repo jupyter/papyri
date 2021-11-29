@@ -1058,9 +1058,14 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, exclude, config, new_config):
+    def collect_examples(self, folder, exclude, new_config):
         acc = []
         examples = list(folder.glob("**/*.py"))
+        if bool(exclude) or bool(new_config.examples_exclude):
+            assert exclude == new_config.examples_exclude, (
+                exclude,
+                new_config.examples_exclude,
+            )
 
         valid_examples = []
         for e in examples:
@@ -1092,7 +1097,7 @@ class Gen:
                 script = example.read_text()
                 ce_status = "None"
                 figs = []
-                if config["exec"]:
+                if new_config.exec:
                     with executor:
                         try:
                             executor.exec(script)
@@ -1110,7 +1115,7 @@ class Gen:
                     parse_script(
                         script,
                         ns={},
-                        infer=config["infer"],
+                        infer=new_config.infer,
                         prev="",
                         new_config=new_config,
                     )
@@ -1184,7 +1189,6 @@ class Gen:
             examples_data = self.collect_examples(
                 examples_folder,
                 module_conf.get("examples_exclude", set()),
-                module_conf,
                 new_config=new_config,
             )
             for edoc, figs in examples_data:
