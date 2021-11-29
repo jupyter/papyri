@@ -12,7 +12,6 @@ likely be separated into a separate module at some point.
 from __future__ import annotations
 
 import inspect
-import io
 import json
 import logging
 import os
@@ -54,6 +53,7 @@ from .take2 import (
 )
 from .utils import dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
+from .miscs import DummyP, BlockExecutor
 
 try:
     from . import ts
@@ -71,28 +71,6 @@ except (ImportError, OSError):
 SITE_PACKAGE = site.getsitepackages()
 
 
-class DummyP(Progress):
-    """
-    Rich progress bar can screw up ipdb, so it can be useful to have a dummy
-    replacement
-    """
-
-    def add_task(*args, **kwargs):
-        pass
-
-    def advance(*args, **kwargs):
-        pass
-
-    def update(*args, **kwargs):
-        pass
-
-    def __enter__(self, *args, **kwargs):
-        return self
-
-    def __exit__(self, *args, **kwargs):
-        pass
-
-
 def paragraph(lines) -> Any:
     """
     Leftover rst parsing,
@@ -100,6 +78,7 @@ def paragraph(lines) -> Any:
     Remove at some point.
     """
     [section] = ts.parse("\n".join(lines).encode())
+    assert len(section.children) == 1
     p2 = section.children[0]
     return p2
 
@@ -199,54 +178,6 @@ def parse_script(script, ns=None, infer=None, prev="", config=None):
             ref = ""
         yield text + failed, ref
     warnings.simplefilter("default", UserWarning)
-
-
-class BlockExecutor:
-    """
-    To merge with next function; a block executor that
-    can take sequences of code, keep state and will return the figures generated.
-    """
-
-    def __init__(self, ns):
-        import matplotlib
-
-        matplotlib.use("agg")
-        self.ns = ns
-        pass
-
-    def __enter__(self):
-        assert (len(self.fig_man())) == 0, f"init fail in {len(self.fig_man())}"
-
-    def __exit__(self, *args, **kwargs):
-        import matplotlib.pyplot as plt
-
-        plt.close("all")
-        assert (len(self.fig_man())) == 0, f"init fail in {len(self.fig_man())}"
-
-    def fig_man(self):
-        from matplotlib import _pylab_helpers
-
-        return _pylab_helpers.Gcf.get_all_fig_managers()
-
-    def get_figs(self):
-        figs = []
-        for fig_man in self.fig_man():
-            buf = io.BytesIO()
-            fig_man.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
-            buf.seek(0)
-            figs.append(buf.read())
-        return figs
-
-    def exec(self, text):
-        from matplotlib import _pylab_helpers, cbook
-        from matplotlib.backend_bases import FigureManagerBase
-
-        with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
-            res = exec(text, self.ns)
-
-        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-
-        return res, fig_managers
 
 
 def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, config):
@@ -961,6 +892,11 @@ class Gen:
         item_line = None
         item_type = None
 
+        # that is not going to be the case because we fallback on execution failure.
+        assert exec_ == config["exec"]
+
+        assert config["infer"] == infer
+
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
         item_file = find_file(target_item)
@@ -1064,7 +1000,7 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, exclude):
+    def collect_examples(self, folder, exclude, config):
         acc = []
         examples = list(folder.glob("**/*.py"))
 
@@ -1095,31 +1031,37 @@ class Gen:
                 p2.update(taskp, description=str(example).ljust(7))
                 p2.advance(taskp)
                 executor = BlockExecutor({})
-                with executor:
-                    script = example.read_text()
-                    try:
-                        executor.exec(script)
-                        figs = [
-                            (f"ex-{example.name}-{i}.png", f)
-                            for i, f in enumerate(executor.get_figs())
-                        ]
-                        entries = list(parse_script(script, ns={}, infer=True, prev=""))
-                    except Exception as e:
-                        self.log.error("%s failed %s", example, type(e))
-                        failed.append(str(example))
-                        continue
-                        # raise type(e)(f"Within {example}")
-                    s = Section(
-                        [Code(entries, "", "execed")] + [Fig(name) for name, _ in figs]
-                    )
-                    s = processed_example_data(s)
+                script = example.read_text()
+                ce_status = "None"
+                figs = []
+                if config["exec"]:
+                    with executor:
+                        try:
+                            executor.exec(script)
+                            figs = [
+                                (f"ex-{example.name}-{i}.png", f)
+                                for i, f in enumerate(executor.get_figs())
+                            ]
+                            ce_status = "execed"
+                        except Exception as e:
+                            self.log.error("%s failed %s", example, type(e))
+                            failed.append(str(example))
+                            continue
+                            # raise type(e)(f"Within {example}")
+                entries = list(
+                    parse_script(script, ns={}, infer=config["infer"], prev="")
+                )
+                s = Section(
+                    [Code(entries, "", ce_status)] + [Fig(name) for name, _ in figs]
+                )
+                s = processed_example_data(s)
 
-                    acc.append(
-                        (
-                            {example.name: s},
-                            figs,
-                        )
+                acc.append(
+                    (
+                        {example.name: s},
+                        figs,
                     )
+                )
         assert len(failed) == 0, failed
         return acc
 
@@ -1161,7 +1103,7 @@ class Gen:
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(
-                examples_folder, module_conf.get("examples_exclude", set())
+                examples_folder, module_conf.get("examples_exclude", set()), module_conf
             )
             for edoc, figs in examples_data:
                 self.examples.update(
@@ -1245,6 +1187,8 @@ class Gen:
 
         collector, module_conf = self.configure(names, conf)
         collected: Dict[str, Any] = collector.items()
+        module_conf["exec"] = exec_
+        module_conf["infer"] = infer
 
         self.log.debug("Configuration: %s", module_conf)
 
@@ -1311,8 +1255,8 @@ class Gen:
                 execute_exclude_patterns = module_conf.get(
                     "execute_exclude_patterns", None
                 )
-                ex = exec_
-                if execute_exclude_patterns and exec_:
+                ex = module_conf["exec"]
+                if execute_exclude_patterns and module_conf["exec"]:
                     for pat in execute_exclude_patterns:
                         if qa.startswith(pat):
                             ex = False

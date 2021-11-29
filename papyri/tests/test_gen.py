@@ -15,7 +15,12 @@ def test_find_beyond_decorators():
     """
     gen = Gen(dummy_progress=True)
     doc, figs = gen.do_one_item(
-        ex1, NumpyDocString(""), infer=False, exec_=False, qa="irrelevant", config={}
+        ex1,
+        NumpyDocString(""),
+        infer=True,
+        exec_=True,
+        qa="irrelevant",
+        config={"exec": True, "infer": True},
     )
 
     assert doc.item_file.endswith("test_gen.py")
