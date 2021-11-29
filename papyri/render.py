@@ -6,6 +6,7 @@ import os
 import random
 import shutil
 from collections import OrderedDict, defaultdict
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -18,7 +19,7 @@ from quart_trio import QuartTrio
 from rich.logging import RichHandler
 from there import print
 
-from . import config
+from . import config as default_config
 
 from .config import ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
@@ -856,13 +857,12 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
 
 
 async def _self_render_as_index_page(
-    html: bool,
     html_dir: Optional[Path],
     gstore,
     tree,
     known_refs,
     ref_map,
-    sidebar,
+    config,
     template,
     css_data,
 ) -> None:
@@ -897,7 +897,7 @@ async def _self_render_as_index_page(
     if html_dir is not None:
         assert isinstance(html_dir, Path)
 
-    if not html:
+    if not config.html:
         return
 
     import papyri
@@ -912,7 +912,7 @@ async def _self_render_as_index_page(
         ref_map=ref_map,
     )
     data = render_one(
-        sidebar=sidebar,
+        sidebar=config.html_sidebar,
         template=template,
         doc=doc_blob,
         qa=qa,
@@ -927,7 +927,7 @@ async def _self_render_as_index_page(
             f.write(data)
 
 
-async def _write_gallery(store, gstore, sidebar, output_dir):
+async def _write_gallery(store, gstore, config):
     """ """
     mv2 = gstore.glob((None, None))
     for _, (module, version) in progress(
@@ -935,13 +935,30 @@ async def _write_gallery(store, gstore, sidebar, output_dir):
     ):
         # version, module = item.path.name, item.path.parent.name
         data = await gallery(
-            module, store, version, ext=".html", gstore=gstore, sidebar=sidebar
+            module,
+            store,
+            version,
+            ext=".html",
+            gstore=gstore,
+            sidebar=config.html_sidebar,
         )
-        if output_dir:
-            (output_dir / module / version / "gallery").mkdir(
+        if config.output_dir:
+            (config.output_dir / module / version / "gallery").mkdir(
                 parents=True, exist_ok=True
             )
-            (output_dir / module / version / "gallery" / "index.html").write_text(data)
+            (
+                config.output_dir / module / version / "gallery" / "index.html"
+            ).write_text(data)
+
+
+@dataclass
+class StaticRenderingConfig:
+    """Class for keeping track of an item in inventory."""
+
+    html: bool
+    html_sidebar: bool
+    ascii: bool
+    output_dir: Optional[Path]
 
 
 async def main(ascii: bool, html, dry_run, sidebar):
@@ -961,6 +978,16 @@ async def main(ascii: bool, html, dry_run, sidebar):
 
     """
 
+    html_dir_: Optional[Path] = default_config.html_dir
+    if dry_run:
+        output_dir = None
+        html_dir_ = None
+    else:
+        assert html_dir_ is not None
+        output_dir = html_dir_ / "p"
+        output_dir.mkdir(exist_ok=True)
+    config = StaticRenderingConfig(html, sidebar, ascii, output_dir)
+
     gstore = GraphStore(ingest_dir, {})
     store = Store(ingest_dir)
     gfiles = list(gstore.glob((None, None, "module", None)))
@@ -975,14 +1002,6 @@ async def main(ascii: bool, html, dry_run, sidebar):
     env.globals["unreachable"] = unreachable
     env.globals["url"] = url
     template = env.get_template("core.tpl.j2")
-    html_dir_: Optional[Path] = config.html_dir
-    if dry_run:
-        output_dir = None
-        html_dir_ = None
-    else:
-        assert html_dir_ is not None
-        output_dir = html_dir_ / "p"
-        output_dir.mkdir(exist_ok=True)
     document: Store
 
     x_, y_ = find_all_refs(store)
@@ -1004,47 +1023,41 @@ async def main(ascii: bool, html, dry_run, sidebar):
     random.shuffle(gfiles)
     # Gallery
 
-    await _write_gallery(store, gstore, sidebar, output_dir)
+    await _write_gallery(store, gstore, config)
 
     await _write_api_file(
         gfiles,
-        output_dir,
         gstore,
         tree,
         known_refs,
         ref_map,
-        html,
         template,
         css_data,
-        sidebar,
-        ascii,
+        config,
     )
 
     await _self_render_as_index_page(
-        html, html_dir_, gstore, tree, known_refs, ref_map, sidebar, template, css_data
+        html_dir_, gstore, tree, known_refs, ref_map, config, template, css_data
     )
-    await copy_assets(output_dir, gstore)
+    await copy_assets(config, gstore)
 
 
 async def _write_api_file(
     gfiles,
-    output_dir,
     gstore,
     tree,
     known_refs,
     ref_map,
-    html,
     template,
     css_data,
-    sidebar,
-    ascii,
+    config,
 ):
 
     for p, key in progress(gfiles, description="Rendering..."):
         module, version = key.module, key.version
-        if ascii:
+        if config.ascii:
             await _ascii_render(key, store=gstore)
-        if html:
+        if config.html:
             doc_blob, qa, siblings, parts_links = await loc(
                 key,
                 store=gstore,
@@ -1064,25 +1077,29 @@ async def _write_api_file(
                 backrefs=doc_blob.backrefs,
                 pygment_css=css_data,
                 graph=json_str,
-                sidebar=sidebar,
+                sidebar=config.html_sidebar,
             )
-            if output_dir:
-                (output_dir / module / version / "api").mkdir(
+            if config.output_dir:
+                (config.output_dir / module / version / "api").mkdir(
                     parents=True, exist_ok=True
                 )
-                (output_dir / module / version / "api" / f"{qa}.html").write_text(data)
+                (
+                    config.output_dir / module / version / "api" / f"{qa}.html"
+                ).write_text(data)
 
 
-async def copy_assets(output_dir, gstore):
+async def copy_assets(config, gstore):
     """
     Copy assets from to their final destination.
 
     Assets are all the binary files that we don't want to change.
     """
-    if output_dir:
-        assets_2 = gstore.glob((None, None, "assets", None))
-        for _, asset in progress(assets_2, description="Copying assets"):
-            b = output_dir / asset.module / asset.version / "img"
-            b.mkdir(parents=True, exist_ok=True)
-            data = gstore.get(asset)
-            (b / asset.path).write_bytes(data)
+    if config.output_dir is None:
+        return
+
+    assets_2 = gstore.glob((None, None, "assets", None))
+    for _, asset in progress(assets_2, description="Copying assets"):
+        b = config.output_dir / asset.module / asset.version / "img"
+        b.mkdir(parents=True, exist_ok=True)
+        data = gstore.get(asset)
+        (b / asset.path).write_bytes(data)
