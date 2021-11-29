@@ -20,7 +20,6 @@ def test_find_beyond_decorators():
         infer=True,
         exec_=True,
         qa="irrelevant",
-        config={"exec": True, "infer": True},
         new_config=Config(exec=True, infer=True),
     )
 

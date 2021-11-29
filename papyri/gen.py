@@ -921,7 +921,6 @@ class Gen:
         infer: bool,
         exec_: bool,
         qa: str,
-        config,
         new_config,
     ) -> Tuple[DocBlob, List]:
         """
@@ -947,9 +946,9 @@ class Gen:
         item_type = None
 
         # that is not going to be the case because we fallback on execution failure.
-        assert exec_ == config["exec"], (exec_, config["exec"])
+        assert exec_ == new_config.exec, (exec_, new_config.exec)
 
-        assert config["infer"] == infer, (config, infer)
+        assert new_config.infer == infer, (new_config, infer)
 
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
@@ -1359,7 +1358,6 @@ class Gen:
                         infer=new_config.infer,
                         exec_=ex,
                         qa=qa,
-                        config=module_conf,
                         new_config=new_config,
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
@@ -1377,7 +1375,6 @@ class Gen:
                                 infer=new_config.infer,
                                 exec_=False,
                                 qa=qa,
-                                config=module_conf,
                                 new_config=new_config,
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
