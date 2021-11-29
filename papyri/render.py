@@ -1025,6 +1025,8 @@ async def main(ascii: bool, html, dry_run, sidebar):
 
     await _write_gallery(store, gstore, config)
 
+    await _write_example_files(gstore, config)
+
     await _write_api_file(
         gfiles,
         gstore,
@@ -1042,6 +1044,73 @@ async def main(ascii: bool, html, dry_run, sidebar):
     await copy_assets(config, gstore)
 
 
+async def _write_example_files(gstore, config):
+    if not config.html:
+        return
+
+    examples = list(gstore.glob((None, None, "examples", None)))
+    env = Environment(
+        loader=FileSystemLoader(os.path.dirname(__file__)),
+        autoescape=select_autoescape(["html", "tpl.j2"]),
+        undefined=StrictUndefined,
+    )
+    env.globals["len"] = len
+    env.globals["url"] = url
+    env.globals["unreachable"] = unreachable
+    for p, example in progress(examples, description="Rendering Examples..."):
+        module, version, _, path = example
+        data = await render_single_examples(
+            env,
+            module,
+            gstore,
+            version,
+            ".html",
+            config.html_sidebar,
+            gstore.get(example),
+        )
+        if config.output_dir:
+            (config.output_dir / module / version / "examples").mkdir(
+                parents=True, exist_ok=True
+            )
+            (
+                config.output_dir / module / version / "examples" / f"{path}.html"
+            ).write_text(data)
+
+
+async def render_single_examples(env, module, gstore, version, ext, sidebar, data):
+    assert sidebar is not None
+    css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
+
+    mod_vers = gstore.glob((None, None))
+    parts = {module: []}
+    for mod, ver in mod_vers:
+        assert isinstance(mod, str)
+        assert isinstance(ver, str)
+        parts[module].append((RefInfo(mod, ver, "api", mod), mod))
+
+    from .take2 import Section
+
+    ex = Section.from_json(json.loads(data))
+
+    class Doc:
+        pass
+
+    doc = Doc()
+    doc.logo = None
+
+    return env.get_template("examples.tpl.j2").render(
+        pygment_css=css_data,
+        module=module,
+        parts=parts,
+        ext=ext,
+        version=version,
+        parts_links=defaultdict(lambda: ""),
+        doc=doc,
+        ex=ex,
+        sidebar=sidebar,
+    )
+
+
 async def _write_api_file(
     gfiles,
     gstore,
@@ -1053,7 +1122,7 @@ async def _write_api_file(
     config,
 ):
 
-    for p, key in progress(gfiles, description="Rendering..."):
+    for p, key in progress(gfiles, description="Rendering API..."):
         module, version = key.module, key.version
         if config.ascii:
             await _ascii_render(key, store=gstore)
