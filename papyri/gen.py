@@ -1050,18 +1050,13 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, exclude, new_config):
+    def collect_examples(self, folder, new_config):
         acc = []
         examples = list(folder.glob("**/*.py"))
-        if bool(exclude) or bool(new_config.examples_exclude):
-            assert exclude == new_config.examples_exclude, (
-                exclude,
-                new_config.examples_exclude,
-            )
 
         valid_examples = []
         for e in examples:
-            if any(str(e).endswith(p) for p in exclude):
+            if any(str(e).endswith(p) for p in new_config.examples_exclude):
                 continue
             valid_examples.append(e)
         examples = valid_examples
@@ -1169,17 +1164,16 @@ class Gen:
 
         collector = DFSCollector(modules[0], modules[1:])
 
-        return collector, module_conf
+        return collector
 
-    def collect_examples_out(self, module_conf, new_config):
+    def collect_examples_out(self, new_config):
 
-        examples_folder = module_conf.get("examples_folder", None)
+        examples_folder = new_config.examples_folder
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(
                 examples_folder,
-                module_conf.get("examples_exclude", set()),
                 new_config=new_config,
             )
             for edoc, figs in examples_data:
@@ -1262,13 +1256,12 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector, module_conf = self.configure(names, conf)
-        assert "infer" in module_conf
+        collector = self.configure(names, conf)
         collected: Dict[str, Any] = collector.items()
 
-        self.log.debug("Configuration: %s", module_conf)
+        self.log.debug("Configuration: %s", new_config)
 
-        self.collect_examples_out(module_conf, new_config)
+        self.collect_examples_out(new_config)
 
         if new_config.logo:
             self.put_raw(
