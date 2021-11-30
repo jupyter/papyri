@@ -11,6 +11,7 @@ likely be separated into a separate module at some point.
 
 from __future__ import annotations
 
+import dataclasses
 import inspect
 import json
 import logging
@@ -19,6 +20,7 @@ import site
 import sys
 import warnings
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -421,8 +423,6 @@ def normalise_ref(ref):
     return ref
 
 
-from dataclasses import dataclass
-
 
 @dataclass
 class Config:
@@ -442,6 +442,9 @@ class Config:
     wait_for_plt_show: Optional[bool] = True
     examples_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
+
+    def replace(self, **kwargs):
+        return dataclasses.replace(self, **kwargs)
 
 
 def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: bool):
@@ -1379,7 +1382,7 @@ class Gen:
                                 infer=new_config.infer,
                                 exec_=False,
                                 qa=qa,
-                                new_config=new_config,
+                                new_config=new_config.replace(exec=False),
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                         except Exception as e:
