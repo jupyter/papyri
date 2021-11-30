@@ -185,7 +185,7 @@ def parse_script(script, ns, infer, prev, new_config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, new_config):
+def get_example_data(doc, infer=True, *, obj, qa: str, new_config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -264,7 +264,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, new_config):
                         pass
                     raise_in_fig = None
                     did_except = False
-                    if exec_ and ce_status == "compiled":
+                    if new_config.exec and ce_status == "compiled":
                         try:
                             if not wait_for_show:
                                 assert len(fig_managers) == 0
@@ -421,7 +421,6 @@ def normalise_ref(ref):
     except Exception:
         pass
     return ref
-
 
 
 @dataclass
@@ -922,7 +921,6 @@ class Gen:
         ndoc,
         *,
         infer: bool,
-        exec_: bool,
         qa: str,
         new_config,
     ) -> Tuple[DocBlob, List]:
@@ -949,7 +947,6 @@ class Gen:
         item_type = None
 
         # that is not going to be the case because we fallback on execution failure.
-        assert exec_ == new_config.exec, (exec_, new_config.exec)
 
         assert new_config.infer == infer, (new_config, infer)
 
@@ -1026,7 +1023,6 @@ class Gen:
                 ndoc,
                 infer,
                 obj=target_item,
-                exec_=exec_,
                 qa=qa,
                 new_config=new_config,
             )
@@ -1350,12 +1346,8 @@ class Gen:
                 execute_exclude_patterns = new_config.execute_exclude_patterns
                 ex = new_config.exec
                 if execute_exclude_patterns and new_config.exec:
-                    for pat in execute_exclude_patterns:
-                        if qa.startswith(pat):
-                            ex = False
-                            break
-                # else:
-                #    print("will run", qa)
+                    if any(qa.startswith(pat) for pat in execute_exclude_patterns):
+                        ex = False
 
                 try:
                     # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
@@ -1363,9 +1355,8 @@ class Gen:
                         target_item,
                         ndoc,
                         infer=new_config.infer,
-                        exec_=ex,
                         qa=qa,
-                        new_config=new_config,
+                        new_config=new_config.replace(exec=ex),
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
@@ -1380,7 +1371,6 @@ class Gen:
                                 target_item,
                                 ndoc,
                                 infer=new_config.infer,
-                                exec_=False,
                                 qa=qa,
                                 new_config=new_config.replace(exec=False),
                             )

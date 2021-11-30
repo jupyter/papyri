@@ -18,7 +18,6 @@ def test_find_beyond_decorators():
         ex1,
         NumpyDocString(""),
         infer=True,
-        exec_=True,
         qa="irrelevant",
         new_config=Config(exec=True, infer=True),
     )
