@@ -1,4 +1,8 @@
 [IPython]
 logo = "../ipython-logo.png"
 exec_failure = "fallback"
-exclude = ['IPython.core.magics.execution.ExecutionMagics.run']
+exclude = [
+    'IPython.core.magics.execution.ExecutionMagics.run',
+    'IPython.core.magics.script.ScriptMagics.shebang',
+    'IPython.core.magics.basic.BasicMagics.alias_magic',
+]
