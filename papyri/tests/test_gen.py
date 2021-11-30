@@ -17,7 +17,6 @@ def test_find_beyond_decorators():
     doc, figs = gen.do_one_item(
         ex1,
         NumpyDocString(""),
-        infer=True,
         qa="irrelevant",
         new_config=Config(exec=True, infer=True),
     )

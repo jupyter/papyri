@@ -917,7 +917,6 @@ class Gen:
         target_item: Any,
         ndoc,
         *,
-        infer: bool,
         qa: str,
         new_config,
     ) -> Tuple[DocBlob, List]:
@@ -944,8 +943,6 @@ class Gen:
         item_type = None
 
         # that is not going to be the case because we fallback on execution failure.
-
-        assert new_config.infer == infer, (new_config, infer)
 
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
@@ -1349,7 +1346,6 @@ class Gen:
                     doc_blob, figs = self.do_one_item(
                         target_item,
                         ndoc,
-                        infer=new_config.infer,
                         qa=qa,
                         new_config=new_config.replace(exec=ex),
                     )
@@ -1365,7 +1361,6 @@ class Gen:
                             doc_blob, figs = self.do_one_item(
                                 target_item,
                                 ndoc,
-                                infer=new_config.infer,
                                 qa=qa,
                                 new_config=new_config.replace(exec=False),
                             )
