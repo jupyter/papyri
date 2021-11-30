@@ -113,7 +113,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns, infer, prev, new_config):
+def parse_script(script, ns, prev, new_config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -124,8 +124,6 @@ def parse_script(script, ns, infer, prev, new_config):
         the script to tokenize and infer types on
     ns : dict
         extra namespace to use with jedi's Interpreter.
-    infer : bool
-        whether to run jedi type inference that can be quite time consuming.
     prev : str
         previous lines that lead to this.
 
@@ -141,8 +139,6 @@ def parse_script(script, ns, infer, prev, new_config):
         fully qualified name of the type of current token
 
     """
-    assert infer == new_config.infer
-
     jeds = []
 
     warnings.simplefilter("ignore", UserWarning)
@@ -162,7 +158,11 @@ def parse_script(script, ns, infer, prev, new_config):
             for jed in jeds:
                 failed = ""
                 try:
-                    if infer and (text not in (" .=()[],")) and text.isidentifier():
+                    if (
+                        new_config.infer
+                        and (text not in (" .=()[],"))
+                        and text.isidentifier()
+                    ):
                         inf = jed.infer(line_n + 1, col_n)
                         if inf:
                             # TODO: we might want the qualname to be module_name:name for disambiguation.
@@ -185,7 +185,7 @@ def parse_script(script, ns, infer, prev, new_config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, infer=True, *, obj, qa: str, new_config):
+def get_example_data(doc, *, obj, qa: str, new_config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -201,8 +201,6 @@ def get_example_data(doc, infer=True, *, obj, qa: str, new_config):
     ----------
     doc
         a docstring parsed into a NnumpyDoc document.
-    infer : bool
-        whether to run type inference; which can be time consuming.
 
     Examples
     --------
@@ -312,14 +310,13 @@ def get_example_data(doc, infer=True, *, obj, qa: str, new_config):
                         print(f"Turning off type inference for func {qa!r}")
                         inf = False
                     else:
-                        inf = infer
+                        inf = new_config.infer
                     entries = list(
                         parse_script(
                             script,
                             ns=ns,
-                            infer=inf,
                             prev=acc,
-                            new_config=new_config,
+                            new_config=new_config.replace(infer=inf),
                         )
                     )
                     acc += "\n" + script
@@ -1021,7 +1018,6 @@ class Gen:
         try:
             ndoc.example_section_data, figs = get_example_data(
                 ndoc,
-                infer,
                 obj=target_item,
                 qa=qa,
                 new_config=new_config,
@@ -1114,7 +1110,6 @@ class Gen:
                     parse_script(
                         script,
                         ns={},
-                        infer=new_config.infer,
                         prev="",
                         new_config=new_config,
                     )
@@ -1343,11 +1338,11 @@ class Gen:
                         continue
                 if not isinstance(target_item, ModuleType):
                     arbitrary = []
-                execute_exclude_patterns = new_config.execute_exclude_patterns
                 ex = new_config.exec
-                if execute_exclude_patterns and new_config.exec:
-                    if any(qa.startswith(pat) for pat in execute_exclude_patterns):
-                        ex = False
+                if new_config.exec and any(
+                    qa.startswith(pat) for pat in new_config.execute_exclude_patterns
+                ):
+                    ex = False
 
                 try:
                     # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
