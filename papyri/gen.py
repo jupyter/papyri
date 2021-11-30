@@ -481,12 +481,8 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         g.log.setLevel("DEBUG")
         g.log.debug("Log level set to debug")
 
-    conf[names[0]]["exec"] = exec_
-    conf[names[0]]["infer"] = infer
-
     g.do_one_mod(
         names,
-        conf,
         relative_dir=Path(target_file).parent,
         experimental=experimental,
         new_config=new_config,
@@ -1120,7 +1116,7 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def configure(self, names: List[str], conf):
+    def configure(self, names: List[str], new_config):
         """
         Configure current instance of gen
 
@@ -1132,10 +1128,8 @@ class Gen:
             The first one is assumed to be the root, others, submodules not
             reachable from the root.
 
-        conf: dict
-            mutated conf object
-
         """
+        assert len(names) == 1
         modules = []
         for name in names:
             x, *r = name.split(".")
@@ -1151,9 +1145,7 @@ class Gen:
         version = getattr(modules[0], "__version__", "???")
         self.version = version
 
-        module_conf = conf.get(self.root, {})
-
-        subs = module_conf.get("submodules", [])
+        subs = new_config.submodules
         extra_from_conf = [self.root + "." + s for s in subs]
         for name in extra_from_conf:
             x, *r = name.split(".")
@@ -1225,7 +1217,6 @@ class Gen:
     def do_one_mod(
         self,
         names: List[str],
-        conf: MutableMapping[str, Any],
         relative_dir: Path,
         *,
         experimental,
@@ -1256,7 +1247,7 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector = self.configure(names, conf)
+        collector = self.configure(names, new_config)
         collected: Dict[str, Any] = collector.items()
 
         self.log.debug("Configuration: %s", new_config)
