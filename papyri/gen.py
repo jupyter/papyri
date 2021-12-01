@@ -11,6 +11,7 @@ likely be separated into a separate module at some point.
 
 from __future__ import annotations
 
+import dataclasses
 import inspect
 import json
 import logging
@@ -19,6 +20,7 @@ import site
 import sys
 import warnings
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -111,7 +113,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns, infer, prev, new_config):
+def parse_script(script, ns, prev, new_config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -122,8 +124,6 @@ def parse_script(script, ns, infer, prev, new_config):
         the script to tokenize and infer types on
     ns : dict
         extra namespace to use with jedi's Interpreter.
-    infer : bool
-        whether to run jedi type inference that can be quite time consuming.
     prev : str
         previous lines that lead to this.
 
@@ -139,8 +139,6 @@ def parse_script(script, ns, infer, prev, new_config):
         fully qualified name of the type of current token
 
     """
-    assert infer == new_config.infer
-
     jeds = []
 
     warnings.simplefilter("ignore", UserWarning)
@@ -160,7 +158,11 @@ def parse_script(script, ns, infer, prev, new_config):
             for jed in jeds:
                 failed = ""
                 try:
-                    if infer and (text not in (" .=()[],")) and text.isidentifier():
+                    if (
+                        new_config.infer
+                        and (text not in (" .=()[],"))
+                        and text.isidentifier()
+                    ):
                         inf = jed.infer(line_n + 1, col_n)
                         if inf:
                             # TODO: we might want the qualname to be module_name:name for disambiguation.
@@ -183,7 +185,7 @@ def parse_script(script, ns, infer, prev, new_config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, new_config):
+def get_example_data(doc, *, obj, qa: str, new_config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -199,8 +201,6 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, new_config):
     ----------
     doc
         a docstring parsed into a NnumpyDoc document.
-    infer : bool
-        whether to run type inference; which can be time consuming.
 
     Examples
     --------
@@ -262,7 +262,7 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, new_config):
                         pass
                     raise_in_fig = None
                     did_except = False
-                    if exec_ and ce_status == "compiled":
+                    if new_config.exec and ce_status == "compiled":
                         try:
                             if not wait_for_show:
                                 assert len(fig_managers) == 0
@@ -310,14 +310,13 @@ def get_example_data(doc, infer=True, *, obj, exec_: bool, qa: str, new_config):
                         print(f"Turning off type inference for func {qa!r}")
                         inf = False
                     else:
-                        inf = infer
+                        inf = new_config.infer
                     entries = list(
                         parse_script(
                             script,
                             ns=ns,
-                            infer=inf,
                             prev=acc,
-                            new_config=new_config,
+                            new_config=new_config.replace(infer=inf),
                         )
                     )
                     acc += "\n" + script
@@ -421,9 +420,6 @@ def normalise_ref(ref):
     return ref
 
 
-from dataclasses import dataclass
-
-
 @dataclass
 class Config:
     dummy_progress: bool = False
@@ -442,6 +438,9 @@ class Config:
     wait_for_plt_show: Optional[bool] = True
     examples_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
+
+    def replace(self, **kwargs):
+        return dataclasses.replace(self, **kwargs)
 
 
 def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: bool):
@@ -482,12 +481,8 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         g.log.setLevel("DEBUG")
         g.log.debug("Log level set to debug")
 
-    conf[names[0]]["exec"] = exec_
-    conf[names[0]]["infer"] = infer
-
     g.do_one_mod(
         names,
-        conf,
         relative_dir=Path(target_file).parent,
         experimental=experimental,
         new_config=new_config,
@@ -918,8 +913,6 @@ class Gen:
         target_item: Any,
         ndoc,
         *,
-        infer: bool,
-        exec_: bool,
         qa: str,
         new_config,
     ) -> Tuple[DocBlob, List]:
@@ -946,9 +939,6 @@ class Gen:
         item_type = None
 
         # that is not going to be the case because we fallback on execution failure.
-        assert exec_ == new_config.exec, (exec_, new_config.exec)
-
-        assert new_config.infer == infer, (new_config, infer)
 
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
@@ -1021,9 +1011,7 @@ class Gen:
         try:
             ndoc.example_section_data, figs = get_example_data(
                 ndoc,
-                infer,
                 obj=target_item,
-                exec_=exec_,
                 qa=qa,
                 new_config=new_config,
             )
@@ -1058,18 +1046,13 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, exclude, new_config):
+    def collect_examples(self, folder, new_config):
         acc = []
         examples = list(folder.glob("**/*.py"))
-        if bool(exclude) or bool(new_config.examples_exclude):
-            assert exclude == new_config.examples_exclude, (
-                exclude,
-                new_config.examples_exclude,
-            )
 
         valid_examples = []
         for e in examples:
-            if any(str(e).endswith(p) for p in exclude):
+            if any(str(e).endswith(p) for p in new_config.examples_exclude):
                 continue
             valid_examples.append(e)
         examples = valid_examples
@@ -1115,7 +1098,6 @@ class Gen:
                     parse_script(
                         script,
                         ns={},
-                        infer=new_config.infer,
                         prev="",
                         new_config=new_config,
                     )
@@ -1134,7 +1116,7 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def configure(self, names: List[str], conf):
+    def configure(self, names: List[str], new_config):
         """
         Configure current instance of gen
 
@@ -1146,10 +1128,8 @@ class Gen:
             The first one is assumed to be the root, others, submodules not
             reachable from the root.
 
-        conf: dict
-            mutated conf object
-
         """
+        assert len(names) == 1
         modules = []
         for name in names:
             x, *r = name.split(".")
@@ -1165,9 +1145,7 @@ class Gen:
         version = getattr(modules[0], "__version__", "???")
         self.version = version
 
-        module_conf = conf.get(self.root, {})
-
-        subs = module_conf.get("submodules", [])
+        subs = new_config.submodules
         extra_from_conf = [self.root + "." + s for s in subs]
         for name in extra_from_conf:
             x, *r = name.split(".")
@@ -1178,17 +1156,16 @@ class Gen:
 
         collector = DFSCollector(modules[0], modules[1:])
 
-        return collector, module_conf
+        return collector
 
-    def collect_examples_out(self, module_conf, new_config):
+    def collect_examples_out(self, new_config):
 
-        examples_folder = module_conf.get("examples_folder", None)
+        examples_folder = new_config.examples_folder
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(
                 examples_folder,
-                module_conf.get("examples_exclude", set()),
                 new_config=new_config,
             )
             for edoc, figs in examples_data:
@@ -1240,7 +1217,6 @@ class Gen:
     def do_one_mod(
         self,
         names: List[str],
-        conf: MutableMapping[str, Any],
         relative_dir: Path,
         *,
         experimental,
@@ -1271,13 +1247,12 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector, module_conf = self.configure(names, conf)
-        assert "infer" in module_conf
+        collector = self.configure(names, new_config)
         collected: Dict[str, Any] = collector.items()
 
-        self.log.debug("Configuration: %s", module_conf)
+        self.log.debug("Configuration: %s", new_config)
 
-        self.collect_examples_out(module_conf, new_config)
+        self.collect_examples_out(new_config)
 
         if new_config.logo:
             self.put_raw(
@@ -1344,25 +1319,19 @@ class Gen:
                         continue
                 if not isinstance(target_item, ModuleType):
                     arbitrary = []
-                execute_exclude_patterns = new_config.execute_exclude_patterns
                 ex = new_config.exec
-                if execute_exclude_patterns and new_config.exec:
-                    for pat in execute_exclude_patterns:
-                        if qa.startswith(pat):
-                            ex = False
-                            break
-                # else:
-                #    print("will run", qa)
+                if new_config.exec and any(
+                    qa.startswith(pat) for pat in new_config.execute_exclude_patterns
+                ):
+                    ex = False
 
                 try:
                     # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
                     doc_blob, figs = self.do_one_item(
                         target_item,
                         ndoc,
-                        infer=new_config.infer,
-                        exec_=ex,
                         qa=qa,
-                        new_config=new_config,
+                        new_config=new_config.replace(exec=ex),
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
@@ -1376,10 +1345,8 @@ class Gen:
                             doc_blob, figs = self.do_one_item(
                                 target_item,
                                 ndoc,
-                                infer=new_config.infer,
-                                exec_=False,
                                 qa=qa,
-                                new_config=new_config,
+                                new_config=new_config.replace(exec=False),
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                         except Exception as e:
