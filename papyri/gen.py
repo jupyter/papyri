@@ -1108,13 +1108,13 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, new_config):
+    def collect_examples(self, folder, config):
         acc = []
         examples = list(folder.glob("**/*.py"))
 
         valid_examples = []
         for e in examples:
-            if any(str(e).endswith(p) for p in new_config.examples_exclude):
+            if any(str(e).endswith(p) for p in config.examples_exclude):
                 continue
             valid_examples.append(e)
         examples = valid_examples
@@ -1142,7 +1142,7 @@ class Gen:
                 script = example.read_text()
                 ce_status = "None"
                 figs = []
-                if new_config.exec:
+                if config.exec:
                     with executor:
                         try:
                             executor.exec(script)
@@ -1161,7 +1161,7 @@ class Gen:
                         script,
                         ns={},
                         prev="",
-                        config=new_config,
+                        config=config,
                     )
                 )
                 s = Section(
@@ -1212,15 +1212,15 @@ class Gen:
 
         return collector
 
-    def collect_examples_out(self, new_config):
+    def collect_examples_out(self, config):
 
-        examples_folder = new_config.examples_folder
+        examples_folder = config.examples_folder
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(
                 examples_folder,
-                new_config=new_config,
+                config=config,
             )
             for edoc, figs in examples_data:
                 self.examples.update(
