@@ -1401,7 +1401,7 @@ class Gen:
                                 target_item,
                                 ndoc,
                                 qa=qa,
-                                new_config=new_config.replace(exec=False),
+                                config=new_config.replace(exec=False),
                                 aliases=collector.aliases[qa],
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
