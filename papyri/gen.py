@@ -460,11 +460,11 @@ def gen_main(
     if conffile.exists():
         conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
         k0 = next(iter(conf.keys()))
-        new_config = Config(**conf[k0], dummy_progress=dummy_progress)
+        config = Config(**conf[k0], dummy_progress=dummy_progress)
         if exec_ is not None:
-            new_config.exec = exec_
+            config.exec = exec_
         if infer is not None:
-            new_config.infer = infer
+            config.infer = infer
 
         if len(conf.keys()) != 1:
             raise ValueError(
@@ -494,16 +494,16 @@ def gen_main(
     g.do_generic_info(
         names[0],
         relative_dir=Path(target_file).parent,
-        new_config=new_config,
+        config=config,
     )
-    g.collect_examples_out(new_config)
+    g.collect_examples_out(config)
     g.do_one_mod(
         names[0],
         relative_dir=Path(target_file).parent,
         experimental=experimental,
-        new_config=new_config,
+        config=config,
     )
-    docs_path: Optional[str] = new_config.docs_path
+    docs_path: Optional[str] = config.docs_path
     if docs_path is not None:
         path = Path(docs_path).expanduser()
         g.do_docs(path)
@@ -1267,11 +1267,9 @@ class Gen:
 
         return item_docstring, arbitrary
 
-    def do_generic_info(self, root, relative_dir, new_config):
-        if new_config.logo:
-            self.put_raw(
-                "logo.png", (relative_dir / Path(new_config.logo)).read_bytes()
-            )
+    def do_generic_info(self, root, relative_dir, config):
+        if config.logo:
+            self.put_raw("logo.png", (relative_dir / Path(config.logo)).read_bytes())
 
     def do_one_mod(
         self,
@@ -1279,7 +1277,7 @@ class Gen:
         relative_dir: Path,
         *,
         experimental,
-        new_config: Config,
+        config: Config,
     ):
         """
         Crawl one module and stores resulting docbundle in self.store.
@@ -1305,13 +1303,13 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector = self.configure(root, new_config)
+        collector = self.configure(root, config)
         collected: Dict[str, Any] = collector.items()
 
-        self.log.debug("Configuration: %s", new_config)
+        self.log.debug("Configuration: %s", config)
 
         # collect all items we want to document.
-        excluded = sorted(new_config.exclude)
+        excluded = sorted(config.exclude)
         if excluded:
             self.log.info(
                 "The following items will be excluded by the configurations:\n %s",
@@ -1373,9 +1371,9 @@ class Gen:
                         continue
                 if not isinstance(target_item, ModuleType):
                     arbitrary = []
-                ex = new_config.exec
-                if new_config.exec and any(
-                    qa.startswith(pat) for pat in new_config.execute_exclude_patterns
+                ex = config.exec
+                if config.exec and any(
+                    qa.startswith(pat) for pat in config.execute_exclude_patterns
                 ):
                     ex = False
 
@@ -1385,14 +1383,14 @@ class Gen:
                         target_item,
                         ndoc,
                         qa=qa,
-                        new_config=new_config.replace(exec=ex),
+                        config=config.replace(exec=ex),
                         aliases=collector.aliases[qa],
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
                     self.log.error("Execution error in %s", repr(qa))
                     failure_collection["ExecError-" + str(type(e))].append(qa)
-                    if new_config.exec_failure == "fallback":
+                    if config.exec_failure == "fallback":
                         print("Re-analysing ", qa, "without execution", type(e))
                         # debug:
                         # TODO: ndoc-placeholder : make sure ndoc placeholder handled here as well.
@@ -1401,7 +1399,7 @@ class Gen:
                                 target_item,
                                 ndoc,
                                 qa=qa,
-                                config=new_config.replace(exec=False),
+                                config=config.replace(exec=False),
                                 aliases=collector.aliases[qa],
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
