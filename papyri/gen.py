@@ -929,7 +929,21 @@ class Gen:
         self, target_item: Any, ndoc, *, qa: str, new_config, aliases
     ) -> Tuple[DocBlob, List]:
         """
-        Get documentation information for one item
+        Get documentation information for one python object
+
+        Parameters
+        ----------
+        target_item : any
+            the object you want to get documentation for
+        ndoc :
+            numpydoc parsed docstring.
+        qa : str
+            fully qualified object path.
+        new_config : Config
+            current configuratin
+        aliases :  sequence
+            other aliases for cuttent object.
+
 
         Returns
         -------
