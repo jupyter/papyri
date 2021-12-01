@@ -119,6 +119,18 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             # not numpydoc format
             # See https://github.com/scipy/scipy/pull/15034
             'scipy.sparse.linalg.dsolve._superlu.gstrf', 
+            # numpydoc parse error
+            "scipy.optimize._linprog_doc._linprog_highs_doc",
+            "scipy.optimize._linprog_doc._linprog_highs_ds_doc",
+            "scipy.optimize._linprog_doc._linprog_highs_ipm_doc",
+            "scipy.optimize._linprog_ip._linprog_ip",
+            "scipy.optimize._linprog_doc._linprog_ip_doc",
+            "scipy.optimize._linprog_rs._linprog_rs",
+            "scipy.optimize._linprog_doc._linprog_rs_doc",
+            "scipy.optimize._linprog_simplex._linprog_simplex",
+            "scipy.optimize._linprog_doc._linprog_simplex_doc",
+            "scipy.optimize._qap._quadratic_assignment_2opt",
+            "scipy.optimize._qap._quadratic_assignment_faq"
 
             ]
 exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]

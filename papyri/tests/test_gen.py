@@ -19,6 +19,7 @@ def test_find_beyond_decorators():
         NumpyDocString(""),
         qa="irrelevant",
         new_config=Config(exec=True, infer=True),
+        aliases=[],
     )
 
     assert doc.item_file.endswith("test_gen.py")

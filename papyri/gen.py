@@ -482,6 +482,12 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         g.log.setLevel("DEBUG")
         g.log.debug("Log level set to debug")
 
+    g.do_generic_info(
+        names[0],
+        relative_dir=Path(target_file).parent,
+        new_config=new_config,
+    )
+    g.collect_examples_out(new_config)
     g.do_one_mod(
         names[0],
         relative_dir=Path(target_file).parent,
@@ -910,12 +916,7 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self,
-        target_item: Any,
-        ndoc,
-        *,
-        qa: str,
-        new_config,
+        self, target_item: Any, ndoc, *, qa: str, new_config, aliases
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one item
@@ -1044,6 +1045,35 @@ class Gen:
         blob.item_file = item_file
         blob.item_line = item_line
         blob.item_type = item_type
+
+        blob.signature = blob.content.pop("Signature")
+        blob.aliases = aliases
+        for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
+            try:
+                data = blob.content.get(section, None)
+                if data is None:
+                    # don't exists
+                    pass
+                elif not data:
+                    # is empty
+                    blob.content[section] = Section()
+                else:
+                    tsc = ts.parse("\n".join(data).encode())
+                    assert len(tsc) in (0, 1), (tsc, data)
+                    if tsc:
+                        tssc = tsc[0]
+                    else:
+                        tssc = Section()
+                    assert isinstance(tssc, Section)
+                    blob.content[section] = tssc
+            except Exception:
+                self.log.exception(f"Skipping section {section!r} in {qa!r} (Error)")
+                raise
+        assert isinstance(blob.content["Summary"], Section)
+        if "Summary" in doc_blob.content:
+        assert isinstance(
+            doc_blob.content["Summary"], Section
+        ), doc_blob.content["Summary"]
 
         return blob, figs
 
@@ -1183,14 +1213,13 @@ class Gen:
             whether to try experimental features
         p2: rich progress instance
         """
-        short_description = (qa[:19] + "..") if len(qa) > 21 else qa
         item_docstring = target_item.__doc__
         # TODO: we may not want to skip items as they may have children
         # right now keep modules, but we may want to keep classes if
         # they have documented descendants.
 
         if item_docstring is None and not isinstance(target_item, ModuleType):
-            return short_description, None, None
+            return None, None
 
         elif item_docstring is None and isinstance(target_item, ModuleType):
             item_docstring = """This module has no documentation"""
@@ -1205,7 +1234,13 @@ class Gen:
         except Exception as e:
             raise type(e)(f"from {qa}")
 
-        return short_description, item_docstring, arbitrary
+        return item_docstring, arbitrary
+
+    def do_generic_info(self, root, relative_dir, new_config):
+        if new_config.logo:
+            self.put_raw(
+                "logo.png", (relative_dir / Path(new_config.logo)).read_bytes()
+            )
 
     def do_one_mod(
         self,
@@ -1216,7 +1251,7 @@ class Gen:
         new_config: Config,
     ):
         """
-        Crawl one modules and stores resulting docbundle in self.store.
+        Crawl one module and stores resulting docbundle in self.store.
 
         Parameters
         ----------
@@ -1243,13 +1278,6 @@ class Gen:
         collected: Dict[str, Any] = collector.items()
 
         self.log.debug("Configuration: %s", new_config)
-
-        self.collect_examples_out(new_config)
-
-        if new_config.logo:
-            self.put_raw(
-                "logo.png", (relative_dir / Path(new_config.logo)).read_bytes()
-            )
 
         # collect all items we want to document.
         excluded = sorted(new_config.exclude)
@@ -1281,29 +1309,32 @@ class Gen:
             failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
 
             for qa, target_item in collected.items():
+                p2.update(taskp, description=qa)
+                p2.advance(taskp)
+
                 dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
-                short_description, item_docstring, arbitrary = self.helper_1(
+
+                item_docstring, arbitrary = self.helper_1(
                     qa=qa,
                     experimental=experimental,
                     target_item=target_item,
                     # mutable, not great.
                     failure_collection=failure_collection,
                 )
-                p2.update(taskp, description=short_description.ljust(17))
-                p2.advance(taskp)
-
-                if item_docstring is None:
-                    continue
 
                 try:
-                    ndoc = NumpyDocString(dedent_but_first(item_docstring))
-                except Exception:
+                    if item_docstring is None:
+                        continue
+                    else:
+                        ndoc = NumpyDocString(dedent_but_first(item_docstring))
+                except Exception as e:
                     if not isinstance(target_item, ModuleType):
                         self.log.exception(
                             "Unexpected error parsing %s – %s",
                             qa,
                             target_item.__name__,
                         )
+                        failure_collection["NumpydocError-" + str(type(e))].append(qa)
                     if isinstance(target_item, ModuleType):
                         # TODO: ndoc-placeholder : remove placeholder here
                         ndoc = NumpyDocString(f"To remove in the future –– {qa}")
@@ -1324,6 +1355,7 @@ class Gen:
                         ndoc,
                         qa=qa,
                         new_config=new_config.replace(exec=ex),
+                        aliases=collector.aliases[qa],
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
@@ -1339,6 +1371,7 @@ class Gen:
                                 ndoc,
                                 qa=qa,
                                 new_config=new_config.replace(exec=False),
+                                aliases=collector.aliases[qa],
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                         except Exception as e:
@@ -1348,41 +1381,12 @@ class Gen:
                             failure_collection["ErrorNoExec-" + str(type(e))].append(qa)
                             continue
                 doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
-                doc_blob.aliases = collector.aliases[qa]
-
-                # processing....
-                doc_blob.signature = doc_blob.content.pop("Signature")
 
                 ## TODO: here type instability of Summary, and other stuff convert before.
                 for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
-                    try:
-                        if section in doc_blob.content:
-                            if data := doc_blob.content[section]:
-                                # assert (
-                                #    False
-                                # ), "will get 'Was not able to parse docstring for ...'"
-                                # TODO : the following is in progress as we try to move away from custom parsing and use
-                                # tree_ssitter.
-                                tsc = ts.parse("\n".join(data).encode())
-                                assert len(tsc) in (0, 1), (tsc, data)
-                                if tsc:
-                                    tssc = tsc[0]
-                                else:
-                                    tssc = Section()
-                                assert isinstance(tssc, Section)
-                                doc_blob.content[section] = tssc
-                            else:
-                                doc_blob.content[section] = Section()
-                    except Exception as e:
-                        self.log.exception(
-                            f"Skipping section {section!r} in {qa!r} (Error)"
-                        )
-                        failure_collection[type(e).__name__].append(qa)
-                        doc_blob.content[section] = ts.parse(
-                            b"Parsing not NotImplemented for this section."
-                        )[0]
-                        if experimental:
-                            raise type(e)(f"during {qa}") from e
+                    if section in doc_blob.content:
+                        if data := doc_blob.content[section]:
+                            assert isinstance(data, Section)
 
                 if not isinstance(doc_blob.content["Summary"], Section):
                     assert isinstance(doc_blob.content["Summary"], list)
