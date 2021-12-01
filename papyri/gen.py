@@ -1399,7 +1399,6 @@ class Gen:
                             continue
                 doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
 
-
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
                 assert isinstance(doc_blob.references, (list, str, type(None))), (
                     repr(doc_blob.references),
@@ -1421,7 +1420,6 @@ class Gen:
                     "Methods",
                     "Receives",
                 ]
-
 
                 for s in sections_:
                     if s in doc_blob.content:
