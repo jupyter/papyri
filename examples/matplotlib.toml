@@ -123,7 +123,7 @@ exclude = ['matplotlib._api',
            'matplotlib.axes._axes.Axes._fill_between_x_or_y', 
            "matplotlib.mlab",
            "matplotlib.backends.backend_agg",
-           "matplotlib.backends.backend_agg",
+           "matplotlib.pyplot.switch_backend.<locals>.backend_mod",
            # substitution reference
            "matplotlib.pyplot.boxplot",
            "matplotlib.axes._axes.Axes.boxplot",
