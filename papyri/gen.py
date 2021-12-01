@@ -185,7 +185,7 @@ def parse_script(script, ns, prev, new_config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, *, obj, qa: str, new_config):
+def get_example_data(doc, *, obj, qa: str, config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -246,7 +246,7 @@ def get_example_data(doc, *, obj, qa: str, new_config):
     # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     fig_managers = executor.fig_man()
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
-    wait_for_show = new_config.wait_for_plt_show
+    wait_for_show = config.wait_for_plt_show
     with executor:
         for b in blocks:
             for item in b:
@@ -262,7 +262,7 @@ def get_example_data(doc, *, obj, qa: str, new_config):
                         pass
                     raise_in_fig = None
                     did_except = False
-                    if new_config.exec and ce_status == "compiled":
+                    if config.exec and ce_status == "compiled":
                         try:
                             if not wait_for_show:
                                 assert len(fig_managers) == 0
@@ -271,7 +271,7 @@ def get_example_data(doc, *, obj, qa: str, new_config):
                                 ce_status = "execed"
                             except Exception:
                                 ce_status = "exception_in_exec"
-                                if new_config.exec_failure != "fallback":
+                                if config.exec_failure != "fallback":
                                     raise
                             if fig_managers and (
                                 ("plt.show" in script) or not wait_for_show
@@ -305,18 +305,18 @@ def get_example_data(doc, *, obj, qa: str, new_config):
                                 assert len(fig_managers) == 0, fig_managers + [
                                     did_except,
                                 ]
-                    infer_exclude = new_config.exclude_jedi
+                    infer_exclude = config.exclude_jedi
                     if qa in infer_exclude:
                         print(f"Turning off type inference for func {qa!r}")
                         inf = False
                     else:
-                        inf = new_config.infer
+                        inf = config.infer
                     entries = list(
                         parse_script(
                             script,
                             ns=ns,
                             prev=acc,
-                            new_config=new_config.replace(infer=inf),
+                            new_config=config.replace(infer=inf),
                         )
                     )
                     acc += "\n" + script
@@ -926,7 +926,7 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, *, qa: str, new_config, aliases
+        self, target_item: Any, ndoc, *, qa: str, config, aliases
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one python object
@@ -939,7 +939,7 @@ class Gen:
             numpydoc parsed docstring.
         qa : str
             fully qualified object path.
-        new_config : Config
+        config : Config
             current configuratin
         aliases :  sequence
             other aliases for cuttent object.
@@ -1039,7 +1039,7 @@ class Gen:
                 ndoc,
                 obj=target_item,
                 qa=qa,
-                new_config=new_config,
+                config=config,
             )
             ndoc.figs = figs
         except Exception as e:
