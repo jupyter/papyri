@@ -119,7 +119,7 @@ def not_type_check(item, annotation):
     elif annotation.__origin__ is typing.Union:
         if any([not_type_check(item, arg) is None for arg in annotation.__args__]):
             return None
-        return f"expecting one of {annotation}, got {item}"
+        return f"expecting one of {annotation!r}, got {item!r}"
     raise ValueError(item, annotation)
 
 
@@ -133,7 +133,7 @@ def _invalidate(obj, depth=0):
         item = getattr(obj, k)
         res = not_type_check(item, v)
         if res:
-            return f"{k} at {type(obj)} : {res}"
+            return f"{k} field of  {type(obj)} : {res}"
 
         if isinstance(item, (list, tuple)):
             for ii, i in enumerate(item):
@@ -156,7 +156,7 @@ def _invalidate(obj, depth=0):
 def validate(obj):
     res = _invalidate(obj)
     if res:
-        raise ValueError(f"{res}")
+        raise ValueError(f"Wrong type at field :: {res}")
 
 
 class Base:

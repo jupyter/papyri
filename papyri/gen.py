@@ -443,7 +443,16 @@ class Config:
         return dataclasses.replace(self, **kwargs)
 
 
-def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: bool):
+def gen_main(
+    infer,
+    exec_,
+    target_file,
+    experimental,
+    debug,
+    *,
+    dummy_progress: bool,
+    dry_run=bool,
+):
     """
     main entry point
     """
@@ -471,7 +480,7 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
     tp = os.path.expanduser("~/.papyri/data")
 
     target_dir = Path(tp).expanduser()
-    if not target_dir.exists():
+    if not target_dir.exists() and not dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
 
     g = Gen(
@@ -498,12 +507,13 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
     if docs_path is not None:
         path = Path(docs_path).expanduser()
         g.do_docs(path)
-    p = target_dir / (g.root + "_" + g.version)
-    p.mkdir(exist_ok=True)
+    if not dry_run:
+        p = target_dir / (g.root + "_" + g.version)
+        p.mkdir(exist_ok=True)
 
-    g.log.info("Saving current Doc bundle to %s", p)
-    g.clean(p)
-    g.write(p)
+        g.log.info("Saving current Doc bundle to %s", p)
+        g.clean(p)
+        g.write(p)
 
 
 class TimeElapsedColumn(ProgressColumn):
@@ -1047,6 +1057,14 @@ class Gen:
         blob.item_type = item_type
 
         blob.signature = blob.content.pop("Signature")
+        blob.references = blob.content.pop("References")
+
+        del blob.content["Examples"]
+        del blob.content["index"]
+
+        if blob.references == "":
+            # TODO:fix
+            blob.references = None
         blob.aliases = aliases
         for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
             try:
@@ -1070,10 +1088,9 @@ class Gen:
                 self.log.exception(f"Skipping section {section!r} in {qa!r} (Error)")
                 raise
         assert isinstance(blob.content["Summary"], Section)
-        if "Summary" in doc_blob.content:
         assert isinstance(
-            doc_blob.content["Summary"], Section
-        ), doc_blob.content["Summary"]
+            blob.content.get("Summary", Section()), Section
+        ), blob.content["Summary"]
 
         return blob, figs
 
@@ -1382,37 +1399,17 @@ class Gen:
                             continue
                 doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
 
-                ## TODO: here type instability of Summary, and other stuff convert before.
-                for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
-                    if section in doc_blob.content:
-                        if data := doc_blob.content[section]:
-                            assert isinstance(data, Section)
-
-                if not isinstance(doc_blob.content["Summary"], Section):
-                    assert isinstance(doc_blob.content["Summary"], list)
-                    assert len(doc_blob.content["Summary"]) == 1
-                    # doc_blob.content["Summary"] = ts.parse(
-
-                    for s in doc_blob.content["Summary"]:
-                        assert isinstance(s, str)
-
-                if "Summary" in doc_blob.content:
-                    assert isinstance(
-                        doc_blob.content["Summary"], Section
-                    ), doc_blob.content["Summary"]
-
-                doc_blob.references = doc_blob.content.pop("References")
 
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
-                assert isinstance(doc_blob.references, (list, str)), (
+                assert isinstance(doc_blob.references, (list, str, type(None))), (
                     repr(doc_blob.references),
                     qa,
                 )
 
+                if isinstance(doc_blob.references, str):
+                    print(repr(doc_blob.references))
                 doc_blob.references = None
 
-                del doc_blob.content["Examples"]
-                del doc_blob.content["index"]
                 sections_ = [
                     "Parameters",
                     "Returns",
@@ -1421,16 +1418,10 @@ class Gen:
                     "Attributes",
                     "Other Parameters",
                     "Warns",
-                    ##"Warnings",
                     "Methods",
-                    # "Summary",
                     "Receives",
                 ]
 
-                #        new_doc_blob._content["Parameters"] = [
-                #            Parameter(a, b, c)
-                #            for (a, b, c) in new_doc_blob._content.get("Parameters", [])
-                #        ]
 
                 for s in sections_:
                     if s in doc_blob.content:

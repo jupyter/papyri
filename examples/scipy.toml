@@ -130,7 +130,8 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             "scipy.optimize._linprog_simplex._linprog_simplex",
             "scipy.optimize._linprog_doc._linprog_simplex_doc",
             "scipy.optimize._qap._quadratic_assignment_2opt",
-            "scipy.optimize._qap._quadratic_assignment_faq"
+            "scipy.optimize._qap._quadratic_assignment_faq",
+            "scipy.optimize._linprog_highs._linprog_highs",
 
             ]
 exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]
