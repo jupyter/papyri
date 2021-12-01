@@ -113,7 +113,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns, prev, new_config):
+def parse_script(script, ns, prev, config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -159,7 +159,7 @@ def parse_script(script, ns, prev, new_config):
                 failed = ""
                 try:
                     if (
-                        new_config.infer
+                        config.infer
                         and (text not in (" .=()[],"))
                         and text.isidentifier()
                     ):
@@ -316,7 +316,7 @@ def get_example_data(doc, *, obj, qa: str, config):
                             script,
                             ns=ns,
                             prev=acc,
-                            new_config=config.replace(infer=inf),
+                            config=config.replace(infer=inf),
                         )
                     )
                     acc += "\n" + script
@@ -1161,7 +1161,7 @@ class Gen:
                         script,
                         ns={},
                         prev="",
-                        new_config=new_config,
+                        config=new_config,
                     )
                 )
                 s = Section(
