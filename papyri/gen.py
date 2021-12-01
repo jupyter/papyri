@@ -1178,7 +1178,7 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def configure(self, root: str, new_config):
+    def configure(self, root: str, config):
         """
         Configure current instance of gen
 
@@ -1199,7 +1199,7 @@ class Gen:
         version = getattr(modules[0], "__version__", "???")
         self.version = version
 
-        subs = new_config.submodules
+        subs = config.submodules
         extra_from_conf = [self.root + "." + s for s in subs]
         for name in extra_from_conf:
             x, *r = name.split(".")
