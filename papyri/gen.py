@@ -466,6 +466,7 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
 
     else:
         sys.exit(f"{conffile!r} does not exists.")
+    assert len(names) == 1, "current we can only do one package at a time"
 
     tp = os.path.expanduser("~/.papyri/data")
 
@@ -482,7 +483,7 @@ def gen_main(infer, exec_, target_file, experimental, debug, *, dummy_progress: 
         g.log.debug("Log level set to debug")
 
     g.do_one_mod(
-        names,
+        names[0],
         relative_dir=Path(target_file).parent,
         experimental=experimental,
         new_config=new_config,
@@ -1116,29 +1117,21 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def configure(self, names: List[str], new_config):
+    def configure(self, root: str, new_config):
         """
         Configure current instance of gen
 
         Parameters
         ----------
 
-        names: List of str
-            modules and submodules to recursively crawl.
-            The first one is assumed to be the root, others, submodules not
-            reachable from the root.
+        root: str
+            name of the root module to crawl
 
         """
-        assert len(names) == 1
-        modules = []
-        for name in names:
-            x, *r = name.split(".")
-            n0 = __import__(name)
-            for sub in r:
-                n0 = getattr(n0, sub)
-            modules.append(n0)
+        assert "." not in root
+        n0 = __import__(root)
+        modules = [n0]
 
-        root = names[0].split(".")[0]
         self.root = root
 
         # step 2 try to guess the version number from the top module.
@@ -1216,7 +1209,7 @@ class Gen:
 
     def do_one_mod(
         self,
-        names: List[str],
+        root: str,
         relative_dir: Path,
         *,
         experimental,
@@ -1227,9 +1220,8 @@ class Gen:
 
         Parameters
         ----------
-        names : List[str]
-            list of (sub)modules names to generate docbundle for.
-            The first is considered the root module.
+        root : str
+            module name to generate docbundle for.
         exec_ : bool
             Whether to try to execute the code blocks and embed resulting values like plots.
 
@@ -1247,7 +1239,7 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector = self.configure(names, new_config)
+        collector = self.configure(root, new_config)
         collected: Dict[str, Any] = collector.items()
 
         self.log.debug("Configuration: %s", new_config)
@@ -1278,7 +1270,7 @@ class Gen:
         collected = {k: v for k, v in collected.items() if k not in excluded}
 
         known_refs = frozenset(
-            {RefInfo(names[0], self.version, "module", qa) for qa in collected.keys()}
+            {RefInfo(root, self.version, "module", qa) for qa in collected.keys()}
         )
 
         with p() as p2:
