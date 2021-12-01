@@ -921,7 +921,6 @@ class Gen:
         infer: bool,
         exec_: bool,
         qa: str,
-        config,
         new_config,
     ) -> Tuple[DocBlob, List]:
         """
@@ -947,9 +946,9 @@ class Gen:
         item_type = None
 
         # that is not going to be the case because we fallback on execution failure.
-        assert exec_ == config["exec"], (exec_, config["exec"])
+        assert exec_ == new_config.exec, (exec_, new_config.exec)
 
-        assert config["infer"] == infer, (config, infer)
+        assert new_config.infer == infer, (new_config, infer)
 
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
@@ -1059,9 +1058,14 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, exclude, config, new_config):
+    def collect_examples(self, folder, exclude, new_config):
         acc = []
         examples = list(folder.glob("**/*.py"))
+        if bool(exclude) or bool(new_config.examples_exclude):
+            assert exclude == new_config.examples_exclude, (
+                exclude,
+                new_config.examples_exclude,
+            )
 
         valid_examples = []
         for e in examples:
@@ -1093,7 +1097,7 @@ class Gen:
                 script = example.read_text()
                 ce_status = "None"
                 figs = []
-                if config["exec"]:
+                if new_config.exec:
                     with executor:
                         try:
                             executor.exec(script)
@@ -1111,7 +1115,7 @@ class Gen:
                     parse_script(
                         script,
                         ns={},
-                        infer=config["infer"],
+                        infer=new_config.infer,
                         prev="",
                         new_config=new_config,
                     )
@@ -1185,7 +1189,6 @@ class Gen:
             examples_data = self.collect_examples(
                 examples_folder,
                 module_conf.get("examples_exclude", set()),
-                module_conf,
                 new_config=new_config,
             )
             for edoc, figs in examples_data:
@@ -1359,7 +1362,6 @@ class Gen:
                         infer=new_config.infer,
                         exec_=ex,
                         qa=qa,
-                        config=module_conf,
                         new_config=new_config,
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
@@ -1377,7 +1379,6 @@ class Gen:
                                 infer=new_config.infer,
                                 exec_=False,
                                 qa=qa,
-                                config=module_conf,
                                 new_config=new_config,
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
