@@ -175,9 +175,6 @@ class Base:
 
 
 class Node(Base):
-    def __init__(self, value):
-        self.value = value
-
     def __eq__(self, other):
         if not (type(self) == type(other)):
             return False
@@ -262,6 +259,9 @@ class RefInfo(Node):
 class Verbatim(Node):
     value: List[str]
 
+    def __init__(self, value):
+        self.value = value
+
     def __eq__(self, other):
         if not type(self) == type(other):
             return False
@@ -270,9 +270,6 @@ class Verbatim(Node):
 
     def __hash__(self):
         return hash(tuple(self.value))
-
-    def __init__(self, value):
-        self.value = value
 
     @classmethod
     def parse(cls, tokens):
@@ -447,9 +444,15 @@ class Directive(Node):
 class BlockMath(Node):
     value: str
 
+    def __init__(self, value):
+        self.value = value
+
 
 class Math(Node):
     value: List[str]  # list of tokens not list of lines.
+
+    def __init__(self, value):
+        self.value = value
 
     @property
     def text(self):
@@ -466,6 +469,9 @@ class Math(Node):
 
 class Word(Node):
     value: str
+
+    def __init__(self, value):
+        self.value = value
 
     @classmethod
     def _instance(cls):
@@ -785,6 +791,9 @@ class Code(Node):
 class Text(Node):
     value: str
 
+    def __init__(self, value):
+        self.value = value
+
 
 class BlockQuote(Node):
     value: List[str]
@@ -795,6 +804,9 @@ class BlockQuote(Node):
 
 class Fig(Node):
     value: str
+
+    def __init__(self, value):
+        self.value = value
 
 
 def compress_word(stream):
