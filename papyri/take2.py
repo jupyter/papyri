@@ -1527,11 +1527,11 @@ class DefListItem(Block):
     def children(self, value):
         self.dt, *self.dd = value
 
-    def __init__(self, lines=None, wh=None, ind=None, dl=None, dd=None):
+    def __init__(self, lines=None, wh=None, ind=None, dt=None, dd=None):
         self.lines = lines
         self.wh = wh
         self.ind = ind
-        self.dt = dl
+        self.dt = dt
         assert isinstance(dd, (list, type(None))), dd
         self.dd = dd
 
