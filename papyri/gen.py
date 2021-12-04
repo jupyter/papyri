@@ -452,6 +452,10 @@ def gen_main(
     *,
     dummy_progress: bool,
     dry_run=bool,
+    api,
+    examples,
+    fail,
+    narative,
 ):
     """
     main entry point
@@ -496,17 +500,19 @@ def gen_main(
         relative_dir=Path(target_file).parent,
         config=config,
     )
-    g.collect_examples_out(config)
-    g.do_one_mod(
-        names[0],
-        relative_dir=Path(target_file).parent,
-        experimental=experimental,
-        config=config,
-    )
+    if examples:
+        g.collect_examples_out(config)
+    if api:
+        g.do_one_mod(
+            names[0],
+            relative_dir=Path(target_file).parent,
+            experimental=experimental,
+            config=config,
+        )
     docs_path: Optional[str] = config.docs_path
-    if docs_path is not None:
+    if docs_path is not None and narative:
         path = Path(docs_path).expanduser()
-        g.do_docs(path)
+        g.do_docs(path, fail, config)
     if not dry_run:
         p = target_dir / (g.root + "_" + g.version)
         p.mkdir(exist_ok=True)
@@ -850,7 +856,7 @@ class Gen:
         if (where / "docs").exists():
             (where / "docs").rmdir()
 
-    def do_docs(self, path):
+    def do_docs(self, path, fail, config):
         """
         Crawl the filesystem for all docs/rst files
 
