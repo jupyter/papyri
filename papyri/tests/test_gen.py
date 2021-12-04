@@ -18,7 +18,7 @@ def test_find_beyond_decorators():
         ex1,
         NumpyDocString(""),
         qa="irrelevant",
-        new_config=Config(exec=True, infer=True),
+        config=Config(exec=True, infer=True),
         aliases=[],
     )
 

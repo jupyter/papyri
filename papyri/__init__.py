@@ -344,6 +344,10 @@ def gen(
     debug: bool = False,
     dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
     dry_run: bool = False,
+    api: bool = True,
+    examples: bool = True,
+    narative: bool = True,
+    fail: bool = typer.Option(False, help="Fail on first error"),
 ):
     """
     Generate documentation for a given package.
@@ -363,6 +367,10 @@ def gen(
         debug=debug,
         dummy_progress=dummy_progress,
         dry_run=dry_run,
+        api=api,
+        examples=examples,
+        fail=fail,
+        narative=narative,
     )
 
 

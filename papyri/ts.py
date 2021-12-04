@@ -180,6 +180,9 @@ class TSVisitor:
         self.root = root
         self.depth = 0
 
+    def show(self, node):
+        return self.bytes[node.start_byte : node.end_byte].decode()
+
     def visit_document(self, node):
         new_node = node.without_whitespace()
         items = self.visit(new_node)
@@ -545,7 +548,7 @@ class TSVisitor:
                         Lines(),
                         Lines(),
                         Lines(),
-                        dl=self.visit_paragraph(term)[0],
+                        dt=self.visit_paragraph(term)[0],
                         dd=_dd,
                     )
                 )
@@ -562,7 +565,7 @@ class TSVisitor:
                         Lines(),
                         Lines(),
                         Lines(),
-                        dl=Paragraph(compress_word(self.visit(term)), []),
+                        dt=Paragraph(compress_word(self.visit(term)), []),
                         dd=self.visit_paragraph(term),
                     )
                 )

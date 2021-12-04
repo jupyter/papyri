@@ -113,7 +113,7 @@ def paragraphs(lines) -> List[Any]:
     return acc
 
 
-def parse_script(script, ns, prev, new_config):
+def parse_script(script, ns, prev, config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -159,7 +159,7 @@ def parse_script(script, ns, prev, new_config):
                 failed = ""
                 try:
                     if (
-                        new_config.infer
+                        config.infer
                         and (text not in (" .=()[],"))
                         and text.isidentifier()
                     ):
@@ -185,7 +185,7 @@ def parse_script(script, ns, prev, new_config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, *, obj, qa: str, new_config):
+def get_example_data(doc, *, obj, qa: str, config):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -246,7 +246,7 @@ def get_example_data(doc, *, obj, qa: str, new_config):
     # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
     fig_managers = executor.fig_man()
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
-    wait_for_show = new_config.wait_for_plt_show
+    wait_for_show = config.wait_for_plt_show
     with executor:
         for b in blocks:
             for item in b:
@@ -262,7 +262,7 @@ def get_example_data(doc, *, obj, qa: str, new_config):
                         pass
                     raise_in_fig = None
                     did_except = False
-                    if new_config.exec and ce_status == "compiled":
+                    if config.exec and ce_status == "compiled":
                         try:
                             if not wait_for_show:
                                 assert len(fig_managers) == 0
@@ -271,7 +271,7 @@ def get_example_data(doc, *, obj, qa: str, new_config):
                                 ce_status = "execed"
                             except Exception:
                                 ce_status = "exception_in_exec"
-                                if new_config.exec_failure != "fallback":
+                                if config.exec_failure != "fallback":
                                     raise
                             if fig_managers and (
                                 ("plt.show" in script) or not wait_for_show
@@ -305,18 +305,18 @@ def get_example_data(doc, *, obj, qa: str, new_config):
                                 assert len(fig_managers) == 0, fig_managers + [
                                     did_except,
                                 ]
-                    infer_exclude = new_config.exclude_jedi
+                    infer_exclude = config.exclude_jedi
                     if qa in infer_exclude:
                         print(f"Turning off type inference for func {qa!r}")
                         inf = False
                     else:
-                        inf = new_config.infer
+                        inf = config.infer
                     entries = list(
                         parse_script(
                             script,
                             ns=ns,
                             prev=acc,
-                            new_config=new_config.replace(infer=inf),
+                            config=config.replace(infer=inf),
                         )
                     )
                     acc += "\n" + script
@@ -452,6 +452,10 @@ def gen_main(
     *,
     dummy_progress: bool,
     dry_run=bool,
+    api,
+    examples,
+    fail,
+    narative,
 ):
     """
     main entry point
@@ -460,11 +464,11 @@ def gen_main(
     if conffile.exists():
         conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
         k0 = next(iter(conf.keys()))
-        new_config = Config(**conf[k0], dummy_progress=dummy_progress)
+        config = Config(**conf[k0], dummy_progress=dummy_progress)
         if exec_ is not None:
-            new_config.exec = exec_
+            config.exec = exec_
         if infer is not None:
-            new_config.infer = infer
+            config.infer = infer
 
         if len(conf.keys()) != 1:
             raise ValueError(
@@ -494,19 +498,21 @@ def gen_main(
     g.do_generic_info(
         names[0],
         relative_dir=Path(target_file).parent,
-        new_config=new_config,
+        config=config,
     )
-    g.collect_examples_out(new_config)
-    g.do_one_mod(
-        names[0],
-        relative_dir=Path(target_file).parent,
-        experimental=experimental,
-        new_config=new_config,
-    )
-    docs_path: Optional[str] = new_config.docs_path
-    if docs_path is not None:
+    if examples:
+        g.collect_examples_out(config)
+    if api:
+        g.do_one_mod(
+            names[0],
+            relative_dir=Path(target_file).parent,
+            experimental=experimental,
+            config=config,
+        )
+    docs_path: Optional[str] = config.docs_path
+    if docs_path is not None and narative:
         path = Path(docs_path).expanduser()
-        g.do_docs(path)
+        g.do_docs(path, fail, config)
     if not dry_run:
         p = target_dir / (g.root + "_" + g.version)
         p.mkdir(exist_ok=True)
@@ -850,7 +856,7 @@ class Gen:
         if (where / "docs").exists():
             (where / "docs").rmdir()
 
-    def do_docs(self, path):
+    def do_docs(self, path, fail, config):
         """
         Crawl the filesystem for all docs/rst files
 
@@ -926,10 +932,24 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, *, qa: str, new_config, aliases
+        self, target_item: Any, ndoc, *, qa: str, config, aliases
     ) -> Tuple[DocBlob, List]:
         """
-        Get documentation information for one item
+        Get documentation information for one python object
+
+        Parameters
+        ----------
+        target_item : any
+            the object you want to get documentation for
+        ndoc :
+            numpydoc parsed docstring.
+        qa : str
+            fully qualified object path.
+        config : Config
+            current configuratin
+        aliases :  sequence
+            other aliases for cuttent object.
+
 
         Returns
         -------
@@ -1025,7 +1045,7 @@ class Gen:
                 ndoc,
                 obj=target_item,
                 qa=qa,
-                new_config=new_config,
+                config=config,
             )
             ndoc.figs = figs
         except Exception as e:
@@ -1094,13 +1114,13 @@ class Gen:
 
         return blob, figs
 
-    def collect_examples(self, folder, new_config):
+    def collect_examples(self, folder, config):
         acc = []
         examples = list(folder.glob("**/*.py"))
 
         valid_examples = []
         for e in examples:
-            if any(str(e).endswith(p) for p in new_config.examples_exclude):
+            if any(str(e).endswith(p) for p in config.examples_exclude):
                 continue
             valid_examples.append(e)
         examples = valid_examples
@@ -1128,7 +1148,7 @@ class Gen:
                 script = example.read_text()
                 ce_status = "None"
                 figs = []
-                if new_config.exec:
+                if config.exec:
                     with executor:
                         try:
                             executor.exec(script)
@@ -1147,7 +1167,7 @@ class Gen:
                         script,
                         ns={},
                         prev="",
-                        new_config=new_config,
+                        config=config,
                     )
                 )
                 s = Section(
@@ -1164,7 +1184,7 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def configure(self, root: str, new_config):
+    def configure(self, root: str, config):
         """
         Configure current instance of gen
 
@@ -1185,7 +1205,7 @@ class Gen:
         version = getattr(modules[0], "__version__", "???")
         self.version = version
 
-        subs = new_config.submodules
+        subs = config.submodules
         extra_from_conf = [self.root + "." + s for s in subs]
         for name in extra_from_conf:
             x, *r = name.split(".")
@@ -1198,15 +1218,15 @@ class Gen:
 
         return collector
 
-    def collect_examples_out(self, new_config):
+    def collect_examples_out(self, config):
 
-        examples_folder = new_config.examples_folder
+        examples_folder = config.examples_folder
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(
                 examples_folder,
-                new_config=new_config,
+                config=config,
             )
             for edoc, figs in examples_data:
                 self.examples.update(
@@ -1253,11 +1273,9 @@ class Gen:
 
         return item_docstring, arbitrary
 
-    def do_generic_info(self, root, relative_dir, new_config):
-        if new_config.logo:
-            self.put_raw(
-                "logo.png", (relative_dir / Path(new_config.logo)).read_bytes()
-            )
+    def do_generic_info(self, root, relative_dir, config):
+        if config.logo:
+            self.put_raw("logo.png", (relative_dir / Path(config.logo)).read_bytes())
 
     def do_one_mod(
         self,
@@ -1265,7 +1283,7 @@ class Gen:
         relative_dir: Path,
         *,
         experimental,
-        new_config: Config,
+        config: Config,
     ):
         """
         Crawl one module and stores resulting docbundle in self.store.
@@ -1291,13 +1309,13 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector = self.configure(root, new_config)
+        collector = self.configure(root, config)
         collected: Dict[str, Any] = collector.items()
 
-        self.log.debug("Configuration: %s", new_config)
+        self.log.debug("Configuration: %s", config)
 
         # collect all items we want to document.
-        excluded = sorted(new_config.exclude)
+        excluded = sorted(config.exclude)
         if excluded:
             self.log.info(
                 "The following items will be excluded by the configurations:\n %s",
@@ -1359,9 +1377,9 @@ class Gen:
                         continue
                 if not isinstance(target_item, ModuleType):
                     arbitrary = []
-                ex = new_config.exec
-                if new_config.exec and any(
-                    qa.startswith(pat) for pat in new_config.execute_exclude_patterns
+                ex = config.exec
+                if config.exec and any(
+                    qa.startswith(pat) for pat in config.execute_exclude_patterns
                 ):
                     ex = False
 
@@ -1371,14 +1389,14 @@ class Gen:
                         target_item,
                         ndoc,
                         qa=qa,
-                        new_config=new_config.replace(exec=ex),
+                        config=config.replace(exec=ex),
                         aliases=collector.aliases[qa],
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:
                     self.log.error("Execution error in %s", repr(qa))
                     failure_collection["ExecError-" + str(type(e))].append(qa)
-                    if new_config.exec_failure == "fallback":
+                    if config.exec_failure == "fallback":
                         print("Re-analysing ", qa, "without execution", type(e))
                         # debug:
                         # TODO: ndoc-placeholder : make sure ndoc placeholder handled here as well.
@@ -1387,7 +1405,7 @@ class Gen:
                                 target_item,
                                 ndoc,
                                 qa=qa,
-                                new_config=new_config.replace(exec=False),
+                                config=config.replace(exec=False),
                                 aliases=collector.aliases[qa],
                             )
                             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
