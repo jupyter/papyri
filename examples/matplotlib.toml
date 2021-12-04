@@ -124,6 +124,7 @@ exclude = ['matplotlib._api',
            "matplotlib.mlab",
            "matplotlib.backends.backend_agg",
            "matplotlib.pyplot.switch_backend.<locals>.backend_mod",
+           "matplotlib.backends.backend_svg.FigureCanvasSVG.print_svg",
            # substitution reference
            "matplotlib.pyplot.boxplot",
            "matplotlib.axes._axes.Axes.boxplot",
