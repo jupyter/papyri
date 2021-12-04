@@ -689,6 +689,19 @@ class DocBlob(Node):
     as well as link to external references, like images generated.
     """
 
+    @classmethod
+    def _deserialise(cls, **kwargs):
+        # print("will deserialise", cls)
+        try:
+            instance = cls._instance()
+        except Exception as e:
+            raise type(e)(f"Error deserialising {cls}, {kwargs})") from e
+        assert "_content" in kwargs
+        assert kwargs["_content"] is not None
+        for k, v in kwargs.items():
+            setattr(instance, k, v)
+        return instance
+
     sections = [
         "Signature",
         "Summary",
@@ -799,6 +812,7 @@ class DocBlob(Node):
             "index",
         }
         self._content = new
+        assert self._content is not None
 
 
 class Gen:

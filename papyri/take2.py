@@ -171,13 +171,7 @@ class Base:
     @classmethod
     def _deserialise(cls, **kwargs):
         # print("will deserialise", cls)
-        try:
-            instance = cls._instance()
-        except Exception as e:
-            raise type(e)(f"Error deserialising {cls}, {kwargs})") from e
-        for k, v in kwargs.items():
-            setattr(instance, k, v)
-        return instance
+        return cls(**kwargs)
 
 
 class Node(Base):
@@ -1378,12 +1372,18 @@ class BlockDirective(Block):
         else:
             self.inner = value[0]
 
-    def __init__(self, lines=None, wh=None, ind=None):
-        if None in (lines, wh, ind):
-            return
+    def __init__(self, *, lines, wh, ind, directive_name, args0, inner):
         self.lines = lines
         self.wh = wh
         self.ind = ind
+        self.directive_name = directive_name
+        self.args0 = args0
+        self.inner = inner
+
+    @classmethod
+    def parse(cls, lines=None, wh=None, ind=None):
+        if None in (lines, wh, ind):
+            return
 
         # numpy doc bug
         l = lines[0]._line
@@ -1398,17 +1398,26 @@ class BlockDirective(Block):
         l0 = lines[0]
         pred, *postd = l0.split("::")
         # assert pred.startswith(".. ")
-        self.directive_name = pred[3:].strip()
+        self_directive_name = pred[3:].strip()
         if pred.startswith(".. |"):
             # TODO:
             print("replacement not implemented yet")
-        elif " " in self.directive_name:
+        elif " " in self_directive_name:
             assert False, repr(pred)
-        self.args0 = postd
-        if self.ind:
-            self.inner = Paragraph.parse_lines([x.text for x in self.ind.dedented()])
+        self_args0 = postd
+        if ind:
+            self_inner = Paragraph.parse_lines([x.text for x in ind.dedented()])
         else:
-            self.inner = None
+            self_inner = None
+
+        return cls(
+            lines=lines,
+            wh=wh,
+            ind=ind,
+            directive_name=self_directive_name,
+            args0=self_args0,
+            inner=self_inner,
+        )
 
 
 class Comment(Block):
@@ -1544,9 +1553,7 @@ class DefListItem(Block):
 
     @classmethod
     def _deserialise(cls, **kwargs):
-        inst = cls()
-        for k, v in kwargs.items():
-            setattr(inst, k, v)
+        inst = cls(**kwargs)
         return inst
 
 
@@ -1573,13 +1580,13 @@ class SeeAlsoItem(Node):
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]
 
-    def __init__(self, name=None, descriptions=None, type_=None):
+    def __init__(self, name=None, descriptions=None, type=None):
         self.name = name
         if descriptions is not None:
             for d in descriptions:
                 assert isinstance(d, Paragraph), repr(d)
         self.descriptions = descriptions
-        self.type = type_
+        self.type = type
 
     # @classmethod
     # def from_json(cls, name, descriptions, type):
@@ -1716,7 +1723,7 @@ def block_directive_pass(block):
     if len(block.lines) >= 1 and (
         block.lines[0].startswith(".. ") and ("::" in block.lines[0].text)
     ):
-        return [BlockDirective(block.lines, block.wh, block.ind)]
+        return [BlockDirective.parse(block.lines, block.wh, block.ind)]
     return [block]
 
 
@@ -1726,7 +1733,7 @@ def block_comment(block):
         return [block]
     if len(block.lines) >= 1 and (block.lines[0].startswith(".. ")):
         assert "::" not in block.lines[0].text
-        return [BlockDirective(block.lines, block.wh, block.ind)]
+        return [BlockDirective.parse(block.lines, block.wh, block.ind)]
     return [block]
 
 

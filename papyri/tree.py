@@ -227,8 +227,8 @@ class TreeReplacer:
         assert not isinstance(node, list)
         res = self.generic_visit(node)
         assert len(res) == 1
-        if self._replacements:
-            print("Done ", self._replacements, "replacements")
+        # if self._replacements:
+        #    print("Done ", self._replacements, "replacements")
         return res[0]
 
     def generic_visit(self, node) -> List[Node]:
