@@ -132,7 +132,10 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             "scipy.optimize._qap._quadratic_assignment_2opt",
             "scipy.optimize._qap._quadratic_assignment_faq",
             "scipy.optimize._linprog_highs._linprog_highs",
-
+            #"ExecError-<class 'ValueError'>": [
+            "scipy.signal.signaltools.resample_poly",
+            "scipy.optimize.optimize.bracket",
+            "scipy.spatial.transform._rotation_spline.RotationSpline"
             ]
 exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]
 execute_exclude_patterns = []

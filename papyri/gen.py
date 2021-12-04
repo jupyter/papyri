@@ -1065,7 +1065,7 @@ class Gen:
         except Exception as e:
             ndoc.example_section_data = Section()
             self.log.error("Error getting example data in %s", repr(qa))
-            raise ValueError("Error getting example data in {qa!r}") from e
+            raise ValueError(f"Error getting example data in {qa!r}") from e
             ndoc.figs = []
 
         ndoc.refs = list(
@@ -1250,7 +1250,6 @@ class Gen:
                     }
                 )
                 for name, data in figs:
-                    print("put one fig", name)
                     self.put_raw(name, data)
 
     def helper_1(self, *, qa: str, experimental: bool, target_item, failure_collection):
@@ -1362,14 +1361,17 @@ class Gen:
                 p2.advance(taskp)
 
                 dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
-
-                item_docstring, arbitrary = self.helper_1(
-                    qa=qa,
-                    experimental=experimental,
-                    target_item=target_item,
-                    # mutable, not great.
-                    failure_collection=failure_collection,
-                )
+                try:
+                    item_docstring, arbitrary = self.helper_1(
+                        qa=qa,
+                        experimental=experimental,
+                        target_item=target_item,
+                        # mutable, not great.
+                        failure_collection=failure_collection,
+                    )
+                except Exception as e:
+                    failure_collection["ErrorHelper1-" + str(type(e))].append(qa)
+                    continue
 
                 try:
                     if item_docstring is None:
@@ -1457,7 +1459,7 @@ class Gen:
                     if s in doc_blob.content:
                         assert isinstance(
                             doc_blob.content[s], list
-                        ), f"{s}, {doc_blob.content[s]} "
+                        ), f"{s}, {doc_blob.content[s]} {qa} "
                         new_content = Section()
                         for param, type_, desc in doc_blob.content[s]:
                             assert isinstance(desc, list)
@@ -1466,6 +1468,11 @@ class Gen:
                                 try:
                                     items = P2(desc)
                                 except Exception as e:
+                                    failure_collection[
+                                        "ParseDesc-" + str(type(e))
+                                    ].append(qa)
+                                    continue
+
                                     raise type(e)(f"from {qa}")
                                 for l in items:
                                     assert not isinstance(l, Section)
