@@ -1457,7 +1457,7 @@ class Gen:
                     if s in doc_blob.content:
                         assert isinstance(
                             doc_blob.content[s], list
-                        ), f"{s}, {doc_blob.content[s]} "
+                        ), f"{s}, {doc_blob.content[s]} {qa} "
                         new_content = Section()
                         for param, type_, desc in doc_blob.content[s]:
                             assert isinstance(desc, list)

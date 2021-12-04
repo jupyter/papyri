@@ -1,2 +1,6 @@
 [astropy]
+exclude = ["astropy.utils.misc.OrderedDescriptorContainer",
+# VisitTargetNotImplementedError
+"astropy.utils.data.download_file",
+]
 submodules = [ "io", "io.fits",]

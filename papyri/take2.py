@@ -175,7 +175,7 @@ class Base:
 
 
 class Node(Base):
-    def __init__(self, value=None):
+    def __init__(self, value):
         self.value = value
 
     def __eq__(self, other):
@@ -271,7 +271,7 @@ class Verbatim(Node):
     def __hash__(self):
         return hash(tuple(self.value))
 
-    def __init__(self, value=None):
+    def __init__(self, value):
         self.value = value
 
     @classmethod
@@ -488,7 +488,7 @@ class Words(Node):
 
     value: str
 
-    def __init__(self, value=None):
+    def __init__(self, value):
         self.value = value
 
     @classmethod
@@ -511,7 +511,7 @@ class Words(Node):
 class Emph(Node):
     value: Words
 
-    def __init__(self, value=None):
+    def __init__(self, value):
         self.value = value
 
     def __hash__(self):
@@ -532,7 +532,7 @@ class Emph(Node):
 class Strong(Node):
     content: Words
 
-    def __init__(self, content=None):
+    def __init__(self, content):
         self.content = content
 
     @property
@@ -571,7 +571,15 @@ def lex(lines):
 
 class _XList(Node):
     value: List[
-        Union[Paragraph, EnumeratedList, BulletList, DefList, BlockQuote, BlockVerbatim]
+        Union[
+            Paragraph,
+            EnumeratedList,
+            BulletList,
+            DefList,
+            BlockQuote,
+            BlockVerbatim,
+            BlockDirective,
+        ]
     ]
 
     @property
@@ -582,7 +590,7 @@ class _XList(Node):
     def children(self, children):
         self.value = children
 
-    def __init__(self, value=None):
+    def __init__(self, value):
         self.value = value
 
 
@@ -694,7 +702,7 @@ class Param(Node):
         ]
     ]
 
-    def __init__(self, param=None, type_=None, desc=None):
+    def __init__(self, param, type_, desc):
         self.param = param
         self.type_ = type_
         self.desc = desc
@@ -724,7 +732,7 @@ class Token(Node):
     type: Optional[str]
     link: Union[Link, str]
 
-    def __init__(self, link=None, type=None):
+    def __init__(self, link, type):
         self.link = link
         self.type = type
 
@@ -737,7 +745,7 @@ class Code2(Node):
     out: str
     ce_status: str
 
-    def __init__(self, entries=None, out=None, ce_status=None):
+    def __init__(self, entries, out, ce_status):
         self.entries = entries
         self.out = out
         self.ce_status = ce_status
@@ -751,7 +759,7 @@ class Code(Node):
     out: str
     ce_status: str
 
-    def __init__(self, entries=None, out=None, ce_status=None):
+    def __init__(self, entries, out, ce_status):
         self.entries = entries
         self.out = out
         self.ce_status = ce_status
@@ -781,7 +789,7 @@ class Text(Node):
 class BlockQuote(Node):
     value: List[str]
 
-    def __init__(self, value=None):
+    def __init__(self, value):
         self.value = value
 
 
@@ -1517,6 +1525,7 @@ class DefListItem(Block):
             BlockDirective,
             Admonition,
             BlockMath,
+            BlockVerbatim,
         ]
     ]
 

@@ -333,7 +333,7 @@ def relink():
 
 @app.command()
 def gen(
-    file: str,
+    files: List[str],
     infer: Optional[bool] = typer.Option(
         True, help="Whether to run type inference on code examples."
     ),
@@ -359,19 +359,20 @@ def gen(
     _intro()
     from papyri.gen import gen_main
 
-    gen_main(
-        infer=infer,
-        exec_=exec,
-        target_file=file,
-        experimental=experimental,
-        debug=debug,
-        dummy_progress=dummy_progress,
-        dry_run=dry_run,
-        api=api,
-        examples=examples,
-        fail=fail,
-        narative=narative,
-    )
+    for file in files:
+        gen_main(
+            infer=infer,
+            exec_=exec,
+            target_file=file,
+            experimental=experimental,
+            debug=debug,
+            dummy_progress=dummy_progress,
+            dry_run=dry_run,
+            api=api,
+            examples=examples,
+            fail=fail,
+            narative=narative,
+        )
 
 
 @app.command()
