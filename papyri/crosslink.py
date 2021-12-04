@@ -109,17 +109,31 @@ class IngestedBlobs(Node):
 
     __isfrozen = False
 
+    @classmethod
+    def _deserialise(cls, **kwargs):
+        # print("will deserialise", cls)
+        try:
+            instance = cls._instance()
+        except Exception as e:
+            raise type(e)(f"Error deserialising {cls}, {kwargs})") from e
+        assert "_content" in kwargs
+        assert kwargs["_content"] is not None
+        for k, v in kwargs.items():
+            setattr(instance, k, v)
+        return instance
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.backrefs = []
-        self._content = None
-        self.example_section_data = None
-        self.refs = None
-        self.ordered_sections = None
-        self.item_file = None
-        self.item_line = None
-        self.item_type = None
+        self._content = kwargs.pop("_content", None)
+        self.example_section_data = kwargs.pop("example_section_data", None)
+        self.refs = kwargs.pop("refs", None)
+        self.ordered_sections = kwargs.pop("ordered_sections", None)
+        self.item_file = kwargs.pop("item_file", None)
+        self.item_line = kwargs.pop("item_line", None)
+        self.item_type = kwargs.pop("item_type", None)
         self.aliases = []
+        assert not kwargs, kwargs
 
     def __setattr__(self, key, value):
         if self.__isfrozen and not hasattr(self, key):
@@ -165,6 +179,7 @@ class IngestedBlobs(Node):
         """
         Process a doc blob, to find all local and nonlocal references.
         """
+        assert self._content is not None
         local_refs = []
         sections_ = [
             "Parameters",
@@ -541,6 +556,7 @@ class Ingester:
                 doc_blob = IngestedBlobs.from_json(data)
             except Exception as e:
                 raise type(e)(key)
+            assert doc_blob.content is not None, data
             doc_blob.process(known_refs, aliases=aliases)
 
             # TODO: Move this into process ?

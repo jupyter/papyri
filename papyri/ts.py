@@ -472,20 +472,17 @@ class TSVisitor:
             [content] = body.children
             args0 = []
 
-        #        import ipdb
-        #
-        #        ipdb.set_trace()
-
-        directive = BlockDirective()
-        directive.args0 = args0
-        directive.directive_name = role
         stream_with_spaces = [
             x for y in [(x, Word(" ")) for x in self.visit(content)] for x in y
         ]
-        directive.inner = Paragraph(compress_word(stream_with_spaces), [])
-        directive.lines = Lines()
-        directive.wh = Lines()
-        directive.ind = Lines()
+        directive = BlockDirective(
+            lines=Lines(),
+            wh=Lines(),
+            ind=Lines(),
+            directive_name=role,
+            args0=args0,
+            inner=Paragraph(compress_word(stream_with_spaces), []),
+        )
         return [directive]
 
     def visit_footnote_reference(self, node, prev_end=None):
