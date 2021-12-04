@@ -1348,9 +1348,6 @@ class Admonition(Block):
 
 
 class BlockDirective(Block):
-    lines: Lines
-    wh: Lines
-    ind: Lines
 
     directive_name: str
     args0: List[str]
@@ -1372,10 +1369,7 @@ class BlockDirective(Block):
         else:
             self.inner = value[0]
 
-    def __init__(self, *, lines, wh, ind, directive_name, args0, inner):
-        self.lines = lines
-        self.wh = wh
-        self.ind = ind
+    def __init__(self, *, directive_name, args0, inner):
         self.directive_name = directive_name
         self.args0 = args0
         self.inner = inner
@@ -1392,6 +1386,7 @@ class BlockDirective(Block):
         # end numpy doc bug
         # scipy bug....
         if lines[0].startswith("..Deprecated"):
+            assert False
             lines[0]._line = ".. deprecated:: 1.5.0"
         # end scipy bug.
         # assert lines[0].startswith(".. "), lines
@@ -1411,9 +1406,6 @@ class BlockDirective(Block):
             self_inner = None
 
         return cls(
-            lines=lines,
-            wh=wh,
-            ind=ind,
             directive_name=self_directive_name,
             args0=self_args0,
             inner=self_inner,

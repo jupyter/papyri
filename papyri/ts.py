@@ -476,9 +476,6 @@ class TSVisitor:
             x for y in [(x, Word(" ")) for x in self.visit(content)] for x in y
         ]
         directive = BlockDirective(
-            lines=Lines(),
-            wh=Lines(),
-            ind=Lines(),
             directive_name=role,
             args0=args0,
             inner=Paragraph(compress_word(stream_with_spaces), []),
