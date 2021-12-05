@@ -447,7 +447,6 @@ def gen_main(
     infer,
     exec_,
     target_file,
-    experimental,
     debug,
     *,
     dummy_progress: bool,
@@ -505,8 +504,6 @@ def gen_main(
     if api:
         g.do_one_mod(
             names[0],
-            relative_dir=Path(target_file).parent,
-            experimental=experimental,
             config=config,
         )
     docs_path: Optional[str] = config.docs_path
@@ -946,7 +943,7 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, *, qa: str, config, aliases
+        self, target_item: Any, ndoc, *, qa: str, config: Config, aliases: Dict
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one python object
@@ -1126,6 +1123,62 @@ class Gen:
             blob.content.get("Summary", Section()), Section
         ), blob.content["Summary"]
 
+        sections_ = [
+            "Parameters",
+            "Returns",
+            "Raises",
+            "Yields",
+            "Attributes",
+            "Other Parameters",
+            "Warns",
+            "Methods",
+            "Receives",
+        ]
+
+        for s in set(sections_).intersection(blob.content.keys()):
+            assert isinstance(blob.content[s], list), f"{s}, {blob.content[s]} {qa} "
+            new_content = Section()
+            for param, type_, desc in blob.content[s]:
+                assert isinstance(desc, list)
+                items = []
+                if desc:
+                    try:
+                        items = P2(desc)
+                    except Exception as e:
+                        raise type(e)(f"from {qa}")
+                    for l in items:
+                        assert not isinstance(l, Section)
+                new_content.append(Param(param, type_, desc=items).validate())
+            blob.content[s] = new_content
+
+        blob.see_also = []
+        if see_also := blob.content.get("See Also", None):
+            for nts, d0 in see_also:
+                try:
+                    d = d0
+                    for (name, type_or_description) in nts:
+                        if type_or_description and not d:
+                            desc = type_or_description
+                            if isinstance(desc, str):
+                                desc = [desc]
+                            assert isinstance(desc, list)
+                            desc = paragraphs(desc)
+                            type_ = None
+                        else:
+                            desc = d0
+                            type_ = type_or_description
+                            assert isinstance(desc, list)
+                            desc = paragraphs(desc)
+
+                        sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
+                        blob.see_also.append(sai)
+                        del desc
+                        del type_
+                except Exception as e:
+                    raise ValueError(
+                        f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
+                    ) from e
+        del blob.content["See Also"]
         return blob, figs
 
     def collect_examples(self, folder, config):
@@ -1213,8 +1266,6 @@ class Gen:
         n0 = __import__(root)
         modules = [n0]
 
-        self.root = root
-
         # step 2 try to guess the version number from the top module.
         version = getattr(modules[0], "__version__", "???")
         self.version = version
@@ -1252,15 +1303,13 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(name, data)
 
-    def helper_1(self, *, qa: str, experimental: bool, target_item, failure_collection):
+    def helper_1(self, *, qa: str, target_item, failure_collection):
         """
         Parameters
         ----------
         qa : str
             fully qualified name of the object we are extracting the
         documentation from .
-        experimental : bool
-            whether to try experimental features
         p2: rich progress instance
         """
         item_docstring = target_item.__doc__
@@ -1276,10 +1325,8 @@ class Gen:
         try:
             arbitrary = ts.parse(dedent_but_first(item_docstring).encode())
         except (AssertionError, NotImplementedError) as e:
-            self.log.warning("TS could not parse %s, %s", repr(qa), e)
-            failure_collection[type(e).__name__].append(qa)
-            if experimental:
-                raise type(e)(f"from {qa}") from e
+            self.log.error("TS could not parse %s, %s", repr(qa), e)
+            raise type(e)(f"from {qa}") from e
             arbitrary = []
         except Exception as e:
             raise type(e)(f"from {qa}")
@@ -1287,15 +1334,14 @@ class Gen:
         return item_docstring, arbitrary
 
     def do_generic_info(self, root, relative_dir, config):
+        self.root = root
         if config.logo:
             self.put_raw("logo.png", (relative_dir / Path(config.logo)).read_bytes())
 
     def do_one_mod(
         self,
         root: str,
-        relative_dir: Path,
         *,
-        experimental,
         config: Config,
     ):
         """
@@ -1360,11 +1406,9 @@ class Gen:
                 p2.update(taskp, description=qa)
                 p2.advance(taskp)
 
-                dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
                 try:
                     item_docstring, arbitrary = self.helper_1(
                         qa=qa,
-                        experimental=experimental,
                         target_item=target_item,
                         # mutable, not great.
                         failure_collection=failure_collection,
@@ -1398,6 +1442,7 @@ class Gen:
                     qa.startswith(pat) for pat in config.execute_exclude_patterns
                 ):
                     ex = False
+                dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
 
                 try:
                     # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
@@ -1443,75 +1488,6 @@ class Gen:
                     print(repr(doc_blob.references))
                 doc_blob.references = None
 
-                sections_ = [
-                    "Parameters",
-                    "Returns",
-                    "Raises",
-                    "Yields",
-                    "Attributes",
-                    "Other Parameters",
-                    "Warns",
-                    "Methods",
-                    "Receives",
-                ]
-
-                for s in sections_:
-                    if s in doc_blob.content:
-                        assert isinstance(
-                            doc_blob.content[s], list
-                        ), f"{s}, {doc_blob.content[s]} {qa} "
-                        new_content = Section()
-                        for param, type_, desc in doc_blob.content[s]:
-                            assert isinstance(desc, list)
-                            items = []
-                            if desc:
-                                try:
-                                    items = P2(desc)
-                                except Exception as e:
-                                    failure_collection[
-                                        "ParseDesc-" + str(type(e))
-                                    ].append(qa)
-                                    continue
-
-                                    raise type(e)(f"from {qa}")
-                                for l in items:
-                                    assert not isinstance(l, Section)
-                            new_content.append(
-                                Param(param, type_, desc=items).validate()
-                            )
-                        doc_blob.content[s] = new_content
-
-                doc_blob.see_also = []
-                if see_also := doc_blob.content.get("See Also", None):
-                    for nts, d0 in see_also:
-                        try:
-                            d = d0
-                            for (name, type_or_description) in nts:
-                                if type_or_description and not d:
-                                    desc = type_or_description
-                                    if isinstance(desc, str):
-                                        desc = [desc]
-                                    assert isinstance(desc, list)
-                                    desc = paragraphs(desc)
-                                    type_ = None
-                                else:
-                                    desc = d0
-                                    type_ = type_or_description
-                                    assert isinstance(desc, list)
-                                    desc = paragraphs(desc)
-
-                                sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
-                                doc_blob.see_also.append(sai)
-                                del desc
-                                del type_
-                        except Exception as e:
-                            raise ValueError(
-                                f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
-                            ) from e
-                del doc_blob.content["See Also"]
-
-                for k, v in doc_blob.content.items():
-                    assert isinstance(v, Section), f"{k} is not a section {v}"
                 # end processing
                 try:
                     doc_blob.validate()
