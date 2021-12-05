@@ -943,7 +943,7 @@ class Gen:
         self.bdata[path] = data
 
     def do_one_item(
-        self, target_item: Any, ndoc, *, qa: str, config: Config, aliases: Dict
+        self, target_item: Any, ndoc, *, qa: str, config: Config, aliases: List[str]
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one python object
@@ -974,6 +974,7 @@ class Gen:
         --------
         do_one_mod
         """
+        assert isinstance(aliases, list)
         blob = DocBlob()
 
         blob.content = {k: v for k, v in ndoc._parsed_data.items()}
