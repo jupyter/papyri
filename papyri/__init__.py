@@ -340,7 +340,6 @@ def gen(
     exec: Optional[bool] = typer.Option(
         None, help="Whether to attempt to execute doctring code."
     ),
-    experimental: bool = typer.Option(False, help="Use experimental Ts parsing"),
     debug: bool = False,
     dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
     dry_run: bool = False,
@@ -364,7 +363,6 @@ def gen(
             infer=infer,
             exec_=exec,
             target_file=file,
-            experimental=experimental,
             debug=debug,
             dummy_progress=dummy_progress,
             dry_run=dry_run,
