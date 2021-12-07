@@ -185,7 +185,7 @@ def parse_script(script, ns, prev, config):
     warnings.simplefilter("default", UserWarning)
 
 
-def get_example_data(doc, *, obj, qa: str, config):
+def get_example_data(doc, *, obj, qa: str, config, log):
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -270,6 +270,7 @@ def get_example_data(doc, *, obj, qa: str, config):
                                 res, fig_managers = executor.exec(script)
                                 ce_status = "execed"
                             except Exception:
+                                log.exception("error in execution")
                                 ce_status = "exception_in_exec"
                                 if config.exec_failure != "fallback":
                                     raise
@@ -288,7 +289,7 @@ def get_example_data(doc, *, obj, qa: str, config):
                             did_except = True
                             print(f"exception executing... {qa}")
                             fig_managers = executor.fig_man()
-                            if raise_in_fig:
+                            if raise_in_fig or config.exec_failure != "fallback":
                                 raise
                         finally:
                             if not wait_for_show:
@@ -1054,10 +1055,7 @@ class Gen:
 
         try:
             ndoc.example_section_data, figs = get_example_data(
-                ndoc,
-                obj=target_item,
-                qa=qa,
-                config=config,
+                ndoc, obj=target_item, qa=qa, config=config, log=self.log
             )
             ndoc.figs = figs
         except Exception as e:
@@ -1220,16 +1218,18 @@ class Gen:
                     with executor:
                         try:
                             executor.exec(script)
+                            print(script)
                             figs = [
                                 (f"ex-{example.name}-{i}.png", f)
                                 for i, f in enumerate(executor.get_figs())
                             ]
                             ce_status = "execed"
                         except Exception as e:
-                            self.log.error("%s failed %s", example, type(e))
                             failed.append(str(example))
-                            continue
-                            # raise type(e)(f"Within {example}")
+                            if config.exec_failure == "fallback":
+                                self.log.error("%s failed %s", example, type(e))
+                            else:
+                                raise type(e)(f"Within {example}")
                 entries = list(
                     parse_script(
                         script,
@@ -1458,25 +1458,8 @@ class Gen:
                 except Exception as e:
                     self.log.error("Execution error in %s", repr(qa))
                     failure_collection["ExecError-" + str(type(e))].append(qa)
-                    if config.exec_failure == "fallback":
-                        print("Re-analysing ", qa, "without execution", type(e))
-                        # debug:
-                        # TODO: ndoc-placeholder : make sure ndoc placeholder handled here as well.
-                        try:
-                            doc_blob, figs = self.do_one_item(
-                                target_item,
-                                ndoc,
-                                qa=qa,
-                                config=config.replace(exec=False),
-                                aliases=collector.aliases[qa],
-                            )
-                            doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
-                        except Exception as e:
-                            self.log.exception(
-                                "unexpected non-exec error in %s", repr(qa)
-                            )
-                            failure_collection["ErrorNoExec-" + str(type(e))].append(qa)
-                            continue
+                    raise
+
                 doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
 
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
