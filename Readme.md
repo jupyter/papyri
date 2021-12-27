@@ -110,8 +110,7 @@ You may need to get a modified version of numpydoc depending on the stage of dev
 ```
 # clone this repo
 # cd this repo
-pip install flit
-flit install --symlink
+pip install -e . 
 ```
 
 Build the TreeSitter rst parser:
