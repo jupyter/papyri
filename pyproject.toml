@@ -1,16 +1,16 @@
 [build-system]
-requires = ["flit_core >=2,<3"]
+requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
-[tool.flit.metadata]
-module = "papyri"
-author = "Matthias Bussonnier"
-author-email = "bussonniermatthias@gmail.com"
-home-page = "https://github.com/Carreau/papyri"
+[project]
+name = "papyri"
+authors = [{name = "Matthias Bussonnier", email = "bussonniermatthias@gmail.com"}]
 classifiers = ["License :: OSI Approved :: MIT License"]
-description-file="Readme.md"
+readme = "Readme.md"
+license = {file = "LICENSE"}
+dynamic = ["version","description"]
 requires-python=">=3.8"
-requires=[
+dependencies = [
     "typer",
     "toml",
     "urwid",
@@ -33,9 +33,12 @@ requires=[
     "matplotlib",
 ]
 
-[tool.flit.scripts]
+[project.scripts]
 papyri = "papyri:app"
 
 [tool.pytest.ini_options]
 addopts = "--durations=10"
 filterwarnings = "ignore:The module numpy.dual.*:DeprecationWarning"
+
+[project.urls]
+Home = "https://github.com/Carreau/papyri"
