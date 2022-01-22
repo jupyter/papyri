@@ -1,0 +1,110 @@
+> Author Information
+> For each author please fill out the form below. Some items on the form are explained here:
+> 
+> Email address will only be used for communication with the authors. It will not appear in public Web pages of this conference. The email address can be omitted for not corresponding authors. These authors will also have no access to the submission page.
+> Web page can be used on the conference Web pages, for example, for making the program. It should be a Web page of the author, not the Web page of her or his organization.
+> Each author marked as a corresponding author will receive email messages from the system about this submission. There must be at least one corresponding author.
+> Author 1 (click here to add yourself) (click here to add an associate)
+
+> First name†:
+Matthias
+> Last name:
+Bussonnier
+> Email:
+bussonniermatthias@gmail.com
+> Country/region:*
+France
+> Organization:
+Jupyter/Quansight Labs
+> Web page:	
+
+> corresponding author
+> Author 2 (click here to add yourself) (click here to add an associate)
+> First name†:*	
+> Last name:*	
+> Email:*	
+> Country/region:*	
+> Organization:*	
+> Web page:	
+> corresponding author
+> Author 3 (click here to add yourself) (click here to add an associate)
+> First name†:*	
+> Last name:*	
+> Email:*	
+> Country/region:*	
+> Organization:*	
+> Web page:	
+> corresponding author
+> Click here to add more authors
+> † Note: leave first name blank if there is no first name. If you are not sure how to divide a name into the first and last name, read the Help article about names.
+> 
+> Title and Abstract:
+> The title and the abstract should be entered as plain text, they should not contain HTML elements.
+> 
+> Title:*	
+
+Papyri: Better Documentation for the Scientific Ecosystem in Jupyter
+
+> Abstract:*	
+
+Python has multiple stories for documentation: docstrings, narrative
+documentation built via Sphinx and hosted online, and Dynamic Tutorials by
+downloading notebooks. However, none of these offer a complete documentation
+experience. Via a reusable framework we call Papyri, we want to offer a
+state-of-the-art documentation experience to end-users. We want to show our
+progress over the past 9 month after being funded by the Chan Zuckerberg
+initiative. The current proof of concept allows library authors to publish a
+semantic Intermediate Representation Documentation format (IRD). On users’
+machines, tools can leverage IRD to provide access to the full richness of the
+Python Ecosystem documentation. This project represents the key for the
+development, quality, ease of use, and discoverability in a growing Python
+ecosystem. Additionally, this framework will open the door to several other
+valuable features, such as allowing docstrings to be written in the widely-used
+markdown format, better configuration of end-user appearance and preferences,
+translations and domain-specific alternatives, indexing, and others.
+
+
+
+> Keywords
+> Type a list of keywords (also known as key phrases or key terms), one per line to characterize your submission. You should specify at least three keywords.
+
+
+> 
+> Keywords:*	
+
+Jupyter, Documentation, markdown, RST.
+
+> Other Information and Files
+> Short Summary.* A brief description which will appear in the online program and give attendees a basic sense of your talk or poster. This should be around 100 words or less
+
+In this talk we will demo and discuss the work that is being done on Papyri, a
+new framework to provide rich documentation  in Jupyter and Terminal IPython
+with plots, crosslink, equations. We will describe how libraries can opt-in to
+this new framework, what are the trade-off of using it, the current
+capabilities and the one planed with current funding, as well as where this
+could go in th future.
+
+> Type of Submission.* Please indicate whether you would like to be considered for a talk slot or poster slot. Please note that talks that are not accepted are automatically considered for a poster slot.
+> Talk
+
+Talk
+
+> Poster
+> Are you (the submitting author) interested in serving on the program committee? Program committee members review submissions for inclusion in the program.
+> 
+> The associated workload is fairly light; last year, each review board member reviewed approximately seven 150 word abstracts, approximately a 2-3 hour time commitment.
+> 
+> 
+> If you would like to join the program committee, please select the topics below that you feel comfortable reviewing. If you do not wish to join, leave the below checkboxes blank.
+> 
+> Participation will have no impact on whether or not your submission is accepted.
+> General
+> Machine Learning & Data Science
+> Data Life Cycle
+> Physics & Astronomy
+> Materials & Chemistry
+> Computational Social Science and Digital Humanities
+> Earth, Ocean, Geo, & Atmospheric Science
+> Engineering
+> Maintainers
+> SciPy Tutorials
