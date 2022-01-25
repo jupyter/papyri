@@ -35,7 +35,7 @@ logging.basicConfig(
 log = logging.getLogger("papyri")
 
 
-def url(info):
+def url(info, prefix="/p/"):
     assert isinstance(info, RefInfo)
     assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
     # assume same package/version for now.
@@ -43,9 +43,9 @@ def url(info):
         assert info.version is None
         return info.path
     if info.kind == "examples":
-        return f"/p/{info.module}/{info.version}/examples/{info.path}"
+        return f"/{prefix}/{info.module}/{info.version}/examples/{info.path}"
     else:
-        return f"/p/{info.module}/{info.version}/api/{info.path}"
+        return f"/{prefix}/{info.module}/{info.version}/api/{info.path}"
 
 
 def unreachable(*obj):
@@ -396,7 +396,15 @@ def compute_graph(gs, blob, key):
 
 
 async def _route(
-    ref, store, version=None, env=None, template=None, gstore=None, *, sidebar
+    ref,
+    store,
+    version=None,
+    env=None,
+    template=None,
+    gstore=None,
+    *,
+    sidebar,
+    prefix="/p/",
 ):
     assert not ref.endswith(".html")
     if env is None:
@@ -406,8 +414,9 @@ async def _route(
             undefined=StrictUndefined,
         )
         env.globals["len"] = len
-        env.globals["url"] = url
+        env.globals["url"] = lambda x: url(x, prefix)
         env.globals["unreachable"] = unreachable
+    env.globals["prefix"] = prefix
     env.globals["sidebar"] = sidebar
     # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
