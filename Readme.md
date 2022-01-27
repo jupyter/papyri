@@ -12,6 +12,9 @@ See some of the reason behind it  on [this blog post](https://labs.quansight.org
 
 And this [small presentation at CZI EOSS4 meeting in early november 2021](https://docs.google.com/presentation/d/1sSh44smooCiOlj0-Zrac9n5KX0K_ABBFznDmMIwUnbM/edit?usp=sharing)
 
+Papyri doe not completely build it's own docs yet but you might be able to view a static rending of it
+[here](https://pydocs.github.io/). It is not yet automatically built, so might be out of date. 
+
 # screenshots
 
 
