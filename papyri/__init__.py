@@ -11,14 +11,57 @@ You likely want to see the readme.md file for now which is kept up do date more 
 Installation
 ------------
 
-pip install papyri
+.. code::
+
+    pip install papyri
+
+
+dev install
+-----------
+
+You may need to get a modified version of numpydoc depending on the stage of development.
+
+
+    git clone https://github.com/jupyter/papyri
+    cd papyri
+    pip install -e .
+
+Build the TreeSitter rst parser:
+
+Some functionality require ``tree_sitter_rst``, see run `papyri build-parser`, and CI config file on how to build the tree-sitter
+shared object locally::
+
+    git clone https://github.com/stsewd/tree-sitter-rst
+    papyri build-parser
+
 
 Usage
 -----
 
+There are mostly 3 stages to run papyri, so far you need to do the 3 steps/roles
+on your local machine, but it will not be necessary once papyri is production ready.
+The three stages are:
+
+- As a library maintainer, generate and publish papyri IRD file.
+- As a system operator, install IRD files on your system
+- As a user, view the documentation in your IDE, webbrowser... with your preferences.
+
+
+To generate IRD files::
+
   $ papyri gen <config file>
 
+You can look in the ``examples`` folder to see some of these config files.
+Those will put IRD files in ``~/.papyri/data`` there is no upload mechanism yet.
+
+To install those files::
+
   $ papyri ingest ~/.papyri/data/library_version/
+
+
+And finally to view the docs, either follow your IED documentation or use some of the
+built-in renderer::
+
 
   $ papyri render
 
