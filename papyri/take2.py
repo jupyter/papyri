@@ -1231,6 +1231,7 @@ class Lines(Node):
     _lines: List[Line]
 
     def __init__(self, _lines=None):
+        # assert False
         if _lines is None:
             _lines = []
         assert isinstance(_lines, (list, Lines))
@@ -1810,6 +1811,7 @@ def assert_block_lines(blocks):
 def parse_rst_to_papyri_tree(text):
     """
     This should at some point be completely replaced by tree sitter.
+    in particular `from ts import parse`
     """
 
     doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]

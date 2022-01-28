@@ -1163,11 +1163,23 @@ class Gen:
                             assert isinstance(desc, list)
                             desc = paragraphs(desc)
                             type_ = None
-                        else:
+                        elif d0:
                             desc = d0
                             type_ = type_or_description
                             assert isinstance(desc, list)
                             desc = paragraphs(desc)
+                            section: Section
+                            parsed = ts.parse("\n".join(d0).encode())
+                            # if len(parsed)
+                            (section,) = parsed
+
+                            (par,) = section
+                            if not [par] == desc:
+                                assert False, (par, desc)
+
+                        else:
+                            desc = []
+                            type_ = type_or_description
 
                         sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
                         blob.see_also.append(sai)

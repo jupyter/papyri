@@ -135,7 +135,20 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             #"ExecError-<class 'ValueError'>": [
             "scipy.signal.signaltools.resample_poly",
             "scipy.optimize.optimize.bracket",
-            "scipy.spatial.transform._rotation_spline.RotationSpline"
+            "scipy.spatial.transform._rotation_spline.RotationSpline",
+            "scipy.signal.filter_design.freqz",
+            "scipy.signal.waveforms.sweep_poly",
+            "scipy.optimize.cobyla.fmin_cobyla",
+            "scipy.optimize._shgo.shgo",
+            "scipy.linalg.basic.matmul_toeplitz",
+            "scipy.linalg.basic.solve_banded",
+            "scipy.linalg.basic.solve_toeplitz",
+            "scipy.linalg.basic.solve_triangular",
+            "scipy.linalg.basic.solveh_banded",
+            "scipy.integrate._bvp.solve_bvp",
+            "scipy._lib._util.DeprecatedImport",
+            "scipy._lib._util.scipy.linalg.lapack",
+            "scipy.sparse.csgraph._flow.maximum_flow",
             ]
 exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]
 execute_exclude_patterns = []

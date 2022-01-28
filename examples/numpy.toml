@@ -30,7 +30,17 @@ exclude = [
    # Citation Reference not implemented
    "numpy.fft",
    # numpydocs errors
-   "numpy.polynomial._polybase.ABCPolyBase"
+   "numpy.polynomial._polybase.ABCPolyBase",
+   # Examples error
+   "numpy.ctypeslib", 
+   "numpy.linalg.multi_dot",
+   "numpy.linalg.qr",
+   "numpy.testing._private.utils.raises",
+   "numpy.testing._private.nosetester.run_module_suite",
+   "numpy.testing._private.utils.suppress_warnings",
+   "numpy.lib._datasource.Repository",
+   "numpy.testing._private.decorators.setastest",
+   "numpy.testing._private.decorators.slow",
    ]
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
