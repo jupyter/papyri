@@ -81,5 +81,7 @@ exclude = [
         "pandas.core.frame.DataFrame.to_gbq",
         "pandas.core.indexes.base.Index.drop_duplicates",
         "pandas.plotting._core.hist_frame",
+    # "ExecError-<class 'ValueError'>": [
+        "pandas._testing._io.network",
 ]
 
