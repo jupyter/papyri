@@ -190,20 +190,6 @@ class Node(Base):
     def _instance(cls):
         return cls()
 
-    @classmethod
-    def parse(cls, tokens):
-        """
-        Try to parse current `tokens` stream from current position.
-
-        Returns
-        -------
-        Tuple with the following items:
-            - Node to insert at current position in the token tree;
-            - None if could not parse.
-
-        """
-        return cls(tokens[0]), tokens[1:]
-
     def is_whitespace(self):
         if not isinstance(self.value, str):
             return False
@@ -271,19 +257,6 @@ class Verbatim(Node):
     def __hash__(self):
         return hash(tuple(self.value))
 
-    @classmethod
-    def parse(cls, tokens):
-        # assert False
-        acc = []
-        if len(tokens) < 5:
-            return None
-        if (tokens[0], tokens[1]) == ("`", "`") and tokens[2].strip():
-            for i, t in enumerate(tokens[2:]):
-                if t == "`" and tokens[i + 2] == "`":
-                    return cls(acc), tokens[i + 4 :]
-                else:
-                    acc.append(t)
-        return None
 
     @property
     def text(self):
@@ -377,47 +350,6 @@ class Directive(Node):
     @property
     def text(self):
         return "".join(self.value)
-
-    @classmethod
-    def parse(cls, tokens):
-        acc = []
-        consume_start = None
-        domain, role = None, None
-        if (
-            (len(tokens) > 2)
-            and tokens[0] == "`"
-            and tokens[1] != "`"
-            and tokens[1].strip()
-        ):
-            consume_start = 1
-        elif (len(tokens) >= 4) and (tokens[0], tokens[2], tokens[3]) == (
-            ":",
-            ":",
-            "`",
-        ):
-            domain, role = None, tokens[1]
-            consume_start = 4
-            pass
-        elif len(tokens) >= 6 and (tokens[0], tokens[2], tokens[4], tokens[5]) == (
-            ":",
-            ":",
-            ":",
-            "`",
-        ):
-            domain, role = tokens[1], tokens[3]
-            consume_start = 6
-
-        if consume_start is None:
-            return None
-
-        if role is not None:
-            assert ":" not in role
-
-        for i, t in enumerate(tokens[consume_start:]):
-            if t == "`":
-                return cls(acc, domain, role), tokens[i + 1 + consume_start :]
-            else:
-                acc.append(t)
 
     def __len__(self):
         return sum(len(x) for x in self.value) + len(self.prefix)
@@ -556,25 +488,6 @@ class Strong(Node):
         return hash(repr(self))
 
 
-def lex(lines):
-    acc = ""
-    for i, l in enumerate(lines):
-        assert isinstance(l, str), l
-        for c in l:
-            if c in " `*_:":
-                if acc:
-                    yield acc
-                yield c
-                acc = ""
-            else:
-                acc += c
-        if acc:
-            yield acc
-            acc = ""
-        if i != len(lines) - 1:
-            yield " "
-
-
 class _XList(Node):
     value: List[
         Union[
@@ -608,17 +521,6 @@ class BulletList(_XList):
     pass
 
 
-class FirstCombinator:
-    def __init__(self, parsers):
-        self.parsers = parsers
-
-    def parse(self, tokens):
-        for parser in self.parsers:
-            res = parser.parse(tokens)
-            if res is not None:
-                return res
-
-        return None
 
 
 class Section(Node):
@@ -895,20 +797,6 @@ class Paragraph(Node):
     @classmethod
     def _instance(cls):
         return cls([], [])
-
-    @classmethod
-    def parse_lines(cls, lines):
-        assert isinstance(lines, list), lines
-        tokens = list(lex(lines))
-
-        rest = tokens
-        acc = []
-        parser = FirstCombinator([Verbatim, Directive, Word])
-        while rest:
-            parsed, rest = parser.parse(rest)
-            acc.append(parsed)
-
-        return cls(compress_word(acc), [])
 
     def __repr__(self):
 
@@ -1341,43 +1229,6 @@ class BlockDirective(Block):
         self.args0 = args0
         self.inner = inner
 
-    @classmethod
-    def parse(cls, lines=None, wh=None, ind=None):
-        if None in (lines, wh, ind):
-            return
-
-        # numpy doc bug
-        l = lines[0]._line
-        if l.startswith("..version"):
-            lines[0]._line = ".. " + l[2:]
-        # end numpy doc bug
-        # scipy bug....
-        if lines[0].startswith("..Deprecated"):
-            assert False
-            lines[0]._line = ".. deprecated:: 1.5.0"
-        # end scipy bug.
-        # assert lines[0].startswith(".. "), lines
-        l0 = lines[0]
-        pred, *postd = l0.split("::")
-        # assert pred.startswith(".. ")
-        self_directive_name = pred[3:].strip()
-        if pred.startswith(".. |"):
-            # TODO:
-            print("replacement not implemented yet")
-        elif " " in self_directive_name:
-            assert False, repr(pred)
-        self_args0 = postd
-        if ind:
-            self_inner = Paragraph.parse_lines([x.text for x in ind.dedented()])
-        else:
-            self_inner = None
-
-        return cls(
-            directive_name=self_directive_name,
-            args0=self_args0,
-            inner=self_inner,
-        )
-
 
 class Comment(Block):
     lines: Lines
@@ -1504,12 +1355,6 @@ class DefListItem(Block):
         assert isinstance(dd, (list, type(None))), dd
         self.dd = dd
 
-    @classmethod
-    def parse(cls, lines, wh, ind):
-        dl = Paragraph.parse_lines([l.text.strip() for l in lines])
-        assert len(dl.children) == 1
-        dd = Paragraph.parse_lines([x.text for x in ind.dedented()])
-        return cls(lines, wh, ind, dl, [dd])
 
     @classmethod
     def _deserialise(cls, **kwargs):
@@ -1573,15 +1418,6 @@ class Example(Block):
         self.wh = wh
         self.ind = ind
 
-
-# TODO Comments
-def block_comment(block):
-    if not type(block) == Block:
-        return [block]
-    if len(block.lines) >= 1 and (block.lines[0].startswith(".. ")):
-        assert "::" not in block.lines[0].text
-        return [BlockDirective.parse(block.lines, block.wh, block.ind)]
-    return [block]
 
 
 def empty_pass(doc):
