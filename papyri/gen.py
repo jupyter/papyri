@@ -44,7 +44,6 @@ from .miscs import BlockExecutor, DummyP
 from .take2 import (
     Code,
     Fig,
-    Lines,
     Node,
     Param,
     Ref,
@@ -52,7 +51,6 @@ from .take2 import (
     Section,
     SeeAlsoItem,
     Text,
-    make_block_3,
     parse_rst_to_papyri_tree,
 )
 from .tree import DirectiveVisiter
@@ -85,32 +83,6 @@ def paragraph(lines) -> Any:
     assert len(section.children) == 1
     p2 = section.children[0]
     return p2
-
-
-def paragraphs(lines) -> List[Any]:
-    assert isinstance(lines, list)
-    for l in lines:
-        if isinstance(l, str):
-            assert "\n" not in l
-        else:
-            assert "\n" not in l._line
-    blocks_data = make_block_3(Lines(lines))
-    acc = []
-
-    # blocks_data = parse_rst_to_papyri_tree("\n".join(lines))
-
-    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for pre_blank_lines, _blank_lines, post_blank_lines in blocks_data:
-        # pre_blank_lines = block.lines
-        # blank_lines = block.wh
-        # post_black_lines = block.ind
-        if pre_blank_lines:
-            acc.append(paragraph([x._line for x in pre_blank_lines]))
-        ## definitively wrong but will do for now, should likely be verbatim, or recurse ?
-        if post_blank_lines:
-            acc.append(paragraph([x._line for x in post_blank_lines]))
-        # print(block)
-    return acc
 
 
 def parse_script(script, ns, prev, config):
@@ -1179,36 +1151,19 @@ class Gen:
             try:
                 for (name, type_or_description) in nts:
                     if type_or_description and not raw_description:
+                        assert isinstance(type_or_description, str)
+                        type_ = None
                         # we have all in a single line,
                         # and there is no description, so the type field is
                         # actually the description.
-                        assert isinstance(type_or_description, str)
-                        description = [type_or_description]
-                        desc = paragraphs(description)
-                        parsed = ts.parse("\n".join(description).encode())
-                        assert len(parsed) == 1, description
-                        (section,) = parsed
-                        type_ = None
-                        (par,) = section
-                        if not [par] == desc:
-                            assert False, (par, desc)
+                        desc = [paragraph([type_or_description])]
                     elif raw_description:
-                        desc = raw_description
+                        assert isinstance(raw_description, list)
                         type_ = type_or_description
-                        assert isinstance(desc, list)
-                        desc = paragraphs(desc)
-                        parsed = ts.parse("\n".join(raw_description).encode())
-                        # if len(parsed)
-                        # there might be 0 item parsed.
-                        (section,) = parsed
-
-                        (par,) = section
-                        if not [par] == desc:
-                            assert False, (par, desc)
-
+                        desc = [paragraph(raw_description)]
                     else:
-                        desc = []
                         type_ = type_or_description
+                        desc = []
 
                     sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
                     new_see_also.append(sai)
