@@ -1498,6 +1498,7 @@ class Gen:
                 except Exception as e:
                     self.log.error("Execution error in %s", repr(qa))
                     failure_collection["ExecError-" + str(type(e))].append(qa)
+                    # continue
                     raise
 
                 doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)

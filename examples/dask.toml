@@ -15,6 +15,11 @@ exclude = [ "dask.utils.Dispatch",
             "dask.array.routines.unique",
             # misc aseert
             "dask.base.replace_name_in_key",
+            #"ExecError-<class 'ValueError'>": [
+            "dask.array.core.to_npy_stack",
+            #"NumpydocError-<class 'numpydoc.docscrape.ParseError'>": [
+            "dask.array.slicing.slice_array",
   ]
+
 #docs_path = "~/dev/dask/docs/source"
 exec_failure = 'fallback'

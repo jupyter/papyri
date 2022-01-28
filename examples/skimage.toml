@@ -23,9 +23,9 @@ exclude = ['skimage.transform.radon_transform.iradon',
            "skimage.color.delta_e.get_dH2",
            "skimage.color.delta_e.get_dH2",
            "skimage.filters.rank.generic.bottomhat",
-           "skimage.filters.rank.generic.tophat"
+           "skimage.filters.rank.generic.tophat",
            # "NumpydocError-<class 'ValueError'>"
-           "skimage.measure._marching_cubes_lewiner_cy.Cell".
+           "skimage.measure._marching_cubes_lewiner_cy.Cell",
            # "ParseDesc-<class 'AssertionError'>"
            "skimage.measure.simple_metrics.compare_nrmse",
            "skimage.metrics.simple_metrics.normalized_root_mse",

@@ -6,4 +6,15 @@ exclude = [
     'IPython.core.magics.execution.ExecutionMagics.run',
     'IPython.core.magics.script.ScriptMagics.shebang',
     'IPython.core.magics.basic.BasicMagics.alias_magic',
+    'IPython.utils.text.strip_email_quotes',
+    #"ExecError-<class 'ValueError'>": [
+                        "IPython.core.magics.basic.BasicMagics.colors",
+                        "IPython.core.magics.config.ConfigMagics.config",
+                        "IPython.core.magics.execution.ExecutionMagics.time",
+                        "IPython.core.magics.namespace.NamespaceMagics.psearch",
+                        "IPython.core.magics.namespace.NamespaceMagics.who_ls",
+                        "IPython.core.magics.namespace.NamespaceMagics.who",
+                        "IPython.core.magics.namespace.NamespaceMagics.whos",
+                        "IPython.core.magics.namespace.NamespaceMagics.reset_selective",
+                        "IPython.core.magics.pylab.PylabMagics.matplotlib",
 ]

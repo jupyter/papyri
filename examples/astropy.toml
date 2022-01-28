@@ -2,5 +2,19 @@
 exclude = ["astropy.utils.misc.OrderedDescriptorContainer",
 # VisitTargetNotImplementedError
 "astropy.utils.data.download_file",
+                      #"ExecError-<class 'ValueError'>": [
+                        "astropy.utils.introspection.find_current_module",
+                        "astropy.utils.misc.NumpyRNGContext",
+                        "astropy.utils.decorators.classproperty",
+                        "astropy.utils.decorators.deprecated_renamed_argument",
+                        "astropy.utils.decorators.format_doc",
+                        "astropy.logger.AstropyLogger.log_to_file",
+                        "astropy.logger.AstropyLogger.log_to_list",
+                        "astropy.tests.runner.TestRunnerBase",
+                        "astropy.utils.compat.misc.override__dir__",
+                        "astropy.utils.data.get_pkg_data_filename",
+                        "astropy.utils.data.get_pkg_data_filenames",
+                        "astropy.utils.data.get_pkg_data_fileobj",
+                        "astropy.utils.data.get_pkg_data_fileobjs",
 ]
 submodules = [ "io", "io.fits",]
