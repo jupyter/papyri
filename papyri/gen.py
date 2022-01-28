@@ -270,7 +270,7 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                                 res, fig_managers = executor.exec(script)
                                 ce_status = "execed"
                             except Exception:
-                                log.exception("error in execution")
+                                log.exception("error in execution: %s", qa)
                                 ce_status = "exception_in_exec"
                                 if config.exec_failure != "fallback":
                                     raise
@@ -1150,35 +1150,75 @@ class Gen:
                 new_content.append(Param(param, type_, desc=items).validate())
             blob.content[s] = new_content
 
-        blob.see_also = []
-        if see_also := blob.content.get("See Also", None):
-            for nts, d0 in see_also:
-                try:
-                    d = d0
-                    for (name, type_or_description) in nts:
-                        if type_or_description and not d:
-                            desc = type_or_description
-                            if isinstance(desc, str):
-                                desc = [desc]
-                            assert isinstance(desc, list)
-                            desc = paragraphs(desc)
-                            type_ = None
-                        else:
-                            desc = d0
-                            type_ = type_or_description
-                            assert isinstance(desc, list)
-                            desc = paragraphs(desc)
-
-                        sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
-                        blob.see_also.append(sai)
-                        del desc
-                        del type_
-                except Exception as e:
-                    raise ValueError(
-                        f"Error {qa}: {see_also=}    |    {nts=}    | {d0=}"
-                    ) from e
+        blob.see_also = self._normalize_see_also(blob.content.get("See Also", None), qa)
         del blob.content["See Also"]
         return blob, figs
+
+    def _normalize_see_also(self, see_also: List[Any], qa):
+        """
+        numpydoc is complex, the See Also fields can be quite complicated,
+        so here we sort of try to normalise them.
+        from what I can remember,
+        See also can have
+        name1 : type1
+        name2 : type2
+            description for both name1 and name 2.
+
+        though if description is empty, them the type is actually the description.
+        """
+        if not see_also:
+            return []
+        assert see_also is not None
+        new_see_also = []
+        section: Section
+        nts: List[Tuple[str, str]]
+        name: str
+        type_or_description: str
+
+        for nts, raw_description in see_also:
+            try:
+                for (name, type_or_description) in nts:
+                    if type_or_description and not raw_description:
+                        # we have all in a single line,
+                        # and there is no description, so the type field is
+                        # actually the description.
+                        assert isinstance(type_or_description, str)
+                        description = [type_or_description]
+                        desc = paragraphs(description)
+                        parsed = ts.parse("\n".join(description).encode())
+                        assert len(parsed) == 1, description
+                        (section,) = parsed
+                        type_ = None
+                        (par,) = section
+                        if not [par] == desc:
+                            assert False, (par, desc)
+                    elif raw_description:
+                        desc = raw_description
+                        type_ = type_or_description
+                        assert isinstance(desc, list)
+                        desc = paragraphs(desc)
+                        parsed = ts.parse("\n".join(raw_description).encode())
+                        # if len(parsed)
+                        # there might be 0 item parsed.
+                        (section,) = parsed
+
+                        (par,) = section
+                        if not [par] == desc:
+                            assert False, (par, desc)
+
+                    else:
+                        desc = []
+                        type_ = type_or_description
+
+                    sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
+                    new_see_also.append(sai)
+                    del desc
+                    del type_
+            except Exception as e:
+                raise ValueError(
+                    f"Error {qa}: {see_also=} | {nts=}  | {raw_description=}"
+                ) from e
+        return new_see_also
 
     def collect_examples(self, folder, config):
         acc = []
