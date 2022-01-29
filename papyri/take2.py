@@ -257,7 +257,6 @@ class Verbatim(Node):
     def __hash__(self):
         return hash(tuple(self.value))
 
-
     @property
     def text(self):
         return "".join(self.value)
@@ -519,8 +518,6 @@ class EnumeratedList(_XList):
 
 class BulletList(_XList):
     pass
-
-
 
 
 class Section(Node):
@@ -968,7 +965,6 @@ class BlockError(Block):
         return cls(block.lines, block.wh, block.ind)
 
 
-
 class Line(Node):
 
     _line: str
@@ -1260,7 +1256,6 @@ class DefListItem(Block):
         self.dt = dt
         assert isinstance(dd, (list, type(None))), dd
         self.dd = dd
-
 
     @classmethod
     def _deserialise(cls, **kwargs):
