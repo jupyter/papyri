@@ -853,19 +853,6 @@ def indent(text, marker="   |"):
     return "\n".join(marker + l for l in lines)
 
 
-def header_lines(lines):
-    """
-    Find lines indices for header
-    """
-
-    indices = []
-
-    for i in range(len(lines)):
-        if is_at_header(lines[i:]):
-            indices.append(i)
-    return indices
-
-
 def separate(lines, indices):
     acc = []
     for i, j in zip([0] + indices, indices + [-1]):
@@ -981,39 +968,6 @@ class BlockError(Block):
         return cls(block.lines, block.wh, block.ind)
 
 
-# class Section:
-#    """
-#    A section start (or not) with a header.
-#
-#    And have a body
-#    """
-#
-#    def __init__(self, lines):
-#        self.lines = lines
-#
-#    @property
-#    def header(self):
-#        if is_at_header(self.lines):
-#            return self.lines[0:2]
-#        else:
-#            return None, None
-#
-#    @property
-#    def body(self):
-#        if is_at_header(self.lines):
-#            return make_blocks_2(self.lines[2:])
-#        else:
-#            return make_blocks_2(self.lines)
-#
-#    def __repr__(self):
-#        return (
-#            f"<Section header='{self.header[0]}' body-len='{len(self.lines)}'> with\n"
-#            + indent("\n".join([str(b) for b in self.body]) + "...END\n\n", "    |")
-#        )
-
-
-# wrapper around handling lines
-
 
 class Line(Node):
 
@@ -1119,54 +1073,6 @@ class Lines(Node):
         if not isinstance(other, Lines):
             return NotImplemented
         return Lines(self._lines + other._lines)
-
-
-# class Document:
-#    def __init__(self, lines):
-#        self.lines = lines
-#
-#    @property
-#    def sections(self):
-#        indices = header_lines(self.lines)
-#        return [Section(l) for l in separate(self.lines, indices)]
-#
-#    def __repr__(self):
-#        acc = ""
-#        for i, s in enumerate(self.sections[0:]):
-#            acc += "\n" + repr(s)
-#        return "<Document > with" + indent(acc)
-
-
-def is_at_header(lines) -> bool:
-    """
-    Given a list of lines (str), return wether or not we are (likely) at a header
-
-    A header is (generally) of the form:
-        - One line with text
-        - one line some lenght with one of -_=*~ (and space on each side).
-
-    In practice user do not use the same length, and some things may trigger
-    false positive ( tracebacks in docstrings print with a long line of dashes
-    (-).
-
-    We could also peek at the line n-1, and make sure it is a blankline, also
-    some libraries (scipy), use 0 level header with both over and underline
-    (this is not implemented)
-
-    We might also be able to find that headers are actually blocs as well, and
-    blockify a full document, though we have to be careful, some thing so not
-    have spaces after headers. (numpy.__doc__)
-    """
-    if len(lines) < 2:
-        return False
-    l0, l1, *rest = lines
-    if len(l0.strip()) != len(l1.strip()):
-        return False
-    if len(s := set(l1.strip())) != 1:
-        return False
-    if next(iter(s)) in "-=":
-        return True
-    return False
 
 
 class Header:
@@ -1419,18 +1325,6 @@ class Example(Block):
         self.ind = ind
 
 
-
-def empty_pass(doc):
-    ret = []
-    for b in doc:
-        if not b.lines:
-            assert not b.wh
-            assert not b.ind
-            continue
-        ret.append(b)
-    return ret
-
-
 def get_object(qual):
     parts = qual.split(".")
 
@@ -1447,11 +1341,6 @@ def get_object(qual):
     for p in parts[1:]:
         obj = getattr(obj, p)
     return obj
-
-
-def assert_block_lines(blocks):
-    for b in blocks:
-        assert b.lines
 
 
 def parse_rst_to_papyri_tree(text):
