@@ -190,20 +190,6 @@ class Node(Base):
     def _instance(cls):
         return cls()
 
-    @classmethod
-    def parse(cls, tokens):
-        """
-        Try to parse current `tokens` stream from current position.
-
-        Returns
-        -------
-        Tuple with the following items:
-            - Node to insert at current position in the token tree;
-            - None if could not parse.
-
-        """
-        return cls(tokens[0]), tokens[1:]
-
     def is_whitespace(self):
         if not isinstance(self.value, str):
             return False
@@ -270,20 +256,6 @@ class Verbatim(Node):
 
     def __hash__(self):
         return hash(tuple(self.value))
-
-    @classmethod
-    def parse(cls, tokens):
-        # assert False
-        acc = []
-        if len(tokens) < 5:
-            return None
-        if (tokens[0], tokens[1]) == ("`", "`") and tokens[2].strip():
-            for i, t in enumerate(tokens[2:]):
-                if t == "`" and tokens[i + 2] == "`":
-                    return cls(acc), tokens[i + 4 :]
-                else:
-                    acc.append(t)
-        return None
 
     @property
     def text(self):
@@ -377,47 +349,6 @@ class Directive(Node):
     @property
     def text(self):
         return "".join(self.value)
-
-    @classmethod
-    def parse(cls, tokens):
-        acc = []
-        consume_start = None
-        domain, role = None, None
-        if (
-            (len(tokens) > 2)
-            and tokens[0] == "`"
-            and tokens[1] != "`"
-            and tokens[1].strip()
-        ):
-            consume_start = 1
-        elif (len(tokens) >= 4) and (tokens[0], tokens[2], tokens[3]) == (
-            ":",
-            ":",
-            "`",
-        ):
-            domain, role = None, tokens[1]
-            consume_start = 4
-            pass
-        elif len(tokens) >= 6 and (tokens[0], tokens[2], tokens[4], tokens[5]) == (
-            ":",
-            ":",
-            ":",
-            "`",
-        ):
-            domain, role = tokens[1], tokens[3]
-            consume_start = 6
-
-        if consume_start is None:
-            return None
-
-        if role is not None:
-            assert ":" not in role
-
-        for i, t in enumerate(tokens[consume_start:]):
-            if t == "`":
-                return cls(acc, domain, role), tokens[i + 1 + consume_start :]
-            else:
-                acc.append(t)
 
     def __len__(self):
         return sum(len(x) for x in self.value) + len(self.prefix)
@@ -556,25 +487,6 @@ class Strong(Node):
         return hash(repr(self))
 
 
-def lex(lines):
-    acc = ""
-    for i, l in enumerate(lines):
-        assert isinstance(l, str), l
-        for c in l:
-            if c in " `*_:":
-                if acc:
-                    yield acc
-                yield c
-                acc = ""
-            else:
-                acc += c
-        if acc:
-            yield acc
-            acc = ""
-        if i != len(lines) - 1:
-            yield " "
-
-
 class _XList(Node):
     value: List[
         Union[
@@ -606,19 +518,6 @@ class EnumeratedList(_XList):
 
 class BulletList(_XList):
     pass
-
-
-class FirstCombinator:
-    def __init__(self, parsers):
-        self.parsers = parsers
-
-    def parse(self, tokens):
-        for parser in self.parsers:
-            res = parser.parse(tokens)
-            if res is not None:
-                return res
-
-        return None
 
 
 class Section(Node):
@@ -896,20 +795,6 @@ class Paragraph(Node):
     def _instance(cls):
         return cls([], [])
 
-    @classmethod
-    def parse_lines(cls, lines):
-        assert isinstance(lines, list), lines
-        tokens = list(lex(lines))
-
-        rest = tokens
-        acc = []
-        parser = FirstCombinator([Verbatim, Directive, Word])
-        while rest:
-            parsed, rest = parser.parse(rest)
-            acc.append(parsed)
-
-        return cls(compress_word(acc), [])
-
     def __repr__(self):
 
         rw = self.rewrap(self.children, self.width)
@@ -963,19 +848,6 @@ def indent(text, marker="   |"):
     """
     lines = text.split("\n")
     return "\n".join(marker + l for l in lines)
-
-
-def header_lines(lines):
-    """
-    Find lines indices for header
-    """
-
-    indices = []
-
-    for i in range(len(lines)):
-        if is_at_header(lines[i:]):
-            indices.append(i)
-    return indices
 
 
 def separate(lines, indices):
@@ -1044,60 +916,6 @@ def make_blocks_2(lines):
     return acc
 
 
-def make_block_3(lines: Lines):
-    """
-    I think the correct alternative is that each block may get an indented children,
-    and that a block is thus:
-
-        - a) The sequence of consecutive non blank lines with 0 indentation
-        - b) The (potentially absent) blank lines leading to the indent block
-        - c) The Raw indent block (we can decide to recurse, or not later)
-        - d?) The trailing blank line at the end of the block leading to the next one.
-                I think the blank line will be in the
-        raw indent block
-
-    """
-    assert isinstance(lines, Lines)
-    a: List[Lines]
-    b: List[Lines]
-    c: List[Lines]
-    (a, b, c) = [], [], []
-    blocks = []
-    state = "a"
-
-    for l in lines:
-        if l.indent == 0:
-            if state == "a":
-                a.append(l)
-            elif state in ("b", "c"):
-                blocks.append((a, b, c))
-                a, b, c = [l], [], []
-                state = "a"
-            else:
-                raise ValueError
-        elif l.indent is None:
-            if state == "a":
-                state = "b"
-                b.append(l)
-            elif state == "b":
-                b.append(l)
-            elif state == "c":
-                c.append(l)
-            else:
-                raise ValueError
-        elif l.indent > 0:
-            if state in ("a", "b"):
-                state = "c"
-                c.append(l)
-            elif state == "c":
-                c.append(l)
-            else:
-                raise ValueError
-
-    blocks.append((a, b, c))
-    return blocks
-
-
 class Block(Node):
     """
     The following is wrong for some case, in particular if there are many paragraph in a row with 0 indent.
@@ -1145,40 +963,6 @@ class BlockError(Block):
     @classmethod
     def from_block(cls, block):
         return cls(block.lines, block.wh, block.ind)
-
-
-# class Section:
-#    """
-#    A section start (or not) with a header.
-#
-#    And have a body
-#    """
-#
-#    def __init__(self, lines):
-#        self.lines = lines
-#
-#    @property
-#    def header(self):
-#        if is_at_header(self.lines):
-#            return self.lines[0:2]
-#        else:
-#            return None, None
-#
-#    @property
-#    def body(self):
-#        if is_at_header(self.lines):
-#            return make_blocks_2(self.lines[2:])
-#        else:
-#            return make_blocks_2(self.lines)
-#
-#    def __repr__(self):
-#        return (
-#            f"<Section header='{self.header[0]}' body-len='{len(self.lines)}'> with\n"
-#            + indent("\n".join([str(b) for b in self.body]) + "...END\n\n", "    |")
-#        )
-
-
-# wrapper around handling lines
 
 
 class Line(Node):
@@ -1287,54 +1071,6 @@ class Lines(Node):
         return Lines(self._lines + other._lines)
 
 
-# class Document:
-#    def __init__(self, lines):
-#        self.lines = lines
-#
-#    @property
-#    def sections(self):
-#        indices = header_lines(self.lines)
-#        return [Section(l) for l in separate(self.lines, indices)]
-#
-#    def __repr__(self):
-#        acc = ""
-#        for i, s in enumerate(self.sections[0:]):
-#            acc += "\n" + repr(s)
-#        return "<Document > with" + indent(acc)
-
-
-def is_at_header(lines) -> bool:
-    """
-    Given a list of lines (str), return wether or not we are (likely) at a header
-
-    A header is (generally) of the form:
-        - One line with text
-        - one line some lenght with one of -_=*~ (and space on each side).
-
-    In practice user do not use the same length, and some things may trigger
-    false positive ( tracebacks in docstrings print with a long line of dashes
-    (-).
-
-    We could also peek at the line n-1, and make sure it is a blankline, also
-    some libraries (scipy), use 0 level header with both over and underline
-    (this is not implemented)
-
-    We might also be able to find that headers are actually blocs as well, and
-    blockify a full document, though we have to be careful, some thing so not
-    have spaces after headers. (numpy.__doc__)
-    """
-    if len(lines) < 2:
-        return False
-    l0, l1, *rest = lines
-    if len(l0.strip()) != len(l1.strip()):
-        return False
-    if len(s := set(l1.strip())) != 1:
-        return False
-    if next(iter(s)) in "-=":
-        return True
-    return False
-
-
 class Header:
     """
     a header node
@@ -1394,43 +1130,6 @@ class BlockDirective(Block):
         self.directive_name = directive_name
         self.args0 = args0
         self.inner = inner
-
-    @classmethod
-    def parse(cls, lines=None, wh=None, ind=None):
-        if None in (lines, wh, ind):
-            return
-
-        # numpy doc bug
-        l = lines[0]._line
-        if l.startswith("..version"):
-            lines[0]._line = ".. " + l[2:]
-        # end numpy doc bug
-        # scipy bug....
-        if lines[0].startswith("..Deprecated"):
-            assert False
-            lines[0]._line = ".. deprecated:: 1.5.0"
-        # end scipy bug.
-        # assert lines[0].startswith(".. "), lines
-        l0 = lines[0]
-        pred, *postd = l0.split("::")
-        # assert pred.startswith(".. ")
-        self_directive_name = pred[3:].strip()
-        if pred.startswith(".. |"):
-            # TODO:
-            print("replacement not implemented yet")
-        elif " " in self_directive_name:
-            assert False, repr(pred)
-        self_args0 = postd
-        if ind:
-            self_inner = Paragraph.parse_lines([x.text for x in ind.dedented()])
-        else:
-            self_inner = None
-
-        return cls(
-            directive_name=self_directive_name,
-            args0=self_args0,
-            inner=self_inner,
-        )
 
 
 class Comment(Block):
@@ -1559,13 +1258,6 @@ class DefListItem(Block):
         self.dd = dd
 
     @classmethod
-    def parse(cls, lines, wh, ind):
-        dl = Paragraph.parse_lines([l.text.strip() for l in lines])
-        assert len(dl.children) == 1
-        dd = Paragraph.parse_lines([x.text for x in ind.dedented()])
-        return cls(lines, wh, ind, dl, [dd])
-
-    @classmethod
     def _deserialise(cls, **kwargs):
         inst = cls(**kwargs)
         return inst
@@ -1628,163 +1320,6 @@ class Example(Block):
         self.ind = ind
 
 
-def header_pass(block):
-    """
-    Check each block for potential header, if found, split (or extract) the given block into a header.
-
-    Parameters
-    ----------
-    block : Block
-        A block to split or extract
-
-    Returns
-    -------
-    list
-        A list of blocks and/or header
-
-    """
-    # TODO: Add logic to handle doctests raising exceptions.
-
-    if len(block.lines) == 2 and is_at_header(block.lines):
-        assert not block.ind
-        return [Header(block.lines + block.wh)]
-    elif len(block.lines) >= 2 and is_at_header(block.lines):
-        h = Header(block.lines[:2])
-        block.lines = block.lines[2:]
-        return (h, block)
-    return (block,)
-
-
-def header_level_pass(blocks):
-    """
-    Iter over all top level nodes, updating the header level.
-
-    For each encountered header, collect the type of marker use to underline,
-    and increase the counter on newly encountered marker.
-
-    Update the level attribute of the header with the corresponding value.
-
-    Parameters
-    ----------
-    blocks : Block
-        A block to split or extract
-
-    """
-    seen = {}
-    for b in blocks:
-        if not isinstance(b, Header):
-            continue
-        marker_set = set(b._lines[1].strip())
-        assert len(marker_set) == 1, b
-        marker = next(iter(marker_set))
-        if marker not in seen:
-            seen[marker] = len(seen)
-        b.level = seen[marker]
-
-    return blocks
-
-
-def example_pass(block):
-    if not type(block) == Block:
-        return [block]
-    if block.lines and block.lines[0].startswith(">>>"):
-        return [Example(block.lines, block.wh, block.ind)]
-    return [block]
-
-
-def deflist_pass(blocks):
-    acc = []
-    deflist = []
-    for block in blocks:
-        if not type(block) == Block:
-            acc.append(block)
-            continue
-        if len(block.lines) == 1:
-            p = Paragraph.parse_lines([l.text.strip() for l in block.lines])
-        if (
-            len(block.lines) == 1
-            and (not block.wh)
-            and block.ind
-            and len(p.children) == 1
-        ):
-            deflist.append(
-                DefListItem.parse(
-                    block.lines.dedented(), block.wh, block.ind.dedented()
-                )
-            )
-        else:
-            if deflist:
-                acc.append(DefList(deflist))
-                deflist = []
-            acc.append(block)
-    if deflist:
-        acc.append(DefList(deflist))
-    return acc
-
-
-def deflist_item_pass(block):
-    assert False
-    if not type(block) == Block:
-        return [block]
-    if len(block.lines) == 1 and (not block.wh) and block.ind:
-        return [DefListItem(block.lines, block.wh, block.ind)]
-    return [block]
-
-
-def block_directive_pass(block):
-    if not type(block) == Block:
-        return [block]
-    if len(block.lines) >= 1 and (
-        block.lines[0].startswith(".. ") and ("::" in block.lines[0].text)
-    ):
-        return [BlockDirective.parse(block.lines, block.wh, block.ind)]
-    return [block]
-
-
-# TODO Comments
-def block_comment(block):
-    if not type(block) == Block:
-        return [block]
-    if len(block.lines) >= 1 and (block.lines[0].startswith(".. ")):
-        assert "::" not in block.lines[0].text
-        return [BlockDirective.parse(block.lines, block.wh, block.ind)]
-    return [block]
-
-
-def paragraphs_pass(block):
-    if not type(block) == Block:
-        return [block]
-    else:
-        # likely incorrect for the indented part.
-        if block.ind:
-            assert isinstance(block.lines, Lines)
-            lines = block.lines
-            if not lines:
-                return [BlockError.from_block(block)]
-            if lines[-1]._line.endswith("::"):
-                return [Paragraph.parse_lines([l._line for l in block.lines])] + [
-                    BlockVerbatim(block.ind.dedented())
-                ]
-            else:
-                sub = [Block(*b) for b in make_block_3(block.ind.dedented())]
-                sub = deflist_pass(sub)
-                sub = [x for pairs in sub for x in paragraphs_pass(pairs)]
-                return [Paragraph.parse_lines([l._line for l in block.lines])] + sub
-        else:
-            return [Paragraph.parse_lines([l._line for l in block.lines])]
-
-
-def empty_pass(doc):
-    ret = []
-    for b in doc:
-        if not b.lines:
-            assert not b.wh
-            assert not b.ind
-            continue
-        ret.append(b)
-    return ret
-
-
 def get_object(qual):
     parts = qual.split(".")
 
@@ -1803,28 +1338,11 @@ def get_object(qual):
     return obj
 
 
-def assert_block_lines(blocks):
-    for b in blocks:
-        assert b.lines
-
-
 def parse_rst_to_papyri_tree(text):
     """
     This should at some point be completely replaced by tree sitter.
     in particular `from ts import parse`
     """
-
-    doc = [Block(*b) for b in make_block_3(Lines(text.split("\n"))[:])]
-    # assert_block_lines(doc), "raw blocks"
-    doc = [x for pairs in doc for x in header_pass(pairs)]
-    doc = header_level_pass(doc)
-    doc = [x for pairs in doc for x in example_pass(pairs)]
-    doc = [x for pairs in doc for x in block_directive_pass(pairs)]
-    doc = deflist_pass(doc)
-    doc = [x for pairs in doc for x in paragraphs_pass(pairs)]
-
-    # TODO: third pass to set the header level for each header.
-    # TODO: forth pass to make sections.
 
     from .ts import parse
 
@@ -1833,15 +1351,9 @@ def parse_rst_to_papyri_tree(text):
         if text == "::":
             return []
         return items[0].children
-
     else:
         [section] = items
-        if section.children != doc:
-            return section.children
-        else:
-            return section.children
-
-    return doc
+        return section.children
 
 
 if __name__ == "__main__":
