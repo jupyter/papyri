@@ -534,7 +534,6 @@ class Section(Node):
             DefList,
             BlockDirective,
             BlockMath,
-            Example,
             BlockVerbatim,
             Param,
             BulletList,
@@ -601,7 +600,6 @@ class Param(Node):
             DefList,
             BlockDirective,
             BlockMath,
-            Example,
             BlockVerbatim,
             Admonition,
             BulletList,
@@ -881,12 +879,6 @@ class Block(Node):
 
     """
 
-    def __init__(self, lines, wh, ind, *, reason=None):
-        self.lines = Lines(lines)
-        self.wh = Lines(wh)
-        self.ind = Lines(ind)
-        self.reason = reason
-
     def __repr__(self):
         from typing import get_type_hints as gth
 
@@ -900,112 +892,6 @@ class BlockError(Block):
     @classmethod
     def from_block(cls, block):
         return cls(block.lines, block.wh, block.ind)
-
-
-class Line(Node):
-
-    _line: str
-    _number: int
-    _offset: int
-
-    def __init__(self, _line, _number, _offset=0):
-        assert isinstance(_line, str)
-        assert "\n" not in _line, _line
-        self._line = _line
-        self._number = _number
-        self._offset = _offset
-
-    def __eq__(self, other):
-        for attr in ["_line", "_number", "_offset"]:
-            if getattr(self, attr) != getattr(other, attr):
-                return False
-
-        return type(self) == type(other)
-
-    @classmethod
-    def _instance(cls):
-        return cls("", 0)
-
-    @property
-    def text(self):
-        return self._line.rstrip()[self._offset :]
-
-    @property
-    def blank(self):
-        return self._line.strip() == ""
-
-    def __getattr__(self, missing):
-        return getattr(self._line, missing)
-
-    def __repr__(self):
-        return f"<Line {self._number: 3d} {str(self.indent):>4}| {self._line[self._offset:]}>"
-
-    @property
-    def indent(self):
-        if self.blank:
-            return None
-        return len(self._line) - len(self._line.lstrip()) - self._offset
-
-
-class Lines(Node):
-
-    _lines: List[Line]
-
-    def __init__(self, _lines=None):
-        # assert False
-        if _lines is None:
-            _lines = []
-        assert isinstance(_lines, (list, Lines))
-        for l in _lines:
-            assert isinstance(l, (str, Line)), f"got {l}"
-            if isinstance(l, str):
-                assert "\n" not in l
-            if isinstance(l, Line):
-                assert "\n" not in l._line
-
-        self._lines = [
-            l if isinstance(l, Line) else Line(l, n) for n, l in enumerate(_lines)
-        ]
-
-    def __eq__(self, other):
-        return (type(self) == type(other)) and (self._lines == other._lines)
-
-    @classmethod
-    def _instance(cls):
-        return cls([])
-
-    def __iter__(self):
-        return iter(self._lines)
-
-    def __getitem__(self, sl):
-        if isinstance(sl, int):
-            return self._lines[sl]
-        else:
-            return Lines(self._lines[sl])
-
-    def __repr__(self):
-        rep = f"<Lines {len(self._lines)} lines:"
-        for l in self._lines:
-            rep += f"\n    {l}"
-        rep += ">"
-        return rep
-
-    def dedented(self):
-        d = min(l.indent for l in self._lines if l.indent is not None)
-
-        new_lines = []
-        for l in self._lines:
-            nl = Line(l._line, l._number, l._offset + d)
-            new_lines.append(nl)
-        return Lines(new_lines)
-
-    def __len__(self):
-        return len(self._lines)
-
-    def __add__(self, other):
-        if not isinstance(other, Lines):
-            return NotImplemented
-        return Lines(self._lines + other._lines)
 
 
 class Header:
@@ -1067,19 +953,6 @@ class BlockDirective(Block):
         self.directive_name = directive_name
         self.args0 = args0
         self.inner = inner
-
-
-class Comment(Block):
-    lines: Lines
-    wh: Lines
-    ind: Lines
-
-    def __init__(self, lines=None, wh=None, ind=None):
-        if None in (lines, wh, ind):
-            return
-        self.lines = lines
-        self.wh = wh
-        self.ind = ind
 
 
 class BlockVerbatim(Block):
@@ -1158,9 +1031,6 @@ class FieldListItem(Block):
 
 
 class DefListItem(Block):
-    lines: Lines
-    wh: Lines
-    ind: Lines
     dt: Paragraph  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
     dd: List[
@@ -1185,10 +1055,7 @@ class DefListItem(Block):
     def children(self, value):
         self.dt, *self.dd = value
 
-    def __init__(self, lines=None, wh=None, ind=None, dt=None, dd=None):
-        self.lines = lines
-        self.wh = wh
-        self.ind = ind
+    def __init__(self, dt=None, dd=None):
         self.dt = dt
         assert isinstance(dd, (list, type(None))), dd
         self.dd = dd
@@ -1243,17 +1110,6 @@ class SeeAlsoItem(Node):
         return (
             f"<{self.__class__.__name__}: {self.name} {self.type} {self.descriptions}>"
         )
-
-
-class Example(Block):
-    lines: Lines
-    wh: Lines
-    ind: Lines
-
-    def __init__(self, lines=None, wh=None, ind=None):
-        self.lines = lines
-        self.wh = wh
-        self.ind = ind
 
 
 def get_object(qual):
