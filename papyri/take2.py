@@ -1139,13 +1139,16 @@ def parse_rst_to_papyri_tree(text):
     from .ts import parse
 
     items = parse(text.encode())
-    if len(items) != 1:
-        if text == "::":
-            return []
-        return items[0].children
-    else:
+    if len(items) == 0:
+        return []
+    if len(items) == 1:
         [section] = items
         return section.children
+    else:
+        import ipdb
+
+        ipdb.set_trace()
+        raise ValueError(items)
 
 
 if __name__ == "__main__":
