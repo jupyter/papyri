@@ -81,7 +81,7 @@ def dedent_but_first(text):
     """
     simple version of `inspect.cleandoc` that does not trim empty lines
     """
-    assert isinstance(text, str)
+    assert isinstance(text, str), (text, type(text))
     a, *b = text.split("\n")
     return dedent(a) + "\n" + dedent("\n".join(b))
 

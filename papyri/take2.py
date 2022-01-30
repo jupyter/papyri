@@ -486,6 +486,9 @@ class Strong(Node):
     def __hash__(self):
         return hash(repr(self))
 
+    def is_whitespace(self):
+        return False
+
 
 class _XList(Node):
     value: List[
@@ -1147,23 +1150,22 @@ class Comment(Block):
 
 class BlockVerbatim(Block):
 
-    lines: Lines
+    value: str
 
-    def __init__(self, lines):
+    def __init__(self, value):
 
-        self.lines = lines
+        assert isinstance(value, str)
+        self.value = value
 
     def __eq__(self, other):
-        return (type(self) == type(other)) and (self.lines == other.lines)
+        return (type(self) == type(other)) and (self.value == other.value)
 
     @classmethod
     def _instance(cls):
         return cls("")
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} '{len(self.lines)}'> with\n" + indent(
-            "\n".join([str(l) for l in self.lines]), "    "
-        )
+        return f"<{self.__class__.__name__} '{len(self.value)}'>"
 
     def to_json(self):
         return serialize(self, type(self))

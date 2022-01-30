@@ -1411,7 +1411,8 @@ class Gen:
                     )
                 except Exception as e:
                     failure_collection["ErrorHelper1-" + str(type(e))].append(qa)
-                    continue
+                    raise
+                    # continue
 
                 try:
                     if item_docstring is None:
