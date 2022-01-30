@@ -34,7 +34,6 @@ from papyri.take2 import (
     EnumeratedList,
     FieldList,
     FieldListItem,
-    Lines,
     Paragraph,
     Section,
     Strong,
@@ -534,9 +533,6 @@ class TSVisitor:
                 _dd = self.visit(definition)
                 acc.append(
                     DefListItem(
-                        Lines(),
-                        Lines(),
-                        Lines(),
                         dt=self.visit_paragraph(term)[0],
                         dd=_dd,
                     )
@@ -551,9 +547,6 @@ class TSVisitor:
                 # TODO missing type
                 acc.append(
                     DefListItem(
-                        Lines(),
-                        Lines(),
-                        Lines(),
                         dt=Paragraph(compress_word(self.visit(term)), []),
                         dd=self.visit_paragraph(term),
                     )
