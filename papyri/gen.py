@@ -16,6 +16,7 @@ import inspect
 import json
 import logging
 import os
+import re
 import site
 import sys
 import warnings
@@ -1011,6 +1012,7 @@ class Gen:
             try:
                 sig = str(inspect.signature(target_item))
                 sig = qa.split(".")[-1] + sig
+                sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError):
                 pass
             # mutate argument ! BAD
