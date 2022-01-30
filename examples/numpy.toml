@@ -41,6 +41,10 @@ exclude = [
    "numpy.lib._datasource.Repository",
    "numpy.testing._private.decorators.setastest",
    "numpy.testing._private.decorators.slow",
+
+   # numpy.core.shape_base._concatenate_shapes has markdown and fences in the middle
+   # of this documentation. https://github.com/numpy/numpy/pull/20944
+   "numpy.core.shape_base._concatenate_shapes"
    ]
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'

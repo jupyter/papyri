@@ -1145,10 +1145,9 @@ def parse_rst_to_papyri_tree(text):
         [section] = items
         return section.children
     else:
-        import ipdb
-
-        ipdb.set_trace()
-        raise ValueError(items)
+        raise ValueError(
+            "The parsed text has more than one section, this is likely an error/invalid syntax."
+        )
 
 
 if __name__ == "__main__":

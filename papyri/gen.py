@@ -1079,10 +1079,6 @@ class Gen:
                     blob.content[section] = Section()
                 else:
                     tsc = ts.parse("\n".join(data).encode())
-                    if len(tsc) not in (0, 1):
-                        import ipdb
-
-                        ipdb.set_trace()
                     assert len(tsc) in (0, 1), (tsc, data)
                     if tsc:
                         tssc = tsc[0]

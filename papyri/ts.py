@@ -355,12 +355,6 @@ class TSVisitor:
 
     def visit_paragraph(self, node, prev_end=None):
         sub = self.visit(node.with_whitespace())
-        # if Word("Example") in sub:
-        # import ipdb
-
-        # ipdb.set_trace()
-        # sub = self.visit(node)
-        # print("SUB,", sub, node)
         acc = []
         acc2 = []
 
