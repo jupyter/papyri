@@ -418,10 +418,8 @@ class Renderer:
         return ("verbatim", verb.value)
 
     def render_BlockVerbatim(self, verb):
-        acc = []
-        for line in verb.lines:
-            acc.append(Text(line._line))
-        return urwid.Pile(acc)
+        acc = [Text(("verbatim", verb.value))]
+        return urwid.Padding(urwid.Pile(acc), left=4)
 
     def render_Paragraph(self, paragraph):
         from .take2 import Paragraph

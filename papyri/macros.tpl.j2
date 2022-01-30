@@ -119,9 +119,8 @@
         {{block_paragraph(obj)}}
        {% elif type == 'BlockVerbatim' %}
             <pre>
-           {%- for l in obj.lines.dedented() -%}
-{{-l.text}}{% if not loop.last %}{{-'\n'-}}{%- endif -%}
-           {%- endfor -%}</pre>
+           {{- obj.value -}}
+           </pre>
        {% elif type == 'Block' %}
            {{block(obj)}}
            {{unreachable(obj)}}

@@ -295,16 +295,16 @@ class TSVisitor:
 
     def visit_literal_block(self, node, prev_end=None):
         data = self.bytes[node.start_byte : node.end_byte].decode().splitlines()
-        ded = node.start_point[1]
+        dedent_amount = node.start_point[1]
+
+        # here we need to do a bit of custom logic to properly dedent
         acc = [data[0]]
         for x in data[1:]:
-            acc.append(x[ded:])
-        lines = Lines(acc)
-        if prev_end is not None:
-            for l in lines:
-                l._number += node.start_point[0] - prev_end[0]
+            # TODO : maybe assert here that what we remove is actually only whitespace ?
+            # should we have a blcok verbatim with the first node more indented than subsequent ones ?
+            acc.append(x[dedent_amount:])
 
-        b = BlockVerbatim(lines)
+        b = BlockVerbatim("\n".join(acc))
 
         # print(' '*self.depth*4, b)
         return [b]
@@ -397,12 +397,7 @@ class TSVisitor:
 
     def visit_doctest_block(self, node, prev_end=None) -> List[BlockVerbatim]:
         # TODO
-        # likely want to dispatch to the parse example routine.
-        return [
-            BlockVerbatim(
-                Lines(self.bytes[node.start_byte : node.end_byte].decode().splitlines())
-            )
-        ]
+        return self.visit_literal_block(node, prev_end)
 
     def visit_field(self, node, prev_end=None):
         return []

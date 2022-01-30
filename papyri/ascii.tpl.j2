@@ -76,9 +76,7 @@
    |   |{% elif type == 'Paragraph' %}
    |   |   |{{block_paragraph(obj)}}
    |   |{% elif type == 'BlockVerbatim' %}
-   |   |   |{%- for l in obj.lines -%}
-   |   |   |   |{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
-   |   |   |{%- endfor -%}
+   |   |   |{{obj.value}}
    |   |{% elif type == 'Block' %}
    |   |   |   |   |{{unreachable()}}
    |   |{% elif type == 'DefList' %}

@@ -43,9 +43,9 @@ def url(info, prefix="/p/"):
         assert info.version is None
         return info.path
     if info.kind == "examples":
-        return f"/{prefix}/{info.module}/{info.version}/examples/{info.path}"
+        return f"{prefix}{info.module}/{info.version}/examples/{info.path}"
     else:
-        return f"/{prefix}/{info.module}/{info.version}/api/{info.path}"
+        return f"{prefix}{info.module}/{info.version}/api/{info.path}"
 
 
 def unreachable(*obj):
