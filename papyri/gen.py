@@ -52,7 +52,7 @@ from .take2 import (
     Section,
     SeeAlsoItem,
     Text,
-    parse_rst_to_papyri_tree,
+    parse_rst_section,
 )
 from .tree import DirectiveVisiter
 from .utils import dedent_but_first, pos_to_nl, progress
@@ -327,7 +327,7 @@ def P2(lines) -> List[Node]:
         else:
             assert "\n" not in l._line
     assert lines, lines
-    blocks_data = parse_rst_to_papyri_tree("\n".join(lines))
+    blocks_data = parse_rst_section("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
     for block in blocks_data:

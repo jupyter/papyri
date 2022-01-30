@@ -1130,7 +1130,7 @@ def get_object(qual):
     return obj
 
 
-def parse_rst_to_papyri_tree(text):
+def parse_rst_section(text):
     """
     This should at some point be completely replaced by tree sitter.
     in particular `from ts import parse`
@@ -1144,10 +1144,7 @@ def parse_rst_to_papyri_tree(text):
     if len(items) == 1:
         [section] = items
         return section.children
-    else:
-        raise ValueError(
-            "The parsed text has more than one section, this is likely an error/invalid syntax."
-        )
+    raise ValueError("Multiple sections present")
 
 
 if __name__ == "__main__":
@@ -1157,6 +1154,6 @@ if __name__ == "__main__":
         what = "numpy"
     ex = get_object(what).__doc__
     ex = dedent_but_first(ex)
-    doc = parse_rst_to_papyri_tree(ex)
+    doc = parse_rst_section(ex)
     for b in doc:
         print(b)
