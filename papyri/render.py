@@ -421,7 +421,7 @@ async def _route(
     # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
     if template is None:
-        template = env.get_template("core.tpl.j2")
+        template = env.get_template("html.tpl.j2")
     if ref == "":
         # root = "*"
         # print("GLOB", f"{root}/*/papyri.json")
@@ -1009,7 +1009,7 @@ async def main(ascii: bool, html, dry_run, sidebar):
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
     env.globals["url"] = url
-    template = env.get_template("core.tpl.j2")
+    template = env.get_template("html.tpl.j2")
     document: Store
 
     x_, y_ = find_all_refs(store)

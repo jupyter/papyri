@@ -1,4 +1,4 @@
-{% extends "base.tpl.j2" %}
+{% extends "skeleton.tpl.j2" %}
 
 {% block plus %}
     {%- for section in doc.content.keys() if doc.content[section] and len(doc.content[section]) -%}
