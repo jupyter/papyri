@@ -16,6 +16,7 @@ import inspect
 import json
 import logging
 import os
+import re
 import site
 import sys
 import warnings
@@ -51,7 +52,7 @@ from .take2 import (
     Section,
     SeeAlsoItem,
     Text,
-    parse_rst_to_papyri_tree,
+    parse_rst_section,
 )
 from .tree import DirectiveVisiter
 from .utils import dedent_but_first, pos_to_nl, progress
@@ -326,7 +327,7 @@ def P2(lines) -> List[Node]:
         else:
             assert "\n" not in l._line
     assert lines, lines
-    blocks_data = parse_rst_to_papyri_tree("\n".join(lines))
+    blocks_data = parse_rst_section("\n".join(lines))
 
     # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
     for block in blocks_data:
@@ -1011,6 +1012,7 @@ class Gen:
             try:
                 sig = str(inspect.signature(target_item))
                 sig = qa.split(".")[-1] + sig
+                sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError):
                 pass
             # mutate argument ! BAD

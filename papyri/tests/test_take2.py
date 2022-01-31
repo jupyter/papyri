@@ -1,10 +1,11 @@
 import pytest
 
+from papyri.ts import parse
+
 from ..take2 import (
     BlockDirective,
     dedent_but_first,
     get_object,
-    parse_rst_to_papyri_tree,
 )
 
 
@@ -22,6 +23,6 @@ from ..take2 import (
 )
 def test_parse_blocks(target, type_, number):
 
-    blocks = parse_rst_to_papyri_tree(dedent_but_first(get_object(target).__doc__))
-    filtered = [b for b in blocks if type(b) == type_]
+    sections = parse(dedent_but_first(get_object(target).__doc__).encode())
+    filtered = [b for section in sections for b in section.children if type(b) == type_]
     assert len(filtered) == number
