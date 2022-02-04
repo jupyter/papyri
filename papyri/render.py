@@ -448,7 +448,7 @@ async def _route(
     known_refs, ref_map = find_all_refs(store)
 
     # technically incorrect we don't load backrefs
-    x_, y_, doc_blob = await _route_data(gstore)
+    x_, y_, doc_blob = await _route_data(gstore, ref, version, known_refs)
     assert x_ == known_refs
     assert y_ == ref_map
     assert version is not None
