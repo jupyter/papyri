@@ -96,7 +96,8 @@ def parse_script(script, ns, prev, config):
     script : str
         the script to tokenize and infer types on
     ns : dict
-        extra namespace to use with jedi's Interpreter.
+        Extra namespace to use with jedi's Interpreter. This will be used for
+        implicit imports, for example that `np` is interpreted as numpy.
     prev : str
         previous lines that lead to this.
 
@@ -173,7 +174,20 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     Parameters
     ----------
     doc
-        a docstring parsed into a NnumpyDoc document.
+        A docstring parsed into a NnumpyDoc document.
+
+    obj
+        The current object. It is common for the current object/function to not
+        have to be imported imported in docstrings. This should become a high
+        level option at some point. Note that for method classes, the class should
+        be made available but currently is not.
+
+    qa
+        The fully qualified name of current object
+    config : Config
+        Current configuration
+    log
+        Logger instance
 
     Examples
     --------
@@ -203,6 +217,13 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     but we can configure papyri to automatically detect
     when figures are created.
 
+    Notes
+    -----
+
+    We do not yet properly handle explicit exceptions in examples, and those are
+    seen as Papyri failures.
+
+    The capturing of matplotlib figures is also limited.
     """
     assert qa is not None
     blocks = list(map(splitcode, splitblank(doc["Examples"])))
@@ -240,8 +261,17 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                             if not wait_for_show:
                                 assert len(fig_managers) == 0
                             try:
-                                res, fig_managers = executor.exec(script)
+                                res, fig_managers, sout, serr = executor.exec(script)
                                 ce_status = "execed"
+                                out = "\n".join(item.out)
+                                if (out == repr(res)) or (
+                                    res is None and item.out == []
+                                ):
+                                    pass
+                                    # captured aoutput is the same ! we are good.
+                                else:
+                                    pass
+                                    # captured output differ TBD
                             except Exception:
                                 log.exception("error in execution: %s", qa)
                                 ce_status = "exception_in_exec"
@@ -312,6 +342,9 @@ def get_example_data(doc, *, obj, qa: str, config, log):
 
 
 def get_classes(code):
+    """
+    Extract Pygments token classes names for given code block
+    """
     list(lex(code, PythonLexer()))
     FMT = HtmlFormatter()
     classes = [FMT.ttype2class.get(x) for x, y in lex(code, PythonLexer())]
@@ -493,22 +526,7 @@ def gen_main(
         g.write(p)
 
 
-class TimeElapsedColumn(ProgressColumn):
-    """Renders estimated time remaining."""
-
-    # Only refresh twice a second to prevent jitter
-    max_refresh = 0.5
-
-    def render(self, task) -> RichText:
-        """Show time remaining."""
-
-        ctime = task.fields.get("ctime", None)
-        if ctime is None:
-            return RichText("-:--:--", style="progress.remaining")
-        ctime_delta = timedelta(seconds=int(ctime))
-        return RichText(
-            str(ctime_delta), style="progress.remaining", overflow="ellipsis"
-        )
+from .utils import TimeElapsedColumn
 
 
 def full_qual(obj):
@@ -851,8 +869,10 @@ class Gen:
             assert p.is_file()
             parts = p.relative_to(path).parts
             assert parts[-1].endswith("rst")
-
-            data = ts.parse(p.read_bytes())
+            try:
+                data = ts.parse(p.read_bytes())
+            except Exception as e:
+                raise type(e)(f"{p=}")
             blob = DocBlob()
             blob.arbitrary = data
             blob.content = {}
@@ -871,38 +891,48 @@ class Gen:
             self.docs[parts] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
             # data = p.read_bytes()
 
-    def write(self, where: Path):
+    def write_narrative(self, where: Path) -> None:
+        (where / "docs").mkdir(exist_ok=True)
+        for k, v in self.docs.items():
+            subf = where / "docs"
+            file = k[-1].rsplit(".", maxsplit=1)[0]
+            file = ":".join(k[:-1]) + ":" + file
+            subf.mkdir(exist_ok=True, parents=True)
+            with (subf / file).open("w") as f:
+                f.write(v)
+
+    def write_examples(self, where: Path) -> None:
+        (where / "examples").mkdir(exist_ok=True)
+        for k, v in self.examples.items():
+            with (where / "examples" / k).open("w") as f:
+                f.write(v)
+
+    def write_api(self, where: Path):
         """
-        Write a docbundle folder.
+        write the API section of the docbundles.
         """
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
             with (where / "module" / k).open("w") as f:
                 f.write(v)
 
-        (where / "docs").mkdir(exist_ok=True)
-        for k, v in self.docs.items():
-            subf = where / "docs"
-            for s in k[:-1]:
-                subf = subf / s
-            file = k[-1]
-            subf.mkdir(exist_ok=True)
-            with (subf / file).open("w") as f:
-                f.write(v)
+    def write(self, where: Path):
+        """
+        Write a docbundle folder.
+        """
+        self.write_api(where)
+        self.write_narrative(where)
+        self.write_examples(where)
+        self.write_assets(where)
+        with (where / "papyri.json").open("w") as f:
+            f.write(json.dumps(self.metadata, indent=2, sort_keys=True))
 
-        (where / "examples").mkdir(exist_ok=True)
-        for k, v in self.examples.items():
-            with (where / "examples" / k).open("w") as f:
-                f.write(v)
-
+    def write_assets(self, where: Path) -> None:
         assets = where / "assets"
         assets.mkdir()
         for k, v in self.bdata.items():
             with (assets / k).open("wb") as f:
                 f.write(v)
-
-        with (where / "papyri.json").open("w") as f:
-            f.write(json.dumps(self.metadata, indent=2, sort_keys=True))
 
     def put(self, path: str, data):
         """

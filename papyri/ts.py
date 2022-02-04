@@ -27,6 +27,7 @@ from papyri.take2 import (
     BlockQuote,
     BlockVerbatim,
     BulletList,
+    Comment,
     DefList,
     DefListItem,
     Directive,
@@ -34,9 +35,13 @@ from papyri.take2 import (
     EnumeratedList,
     FieldList,
     FieldListItem,
+    Options,
     Paragraph,
     Section,
     Strong,
+    Target,
+    SubstitutionRef,
+    Unimplemented,
     Verbatim,
     Word,
     Words,
@@ -126,6 +131,7 @@ class Node:
     def bytes(self):
         return self.node.bytes
 
+
     def __init__(self, node, *, _with_whitespace=True):
         self.node = node
         self._with_whitespace = _with_whitespace
@@ -179,7 +185,7 @@ class TSVisitor:
         self.root = root
         self.depth = 0
 
-    def show(self, node):
+    def as_text(self, node):
         return self.bytes[node.start_byte : node.end_byte].decode()
 
     def visit_document(self, node):
@@ -380,13 +386,11 @@ class TSVisitor:
 
     def visit_line_block(self, node, prev_end=None):
         # TODO
-        assert False
         return []
 
     def visit_substitution_reference(self, node, prev_end=None):
         # TODO
-        assert False
-        return []
+        return [SubstitutionRef(self.as_text(node))]
 
     def visit_doctest_block(self, node, prev_end=None) -> List[BlockVerbatim]:
         # TODO
@@ -397,16 +401,29 @@ class TSVisitor:
 
     def visit_field_list(self, node, prev_end=None):
         acc = []
-        for list_item in node.children:
-            assert list_item.type == "field"
-            _, name, _, body = list_item.children
-            a, b = compress_word(self.visit(name)), compress_word(self.visit(body))
-            # [_.to_json()for _ in a]
-            # [_.to_json() for _ in b]
-            f = FieldListItem(a, b)
-            acc.append(f)
-        return [FieldList(acc)]
-        return []
+
+        lens = {len(f.children) for f in node.children}
+        if lens == {3}:
+            # we likely have an option list
+            for list_item in node.children:
+                assert list_item.type == "field"
+                _, name, _ = list_item.children
+                # TODO, assert _ and _ are `:`
+                acc.append(self.as_text(name))
+            return [Options(acc)]
+
+        elif lens == {4}:
+            for list_item in node.children:
+                assert list_item.type == "field"
+                _, name, _, body = list_item.children
+                a, b = compress_word(self.visit(name)), compress_word(self.visit(body))
+                # [_.to_json()for _ in a]
+                # [_.to_json() for _ in b]
+                f = FieldListItem(a, b)
+                acc.append(f)
+            return [FieldList(acc)]
+        else:
+            raise ValueError("mixed len...")
 
     def visit_enumerated_list(self, node, prev_end=None):
         acc = []
@@ -418,26 +435,34 @@ class TSVisitor:
 
     def visit_target(self, node, prev_end=None):
         # TODO:
-        raise VisitTargetNotImplementedError()
-        return []
+        # raise VisitTargetNotImplementedError()
+        return [Unimplemented("target", self.as_text(node))]
 
     # def visit_arguments(self, node, prev_end=None):
     #    assert False
     #    return []
 
+    def visit_inline_target(self, node, prev_end):
+        # NotImplemented
+        return [Unimplemented("inline_target", self.as_text(node))]
+
     def visit_directive(self, node, prev_end=None):
+        # TODO:
+        # make it part of the type if a block directive (has, or not), a body.
 
         # directive_name: str
         # args0: List[str]
         ## TODO : this is likely wrong...
         # inner: Optional[Paragraph]
 
-        assert len(node.children) == 4, (
-            node.children,
-            self.bytes[node.start_byte : node.end_byte].decode(),
-        )
-
-        _, _role, cc, body = node.children
+        if len(node.children) == 4:
+            _, _role, cc, body = node.children
+            body_children = body.children
+        elif len(node.children) == 3:
+            _, _role, cc = node.children
+            body_children = []
+        else:
+            raise ValueError
 
         if _role.end_point != cc.start_point:
             block_data = self.bytes[node.start_byte : node.end_byte].decode()
@@ -447,8 +472,8 @@ class TSVisitor:
 
         role = self.bytes[_role.start_byte : _role.end_byte].decode()
 
-        if len(body.children) == 2:
-            arguments, content = body.children
+        if len(body_children) == 2:
+            arguments, content = body_children
             args0 = (
                 self.bytes[
                     arguments.children[0].start_byte : arguments.children[-1].end_byte
@@ -457,12 +482,23 @@ class TSVisitor:
                 .splitlines()
             )
         else:
-            [content] = body.children
-            args0 = []
+            if len(body_children) == 0:
+                pass
+            elif len(body_children) > 1:
+                content = [c for c in body_children if c.type == "content"]
+                content = content[0]
+                import warnings
 
-        stream_with_spaces = [
-            x for y in [(x, Word(" ")) for x in self.visit(content)] for x in y
-        ]
+                warnings.warn("TBD directive arguments")
+            else:
+                [content] = body_children
+            args0 = []
+        if len(body_children) == 0:
+            stream_with_spaces = []
+        else:
+            stream_with_spaces = [
+                x for y in [(x, Word(" ")) for x in self.visit(content)] for x in y
+            ]
         directive = BlockDirective(
             directive_name=role,
             args0=args0,
@@ -490,8 +526,8 @@ class TSVisitor:
 
     def visit_comment(self, node, prev_end=None):
         # TODO
-        raise VisitCommentNotImplementedError()
-        return []
+        return [Comment(self.bytes[node.start_byte : node.end_byte].decode())]
+        # raise VisitCommentNotImplementedError()
 
     def visit_strong(self, node, prev_end=None):
         return [
