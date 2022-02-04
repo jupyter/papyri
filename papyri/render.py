@@ -395,6 +395,15 @@ def compute_graph(gs, blob, key):
     return data
 
 
+async def _route_data(gstore, ref, version, known_refs):
+    root = ref.split("/")[0].split(".")[0]
+    key = Key(root, version, "module", ref)
+    gbytes = gstore.get(key).decode()
+    x_, y_ = find_all_refs(gstore)
+    doc_blob = load_one(gbytes, b"[]", known_refs=known_refs, strict=True)
+    return x_, y_, doc_blob
+
+
 async def _route(
     ref,
     store,
@@ -438,7 +447,8 @@ async def _route(
 
     known_refs, ref_map = find_all_refs(store)
 
-    x_, y_ = find_all_refs(gstore)
+    # technically incorrect we don't load backrefs
+    x_, y_, doc_blob = await _route_data(gstore)
     assert x_ == known_refs
     assert y_ == ref_map
     assert version is not None
@@ -475,7 +485,9 @@ async def _route(
         gbr_data = gstore.get_backref(key)
         gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
         # print("bytes_", bytes_[:40], "...")
-        doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
+
+        # TODO :here we used to load backref, restore above
+        # doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
 
         data = compute_graph(gstore, doc_blob, (root, version, "module", ref))
         json_str = json.dumps(data)
