@@ -248,6 +248,7 @@ class TreeReplacer:
                 "Code",
                 "Fig",
                 "Words",
+                "Comment",
                 "BlockQuote",
                 "BulletList",
                 "Directive",

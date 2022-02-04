@@ -383,6 +383,23 @@ class Ingester:
         self.ingest_dir = ingest_dir
         self.gstore = GraphStore(self.ingest_dir)
 
+    def _ingest_examples(self, path: Path, gstore, known_refs, aliases, version, root):
+
+        for _, fe in progress(
+            (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
+        ):
+            s = Section.from_json(json.loads(fe.read_text()))
+            visitor = DVR(
+                "TBD, supposed to be QA", known_refs, {}, aliases, version=version
+            )
+            s_code = visitor.visit(s)
+            refs = list(map(tuple, visitor._targets))
+            gstore.put(
+                Key(root, version, "examples", fe.name),
+                json.dumps(s_code.to_json(), indent=2).encode(),
+                refs,
+            )
+
     def ingest(self, path: Path, check: bool):
 
         gstore = self.gstore
@@ -401,20 +418,8 @@ class Ingester:
         # long : short
         aliases: Dict[str, str] = data.get("aliases", {})
         rev_aliases = {v: k for k, v in aliases.items()}
-        for _, fe in progress(
-            (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
-        ):
-            s = Section.from_json(json.loads(fe.read_text()))
-            visitor = DVR(
-                "TBD, supposed to be QA", known_refs, {}, aliases, version=version
-            )
-            s_code = visitor.visit(s)
-            refs = list(map(tuple, visitor._targets))
-            gstore.put(
-                Key(root, version, "examples", fe.name),
-                json.dumps(s_code.to_json(), indent=2).encode(),
-                refs,
-            )
+
+        self._ingest_examples(path, gstore, known_refs, aliases, version, root)
 
         for _, f1 in progress(
             (path / "module").glob("*"),
