@@ -400,6 +400,19 @@ class Ingester:
                 refs,
             )
 
+    def _ingest_assets(self, path, root, version, aliases, gstore):
+        for _, f2 in progress(
+            (path / "assets").glob("*"),
+            description=f"{path.name} Reading image files ...",
+        ):
+            gstore.put(Key(root, version, "assets", f2.name), f2.read_bytes(), [])
+
+        gstore.put(
+            Key(root, version, "meta", "papyri.json"),
+            json.dumps(aliases, indent=2).encode(),
+            [],
+        )
+
     def ingest(self, path: Path, check: bool):
 
         gstore = self.gstore
@@ -420,6 +433,7 @@ class Ingester:
         rev_aliases = {v: k for k, v in aliases.items()}
 
         self._ingest_examples(path, gstore, known_refs, aliases, version, root)
+        self._ingest_assets(path, root, version, aliases, gstore)
 
         for _, f1 in progress(
             (path / "module").glob("*"),
@@ -431,7 +445,7 @@ class Ingester:
                 rqa = normalise_ref(qa)
                 if rqa != qa:
                     # numpy weird thing
-                    print(f"skip {qa}")
+                    print(f"skip {qa=}, {rqa=}")
                     continue
                 assert rqa == qa, f"{rqa} !+ {qa}"
             try:
@@ -473,17 +487,6 @@ class Ingester:
                 if exists == "module":
                     sa.name.exists = True
                     sa.name.ref = resolved
-        for _, f2 in progress(
-            (path / "assets").glob("*"),
-            description=f"{path.name} Reading image files ...",
-        ):
-            gstore.put(Key(root, version, "assets", f2.name), f2.read_bytes(), [])
-
-        gstore.put(
-            Key(root, version, "meta", "papyri.json"),
-            json.dumps(aliases, indent=2).encode(),
-            [],
-        )
 
         for _, (qa, doc_blob) in progress(
             nvisited_items.items(), description=f"{path.name} Writing..."
