@@ -383,6 +383,13 @@ class Ingester:
         self.ingest_dir = ingest_dir
         self.gstore = GraphStore(self.ingest_dir)
 
+    def _ingest_narrative(self, path, gstore):
+
+        for console, document in progress(
+            (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
+        ):
+            pass
+
     def _ingest_examples(self, path: Path, gstore, known_refs, aliases, version, root):
 
         for _, fe in progress(
@@ -434,6 +441,7 @@ class Ingester:
 
         self._ingest_examples(path, gstore, known_refs, aliases, version, root)
         self._ingest_assets(path, root, version, aliases, gstore)
+        self._ingest_narrative(path, gstore)
 
         for _, f1 in progress(
             (path / "module").glob("*"),
