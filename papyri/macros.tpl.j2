@@ -192,12 +192,7 @@
        {% else %}
            <code>Some A {{type}} Not implemented yet</code>
            {{unreachable(type, obj)}}
-           {%- for l in obj.lines -%}
-{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
-           {%- endfor -%}</pre><pre>
-            {%- for l in obj.ind -%}
-{{l._line}}{% if not loop.last %}{{-'\n'-}}{% endif %}
-           {%- endfor -%}</pre>
+           </pre>
        {%- endif -%}
     {%- endif %}
 {%- endmacro %}

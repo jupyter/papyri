@@ -255,6 +255,9 @@ class TreeReplacer:
                 "SeeAlsoItems",
                 "Code2",
                 "BlockMath",
+                "Unimplemented",
+                "Options",
+                "SubstitutionRef",
             ]:
                 return [node]
             elif name in ["Text"]:

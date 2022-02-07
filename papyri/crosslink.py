@@ -72,7 +72,7 @@ def find_all_refs(store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
 @dataclass
 class IngestedBlobs(Node):
 
-    __slots__ = ("backrefs",) + (
+    __slots__ = (
         "_content",
         "refs",
         "ordered_sections",
@@ -179,6 +179,7 @@ class IngestedBlobs(Node):
         """
         Process a doc blob, to find all local and nonlocal references.
         """
+        assert isinstance(known_refs, frozenset)
         assert self._content is not None
         local_refs = []
         sections_ = [
@@ -211,7 +212,7 @@ class IngestedBlobs(Node):
 
             local_refs = local_refs + [
                 [u.strip() for u in x[0].split(",")]
-                for x in self.content[s]
+                for x in self.content.get(s, [])
                 if isinstance(x, Param)
             ]
 
@@ -220,10 +221,11 @@ class IngestedBlobs(Node):
 
         local_refs = frozenset(flat(local_refs))
 
-        assert isinstance(known_refs, frozenset)
         assert self.version not in ("", "??"), self.version
         visitor = DVR(self.qa, known_refs, local_refs, aliases, version=self.version)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
+            if section not in self.content:
+                continue
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
@@ -319,7 +321,7 @@ def load_one_uningested(
 
         _local_refs = _local_refs + [
             [u.strip() for u in x[0].split(",")]
-            for x in blob.content[s]
+            for x in blob.content.get(s, [])
             if isinstance(x, Param)
         ]
 
@@ -330,8 +332,8 @@ def load_one_uningested(
 
     visitor = DirectiveVisiter(qa, frozenset(), local_refs, aliases=aliases)
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-        assert section in blob.content
-        blob.content[section] = visitor.visit(blob.content[section])
+        if section in blob.content:
+            blob.content[section] = visitor.visit(blob.content[section])
 
     acc1 = []
     for sec in blob.arbitrary:
@@ -388,7 +390,28 @@ class Ingester:
         for console, document in progress(
             (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
         ):
-            pass
+            doc = load_one_uningested(
+                document.read_text(),
+                None,
+                qa=document.name,
+                known_refs=frozenset(),
+                aliases={},
+                version=None,
+            )
+            ref = document.name
+
+            module, version = path.name.split("_")
+            key = Key(module, "1.22.1", "docs", ref)
+            doc.logo = ""
+            doc.version = version
+            doc.validate()
+            js = doc.to_json()
+            del js["backrefs"]
+            gstore.put(
+                key,
+                json.dumps(js, indent=2).encode(),
+                [],
+            )
 
     def _ingest_examples(self, path: Path, gstore, known_refs, aliases, version, root):
 

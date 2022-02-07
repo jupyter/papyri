@@ -34,6 +34,7 @@ logging.basicConfig(
 
 log = logging.getLogger("papyri")
 
+CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 def url(info, prefix="/p/"):
     assert isinstance(info, RefInfo)
@@ -49,6 +50,7 @@ def url(info, prefix="/p/"):
 
 
 def unreachable(*obj):
+    return str(obj)
     assert False, f"Unreachable: {obj=}"
 
 
@@ -89,7 +91,6 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
     env.globals["len"] = len
     env.globals["url"] = url
     env.globals["unreachable"] = unreachable
-    css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
     pap_files = store.glob("*/*/papyri.json")
     parts = {module: []}
@@ -109,7 +110,7 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
     doc.logo = None
 
     return env.get_template("examples.tpl.j2").render(
-        pygment_css=css_data,
+        pygment_css=CSS_DATA,
         module=module,
         parts=parts,
         ext=ext,
@@ -396,6 +397,7 @@ def compute_graph(gs, blob, key):
 
 
 async def _route_data(gstore, ref, version, known_refs):
+    print("!!", ref)
     root = ref.split("/")[0].split(".")[0]
     key = Key(root, version, "module", ref)
     gbytes = gstore.get(key).decode()
@@ -404,150 +406,193 @@ async def _route_data(gstore, ref, version, known_refs):
     return x_, y_, doc_blob
 
 
-async def _route(
-    ref,
-    store,
-    version=None,
-    env=None,
-    template=None,
-    gstore=None,
-    *,
-    sidebar,
-    prefix="/p/",
-):
-    assert not ref.endswith(".html")
-    if env is None:
+class HtmlRenderer:
+    def __init__(self, store):
+        self.store = store
+
+    async def _serve_narrative(self, package: str, version: str, ref: str):
+        """
+        Serve the narrative part of the documentation for given package
+        """
+        # return "Not Implemented"
+        bytes = self.store.get(Key(package, version, "docs", ref))
+        doc_blob = load_one(bytes, b"[]", known_refs=frozenset(), strict=True)
+        print(doc_blob)
+        # return "OK"
+
         env = Environment(
             loader=FileSystemLoader(os.path.dirname(__file__)),
             autoescape=select_autoescape(["html", "tpl.j2"]),
             undefined=StrictUndefined,
         )
+        prefix = "/p/"
         env.globals["len"] = len
         env.globals["url"] = lambda x: url(x, prefix)
         env.globals["unreachable"] = unreachable
-    env.globals["prefix"] = prefix
-    env.globals["sidebar"] = sidebar
-    # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
-
-    if template is None:
+        env.globals["prefix"] = prefix
+        env.globals["sidebar"] = True
+        # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
         template = env.get_template("html.tpl.j2")
-    if ref == "":
-        # root = "*"
-        # print("GLOB", f"{root}/*/papyri.json")
-        ref = "papyri"
-        import papyri
 
-        version = papyri.__version__
-    root = ref.split(".")[0]
-
-    # papp_files = store.glob(f"{root}/*/papyri.json")
-    # TODO: deal with versions
-    # for p in papp_files:
-    #    aliases = json.loads(await p.read_text())
-
-    known_refs, ref_map = find_all_refs(store)
-
-    # technically incorrect we don't load backrefs
-    x_, y_, doc_blob = await _route_data(gstore, ref, version, known_refs)
-    assert x_ == known_refs
-    assert y_ == ref_map
-    assert version is not None
-
-    siblings = compute_siblings_II(ref, known_refs)
-    # print(siblings)
-
-    # End computing siblings.
-    if version is not None:
-        file_ = store / root / version / "module" / f"{ref}"
-
-    else:
-        assert False
-        # files = list((store / root).glob(f"*/module/{ge(ref)}"))
-    if await file_.exists():
-        # The reference we are trying to view exists;
-        # we will now just render it.
-        # bytes_ = await file_.read_text()
-        key = Key(root, version, "module", ref)
-        gbytes = gstore.get(key).decode()
-        # assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
-        # assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
-        assert root is not None
-        # assert version is not None
-        brpath = store / root / version / "module" / f"{ref}.br"
-        print(brpath)
-        if await brpath.exists():
-            br = await brpath.read_text()
-            # TODO: update to new way of getting backrefs.
-            br = None
-        else:
-            br = None
-
-        gbr_data = gstore.get_backref(key)
-        gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
-        # print("bytes_", bytes_[:40], "...")
-
-        # TODO :here we used to load backref, restore above
-        # doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
-
-        data = compute_graph(gstore, doc_blob, (root, version, "module", ref))
-        json_str = json.dumps(data)
-        parts_links = {}
-        acc = ""
-        for k in siblings.keys():
-            acc += k
-            parts_links[k] = acc
-            acc += "."
-
-        css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
+        # ...
         return render_one(
             template=template,
             doc=doc_blob,
-            qa=ref,
+            qa="numpy",
             ext="",
-            parts=siblings,
-            parts_links=parts_links,
-            backrefs=doc_blob.backrefs,
-            pygment_css=css_data,
-            graph=json_str,
-            sidebar=sidebar,
+            parts={"numpy": []},
+            parts_links={},
+            backrefs=[],
+            pygment_css=CSS_DATA,
+            graph="{}",
+            sidebar=True,
         )
-    else:
-        # The reference we are trying to render does not exists
-        # just try to have a nice  error page and try to find local reference and
-        # use the phantom file to list the backreferences to this.
-        # it migt be a page, or a module we do not have documentation about.
-        r = ref.split(".")[0]
-        this_module_known_refs = [
-            str(s.name)
-            for s in store.glob(f"{r}/*/module/{ref}")
-            if not s.name.endswith(".br")
-        ]
-        x2 = [x.path for x in gstore.glob((r, None, "module", ref))]
-        assert set(x2) == set(this_module_known_refs), (
-            set(x2) - set(this_module_known_refs),
-            (set(this_module_known_refs) - set(x2)),
-        )
-        brpath = store / "__phantom__" / f"{ref}.json"
-        if await brpath.exists():
-            br = json.loads(await brpath.read_text())
+
+    async def _route(
+        self,
+        ref,
+        store,
+        version=None,
+        env=None,
+        template=None,
+        gstore=None,
+        *,
+        sidebar,
+        prefix="/p/",
+    ):
+        assert not ref.endswith(".html")
+        if env is None:
+            env = Environment(
+                loader=FileSystemLoader(os.path.dirname(__file__)),
+                autoescape=select_autoescape(["html", "tpl.j2"]),
+                undefined=StrictUndefined,
+            )
+            env.globals["len"] = len
+            env.globals["url"] = lambda x: url(x, prefix)
+            env.globals["unreachable"] = unreachable
+        env.globals["prefix"] = prefix
+        env.globals["sidebar"] = sidebar
+        # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
+
+        if template is None:
+            template = env.get_template("html.tpl.j2")
+        if ref == "":
+            # root = "*"
+            # print("GLOB", f"{root}/*/papyri.json")
+            ref = "papyri"
+            import papyri
+
+            version = papyri.__version__
+        root = ref.split(".")[0]
+
+        # papp_files = store.glob(f"{root}/*/papyri.json")
+        # TODO: deal with versions
+        # for p in papp_files:
+        #    aliases = json.loads(await p.read_text())
+
+        known_refs, ref_map = find_all_refs(store)
+
+        # technically incorrect we don't load backrefs
+        x_, y_, doc_blob = await _route_data(gstore, ref, version, known_refs)
+        assert x_ == known_refs
+        assert y_ == ref_map
+        assert version is not None
+
+        siblings = compute_siblings_II(ref, known_refs)
+        # print(siblings)
+
+        # End computing siblings.
+        if version is not None:
+            file_ = store / root / version / "module" / f"{ref}"
+
         else:
-            br = []
+            assert False
+            # files = list((store / root).glob(f"*/module/{ge(ref)}"))
+        if await file_.exists():
+            # The reference we are trying to view exists;
+            # we will now just render it.
+            # bytes_ = await file_.read_text()
+            key = Key(root, version, "module", ref)
+            gbytes = gstore.get(key).decode()
+            # assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
+            # assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
+            assert root is not None
+            # assert version is not None
+            brpath = store / root / version / "module" / f"{ref}.br"
+            print(brpath)
+            if await brpath.exists():
+                br = await brpath.read_text()
+                # TODO: update to new way of getting backrefs.
+                br = None
+            else:
+                br = None
 
-        # compute a tree from all the references we have to have a nice browsing
-        # interfaces.
-        tree = {}
-        for f in this_module_known_refs:
-            sub = tree
-            parts = f.split(".")[len(ref.split(".")) :]
-            for part in parts:
-                if part not in sub:
-                    sub[part] = {}
-                sub = sub[part]
+            gbr_data = gstore.get_backref(key)
+            gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
+            # print("bytes_", bytes_[:40], "...")
 
-            sub["__link__"] = f
+            # TODO :here we used to load backref, restore above
+            # doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
 
-        error = env.get_template("404.tpl.j2")
-        return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
+            data = compute_graph(gstore, doc_blob, (root, version, "module", ref))
+            json_str = json.dumps(data)
+            parts_links = {}
+            acc = ""
+            for k in siblings.keys():
+                acc += k
+                parts_links[k] = acc
+                acc += "."
+
+            return render_one(
+                template=template,
+                doc=doc_blob,
+                qa=ref,
+                ext="",
+                parts=siblings,
+                parts_links=parts_links,
+                backrefs=doc_blob.backrefs,
+                pygment_css=css_data,
+                graph=json_str,
+                sidebar=sidebar,
+            )
+        else:
+            # The reference we are trying to render does not exists
+            # just try to have a nice  error page and try to find local reference and
+            # use the phantom file to list the backreferences to this.
+            # it migt be a page, or a module we do not have documentation about.
+            r = ref.split(".")[0]
+            this_module_known_refs = [
+                str(s.name)
+                for s in store.glob(f"{r}/*/module/{ref}")
+                if not s.name.endswith(".br")
+            ]
+            x2 = [x.path for x in gstore.glob((r, None, "module", ref))]
+            assert set(x2) == set(this_module_known_refs), (
+                set(x2) - set(this_module_known_refs),
+                (set(this_module_known_refs) - set(x2)),
+            )
+            brpath = store / "__phantom__" / f"{ref}.json"
+            if await brpath.exists():
+                br = json.loads(await brpath.read_text())
+            else:
+                br = []
+
+            # compute a tree from all the references we have to have a nice browsing
+            # interfaces.
+            tree = {}
+            for f in this_module_known_refs:
+                sub = tree
+                parts = f.split(".")[len(ref.split(".")) :]
+                for part in parts:
+                    if part not in sub:
+                        sub[part] = {}
+                    sub = sub[part]
+
+                sub["__link__"] = f
+
+            error = env.get_template("404.tpl.j2")
+            return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
+
 
 
 async def img(package, version, subpath=None) -> Optional[bytes]:
@@ -580,9 +625,13 @@ def serve(*, sidebar: bool):
 
     store = Store(str(ingest_dir))
     gstore = GraphStore(ingest_dir)
+    html_renderer = HtmlRenderer(gstore)
 
     async def full(package, version, sub, ref):
-        return await _route(ref, store, version, gstore=gstore, sidebar=sidebar)
+        assert sub == "api"
+        return await html_renderer._route(
+            ref, store, version, gstore=gstore, sidebar=sidebar
+        )
 
     async def full_gallery(module, version):
         return await gallery(module, store, version, gstore=gstore, sidebar=sidebar)
@@ -608,7 +657,6 @@ def serve(*, sidebar: bool):
             sidebar=sidebar,
         )
 
-    # return await _route(ref, GHStore(Path('.')))
 
     app.route("/logo.png")(logo)
     app.route("/favicon.ico")(static("favicon.ico"))
@@ -616,6 +664,7 @@ def serve(*, sidebar: bool):
     app.route("/p/<package>/<version>/img/<path:subpath>")(img)
     app.route("/p/<module>/<version>/examples/<path:subpath>")(ex)
     app.route("/p/<module>/<version>/gallery")(full_gallery)
+    app.route("/p/<package>/<version>//<ref>")(html_renderer._serve_narrative)
     app.route("/p/<package>/<version>/<sub>/<ref>")(full)
     app.route("/gallery/")(gr)
     app.route("/gallery/<module>")(g)

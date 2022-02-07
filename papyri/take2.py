@@ -502,6 +502,7 @@ class _XList(Node):
             BlockVerbatim,
             BlockDirective,
             Unimplemented,
+            Admonition,
         ]
     ]
 
@@ -663,6 +664,9 @@ class Unimplemented(Node):
         self.placeholder = placeholder
         self.value = value
 
+    def __repr__(self):
+        return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
+
 
 class _Dummy(Node):
     value: str
@@ -818,7 +822,19 @@ class Paragraph(Node):
         inline = []
         for n in new:
             if isinstance(
-                n, (Word, Words, Directive, Verbatim, Link, Math, Strong, Emph)
+                n,
+                (
+                    Word,
+                    Words,
+                    Directive,
+                    Verbatim,
+                    Link,
+                    Math,
+                    Strong,
+                    Emph,
+                    SubstitutionRef,
+                    Unimplemented,
+                ),
             ):
                 inline.append(n)
             else:
@@ -827,7 +843,7 @@ class Paragraph(Node):
             if isinstance(n, (Paragraph, BlockVerbatim, BulletList, EnumeratedList)):
                 inner.append(n)
 
-        assert len(inner) + len(inline) == len(new)
+        assert len(inner) + len(inline) == len(new), (inner, inline, new)
 
         self.inner = inner
         self.inline = inline
