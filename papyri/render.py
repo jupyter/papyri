@@ -407,8 +407,20 @@ async def _route_data(gstore, ref, version, known_refs):
 
 
 class HtmlRenderer:
-    def __init__(self, store):
+    def __init__(self, store, *, sidebar):
         self.store = store
+        prefix = "/p/"
+        self.env = Environment(
+            loader=FileSystemLoader(os.path.dirname(__file__)),
+            autoescape=select_autoescape(["html", "tpl.j2"]),
+            undefined=StrictUndefined,
+        )
+        self.env.globals["len"] = len
+        self.env.globals["url"] = lambda x: url(x, prefix)
+        self.env.globals["unreachable"] = unreachable
+        self.env.globals["prefix"] = prefix
+        self.env.globals["sidebar"] = sidebar
+        self.sidebar = sidebar
 
     async def _serve_narrative(self, package: str, version: str, ref: str):
         """
@@ -420,19 +432,7 @@ class HtmlRenderer:
         print(doc_blob)
         # return "OK"
 
-        env = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__)),
-            autoescape=select_autoescape(["html", "tpl.j2"]),
-            undefined=StrictUndefined,
-        )
-        prefix = "/p/"
-        env.globals["len"] = len
-        env.globals["url"] = lambda x: url(x, prefix)
-        env.globals["unreachable"] = unreachable
-        env.globals["prefix"] = prefix
-        env.globals["sidebar"] = True
-        # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
-        template = env.get_template("html.tpl.j2")
+        template = self.env.get_template("html.tpl.j2")
 
         # ...
         return render_one(
@@ -445,7 +445,7 @@ class HtmlRenderer:
             backrefs=[],
             pygment_css=CSS_DATA,
             graph="{}",
-            sidebar=True,
+            sidebar=self.sidebar,
         )
 
     async def _route(
@@ -454,24 +454,12 @@ class HtmlRenderer:
         store,
         version=None,
         gstore=None,
-        *,
-        sidebar,
-        prefix="/p/",
     ):
         assert not ref.endswith(".html")
         assert version is not None
         assert ref != ""
-        env = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__)),
-            autoescape=select_autoescape(["html", "tpl.j2"]),
-            undefined=StrictUndefined,
-        )
-        env.globals["len"] = len
-        env.globals["url"] = lambda x: url(x, prefix)
-        env.globals["unreachable"] = unreachable
-        env.globals["prefix"] = prefix
-        env.globals["sidebar"] = sidebar
-        # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
+
+        env = self.env
 
         template = env.get_template("html.tpl.j2")
         root = ref.split(".")[0]
@@ -537,7 +525,7 @@ class HtmlRenderer:
                 backrefs=doc_blob.backrefs,
                 pygment_css=CSS_DATA,
                 graph=json_str,
-                sidebar=sidebar,
+                sidebar=self.sidebar,
             )
         else:
             # The reference we are trying to render does not exists
@@ -609,12 +597,10 @@ def serve(*, sidebar: bool):
 
     store = Store(str(ingest_dir))
     gstore = GraphStore(ingest_dir)
-    html_renderer = HtmlRenderer(gstore)
+    html_renderer = HtmlRenderer(gstore, sidebar=sidebar)
 
-    async def full(package, version, sub, ref):
-        return await html_renderer._route(
-            ref, store, version, gstore=gstore, sidebar=sidebar
-        )
+    async def full(package, version, ref):
+        return await html_renderer._route(ref, store, version, gstore=gstore)
 
     async def full_gallery(module, version):
         return await gallery(module, store, version, gstore=gstore, sidebar=sidebar)
