@@ -453,42 +453,28 @@ class HtmlRenderer:
         ref,
         store,
         version=None,
-        env=None,
-        template=None,
         gstore=None,
         *,
         sidebar,
         prefix="/p/",
     ):
         assert not ref.endswith(".html")
-        if env is None:
-            env = Environment(
-                loader=FileSystemLoader(os.path.dirname(__file__)),
-                autoescape=select_autoescape(["html", "tpl.j2"]),
-                undefined=StrictUndefined,
-            )
-            env.globals["len"] = len
-            env.globals["url"] = lambda x: url(x, prefix)
-            env.globals["unreachable"] = unreachable
+        assert version is not None
+        assert ref != ""
+        env = Environment(
+            loader=FileSystemLoader(os.path.dirname(__file__)),
+            autoescape=select_autoescape(["html", "tpl.j2"]),
+            undefined=StrictUndefined,
+        )
+        env.globals["len"] = len
+        env.globals["url"] = lambda x: url(x, prefix)
+        env.globals["unreachable"] = unreachable
         env.globals["prefix"] = prefix
         env.globals["sidebar"] = sidebar
         # env.globals["unreachable"] = lambda *x: "UNREACHABLELLLLL" + str(x)
 
-        if template is None:
-            template = env.get_template("html.tpl.j2")
-        if ref == "":
-            # root = "*"
-            # print("GLOB", f"{root}/*/papyri.json")
-            ref = "papyri"
-            import papyri
-
-            version = papyri.__version__
+        template = env.get_template("html.tpl.j2")
         root = ref.split(".")[0]
-
-        # papp_files = store.glob(f"{root}/*/papyri.json")
-        # TODO: deal with versions
-        # for p in papp_files:
-        #    aliases = json.loads(await p.read_text())
 
         known_refs, ref_map = find_all_refs(store)
 
@@ -499,12 +485,10 @@ class HtmlRenderer:
         assert version is not None
 
         siblings = compute_siblings_II(ref, known_refs)
-        # print(siblings)
 
         # End computing siblings.
         if version is not None:
             file_ = store / root / version / "module" / f"{ref}"
-
         else:
             assert False
             # files = list((store / root).glob(f"*/module/{ge(ref)}"))
@@ -551,7 +535,7 @@ class HtmlRenderer:
                 parts=siblings,
                 parts_links=parts_links,
                 backrefs=doc_blob.backrefs,
-                pygment_css=css_data,
+                pygment_css=CSS_DATA,
                 graph=json_str,
                 sidebar=sidebar,
             )
@@ -628,7 +612,6 @@ def serve(*, sidebar: bool):
     html_renderer = HtmlRenderer(gstore)
 
     async def full(package, version, sub, ref):
-        assert sub == "api"
         return await html_renderer._route(
             ref, store, version, gstore=gstore, sidebar=sidebar
         )
@@ -664,8 +647,8 @@ def serve(*, sidebar: bool):
     app.route("/p/<package>/<version>/img/<path:subpath>")(img)
     app.route("/p/<module>/<version>/examples/<path:subpath>")(ex)
     app.route("/p/<module>/<version>/gallery")(full_gallery)
-    app.route("/p/<package>/<version>//<ref>")(html_renderer._serve_narrative)
-    app.route("/p/<package>/<version>/<sub>/<ref>")(full)
+    app.route("/p/<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
+    app.route("/p/<package>/<version>/api/<ref>")(full)
     app.route("/gallery/")(gr)
     app.route("/gallery/<module>")(g)
     app.route("/")(index)
