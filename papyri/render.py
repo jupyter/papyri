@@ -122,82 +122,6 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
     )
 
 
-async def gallery(module, store, version, ext="", gstore=None, *, sidebar):
-    assert gstore is not None
-
-    m = defaultdict(lambda: [])
-    assert gstore is not None
-    if gstore:
-        res = gstore.glob((module, version, "assets", None))
-        backrefs = set()
-        for key in res:
-            brs = {tuple(x) for x in gstore.get_backref(key)}
-            backrefs = backrefs.union(brs)
-
-    for key in backrefs:
-        data = json.loads(gstore.get(Key(*key)).decode())
-        data["backrefs"] = []
-
-        i = IngestedBlobs.from_json(data)
-        i.process(frozenset(), {})
-
-        for k in [
-            u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
-        ]:
-            module, v, kind, _path = key
-            # module, filename, link
-            impath = f"/p/{module}/{v}/img/{k}"
-            link = f"/p/{module}/{v}/api/{_path}"
-            # figmap.append((impath, link, name)
-            m[module].append((impath, link, _path))
-
-    for target_path in store.glob(f"{module}/{version}/examples/*"):
-        data = json.loads(await target_path.read_text())
-        from .take2 import Section
-
-        s = Section.from_json(data)
-
-        for k in [u.value for u in s.children if u.__class__.__name__ == "Fig"]:
-            module, v, _, _path = target_path.path.parts[-4:]
-
-            # module, filename, link
-            impath = f"/p/{module}/{v}/img/{k}"
-            link = f"/p/{module}/{v}/examples/{target_path.name}"
-            name = target_path.name
-            # figmap.append((impath, link, name)
-            m[module].append((impath, link, name))
-
-    env = Environment(
-        loader=FileSystemLoader(os.path.dirname(__file__)),
-        autoescape=select_autoescape(["html", "tpl.j2"]),
-        undefined=StrictUndefined,
-    )
-    env.globals["len"] = len
-    env.globals["url"] = url
-    env.globals["sidebar"] = sidebar
-
-    class D:
-        pass
-
-    doc = D()
-    doc.logo = "logo.png"
-
-    pap_files = store.glob("*/*/papyri.json")
-    parts = {module: []}
-    for pp in pap_files:
-        mod, ver = pp.path.parts[-3:-1]
-        parts[module].append((RefInfo(mod, ver, "api", mod), mod))
-
-    return env.get_template("gallery.tpl.j2").render(
-        figmap=m,
-        pygment_css="",
-        module=module,
-        parts=parts,
-        ext=ext,
-        version=version,
-        parts_links=defaultdict(lambda: ""),
-        doc=doc,
-    )
 
 
 # here we compute the siblings at each level; as well as one level down
@@ -407,8 +331,9 @@ async def _route_data(gstore, ref, version, known_refs):
 
 
 class HtmlRenderer:
-    def __init__(self, store, *, sidebar):
+    def __init__(self, store, *, sidebar, old_store):
         self.store = store
+        self.old_store = old_store
         prefix = "/p/"
         self.env = Environment(
             loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -421,6 +346,80 @@ class HtmlRenderer:
         self.env.globals["prefix"] = prefix
         self.env.globals["sidebar"] = sidebar
         self.sidebar = sidebar
+
+    async def gallery(self, module, version, ext=""):
+
+        figmap = defaultdict(lambda: [])
+        res = self.store.glob((module, version, "assets", None))
+        backrefs = set()
+        for key in res:
+            brs = {tuple(x) for x in self.store.get_backref(key)}
+            backrefs = backrefs.union(brs)
+
+        for key in backrefs:
+            data = json.loads(self.store.get(Key(*key)).decode())
+            data["backrefs"] = []
+
+            i = IngestedBlobs.from_json(data)
+            i.process(frozenset(), {})
+
+            for k in [
+                u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
+            ]:
+                module, v, kind, _path = key
+                # module, filename, link
+                impath = f"/p/{module}/{v}/img/{k}"
+                link = f"/p/{module}/{v}/api/{_path}"
+                # figmap.append((impath, link, name)
+                figmap[module].append((impath, link, _path))
+
+        for target_path in self.old_store.glob(f"{module}/{version}/examples/*"):
+            data = json.loads(await target_path.read_text())
+            from .take2 import Section
+
+            s = Section.from_json(data)
+
+            for k in [u.value for u in s.children if u.__class__.__name__ == "Fig"]:
+                module, v, _, _path = target_path.path.parts[-4:]
+
+                # module, filename, link
+                impath = f"/p/{module}/{v}/img/{k}"
+                link = f"/p/{module}/{v}/examples/{target_path.name}"
+                name = target_path.name
+                # figmap.append((impath, link, name)
+                figmap[module].append((impath, link, name))
+
+        env = Environment(
+            loader=FileSystemLoader(os.path.dirname(__file__)),
+            autoescape=select_autoescape(["html", "tpl.j2"]),
+            undefined=StrictUndefined,
+        )
+        env.globals["len"] = len
+        env.globals["url"] = url
+        env.globals["sidebar"] = self.sidebar
+
+        class D:
+            pass
+
+        doc = D()
+        doc.logo = "logo.png"
+
+        pap_files = self.old_store.glob("*/*/papyri.json")
+        parts = {module: []}
+        for pp in pap_files:
+            mod, ver = pp.path.parts[-3:-1]
+            parts[module].append((RefInfo(mod, ver, "api", mod), mod))
+
+        return env.get_template("gallery.tpl.j2").render(
+            figmap=figmap,
+            pygment_css="",
+            module=module,
+            parts=parts,
+            ext=ext,
+            version=version,
+            parts_links=defaultdict(lambda: ""),
+            doc=doc,
+        )
 
     async def _serve_narrative(self, package: str, version: str, ref: str):
         """
@@ -467,7 +466,7 @@ class HtmlRenderer:
         known_refs, ref_map = find_all_refs(store)
 
         # technically incorrect we don't load backrefs
-        x_, y_, doc_blob = await _route_data(gstore, ref, version, known_refs)
+        x_, y_, doc_blob = await _route_data(self.store, ref, version, known_refs)
         assert x_ == known_refs
         assert y_ == ref_map
         assert version is not None
@@ -485,7 +484,7 @@ class HtmlRenderer:
             # we will now just render it.
             # bytes_ = await file_.read_text()
             key = Key(root, version, "module", ref)
-            gbytes = gstore.get(key).decode()
+            gbytes = self.store.get(key).decode()
             # assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
             # assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
             assert root is not None
@@ -499,14 +498,14 @@ class HtmlRenderer:
             else:
                 br = None
 
-            gbr_data = gstore.get_backref(key)
+            gbr_data = self.store.get_backref(key)
             gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
             # print("bytes_", bytes_[:40], "...")
 
             # TODO :here we used to load backref, restore above
             # doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
 
-            data = compute_graph(gstore, doc_blob, (root, version, "module", ref))
+            data = compute_graph(self.store, doc_blob, (root, version, "module", ref))
             json_str = json.dumps(data)
             parts_links = {}
             acc = ""
@@ -538,7 +537,7 @@ class HtmlRenderer:
                 for s in store.glob(f"{r}/*/module/{ref}")
                 if not s.name.endswith(".br")
             ]
-            x2 = [x.path for x in gstore.glob((r, None, "module", ref))]
+            x2 = [x.path for x in self.store.glob((r, None, "module", ref))]
             assert set(x2) == set(this_module_known_refs), (
                 set(x2) - set(this_module_known_refs),
                 (set(this_module_known_refs) - set(x2)),
@@ -597,19 +596,19 @@ def serve(*, sidebar: bool):
 
     store = Store(str(ingest_dir))
     gstore = GraphStore(ingest_dir)
-    html_renderer = HtmlRenderer(gstore, sidebar=sidebar)
+    html_renderer = HtmlRenderer(gstore, sidebar=sidebar, old_store=store)
 
     async def full(package, version, ref):
-        return await html_renderer._route(ref, store, version, gstore=gstore)
+        return await html_renderer._route(ref, store, version)
 
     async def full_gallery(module, version):
-        return await gallery(module, store, version, gstore=gstore, sidebar=sidebar)
+        return await html_renderer.gallery(module, version)
 
     async def g(module):
-        return await gallery(module, store, gstore=gstore, sidebar=sidebar)
+        return await html_renderer.gallery(module)
 
     async def gr():
-        return await gallery("*", store, gstore=gstore, sidebar=sidebar)
+        return await html_renderer.gallery("*")
 
     async def index():
         import papyri
