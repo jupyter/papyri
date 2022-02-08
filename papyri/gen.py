@@ -1,5 +1,4 @@
 """
-
 Main module responsible from scrapping the code, docstrings, an (TBD) rst files,
 and turning that into intermediate representation files that can be published.
 
@@ -34,8 +33,7 @@ from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 from rich.logging import RichHandler
-from rich.progress import BarColumn, Progress
-from rich.progress import TextColumn
+from rich.progress import BarColumn, Progress, TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
@@ -53,7 +51,7 @@ from .take2 import (
     parse_rst_section,
 )
 from .tree import DirectiveVisiter
-from .utils import dedent_but_first, pos_to_nl, progress
+from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 
 try:
@@ -350,22 +348,6 @@ def get_classes(code):
     return classes
 
 
-def P2(lines) -> List[Node]:
-    assert isinstance(lines, list)
-    for l in lines:
-        if isinstance(l, str):
-            assert "\n" not in l
-        else:
-            assert "\n" not in l._line
-    assert lines, lines
-    blocks_data = parse_rst_section("\n".join(lines))
-
-    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for block in blocks_data:
-        assert not block.__class__.__name__ == "Block", block
-    return blocks_data
-
-
 def processed_example_data(example_section_data):
     """this should be no-op on already ingested"""
     new_example_section_data = Section()
@@ -373,7 +355,7 @@ def processed_example_data(example_section_data):
         type_ = in_out.__class__.__name__
         # color examples with pygments classes
         if type_ == "Text":
-            blocks = P2(in_out.value.split("\n"))
+            blocks = parse_rst_section(in_out.value)
             for b in blocks:
                 new_example_section_data.append(b)
 
@@ -427,7 +409,10 @@ def normalise_ref(ref):
 
 @dataclass
 class Config:
+    # we might want to suppress progress/ rich as it infers with ipdb.
     dummy_progress: bool = False
+    # Do not actually touch disk
+    dry_run: bool = False
     exec_failure: Optional[str] = None  # should move to enum
     logo: Optional[str] = None  # should change to path likely
     execute_exclude_patterns: Sequence[str] = ()
@@ -449,12 +434,15 @@ class Config:
 
 
 def load_configuration(path: str) -> MutableMapping[str, Any]:
-    conffile = Path(target_file).expanduser()
+    """
+    Given a path, load a configuration from a File.
+    """
+    conffile = Path(path).expanduser()
     if conffile.exists():
         conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
         assert len(conf.keys()) == 1
-        k0 = next(iter(conf.keys()))
-        return conf[k0]
+        root = next(iter(conf.keys()))
+        return root, conf[root]
     else:
         sys.exit(f"{conffile!r} does not exists.")
 
@@ -475,26 +463,17 @@ def gen_main(
     """
     main entry point
     """
-    conf = load_configuration(target_file)
-    assert len(conf.keys()) == 1
-    k0 = next(iter(conf.keys()))
-    config = Config(**conf[k0], dummy_progress=dummy_progress)
+    target_module_name, conf = load_configuration(target_file)
+    config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
     if exec_ is not None:
         config.exec = exec_
     if infer is not None:
         config.infer = infer
 
-    if len(conf.keys()) != 1:
-        raise ValueError(f"We only support one library at a time for now {conf.keys()}")
 
-    names = list(conf.keys())
+    target_dir = Path("~/.papyri/data").expanduser()
 
-    assert len(names) == 1, "current we can only do one package at a time"
-
-    tp = os.path.expanduser("~/.papyri/data")
-
-    target_dir = Path(tp).expanduser()
-    if not target_dir.exists() and not dry_run:
+    if not target_dir.exists() and not config.dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
 
     g = Gen(
@@ -506,7 +485,7 @@ def gen_main(
         g.log.debug("Log level set to debug")
 
     g.do_generic_info(
-        names[0],
+        target_module_name,
         relative_dir=Path(target_file).parent,
         config=config,
     )
@@ -514,14 +493,14 @@ def gen_main(
         g.collect_examples_out(config)
     if api:
         g.do_one_mod(
-            names[0],
+            target_module_name,
             config=config,
         )
     docs_path: Optional[str] = config.docs_path
     if docs_path is not None and narative:
         path = Path(docs_path).expanduser()
         g.do_docs(path, fail, config)
-    if not dry_run:
+    if not config.dry_run:
         p = target_dir / (g.root + "_" + g.version)
         p.mkdir(exist_ok=True)
 
@@ -530,7 +509,6 @@ def gen_main(
         g.write(p)
 
 
-from .utils import TimeElapsedColumn
 
 
 def full_qual(obj):
@@ -1150,7 +1128,7 @@ class Gen:
                 items = []
                 if desc:
                     try:
-                        items = P2(desc)
+                        items = parse_rst_section("\n".join(desc))
                     except Exception as e:
                         raise type(e)(f"from {qa}")
                     for l in items:
