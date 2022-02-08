@@ -108,7 +108,8 @@ This will augment the `?` operator to show better documentation (when install wi
 
 ## dev install
 
-You may need to get a modified version of numpydoc depending on the stage of development.
+You may need to get a modified version of numpydoc depending on the stage of development. You will need [pip >
+21.3](https://pip.pypa.io/en/stable/news/#v21-3-1) if you want to make editable installs
 
 ```
 # clone this repo
