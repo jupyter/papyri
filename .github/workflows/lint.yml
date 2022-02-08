@@ -45,9 +45,11 @@ jobs:
       run: |
         black --check papyri
     - name: Lint with flake8
+      if: always()
       run: |
         flake8 papyri
     - name: Test with mypy
+      if: always()
       run: |
         python3 -m pip install types-requests types-cachetools types-toml
         mypy papyri
