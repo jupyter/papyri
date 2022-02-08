@@ -70,7 +70,7 @@ except (ImportError, OSError):
 SITE_PACKAGE = site.getsitepackages()
 
 
-def paragraph(lines) -> Any:
+def paragraph(lines: List[str]) -> Any:
     """
     Leftover rst parsing,
 
@@ -82,7 +82,7 @@ def paragraph(lines) -> Any:
     return p2
 
 
-def parse_script(script, ns, prev, config):
+def parse_script(script: str, ns: Dict, prev, config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -171,13 +171,11 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     ----------
     doc
         A docstring parsed into a NnumpyDoc document.
-
     obj
         The current object. It is common for the current object/function to not
         have to be imported imported in docstrings. This should become a high
         level option at some point. Note that for method classes, the class should
         be made available but currently is not.
-
     qa
         The fully qualified name of current object
     config : Config
@@ -215,7 +213,6 @@ def get_example_data(doc, *, obj, qa: str, config, log):
 
     Notes
     -----
-
     We do not yet properly handle explicit exceptions in examples, and those are
     seen as Papyri failures.
 
@@ -550,7 +547,6 @@ class DFSCollector:
             Base object, typically module we want to scan itself.
             We will attempt to no scan any object which does not belong
             to the root or one of its children.
-
         others:
             List of other objects to use a base to explore the object graph.
             Typically this is because some packages do not import some
@@ -582,9 +578,8 @@ class DFSCollector:
         Some object can be reached many times via multiple path.
         We try to remove duplicate path we use to reach given objects.
 
-        Note
-        ----
-
+        Notes
+        -----
         At some point we might want to save all objects aliases,
         in order to extract the canonical import name (visible to users),
         and to resolve references.
@@ -938,15 +933,14 @@ class Gen:
         ----------
         target_item : any
             the object you want to get documentation for
-        ndoc :
+        ndoc
             numpydoc parsed docstring.
         qa : str
             fully qualified object path.
         config : Config
             current configuratin
-        aliases :  sequence
+        aliases : sequence
             other aliases for cuttent object.
-
 
         Returns
         -------
@@ -1267,8 +1261,7 @@ class Gen:
 
         Parameters
         ----------
-
-        root: str
+        root : str
             name of the root module to crawl
 
         """
@@ -1320,7 +1313,7 @@ class Gen:
         qa : str
             fully qualified name of the object we are extracting the
         documentation from .
-        p2: rich progress instance
+        p2 : rich progress instance
         """
         item_docstring = target_item.__doc__
         # TODO: we may not want to skip items as they may have children
@@ -1361,8 +1354,8 @@ class Gen:
         ----------
         root : str
             module name to generate docbundle for.
-        exec_ : bool
-            Whether to try to execute the code blocks and embed resulting values like plots.
+        config : Config
+            configuration object
 
         See Also
         --------

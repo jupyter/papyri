@@ -134,7 +134,6 @@ def example_3():
 
         This will be a directive
 
-
     .. math::
 
         This will be interpreted at math.

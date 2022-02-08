@@ -234,7 +234,6 @@ class GraphStore:
 
         refs : List[Key] ?
 
-
         TODO: refs is forward refs, and we are updating backward believe
         """
         assert isinstance(key, Key)
