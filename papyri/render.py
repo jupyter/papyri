@@ -967,17 +967,15 @@ async def _self_render_as_index_page(
 async def _write_gallery(store, gstore, config):
     """ """
     mv2 = gstore.glob((None, None))
+    html_renderer = HtmlRenderer(gstore, sidebar=config.html_sidebar, old_store=store)
     for _, (module, version) in progress(
         set(mv2), description="Rendering galleries..."
     ):
         # version, module = item.path.name, item.path.parent.name
-        data = await gallery(
+        data = await html_renderer.gallery(
             module,
-            store,
             version,
             ext=".html",
-            gstore=gstore,
-            sidebar=config.html_sidebar,
         )
         if config.output_dir:
             (config.output_dir / module / version / "gallery").mkdir(
