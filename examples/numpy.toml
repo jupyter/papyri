@@ -1,46 +1,51 @@
 [numpy]
-execute_exclude_patterns = ['numpy._', 'numpy.testing._priv', 'numpy.errstate', 'numpy.seterr', 'numpy.bincount',
+execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', 'numpy.seterr', 'numpy.bincount',
 'numpy.core._multiarray_umath.bincount', 'numpy.core._multiarray_umath.datetime_as_string',
 'numpy.core._multiarray_umath.normalize_axis_index', 'numpy.core._multiarray_umath.shares_memory',
 'numpy.datetime_as_string', 'numpy.shares_memory', 'numpy.squeeze',
 'numpy.average',
-'numpy.ctypeslib', 'numpy.append', 'numpy.ma.core']
+'numpy.ctypeslib', 'numpy.append', 'numpy.ma.core',
+
+# try to create a pager that waits for input
+'numpy.lookfor'
+]
+
+# docs_path = '~/dev/numpy/doc/source'
+
 exec = true
 exclude = [
-   'numpy.testing._private.nosetester.NoseTester',
-   'numpy._pytesttester',
-   # misc assertion errors:
+   # multiline ref see also.
+   "numpy._from_dlpack",
+   
+   # the docstring start with a block directive that gets
+   # split between summary and extended summary. 
+   # Which is incorrect and leadt to further parsing issues.
    "numpy.ma.core.MaskedArray.resize",
-   "numpy.polynomial.hermite.hermmulx",
-   "numpy.polynomial.hermite_e.hermemulx",
-   "numpy.polynomial.laguerre.lagmulx",
-   # substitution Reference 
+
+   # substitution Reference not implemented
    'numpy.isscalar',
    # substitution definition not implmented
    'numpy.rollaxis',
-   # comments not implemented
-   'numpy.polyfit',
-   "numpy.unique",
-   "numpy.ma.extras.polyfit",
-   "numpy.polynomial.chebyshev",
-   "numpy.polynomial.polynomial.polyfit",
-   "numpy.polynomial.polyutils.mapdomain",
+
+    
+   # Error in example expected, to implement in papyri:
+   "numpy.linalg.LinAlgError",
+   "numpy.lib._version.NumpyVersion",
+   "numpy.rec.fromstring",
+   "numpy.AxisError",
+   "numpy.lib.utils.safe_eval",
    # missparsing of example sections.
    "numpy.percentile",
    # Citation Reference not implemented
    "numpy.fft",
-   # numpydocs errors
+   # Improper "Class Attributes" section.
    "numpy.polynomial._polybase.ABCPolyBase",
-   # Examples error
-   "numpy.ctypeslib", 
-   "numpy.linalg.multi_dot",
-   "numpy.linalg.qr",
-   "numpy.testing._private.utils.raises",
-   "numpy.testing._private.nosetester.run_module_suite",
-   "numpy.testing._private.utils.suppress_warnings",
-   "numpy.lib._datasource.Repository",
-   "numpy.testing._private.decorators.setastest",
-   "numpy.testing._private.decorators.slow",
+
+   # Error in example, fixed upstream
+   "numpy.polynomial.chebyshev.chebinterpolate",
+   "numpy.polynomial.polynomial.polyfit",
+   "numpy.polynomial.legendre.leg2poly",
+   "numpy.lib.npyio.NpzFile",
 
    # numpy.core.shape_base._concatenate_shapes has markdown and fences in the middle
    # of this documentation. https://github.com/numpy/numpy/pull/20944

@@ -248,12 +248,16 @@ class TreeReplacer:
                 "Code",
                 "Fig",
                 "Words",
+                "Comment",
                 "BlockQuote",
                 "BulletList",
                 "Directive",
                 "SeeAlsoItems",
                 "Code2",
                 "BlockMath",
+                "Unimplemented",
+                "Options",
+                "SubstitutionRef",
             ]:
                 return [node]
             elif name in ["Text"]:

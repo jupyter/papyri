@@ -496,10 +496,13 @@ class _XList(Node):
             Paragraph,
             EnumeratedList,
             BulletList,
+            Target,
             DefList,
             BlockQuote,
             BlockVerbatim,
             BlockDirective,
+            Unimplemented,
+            Admonition,
         ]
     ]
 
@@ -528,11 +531,16 @@ class Section(Node):
         Union[
             Code,
             Code2,
+            Unimplemented,
+            Comment,
+            Target,
             Text,
             Fig,
+            Options,
             Paragraph,
             DefList,
             BlockDirective,
+            Unimplemented,
             BlockMath,
             BlockVerbatim,
             Param,
@@ -541,6 +549,8 @@ class Section(Node):
             BlockQuote,
             Admonition,
             FieldList,
+            Target,
+            SubstitutionRef,
         ]
     ]
     # might need to be more complicated like verbatim.
@@ -646,6 +656,33 @@ class Token(Node):
         return f"<{self.__class__.__name__}: {self.link=} {self.type=} >"
 
 
+class Unimplemented(Node):
+    value: str
+    placeholder: str
+
+    def __init__(self, placeholder, value):
+        self.placeholder = placeholder
+        self.value = value
+
+    def __repr__(self):
+        return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
+
+
+class _Dummy(Node):
+    value: str
+
+    def __init__(self, value):
+        self.value = value
+
+
+class SubstitutionRef(_Dummy):
+    pass
+
+
+class Target(_Dummy):
+    pass
+
+
 class Code2(Node):
     entries: List[Token]
     out: str
@@ -739,15 +776,20 @@ class Paragraph(Node):
             Word,
             Words,
             Strong,
+            Unimplemented,
             Emph,
+            Target,
             Directive,
             Verbatim,
             Link,
             Math,
+            SubstitutionRef,
         ]
     ]
 
-    inner: List[Union[Paragraph, BlockVerbatim, BulletList, EnumeratedList]]
+    inner: List[
+        Union[Paragraph, BlockVerbatim, BulletList, EnumeratedList, Unimplemented]
+    ]
 
     def __init__(self, inline, inner, width=80):
         for i in inline:
@@ -758,10 +800,12 @@ class Paragraph(Node):
                     Strong,
                     Emph,
                     Words,
+                    Unimplemented,
                     Directive,
                     Verbatim,
                     Link,
                     Math,
+                    SubstitutionRef,
                 ),
             ), i
         self.inline = inline
@@ -778,7 +822,19 @@ class Paragraph(Node):
         inline = []
         for n in new:
             if isinstance(
-                n, (Word, Words, Directive, Verbatim, Link, Math, Strong, Emph)
+                n,
+                (
+                    Word,
+                    Words,
+                    Directive,
+                    Verbatim,
+                    Link,
+                    Math,
+                    Strong,
+                    Emph,
+                    SubstitutionRef,
+                    Unimplemented,
+                ),
             ):
                 inline.append(n)
             else:
@@ -787,7 +843,7 @@ class Paragraph(Node):
             if isinstance(n, (Paragraph, BlockVerbatim, BulletList, EnumeratedList)):
                 inner.append(n)
 
-        assert len(inner) + len(inline) == len(new)
+        assert len(inner) + len(inline) == len(new), (inner, inline, new)
 
         self.inner = inner
         self.inline = inline
@@ -927,6 +983,19 @@ class Admonition(Block):
         self.title = title
 
 
+class Comment(Block):
+
+    value: str
+
+    def __init__(self, value):
+        """
+        Comment should not make it in the final document,
+        but we store them for now, to help with error reporting and
+        custom transformations.
+        """
+        self.value = value
+
+
 class BlockDirective(Block):
 
     directive_name: str
@@ -990,6 +1059,14 @@ class DefList(Block):
         )
 
 
+class Options(Block):
+
+    values: List[str]
+
+    def __init__(self, values):
+        self.values = values
+
+
 class FieldList(Block):
     children: List[FieldListItem]
 
@@ -1041,6 +1118,7 @@ class DefListItem(Block):
             BlockQuote,
             DefList,
             BlockDirective,
+            Unimplemented,
             Admonition,
             BlockMath,
             BlockVerbatim,

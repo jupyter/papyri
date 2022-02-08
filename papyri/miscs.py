@@ -3,8 +3,25 @@ Misc helper functions
 """
 
 import io
+import sys
+import ast
 
 from rich.progress import Progress
+
+from contextlib import redirect_stdout, redirect_stderr, contextmanager
+
+
+@contextmanager
+def capture_displayhook(acc):
+    def dh(value):
+        acc.append(value)
+
+    old_dh = sys.displayhook
+    try:
+        sys.displayhook = dh
+        yield
+    finally:
+        sys.displayhook = old_dh
 
 
 class DummyP(Progress):
@@ -65,13 +82,38 @@ class BlockExecutor:
             figs.append(buf.read())
         return figs
 
+    def _exec(self, text, ns):
+        """
+        A variant of exec that can run multi line,
+        and capture sys_displayhook
+        """
+        module = ast.parse(text)
+
+        *nodes, interactive_node = module.body
+        exec(compile(ast.Module(nodes, []), "<papyri>", "exec"), ns)
+        acc = []
+        with capture_displayhook(acc):
+            exec(compile(ast.Interactive([interactive_node]), "<papyri>", "single"), ns)
+        if len(acc) == 1:
+            return acc[0]
+        else:
+            return None
+
     def exec(self, text):
         from matplotlib import _pylab_helpers, cbook
         from matplotlib.backend_bases import FigureManagerBase
 
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        acc = []
+
         with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
-            res = exec(text, self.ns)
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                with capture_displayhook(acc):
+                    res = self._exec(text, self.ns)
 
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
 
-        return res, fig_managers
+        stdout.seek(0)
+        stderr.seek(0)
+        return res, fig_managers, stdout.read(), stderr.read()

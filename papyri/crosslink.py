@@ -72,7 +72,7 @@ def find_all_refs(store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
 @dataclass
 class IngestedBlobs(Node):
 
-    __slots__ = ("backrefs",) + (
+    __slots__ = (
         "_content",
         "refs",
         "ordered_sections",
@@ -179,6 +179,7 @@ class IngestedBlobs(Node):
         """
         Process a doc blob, to find all local and nonlocal references.
         """
+        assert isinstance(known_refs, frozenset)
         assert self._content is not None
         local_refs = []
         sections_ = [
@@ -211,7 +212,7 @@ class IngestedBlobs(Node):
 
             local_refs = local_refs + [
                 [u.strip() for u in x[0].split(",")]
-                for x in self.content[s]
+                for x in self.content.get(s, [])
                 if isinstance(x, Param)
             ]
 
@@ -220,10 +221,11 @@ class IngestedBlobs(Node):
 
         local_refs = frozenset(flat(local_refs))
 
-        assert isinstance(known_refs, frozenset)
         assert self.version not in ("", "??"), self.version
         visitor = DVR(self.qa, known_refs, local_refs, aliases, version=self.version)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
+            if section not in self.content:
+                continue
             assert section in self.content
             self.content[section] = visitor.visit(self.content[section])
         if (len(visitor.local) or len(visitor.total)) and verbose:
@@ -319,7 +321,7 @@ def load_one_uningested(
 
         _local_refs = _local_refs + [
             [u.strip() for u in x[0].split(",")]
-            for x in blob.content[s]
+            for x in blob.content.get(s, [])
             if isinstance(x, Param)
         ]
 
@@ -330,8 +332,8 @@ def load_one_uningested(
 
     visitor = DirectiveVisiter(qa, frozenset(), local_refs, aliases=aliases)
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-        assert section in blob.content
-        blob.content[section] = visitor.visit(blob.content[section])
+        if section in blob.content:
+            blob.content[section] = visitor.visit(blob.content[section])
 
     acc1 = []
     for sec in blob.arbitrary:
@@ -383,6 +385,64 @@ class Ingester:
         self.ingest_dir = ingest_dir
         self.gstore = GraphStore(self.ingest_dir)
 
+    def _ingest_narrative(self, path, gstore):
+
+        for _console, document in progress(
+            (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
+        ):
+            doc = load_one_uningested(
+                document.read_text(),
+                None,
+                qa=document.name,
+                known_refs=frozenset(),
+                aliases={},
+                version=None,
+            )
+            ref = document.name
+
+            module, version = path.name.split("_")
+            key = Key(module, "1.22.1", "docs", ref)
+            doc.logo = ""
+            doc.version = version
+            doc.validate()
+            js = doc.to_json()
+            del js["backrefs"]
+            gstore.put(
+                key,
+                json.dumps(js, indent=2).encode(),
+                [],
+            )
+
+    def _ingest_examples(self, path: Path, gstore, known_refs, aliases, version, root):
+
+        for _, fe in progress(
+            (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
+        ):
+            s = Section.from_json(json.loads(fe.read_text()))
+            visitor = DVR(
+                "TBD, supposed to be QA", known_refs, {}, aliases, version=version
+            )
+            s_code = visitor.visit(s)
+            refs = list(map(tuple, visitor._targets))
+            gstore.put(
+                Key(root, version, "examples", fe.name),
+                json.dumps(s_code.to_json(), indent=2).encode(),
+                refs,
+            )
+
+    def _ingest_assets(self, path, root, version, aliases, gstore):
+        for _, f2 in progress(
+            (path / "assets").glob("*"),
+            description=f"{path.name} Reading image files ...",
+        ):
+            gstore.put(Key(root, version, "assets", f2.name), f2.read_bytes(), [])
+
+        gstore.put(
+            Key(root, version, "meta", "papyri.json"),
+            json.dumps(aliases, indent=2).encode(),
+            [],
+        )
+
     def ingest(self, path: Path, check: bool):
 
         gstore = self.gstore
@@ -401,20 +461,10 @@ class Ingester:
         # long : short
         aliases: Dict[str, str] = data.get("aliases", {})
         rev_aliases = {v: k for k, v in aliases.items()}
-        for _, fe in progress(
-            (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
-        ):
-            s = Section.from_json(json.loads(fe.read_text()))
-            visitor = DVR(
-                "TBD, supposed to be QA", known_refs, {}, aliases, version=version
-            )
-            s_code = visitor.visit(s)
-            refs = list(map(tuple, visitor._targets))
-            gstore.put(
-                Key(root, version, "examples", fe.name),
-                json.dumps(s_code.to_json(), indent=2).encode(),
-                refs,
-            )
+
+        self._ingest_examples(path, gstore, known_refs, aliases, version, root)
+        self._ingest_assets(path, root, version, aliases, gstore)
+        self._ingest_narrative(path, gstore)
 
         for _, f1 in progress(
             (path / "module").glob("*"),
@@ -426,7 +476,7 @@ class Ingester:
                 rqa = normalise_ref(qa)
                 if rqa != qa:
                     # numpy weird thing
-                    print(f"skip {qa}")
+                    print(f"skip {qa=}, {rqa=}")
                     continue
                 assert rqa == qa, f"{rqa} !+ {qa}"
             try:
@@ -468,17 +518,6 @@ class Ingester:
                 if exists == "module":
                     sa.name.exists = True
                     sa.name.ref = resolved
-        for _, f2 in progress(
-            (path / "assets").glob("*"),
-            description=f"{path.name} Reading image files ...",
-        ):
-            gstore.put(Key(root, version, "assets", f2.name), f2.read_bytes(), [])
-
-        gstore.put(
-            Key(root, version, "meta", "papyri.json"),
-            json.dumps(aliases, indent=2).encode(),
-            [],
-        )
 
         for _, (qa, doc_blob) in progress(
             nvisited_items.items(), description=f"{path.name} Writing..."
