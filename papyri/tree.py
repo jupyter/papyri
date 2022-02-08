@@ -37,7 +37,6 @@ def _build_resolver_cache(
     1) a mapping from fully qualified names to refinfo objects.
     2) a set of all the keys we know about.
 
-
     Parameters
     ----------
     known_refs : (frozen) set of RefInfo
@@ -93,7 +92,6 @@ def resolve_(
     """
     Given the current context (qa), and a str (ref), compute the RefInfo object.
 
-
     References are often relative based on the current context (which object you
     are currently in).
 
@@ -102,7 +100,6 @@ def resolve_(
 
     Parameters
     ----------
-
     qa : str
         fully qualified path of the current object (TODO: this will be weird for
         non object, like example).
@@ -114,9 +111,6 @@ def resolve_(
         Reverse alias map. As the import name of object may not be the
         fully qualified names, we may need a reverse alias map to resolve
         with respect to the import name.
-
-
-
 
     """
 

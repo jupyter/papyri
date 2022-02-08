@@ -644,10 +644,8 @@ class Ingester:
 
 def main(path, check, *, dummy_progress):
     """
-
     Parameters
     ----------
-
     dummy_progress : bool
         whether to use a dummy progress bar instead of the rich one.
         Usefull when dropping into PDB.
