@@ -10,7 +10,7 @@ execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', '
 'numpy.lookfor'
 ]
 
-docs_path = '~/dev/numpy/doc/source'
+# docs_path = '~/dev/numpy/doc/source'
 
 exec = true
 exclude = [
