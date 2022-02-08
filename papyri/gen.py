@@ -448,6 +448,17 @@ class Config:
         return dataclasses.replace(self, **kwargs)
 
 
+def load_configuration(path: str) -> MutableMapping[str, Any]:
+    conffile = Path(target_file).expanduser()
+    if conffile.exists():
+        conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
+        assert len(conf.keys()) == 1
+        k0 = next(iter(conf.keys()))
+        return conf[k0]
+    else:
+        sys.exit(f"{conffile!r} does not exists.")
+
+
 def gen_main(
     infer,
     exec_,
@@ -464,25 +475,20 @@ def gen_main(
     """
     main entry point
     """
-    conffile = Path(target_file).expanduser()
-    if conffile.exists():
-        conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
-        k0 = next(iter(conf.keys()))
-        config = Config(**conf[k0], dummy_progress=dummy_progress)
-        if exec_ is not None:
-            config.exec = exec_
-        if infer is not None:
-            config.infer = infer
+    conf = load_configuration(target_file)
+    assert len(conf.keys()) == 1
+    k0 = next(iter(conf.keys()))
+    config = Config(**conf[k0], dummy_progress=dummy_progress)
+    if exec_ is not None:
+        config.exec = exec_
+    if infer is not None:
+        config.infer = infer
 
-        if len(conf.keys()) != 1:
-            raise ValueError(
-                f"We only support one library at a time for now {conf.keys()}"
-            )
+    if len(conf.keys()) != 1:
+        raise ValueError(f"We only support one library at a time for now {conf.keys()}")
 
-        names = list(conf.keys())
+    names = list(conf.keys())
 
-    else:
-        sys.exit(f"{conffile!r} does not exists.")
     assert len(names) == 1, "current we can only do one package at a time"
 
     tp = os.path.expanduser("~/.papyri/data")
