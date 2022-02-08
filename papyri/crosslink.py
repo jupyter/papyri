@@ -387,7 +387,7 @@ class Ingester:
 
     def _ingest_narrative(self, path, gstore):
 
-        for console, document in progress(
+        for _console, document in progress(
             (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
         ):
             doc = load_one_uningested(

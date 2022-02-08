@@ -90,8 +90,7 @@ class BlockExecutor:
         module = ast.parse(text)
 
         *nodes, interactive_node = module.body
-        for node in nodes:
-            exec(compile(ast.Module(nodes, []), "<papyri>", "exec"), ns)
+        exec(compile(ast.Module(nodes, []), "<papyri>", "exec"), ns)
         acc = []
         with capture_displayhook(acc):
             exec(compile(ast.Interactive([interactive_node]), "<papyri>", "single"), ns)

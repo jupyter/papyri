@@ -6,9 +6,7 @@ from . import errors
 from .errors import (
     VisitCitationNotImplementedError,
     VisitCitationReferenceNotImplementedError,
-    VisitCommentNotImplementedError,
     VisitSubstitutionDefinitionNotImplementedError,
-    VisitTargetNotImplementedError,
 )
 
 pth = str(Path(__file__).parent / "rst.so")
@@ -39,7 +37,6 @@ from papyri.take2 import (
     Paragraph,
     Section,
     Strong,
-    Target,
     SubstitutionRef,
     Unimplemented,
     Verbatim,
@@ -130,7 +127,6 @@ class Node:
     @property
     def bytes(self):
         return self.node.bytes
-
 
     def __init__(self, node, *, _with_whitespace=True):
         self.node = node

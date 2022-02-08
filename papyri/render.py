@@ -36,6 +36,7 @@ log = logging.getLogger("papyri")
 
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
+
 def url(info, prefix="/p/"):
     assert isinstance(info, RefInfo)
     assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
@@ -120,8 +121,6 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
         ex=ex,
         sidebar=sidebar,
     )
-
-
 
 
 # here we compute the siblings at each level; as well as one level down
@@ -483,10 +482,6 @@ class HtmlRenderer:
             # The reference we are trying to view exists;
             # we will now just render it.
             # bytes_ = await file_.read_text()
-            key = Key(root, version, "module", ref)
-            gbytes = self.store.get(key).decode()
-            # assert len(gbytes) == len(bytes_), (len(gbytes), len(bytes_))
-            # assert gbytes == bytes_, (gbytes[:10], bytes_[:10])
             assert root is not None
             # assert version is not None
             brpath = store / root / version / "module" / f"{ref}.br"
@@ -497,13 +492,6 @@ class HtmlRenderer:
                 br = None
             else:
                 br = None
-
-            gbr_data = self.store.get_backref(key)
-            gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
-            # print("bytes_", bytes_[:40], "...")
-
-            # TODO :here we used to load backref, restore above
-            # doc_blob = load_one(gbytes, gbr_bytes, known_refs=known_refs, strict=True)
 
             data = compute_graph(self.store, doc_blob, (root, version, "module", ref))
             json_str = json.dumps(data)
@@ -565,7 +553,6 @@ class HtmlRenderer:
             return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
 
 
-
 async def img(package, version, subpath=None) -> Optional[bytes]:
     file = ingest_dir / package / version / "assets" / subpath
     if file.exists():
@@ -624,7 +611,6 @@ def serve(*, sidebar: bool):
             subpath=subpath,
             sidebar=sidebar,
         )
-
 
     app.route("/logo.png")(logo)
     app.route("/favicon.ico")(static("favicon.ico"))

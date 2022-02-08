@@ -22,7 +22,6 @@ import sys
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from types import FunctionType, ModuleType
@@ -35,8 +34,7 @@ from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 from rich.logging import RichHandler
-from rich.progress import BarColumn, Progress, ProgressColumn
-from rich.progress import Text as RichText
+from rich.progress import BarColumn, Progress
 from rich.progress import TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
