@@ -430,7 +430,7 @@ class Config:
         return dataclasses.replace(self, **kwargs)
 
 
-def load_configuration(path: str) -> MutableMapping[str, Any]:
+def load_configuration(path: str) -> Tuple[str, MutableMapping[str, Any]]:
     """
     Given a path, load a configuration from a File.
     """
