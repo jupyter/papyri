@@ -467,7 +467,6 @@ def gen_main(
     if infer is not None:
         config.infer = infer
 
-
     target_dir = Path("~/.papyri/data").expanduser()
 
     if not target_dir.exists() and not config.dry_run:
@@ -504,8 +503,6 @@ def gen_main(
         g.log.info("Saving current Doc bundle to %s", p)
         g.clean(p)
         g.write(p)
-
-
 
 
 def full_qual(obj):
