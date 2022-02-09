@@ -511,7 +511,7 @@ def gen_main(
         g.log.setLevel("DEBUG")
         g.log.debug("Log level set to debug")
 
-    g.do_generic_info(
+    g.collect_package_metadata(
         target_module_name,
         relative_dir=Path(target_file).parent,
     )
@@ -825,6 +825,7 @@ class Gen:
 
         self.log = logging.getLogger("papyri")
         self.config = config
+        self.log.debug("Configuration: %s", self.config)
 
         self.data = {}
         self.bdata = {}
@@ -1281,36 +1282,33 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def configure(self, root: str, config):
+    def _get_collector(self):
         """
-        Configure current instance of gen
 
-        Parameters
-        ----------
-        root : str
-            name of the root module to crawl
+        Construct a depth first search collector that will try to find all
+        the objects it can.
 
+        We give it the root module, and a few submodules as seed.
         """
-        assert "." not in root
-        n0 = __import__(root)
-        modules = [n0]
+        assert "." not in self.root
+        n0 = __import__(self.root)
+        submodules = []
 
-        # step 2 try to guess the version number from the top module.
-        version = getattr(modules[0], "__version__", "???")
-        self.version = version
-
-        subs = config.submodules
+        subs = self.config.submodules
         extra_from_conf = [self.root + "." + s for s in subs]
         for name in extra_from_conf:
-            x, *r = name.split(".")
-            n0 = __import__(name)
+            _, *r = name.split(".")
+            nx = __import__(name)
             for sub in r:
-                n0 = getattr(n0, sub)
-            modules.append(n0)
+                nx = getattr(nx, sub)
+            submodules.append(nx)
 
-        collector = DFSCollector(modules[0], modules[1:])
-
-        return collector
+        self.log.debug(
+            "Collecting API starting from [%r], and %s",
+            n0.__name__,
+            [m.__name__ for m in submodules],
+        )
+        return DFSCollector(n0, submodules)
 
     def collect_examples_out(self):
 
@@ -1361,12 +1359,19 @@ class Gen:
 
         return item_docstring, arbitrary
 
-    def do_generic_info(self, root, relative_dir):
+    def collect_package_metadata(self, root, relative_dir):
+        """
+        Try to gather generic metadata about the current package we are going to
+        build the documentation for.
+        """
         self.root = root
         if self.config.logo:
             self.put_raw(
                 "logo.png", (relative_dir / Path(self.config.logo)).read_bytes()
             )
+
+        module = __import__(root)
+        self.version = module.__version__
 
     def collect_api_docs(
         self,
@@ -1394,10 +1399,8 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector = self.configure(root, self.config)
+        collector = self._get_collector()
         collected: Dict[str, Any] = collector.items()
-
-        self.log.debug("Configuration: %s", self.config)
 
         # collect all items we want to document.
         excluded = sorted(self.config.exclude)
