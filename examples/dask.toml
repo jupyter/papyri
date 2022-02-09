@@ -19,6 +19,11 @@ exclude = [ "dask.utils.Dispatch",
             "dask.array.core.to_npy_stack",
             #"NumpydocError-<class 'numpydoc.docscrape.ParseError'>": [
             "dask.array.slicing.slice_array",
+            # unbalanced backticks,
+            # need fix in numpy
+            "dask.array.ufunc.frexp", # https://github.com/numpy/numpy/pull/21020
+            # imbalanced backticks, need dask fix. https://github.com/dask/dask/pull/8693
+            "dask.array.reductions.cumreduction"
   ]
 
 #docs_path = "~/dev/dask/docs/source"

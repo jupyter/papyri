@@ -16,5 +16,7 @@ exclude = ["astropy.utils.misc.OrderedDescriptorContainer",
                         "astropy.utils.data.get_pkg_data_filenames",
                         "astropy.utils.data.get_pkg_data_fileobj",
                         "astropy.utils.data.get_pkg_data_fileobjs",
+                        # tree sitter don't like the " `Cards`s
+                        "astropy.io.fits.hdu.base._CorruptedHDU",
 ]
 submodules = [ "io", "io.fits",]

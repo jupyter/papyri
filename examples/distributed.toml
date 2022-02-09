@@ -7,6 +7,8 @@ exclude = [
     "distributed.worker.Worker",
     "distributed.client.get_task_stream",
     "distributed.batched.BatchedSend",
+    # imbalanced backticks https://github.com/dask/distributed/pull/5784
+    "distributed.utils_comm.retry"
 
 
 ] #docs_path = "~/dev/dask/docs/source"

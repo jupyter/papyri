@@ -174,4 +174,6 @@ exclude = ['matplotlib._api',
            "matplotlib.collections.RegularPolyCollection.__init__",
            "matplotlib.textpath.TextPath.__init__",
            "matplotlib.textpath.TextToPath.get_text_path",
+           # imbalanced backticks https://github.com/matplotlib/matplotlib/pull/22434
+           "matplotlib.ticker.ScalarFormatter.set_powerlimits"
            ]

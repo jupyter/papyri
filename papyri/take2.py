@@ -322,6 +322,7 @@ class Directive(Node):
 
     def __init__(self, value, domain, role):
         assert isinstance(value, str)
+        assert "`" not in value
         self.value = value
         self.domain = domain
         if domain is not None:
@@ -372,6 +373,7 @@ class Math(Node):
     value: List[str]  # list of tokens not list of lines.
 
     def __init__(self, value):
+        assert isinstance(value, list)
         self.value = value
 
     @property

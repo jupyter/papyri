@@ -30,7 +30,7 @@
    |{%- elif type == 'Word' -%}
    |   |{{- obj.value -}}
    |{%- elif type == 'Directive' -%}
-   |   |:{{blue(obj.domain)}}:{{blue(obj.role)}}:`{{blue(obj.text)}}`
+   |   |:{{blue(obj.domain)}}:{{blue(obj.role)}}:`{{blue(obj.value)}}`
    |{%- elif type == 'Link' %}
    |   |{% if obj.kind=='local' %}
    |   |    {{-green(obj.value)-}}

@@ -149,7 +149,27 @@ exclude = [ "scipy.signal.spectral._spectral_helper",
             "scipy._lib._util.DeprecatedImport",
             "scipy._lib._util.scipy.linalg.lapack",
             "scipy.sparse.csgraph._flow.maximum_flow",
+            # `....`th is not liked by tree-sitter.
+            "scipy.signal._peak_finding.find_peaks_cwt",
+            "scipy.signal._peak_finding._filter_ridge_lines",
+            # stray backtick https://github.com/scipy/scipy/pull/15564
+            "scipy.integrate._quadrature.cumtrapz",
+            "scipy.integrate._quadrature.simps",
+            "scipy.integrate._quadrature.trapz",
+            # unmatched backticks
+            "scipy.integrate.quadpack.dblquad",
             ]
-exclude_jedi = [ "scipy.linalg._sketches.clarkson_woodruff_transform", "scipy.optimize._lsq.least_squares.least_squares",]
+exclude_jedi = [
+    "scipy.linalg._sketches.clarkson_woodruff_transform",
+    "scipy.optimize._lsq.least_squares.least_squares",
+    "scipy.linalg.decomp_qr.qr",
+    "scipy.linalg._decomp_cossin.cossin",
+    "scipy.linalg.decomp.eigh_tridiagonal",
+    "scipy.linalg.decomp.eigvalsh_tridiagonal",
+    "scipy.linalg.decomp.hessenberg",
+    "scipy.linalg.decomp_svd.null_space",
+    ]
+
 execute_exclude_patterns = []
 exec_failure = "fallback"
+jedi_failure_mode = "log"

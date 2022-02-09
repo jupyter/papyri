@@ -229,10 +229,30 @@ class TSVisitor:
         return [Paragraph([Words(data)], [])]
 
     def visit_reference(self, node, prev_end=None):
-        t = Directive(
-            self.bytes[node.start_byte + 1 : node.end_byte - 2].decode(), None, None
-        )
-        return [t]
+        """
+        TODO:
+
+        Currently we parse that as a directive, but actually it should be a reference
+        and according to https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#hyperlink-references,
+        there might be one or two trailing underscore, which we should pay attention to.
+
+
+        """
+        full_text = self.bytes[node.start_byte : node.end_byte].decode()
+        if "`" not in full_text:
+            # TODO reference do not need to be in backticks,
+            # though it conflict with some things like numpy
+            # direct references to np.bool_, np.complex64_ (see pandas docs for example)
+            # we should likely have a way to handle that.
+            _text = full_text
+        else:
+            _text, trailing = (
+                self.bytes[node.start_byte + 1 : node.end_byte]
+                .decode()
+                .rsplit("`", maxsplit=1)
+            )
+            assert trailing in ("_", "__")
+        return [Directive(_text, None, None)]
 
     def visit_interpreted_text(self, node, prev_end=None):
         if len(node.children) == 2:

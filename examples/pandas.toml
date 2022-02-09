@@ -83,5 +83,9 @@ exclude = [
         "pandas.plotting._core.hist_frame",
     # "ExecError-<class 'ValueError'>": [
         "pandas._testing._io.network",
+    # "np.bool_" is seen as a reference
+        "pandas._libs.lib.is_bool_list",
+    # Imbalanced backticks
+    "pandas.core.common.pipe"
 ]
 

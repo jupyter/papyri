@@ -39,5 +39,5 @@ def test_parse_reference():
     [section] = parse("This is a `reference <to this>`_".encode())
     [paragraph] = section.children
     [text, reference] = paragraph.children
-    assert reference.text == "reference <to this>"
+    assert reference.value == "reference <to this>"
     assert text.value == "This is a "
