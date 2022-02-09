@@ -864,7 +864,7 @@ class Gen:
         Crawl the filesystem for all docs/rst files
 
         """
-        if not self.config.doc_path:
+        if not self.config.docs_path:
             return
         path = Path(self.config.docs_path).expanduser()
         self.log.info("Scraping Documentation")
