@@ -313,7 +313,7 @@ class Link(Node):
 
 class Directive(Node):
 
-    value: List[str]
+    value: str
     domain: Optional[str]
     role: Optional[str]
 
@@ -321,8 +321,7 @@ class Directive(Node):
         return hash((tuple(self.value), self.domain, self.role))
 
     def __init__(self, value, domain, role):
-        for l in value:
-            assert isinstance(l, str), l
+        assert isinstance(value, str)
         self.value = value
         self.domain = domain
         if domain is not None:
@@ -343,15 +342,11 @@ class Directive(Node):
             (type(self) == type(other))
             and (self.role == other.role)
             and (other.domain == self.domain)
-            and (self.text == other.text)
+            and (self.value == other.value)
         )
 
-    @property
-    def text(self):
-        return "".join(self.value)
-
     def __len__(self):
-        return sum(len(x) for x in self.value) + len(self.prefix)
+        return len(self.value) + len(self.prefix) + 2
 
     @property
     def prefix(self):
@@ -363,13 +358,7 @@ class Directive(Node):
         return prefix
 
     def __repr__(self):
-        prefix = ""
-        if self.domain:
-            prefix += ":" + self.domain
-        if self.role:
-            prefix += ":" + self.role + ":"
-        # prefix = ''
-        return "<Directive " + prefix + "`" + "".join(self.value) + "`>"
+        return f"<Directive {self.prefix}`{self.value}`>"
 
 
 class BlockMath(Node):

@@ -230,7 +230,7 @@ class TSVisitor:
 
     def visit_reference(self, node, prev_end=None):
         t = Directive(
-            [self.bytes[node.start_byte + 1 : node.end_byte - 2].decode()], None, None
+            self.bytes[node.start_byte + 1 : node.end_byte - 2].decode(), None, None
         )
         return [t]
 
@@ -264,7 +264,7 @@ class TSVisitor:
         assert text_value.endswith("`")
 
         t = Directive(
-            [text_value[1:-1]],
+            text_value[1:-1],
             domain=None,
             role=role_value,
         )
