@@ -472,9 +472,7 @@ def gen_main(
     if not target_dir.exists() and not config.dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
 
-    g = Gen(
-        dummy_progress=dummy_progress,
-    )
+    g = Gen(dummy_progress=dummy_progress, config=config)
     g.log.info("Will write data to %s", target_dir)
     if debug:
         g.log.setLevel("DEBUG")
@@ -787,7 +785,7 @@ class Gen:
 
     """
 
-    def __init__(self, dummy_progress):
+    def __init__(self, dummy_progress, config):
 
         if dummy_progress:
             self.Progress = DummyP
