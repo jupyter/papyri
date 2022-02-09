@@ -518,7 +518,7 @@ def gen_main(
     if examples:
         g.collect_examples_out()
     if api:
-        g.do_one_mod(target_module_name)
+        g.collect_api_docs(target_module_name)
     if narrative:
         g.collect_narrative_docs()
     if not config.dry_run:
@@ -978,7 +978,7 @@ class Gen:
 
         See Also
         --------
-        do_one_mod
+        collect_api_docs
         """
         assert isinstance(aliases, list)
         blob = DocBlob()
@@ -1368,7 +1368,7 @@ class Gen:
                 "logo.png", (relative_dir / Path(self.config.logo)).read_bytes()
             )
 
-    def do_one_mod(
+    def collect_api_docs(
         self,
         root: str,
     ):
