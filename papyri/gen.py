@@ -1,5 +1,4 @@
 """
-
 Main module responsible from scrapping the code, docstrings, an (TBD) rst files,
 and turning that into intermediate representation files that can be published.
 
@@ -34,8 +33,7 @@ from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 from rich.logging import RichHandler
-from rich.progress import BarColumn, Progress
-from rich.progress import TextColumn
+from rich.progress import BarColumn, Progress, TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
@@ -53,7 +51,7 @@ from .take2 import (
     parse_rst_section,
 )
 from .tree import DirectiveVisiter
-from .utils import dedent_but_first, pos_to_nl, progress
+from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
 
 try:
@@ -72,7 +70,7 @@ except (ImportError, OSError):
 SITE_PACKAGE = site.getsitepackages()
 
 
-def paragraph(lines) -> Any:
+def paragraph(lines: List[str]) -> Any:
     """
     Leftover rst parsing,
 
@@ -84,7 +82,7 @@ def paragraph(lines) -> Any:
     return p2
 
 
-def parse_script(script, ns, prev, config):
+def parse_script(script: str, ns: Dict, prev, config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -173,13 +171,11 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     ----------
     doc
         A docstring parsed into a NnumpyDoc document.
-
     obj
         The current object. It is common for the current object/function to not
         have to be imported imported in docstrings. This should become a high
         level option at some point. Note that for method classes, the class should
         be made available but currently is not.
-
     qa
         The fully qualified name of current object
     config : Config
@@ -217,7 +213,6 @@ def get_example_data(doc, *, obj, qa: str, config, log):
 
     Notes
     -----
-
     We do not yet properly handle explicit exceptions in examples, and those are
     seen as Papyri failures.
 
@@ -350,22 +345,6 @@ def get_classes(code):
     return classes
 
 
-def P2(lines) -> List[Node]:
-    assert isinstance(lines, list)
-    for l in lines:
-        if isinstance(l, str):
-            assert "\n" not in l
-        else:
-            assert "\n" not in l._line
-    assert lines, lines
-    blocks_data = parse_rst_section("\n".join(lines))
-
-    # for pre_blank_lines, blank_lines, post_black_lines in blocks_data:
-    for block in blocks_data:
-        assert not block.__class__.__name__ == "Block", block
-    return blocks_data
-
-
 def processed_example_data(example_section_data):
     """this should be no-op on already ingested"""
     new_example_section_data = Section()
@@ -373,7 +352,7 @@ def processed_example_data(example_section_data):
         type_ = in_out.__class__.__name__
         # color examples with pygments classes
         if type_ == "Text":
-            blocks = P2(in_out.value.split("\n"))
+            blocks = parse_rst_section(in_out.value)
             for b in blocks:
                 new_example_section_data.append(b)
 
@@ -427,7 +406,10 @@ def normalise_ref(ref):
 
 @dataclass
 class Config:
+    # we might want to suppress progress/ rich as it infers with ipdb.
     dummy_progress: bool = False
+    # Do not actually touch disk
+    dry_run: bool = False
     exec_failure: Optional[str] = None  # should move to enum
     logo: Optional[str] = None  # should change to path likely
     execute_exclude_patterns: Sequence[str] = ()
@@ -448,6 +430,20 @@ class Config:
         return dataclasses.replace(self, **kwargs)
 
 
+def load_configuration(path: str) -> Tuple[str, MutableMapping[str, Any]]:
+    """
+    Given a path, load a configuration from a File.
+    """
+    conffile = Path(path).expanduser()
+    if conffile.exists():
+        conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
+        assert len(conf.keys()) == 1
+        root = next(iter(conf.keys()))
+        return root, conf[root]
+    else:
+        sys.exit(f"{conffile!r} does not exists.")
+
+
 def gen_main(
     infer,
     exec_,
@@ -464,31 +460,16 @@ def gen_main(
     """
     main entry point
     """
-    conffile = Path(target_file).expanduser()
-    if conffile.exists():
-        conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
-        k0 = next(iter(conf.keys()))
-        config = Config(**conf[k0], dummy_progress=dummy_progress)
-        if exec_ is not None:
-            config.exec = exec_
-        if infer is not None:
-            config.infer = infer
+    target_module_name, conf = load_configuration(target_file)
+    config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
+    if exec_ is not None:
+        config.exec = exec_
+    if infer is not None:
+        config.infer = infer
 
-        if len(conf.keys()) != 1:
-            raise ValueError(
-                f"We only support one library at a time for now {conf.keys()}"
-            )
+    target_dir = Path("~/.papyri/data").expanduser()
 
-        names = list(conf.keys())
-
-    else:
-        sys.exit(f"{conffile!r} does not exists.")
-    assert len(names) == 1, "current we can only do one package at a time"
-
-    tp = os.path.expanduser("~/.papyri/data")
-
-    target_dir = Path(tp).expanduser()
-    if not target_dir.exists() and not dry_run:
+    if not target_dir.exists() and not config.dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
 
     g = Gen(
@@ -500,7 +481,7 @@ def gen_main(
         g.log.debug("Log level set to debug")
 
     g.do_generic_info(
-        names[0],
+        target_module_name,
         relative_dir=Path(target_file).parent,
         config=config,
     )
@@ -508,23 +489,20 @@ def gen_main(
         g.collect_examples_out(config)
     if api:
         g.do_one_mod(
-            names[0],
+            target_module_name,
             config=config,
         )
     docs_path: Optional[str] = config.docs_path
     if docs_path is not None and narative:
         path = Path(docs_path).expanduser()
         g.do_docs(path, fail, config)
-    if not dry_run:
+    if not config.dry_run:
         p = target_dir / (g.root + "_" + g.version)
         p.mkdir(exist_ok=True)
 
         g.log.info("Saving current Doc bundle to %s", p)
         g.clean(p)
         g.write(p)
-
-
-from .utils import TimeElapsedColumn
 
 
 def full_qual(obj):
@@ -566,7 +544,6 @@ class DFSCollector:
             Base object, typically module we want to scan itself.
             We will attempt to no scan any object which does not belong
             to the root or one of its children.
-
         others:
             List of other objects to use a base to explore the object graph.
             Typically this is because some packages do not import some
@@ -598,9 +575,8 @@ class DFSCollector:
         Some object can be reached many times via multiple path.
         We try to remove duplicate path we use to reach given objects.
 
-        Note
-        ----
-
+        Notes
+        -----
         At some point we might want to save all objects aliases,
         in order to extract the canonical import name (visible to users),
         and to resolve references.
@@ -954,15 +930,14 @@ class Gen:
         ----------
         target_item : any
             the object you want to get documentation for
-        ndoc :
+        ndoc
             numpydoc parsed docstring.
         qa : str
             fully qualified object path.
         config : Config
             current configuratin
-        aliases :  sequence
+        aliases : sequence
             other aliases for cuttent object.
-
 
         Returns
         -------
@@ -1144,7 +1119,7 @@ class Gen:
                 items = []
                 if desc:
                     try:
-                        items = P2(desc)
+                        items = parse_rst_section("\n".join(desc))
                     except Exception as e:
                         raise type(e)(f"from {qa}")
                     for l in items:
@@ -1283,8 +1258,7 @@ class Gen:
 
         Parameters
         ----------
-
-        root: str
+        root : str
             name of the root module to crawl
 
         """
@@ -1336,7 +1310,7 @@ class Gen:
         qa : str
             fully qualified name of the object we are extracting the
         documentation from .
-        p2: rich progress instance
+        p2 : rich progress instance
         """
         item_docstring = target_item.__doc__
         # TODO: we may not want to skip items as they may have children
@@ -1377,8 +1351,8 @@ class Gen:
         ----------
         root : str
             module name to generate docbundle for.
-        exec_ : bool
-            Whether to try to execute the code blocks and embed resulting values like plots.
+        config : Config
+            configuration object
 
         See Also
         --------
