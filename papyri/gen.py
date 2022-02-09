@@ -445,20 +445,53 @@ def load_configuration(path: str) -> Tuple[str, MutableMapping[str, Any]]:
 
 
 def gen_main(
-    infer,
-    exec_,
-    target_file,
+    infer: Optional[bool],
+    exec_: Optional[bool],
+    target_file: str,
     debug,
     *,
     dummy_progress: bool,
     dry_run=bool,
-    api,
-    examples,
+    api: bool,
+    examples: bool,
     fail,
     narative,
-):
+) -> None:
     """
-    main entry point
+    Main entry point to generate docbundle files,
+
+    This will take care of reading  single configuration file with the option
+    for the library you want to build the docs for, scrape API, narrative and
+    examples, and put it into a doc bundle for later consumption.
+
+    Parameters
+    ----------
+    infer : bool
+        CLI override of whether to run type inference on examples
+    exec_ : bool
+        CLI override of whether to execute examples/code blocks
+    target_file : str
+        Patch of configuration file
+    dummy_progress : bool
+        CLI flag to disable progress that might screw up with ipdb formatting
+        when debugging.
+    api : bool
+        CLI override of whether to build api docs
+    examples : bool
+        CLI override of whether to build examples docs
+    fail
+        TBD
+    narative : bool
+        CLI override of whether to build narative docs
+    dry_run : bool
+        don't write to disk
+    debug : bool
+        set log level to debug
+
+    Returns
+    -------
+    None
+
     """
     target_module_name, conf = load_configuration(target_file)
     config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
@@ -538,11 +571,11 @@ class DFSCollector:
         """
         Parameters
         ----------
-        root:
+        root
             Base object, typically module we want to scan itself.
             We will attempt to no scan any object which does not belong
             to the root or one of its children.
-        others:
+        others
             List of other objects to use a base to explore the object graph.
             Typically this is because some packages do not import some
             submodules by default, so we need to pass these submodules
@@ -1307,8 +1340,7 @@ class Gen:
         ----------
         qa : str
             fully qualified name of the object we are extracting the
-        documentation from .
-        p2 : rich progress instance
+            documentation from .
         """
         item_docstring = target_item.__doc__
         # TODO: we may not want to skip items as they may have children
