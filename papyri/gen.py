@@ -455,7 +455,7 @@ def gen_main(
     api: bool,
     examples: bool,
     fail,
-    narative,
+    narrative,
 ) -> None:
     """
     Main entry point to generate docbundle files,
@@ -466,9 +466,9 @@ def gen_main(
 
     Parameters
     ----------
-    infer : bool
+    infer : bool | None
         CLI override of whether to run type inference on examples
-    exec_ : bool
+    exec_ : bool | None
         CLI override of whether to execute examples/code blocks
     target_file : str
         Patch of configuration file
@@ -481,8 +481,8 @@ def gen_main(
         CLI override of whether to build examples docs
     fail
         TBD
-    narative : bool
-        CLI override of whether to build narative docs
+    narrative : bool
+        CLI override of whether to build narrative docs
     dry_run : bool
         don't write to disk
     debug : bool
@@ -514,19 +514,13 @@ def gen_main(
     g.do_generic_info(
         target_module_name,
         relative_dir=Path(target_file).parent,
-        config=config,
     )
     if examples:
-        g.collect_examples_out(config)
+        g.collect_examples_out()
     if api:
-        g.do_one_mod(
-            target_module_name,
-            config=config,
-        )
-    docs_path: Optional[str] = config.docs_path
-    if docs_path is not None and narative:
-        path = Path(docs_path).expanduser()
-        g.do_docs(path, fail, config)
+        g.do_one_mod(target_module_name)
+    if narrative:
+        g.collect_narrative_docs()
     if not config.dry_run:
         p = target_dir / (g.root + "_" + g.version)
         p.mkdir(exist_ok=True)
@@ -830,6 +824,7 @@ class Gen:
         )
 
         self.log = logging.getLogger("papyri")
+        self.config = config
 
         self.data = {}
         self.bdata = {}
@@ -864,11 +859,14 @@ class Gen:
         if (where / "docs").exists():
             (where / "docs").rmdir()
 
-    def do_docs(self, path, fail, config):
+    def collect_narrative_docs(self):
         """
         Crawl the filesystem for all docs/rst files
 
         """
+        if not self.config.docs_path:
+            return
+        path = Path(self.config.docs_path).expanduser()
         self.log.info("Scraping Documentation")
         for p in path.glob("**/*.rst"):
             assert p.is_file()
@@ -1314,15 +1312,15 @@ class Gen:
 
         return collector
 
-    def collect_examples_out(self, config):
+    def collect_examples_out(self):
 
-        examples_folder = config.examples_folder
+        examples_folder = self.config.examples_folder
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
             examples_folder = Path(examples_folder).expanduser()
             examples_data = self.collect_examples(
                 examples_folder,
-                config=config,
+                config=self.config,
             )
             for edoc, figs in examples_data:
                 self.examples.update(
@@ -1363,16 +1361,16 @@ class Gen:
 
         return item_docstring, arbitrary
 
-    def do_generic_info(self, root, relative_dir, config):
+    def do_generic_info(self, root, relative_dir):
         self.root = root
-        if config.logo:
-            self.put_raw("logo.png", (relative_dir / Path(config.logo)).read_bytes())
+        if self.config.logo:
+            self.put_raw(
+                "logo.png", (relative_dir / Path(self.config.logo)).read_bytes()
+            )
 
     def do_one_mod(
         self,
         root: str,
-        *,
-        config: Config,
     ):
         """
         Crawl one module and stores resulting docbundle in self.store.
@@ -1381,8 +1379,6 @@ class Gen:
         ----------
         root : str
             module name to generate docbundle for.
-        config : Config
-            configuration object
 
         See Also
         --------
@@ -1398,13 +1394,13 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector = self.configure(root, config)
+        collector = self.configure(root, self.config)
         collected: Dict[str, Any] = collector.items()
 
-        self.log.debug("Configuration: %s", config)
+        self.log.debug("Configuration: %s", self.config)
 
         # collect all items we want to document.
-        excluded = sorted(config.exclude)
+        excluded = sorted(self.config.exclude)
         if excluded:
             self.log.info(
                 "The following items will be excluded by the configurations:\n %s",
@@ -1468,9 +1464,9 @@ class Gen:
                         continue
                 if not isinstance(target_item, ModuleType):
                     arbitrary = []
-                ex = config.exec
-                if config.exec and any(
-                    qa.startswith(pat) for pat in config.execute_exclude_patterns
+                ex = self.config.exec
+                if self.config.exec and any(
+                    qa.startswith(pat) for pat in self.config.execute_exclude_patterns
                 ):
                     ex = False
                 dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
@@ -1481,7 +1477,7 @@ class Gen:
                         target_item,
                         ndoc,
                         qa=qa,
-                        config=config.replace(exec=ex),
+                        config=self.config.replace(exec=ex),
                         aliases=collector.aliases[qa],
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]

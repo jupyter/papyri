@@ -388,7 +388,7 @@ def gen(
     dry_run: bool = False,
     api: bool = True,
     examples: bool = True,
-    narative: bool = True,
+    narrative: bool = True,
     fail: bool = typer.Option(False, help="Fail on first error"),
 ):
     """
@@ -412,7 +412,7 @@ def gen(
             api=api,
             examples=examples,
             fail=fail,
-            narative=narative,
+            narrative=narrative,
         )
 
 
