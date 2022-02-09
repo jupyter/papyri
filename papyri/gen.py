@@ -466,9 +466,9 @@ def gen_main(
 
     Parameters
     ----------
-    infer : bool
+    infer : bool | None
         CLI override of whether to run type inference on examples
-    exec_ : bool
+    exec_ : bool | None
         CLI override of whether to execute examples/code blocks
     target_file : str
         Patch of configuration file
