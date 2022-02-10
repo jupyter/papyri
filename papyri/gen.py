@@ -129,8 +129,10 @@ def parse_script(script: str, ns: Dict, prev, config, *, where=None):
     prev : str
         previous lines that lead to this.
 
-    Yields
+    Return
     ------
+    List of tuples with:
+
     index: int
         index in the tokenstream
     reference : str
@@ -157,46 +159,35 @@ def parse_script(script: str, ns: Dict, prev, config, *, where=None):
     for index, _type, text in P.get_tokens_unprocessed(script):
         line_n, col_n = pos_to_nl(script, index)
         line_n += l_delta
-        try:
-            ref = None
-            for jed in jeds:
-                failed = ""
-                try:
-                    if (
-                        config.infer
-                        and (text not in (" .=()[],"))
-                        and text.isidentifier()
-                    ):
-                        try:
-                            inf = jed.infer(line_n + 1, col_n)
-                        except jedi.inference.utils.UncaughtAttributeError:
-                            if config.jedi_failure_mode in (None, "error"):
-                                raise
-                            elif config.jedi_failure_mode == "log":
-                                print(
-                                    "failed inference example will be empty ",
-                                    where,
-                                    line_n,
-                                    col_n,
-                                )
-                                return None
-                        if inf:
-                            # TODO: we might want the qualname to be module_name:name for disambiguation.
-                            ref = inf[0].full_name
-                            # if ref.startswith('builtins'):
-                            #    ref = ''
-                    else:
-                        ref = ""
-                except (AttributeError, TypeError) as e:
-                    raise type(e)(
-                        f"{contextscript}, {line_n=}, {col_n=}, {prev=}, {jed=}"
-                    ) from e
-                break
-        except IndexError:
-            raise
-            ref = ""
-        acc.append((text + failed, ref))
-        # yield text + failed, ref
+        ref = None
+        if not config.infer or (text not in (" .=()[],")) or text.isidentifier():
+            acc.append((text, ""))
+            continue
+
+        for jed in jeds:
+            try:
+                inf = jed.infer(line_n + 1, col_n)
+                if inf:
+                    # TODO: we might want the qualname to
+                    # be module_name:name for disambiguation.
+                    ref = inf[0].full_name
+            except (AttributeError, TypeError) as e:
+                raise type(e)(
+                    f"{contextscript}, {line_n=}, {col_n=}, {prev=}, {jed=}"
+                ) from e
+            except jedi.inference.utils.UncaughtAttributeError:
+                if config.jedi_failure_mode in (None, "error"):
+                    raise
+                elif config.jedi_failure_mode == "log":
+                    print(
+                        "failed inference example will be empty ",
+                        where,
+                        line_n,
+                        col_n,
+                    )
+                    return None
+            break
+        acc.append((text, ref))
     _jedi_set_cache(full_text, acc)
     warnings.simplefilter("default", UserWarning)
     return acc
