@@ -113,7 +113,7 @@ def _jedi_set_cache(text, value):
     _cache.write_text(json.dumps(value))
 
 
-def parse_script(script: str, ns: Dict, prev, config):
+def parse_script(script: str, ns: Dict, prev, config, *, where=None):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -166,7 +166,19 @@ def parse_script(script: str, ns: Dict, prev, config):
                         and (text not in (" .=()[],"))
                         and text.isidentifier()
                     ):
-                        inf = jed.infer(line_n + 1, col_n)
+                        try:
+                            inf = jed.infer(line_n + 1, col_n)
+                        except jedi.inference.utils.UncaughtAttributeError:
+                            if config.jedi_failure_mode in (None, "error"):
+                                raise
+                            elif config.jedi_failure_mode == "log":
+                                print(
+                                    "failed inference example will be empty ",
+                                    where,
+                                    line_n,
+                                    col_n,
+                                )
+                                return None
                         if inf:
                             # TODO: we might want the qualname to be module_name:name for disambiguation.
                             ref = inf[0].full_name
@@ -192,7 +204,7 @@ def parse_script(script: str, ns: Dict, prev, config):
 from enum import Enum
 
 
-class ExecutionStatus:
+class ExecutionStatus(Enum):
     none = "None"
     compiled = "compiled"
     syntax_error = "syntax_error"
@@ -204,7 +216,7 @@ def _execute_inout(item):
     ce_status = ExecutionStatus.none
     try:
         compile(script, "<>", "exec")
-        ce_status = Execution.compiled
+        ce_status = ExecutionStatus.compiled
     except SyntaxError:
         ce_status = ExecutionStatus.syntax_error
 
@@ -291,96 +303,84 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
     wait_for_show = config.wait_for_plt_show
     if qa in config.exclude_jedi:
+        config = config.replace(infer=inf)
         print(f"Turning off type inference for func {qa!r}")
-        inf = False
-    else:
-        inf = config.infer
+
     with executor:
-        for b in blocks:
-            for item in b:
-                if isinstance(item, InOut):
-                    script, out, ce_status = _execute_inout(item)
-                    figname = None
-                    raise_in_fig = None
-                    did_except = False
-                    if config.exec and ce_status == ExecutionStatus.compiled:
+        for item in (it for block in blocks for it in block):
+            if isinstance(item, InOut):
+                script, out, ce_status = _execute_inout(item)
+                figname = None
+                raise_in_fig = None
+                did_except = False
+                if config.exec and ce_status == ExecutionStatus.compiled:
+                    try:
+                        if not wait_for_show:
+                            assert len(fig_managers) == 0
                         try:
-                            if not wait_for_show:
-                                assert len(fig_managers) == 0
-                            try:
-                                res, fig_managers, sout, serr = executor.exec(script)
-                                ce_status = "execed"
-                                if (out == repr(res)) or (res is None and out == []):
-                                    pass
-                                    # captured aoutput is the same ! we are good.
-                                else:
-                                    pass
-                                    # captured output differ TBD
-                            except Exception:
-                                log.exception("error in execution: %s", qa)
-                                ce_status = "exception_in_exec"
-                                if config.exec_failure != "fallback":
-                                    raise
-                            if fig_managers and (
-                                ("plt.show" in script) or not wait_for_show
-                            ):
-                                raise_in_fig = True
+                            res, fig_managers, sout, serr = executor.exec(script)
+                            ce_status = "execed"
+                            if (out == repr(res)) or (res is None and out == []):
+                                pass
+                            else:
+                                pass
+                                # captured output differ TBD
+                        except Exception:
+                            log.exception("error in execution: %s", qa)
+                            ce_status = "exception_in_exec"
+                            if config.exec_failure != "fallback":
+                                raise
+                        if fig_managers and (
+                            ("plt.show" in script) or not wait_for_show
+                        ):
+                            raise_in_fig = True
+                            for fig in executor.get_figs():
+                                counter += 1
+                                figname = f"fig-{qa}-{counter}.png"
+                                figs.append((figname, fig))
+                            plt.close("all")
+                            raise_in_fig = False
+
+                    except Exception:
+                        did_except = True
+                        print(f"exception executing... {qa}")
+                        fig_managers = executor.fig_man()
+                        if raise_in_fig or config.exec_failure != "fallback":
+                            raise
+                    finally:
+                        if not wait_for_show:
+                            if fig_managers:
                                 for fig in executor.get_figs():
                                     counter += 1
                                     figname = f"fig-{qa}-{counter}.png"
                                     figs.append((figname, fig))
+                                    print(
+                                        f"Still fig manager(s) open for {qa}: {figname}"
+                                    )
                                 plt.close("all")
-                                raise_in_fig = False
-
-                        except Exception:
-                            did_except = True
-                            print(f"exception executing... {qa}")
                             fig_managers = executor.fig_man()
-                            if raise_in_fig or config.exec_failure != "fallback":
-                                raise
-                        finally:
-                            if not wait_for_show:
-                                if fig_managers:
-                                    for fig in executor.get_figs():
-                                        counter += 1
-                                        figname = f"fig-{qa}-{counter}.png"
-                                        figs.append((figname, fig))
-                                        print(
-                                            f"Still fig manager(s) open for {qa}: {figname}"
-                                        )
-                                    plt.close("all")
-                                fig_managers = executor.fig_man()
-                                assert len(fig_managers) == 0, fig_managers + [
-                                    did_except,
-                                ]
+                            assert len(fig_managers) == 0, fig_managers + [
+                                did_except,
+                            ]
+                entries = parse_script(
+                    script,
+                    ns=ns,
+                    prev=acc,
+                    config=config,
+                )
+                if entries is None:
                     entries = [("jedi failed", "jedi failed")]
-                    try:
-                        entries = list(
-                            parse_script(
-                                script,
-                                ns=ns,
-                                prev=acc,
-                                config=config.replace(infer=inf),
-                            )
-                        )
-                    except jedi.inference.utils.UncaughtAttributeError:
-                        if config.jedi_failure_mode in (None, "error"):
-                            raise
-                        elif config.jedi_failure_mode == "log":
-                            print(
-                                "failed inference example will be empty ",
-                                qa,
-                            )
 
-                    acc += "\n" + script
-                    example_section_data.append(
-                        Code(entries, "\n".join(item.out), ce_status)
-                    )
-                    if figname:
-                        example_section_data.append(Fig(figname))
-                else:
-                    assert isinstance(item.out, list)
-                    example_section_data.append(Text("\n".join(item.out)))
+
+                acc += "\n" + script
+                example_section_data.append(
+                    Code(entries, "\n".join(item.out), ce_status)
+                )
+                if figname:
+                    example_section_data.append(Fig(figname))
+            else:
+                assert isinstance(item.out, list)
+                example_section_data.append(Text("\n".join(item.out)))
 
     # TODO fix this if plt.close not called and still a ligering figure.
     fig_managers = executor.fig_man()
@@ -1317,13 +1317,11 @@ class Gen:
                                 self.log.error("%s failed %s", example, type(e))
                             else:
                                 raise type(e)(f"Within {example}")
-                entries = list(
-                    parse_script(
+                entries = parse_script(
                         script,
                         ns={},
                         prev="",
                         config=config,
-                    )
                 )
                 s = Section(
                     [Code(entries, "", ce_status)] + [Fig(name) for name, _ in figs]
