@@ -91,9 +91,10 @@ import datetime
 
 
 def _hashf(text):
-    ## with date hour for cache expiring every hours.
+    ##  for cache expiring every day.
+    ## for every hours, change to 0:13.
 
-    return sha256(text.encode()).hexdigest() + datetime.datetime.now().isoformat()[0:13]
+    return sha256(text.encode()).hexdigest() + datetime.datetime.now().isoformat()[0:10]
 
 
 def _jedi_get_cache(text):
@@ -114,7 +115,9 @@ def _jedi_set_cache(text, value):
     _cache.write_text(json.dumps(value))
 
 
-def parse_script(script: str, ns: Dict, prev, config, *, where=None):
+def parse_script(
+    script: str, ns: Dict, prev, config, *, where=None
+) -> Optional[List[Tuple[str, str]]]:
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -139,8 +142,8 @@ def parse_script(script: str, ns: Dict, prev, config, *, where=None):
         fully qualified name of the type of current token
 
     """
+    assert isinstance(ns, dict)
     jeds = []
-
     warnings.simplefilter("ignore", UserWarning)
 
     l_delta = len(prev.split("\n"))
@@ -160,7 +163,7 @@ def parse_script(script: str, ns: Dict, prev, config, *, where=None):
         line_n, col_n = pos_to_nl(script, index)
         line_n += l_delta
         ref = None
-        if not config.infer or (text not in (" .=()[],")) or text.isidentifier():
+        if not config.infer or (text in (" .=()[],")) or not text.isidentifier():
             acc.append((text, ""))
             continue
 
@@ -191,6 +194,10 @@ def parse_script(script: str, ns: Dict, prev, config, *, where=None):
     _jedi_set_cache(full_text, acc)
     warnings.simplefilter("default", UserWarning)
     return acc
+    if "Dispatchable" in where:
+        import ipdb
+
+        ipdb.set_trace()
 
 
 from enum import Enum
@@ -285,7 +292,6 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     import numpy as np
 
     acc = ""
-    counter = 0
     figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
     ns = {"np": np, "plt": plt, obj.__name__: obj}
     executor = BlockExecutor(ns)
@@ -295,7 +301,7 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
     wait_for_show = config.wait_for_plt_show
     if qa in config.exclude_jedi:
-        config = config.replace(infer=inf)
+        config = config.replace(infer=False)
         print(f"Turning off type inference for func {qa!r}")
     chunks = (it for block in blocks for it in block)
     with executor:
@@ -305,12 +311,13 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                 figname = None
                 raise_in_fig = None
                 did_except = False
-                if config.exec and ce_status == ExecutionStatus.compiled:
+                if config.exec and ce_status == ExecutionStatus.compiled.value:
                     if not wait_for_show:
                         # we should aways have 0 figures
                         # unless stated otherwise
                         assert len(fig_managers) == 0
                     try:
+                        res = object()
                         try:
                             res, fig_managers, sout, serr = executor.exec(script)
                             ce_status = "execed"
@@ -356,15 +363,9 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                     else:
                         pass
                         # captured output differ TBD
-                entries = parse_script(
-                    script,
-                    ns=ns,
-                    prev=acc,
-                    config=config,
-                )
+                entries = parse_script(script, ns=ns, prev=acc, config=config, where=qa)
                 if entries is None:
                     entries = [("jedi failed", "jedi failed")]
-
 
                 acc += "\n" + script
                 example_section_data.append(
@@ -381,6 +382,7 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     if len(fig_managers) != 0:
         print(f"Unclosed figures in {qa}!!")
         plt.close("all")
+
     return processed_example_data(example_section_data), figs
 
 
@@ -1312,10 +1314,10 @@ class Gen:
                             else:
                                 raise type(e)(f"Within {example}")
                 entries = parse_script(
-                        script,
-                        ns={},
-                        prev="",
-                        config=config,
+                    script,
+                    ns={},
+                    prev="",
+                    config=config,
                 )
                 s = Section(
                     [Code(entries, "", ce_status)] + [Fig(name) for name, _ in figs]

@@ -1,5 +1,6 @@
 [scipy]
 logo = "../scipy_logo.png"
+exec = true
 submodules = [ "signal",]
 exclude = [ "scipy.signal.spectral._spectral_helper",
             "scipy.optimize._lsq.least_squares.least_squares",
@@ -168,6 +169,7 @@ exclude_jedi = [
     "scipy.linalg.decomp.eigvalsh_tridiagonal",
     "scipy.linalg.decomp.hessenberg",
     "scipy.linalg.decomp_svd.null_space",
+    "scipy.signal.bsplines.bspline",
     ]
 
 execute_exclude_patterns = []
