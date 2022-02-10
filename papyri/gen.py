@@ -23,6 +23,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from itertools import count
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple
 
@@ -293,8 +294,8 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     import numpy as np
 
     acc = ""
-
     counter = 0
+    figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
     ns = {"np": np, "plt": plt, obj.__name__: obj}
     executor = BlockExecutor(ns)
     figs = []
@@ -305,26 +306,23 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     if qa in config.exclude_jedi:
         config = config.replace(infer=inf)
         print(f"Turning off type inference for func {qa!r}")
-
+    chunks = (it for block in blocks for it in block)
     with executor:
-        for item in (it for block in blocks for it in block):
+        for item in chunks:
             if isinstance(item, InOut):
                 script, out, ce_status = _execute_inout(item)
                 figname = None
                 raise_in_fig = None
                 did_except = False
                 if config.exec and ce_status == ExecutionStatus.compiled:
+                    if not wait_for_show:
+                        # we should aways have 0 figures
+                        # unless stated otherwise
+                        assert len(fig_managers) == 0
                     try:
-                        if not wait_for_show:
-                            assert len(fig_managers) == 0
                         try:
                             res, fig_managers, sout, serr = executor.exec(script)
                             ce_status = "execed"
-                            if (out == repr(res)) or (res is None and out == []):
-                                pass
-                            else:
-                                pass
-                                # captured output differ TBD
                         except Exception:
                             log.exception("error in execution: %s", qa)
                             ce_status = "exception_in_exec"
@@ -335,8 +333,7 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                         ):
                             raise_in_fig = True
                             for fig in executor.get_figs():
-                                counter += 1
-                                figname = f"fig-{qa}-{counter}.png"
+                                figname = next(figure_names)
                                 figs.append((figname, fig))
                             plt.close("all")
                             raise_in_fig = False
@@ -351,8 +348,7 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                         if not wait_for_show:
                             if fig_managers:
                                 for fig in executor.get_figs():
-                                    counter += 1
-                                    figname = f"fig-{qa}-{counter}.png"
+                                    figname = next(figure_names)
                                     figs.append((figname, fig))
                                     print(
                                         f"Still fig manager(s) open for {qa}: {figname}"
@@ -362,6 +358,13 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                             assert len(fig_managers) == 0, fig_managers + [
                                 did_except,
                             ]
+                    # we've executed, we now want to compare output
+                    # in the docstring with the one we produced.
+                    if (out == repr(res)) or (res is None and out == []):
+                        pass
+                    else:
+                        pass
+                        # captured output differ TBD
                 entries = parse_script(
                     script,
                     ns=ns,
