@@ -400,19 +400,19 @@ class DirectiveVisiter(TreeReplacer):
     def replace_Directive(self, directive: Directive):
         if (directive.domain, directive.role) == ("py", "func"):
             pass
-        elif (directive.domain, directive.role) == (None, None) and directive.text in (
+        elif (directive.domain, directive.role) == (None, None) and directive.value in (
             # TODO: link to stdlib
             "None",
             "True",
             "False",
         ):
-            return [Verbatim([directive.text])]
+            return [Verbatim([directive.value])]
         elif (directive.domain is not None) or (
             directive.role not in (None, "mod", "class", "func", "meth", "any")
         ):
             # TODO :many of these directive need to be implemented
             if directive.role == "math":
-                m = Math(directive.value)
+                m = Math([directive.value])
                 return [m]
             if directive.role not in (
                 "attr",
@@ -440,16 +440,17 @@ class DirectiveVisiter(TreeReplacer):
             loc = frozenset()
         else:
             loc = self.local_refs
-        text = directive.text
+        text = directive.value
         # TODO: wrong, there should not be any ` left that is likely a
         # verbatim vs directive parsing issue.
-        text = text.strip("`")
+        assert "`" not in text
+        # text = text.strip("`")
         to_resolve = text
         if " <" in text and text.endswith(">"):
             try:
                 text, to_resolve = text.split(" <")
             except ValueError:
-                assert False, directive.text
+                assert False, directive.value
             assert to_resolve.endswith(">"), (text, to_resolve)
             to_resolve = to_resolve.rstrip(">")
 

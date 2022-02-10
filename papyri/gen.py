@@ -82,6 +82,37 @@ def paragraph(lines: List[str]) -> Any:
     return p2
 
 
+_JEDI_CACHE = Path("~/.cache/papyri/jedi/").expanduser()
+
+
+from hashlib import sha256
+import datetime
+
+
+def _hashf(text):
+    ## with date hour for cache expiring every hours.
+
+    return sha256(text.encode()).hexdigest() + datetime.datetime.now().isoformat()[0:13]
+
+
+def _jedi_get_cache(text):
+
+    _JEDI_CACHE.mkdir(exist_ok=True, parents=True)
+
+    _cache = _JEDI_CACHE / _hashf(text)
+    if _cache.exists():
+        return tuple(tuple(x) for x in json.loads(_cache.read_text()))
+
+    return None
+
+
+def _jedi_set_cache(text, value):
+    _JEDI_CACHE.mkdir(exist_ok=True, parents=True)
+
+    _cache = _JEDI_CACHE / _hashf(text)
+    _cache.write_text(json.dumps(value))
+
+
 def parse_script(script: str, ns: Dict, prev, config):
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
@@ -99,12 +130,8 @@ def parse_script(script: str, ns: Dict, prev, config):
 
     Yields
     ------
-    index
+    index: int
         index in the tokenstream
-    type
-        pygments token type
-    text
-        text of the token
     reference : str
         fully qualified name of the type of current token
 
@@ -117,8 +144,14 @@ def parse_script(script: str, ns: Dict, prev, config):
     contextscript = prev + "\n" + script
     if ns:
         jeds.append(jedi.Interpreter(contextscript, namespaces=[ns]))
-    jeds.append(jedi.Script(prev + "\n" + script))
+    full_text = prev + "\n" + script
+    k = _jedi_get_cache(full_text)
+    if k is not None:
+        return k
+    jeds.append(jedi.Script(full_text))
     P = PythonLexer()
+
+    acc = []
 
     for index, _type, text in P.get_tokens_unprocessed(script):
         line_n, col_n = pos_to_nl(script, index)
@@ -145,14 +178,15 @@ def parse_script(script: str, ns: Dict, prev, config):
                     raise type(e)(
                         f"{contextscript}, {line_n=}, {col_n=}, {prev=}, {jed=}"
                     ) from e
-                    failed = "(jedi failed inference)"
-                    print("failed inference on ", script, ns, jed, col_n, line_n + 1)
                 break
         except IndexError:
             raise
             ref = ""
-        yield text + failed, ref
+        acc.append((text + failed, ref))
+        # yield text + failed, ref
+    _jedi_set_cache(full_text, acc)
     warnings.simplefilter("default", UserWarning)
+    return acc
 
 
 def get_example_data(doc, *, obj, qa: str, config, log):
@@ -308,14 +342,25 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                         inf = False
                     else:
                         inf = config.infer
-                    entries = list(
-                        parse_script(
-                            script,
-                            ns=ns,
-                            prev=acc,
-                            config=config.replace(infer=inf),
+                    entries = [("jedi failed", "jedi failed")]
+                    try:
+                        entries = list(
+                            parse_script(
+                                script,
+                                ns=ns,
+                                prev=acc,
+                                config=config.replace(infer=inf),
+                            )
                         )
-                    )
+                    except jedi.inference.utils.UncaughtAttributeError:
+                        if config.jedi_failure_mode in (None, "error"):
+                            raise
+                        elif config.jedi_failure_mode == "log":
+                            print(
+                                "failed inference example will be empty ",
+                                qa,
+                            )
+
                     acc += "\n" + script
                     example_section_data.append(
                         Code(entries, "\n".join(item.out), ce_status)
@@ -411,6 +456,7 @@ class Config:
     # Do not actually touch disk
     dry_run: bool = False
     exec_failure: Optional[str] = None  # should move to enum
+    jedi_failure_mode: Optional[str] = None  # move to enum ?
     logo: Optional[str] = None  # should change to path likely
     execute_exclude_patterns: Sequence[str] = ()
     infer: bool = True

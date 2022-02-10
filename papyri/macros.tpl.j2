@@ -8,7 +8,7 @@
     {%- elif type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
-        <code>:{{obj.domain}}:{{obj.role}}:`{{obj.text}}`</code>
+        <code>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
     {%- elif type_ == 'Link' -%}
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
