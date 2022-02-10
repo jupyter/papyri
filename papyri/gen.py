@@ -189,6 +189,28 @@ def parse_script(script: str, ns: Dict, prev, config):
     return acc
 
 
+from enum import Enum
+
+
+class ExecutionStatus:
+    none = "None"
+    compiled = "compiled"
+    syntax_error = "syntax_error"
+    exec_error = "exception_in_exec"
+
+
+def _execute_inout(item):
+    script = "\n".join(item.in_)
+    ce_status = ExecutionStatus.none
+    try:
+        compile(script, "<>", "exec")
+        ce_status = Execution.compiled
+    except SyntaxError:
+        ce_status = ExecutionStatus.syntax_error
+
+    return script, item.out, ce_status.value
+
+
 def get_example_data(doc, *, obj, qa: str, config, log):
     """Extract example section data from a NumpyDocstring
 
@@ -268,32 +290,27 @@ def get_example_data(doc, *, obj, qa: str, config, log):
     fig_managers = executor.fig_man()
     assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
     wait_for_show = config.wait_for_plt_show
+    if qa in config.exclude_jedi:
+        print(f"Turning off type inference for func {qa!r}")
+        inf = False
+    else:
+        inf = config.infer
     with executor:
         for b in blocks:
             for item in b:
                 if isinstance(item, InOut):
-                    script = "\n".join(item.in_)
+                    script, out, ce_status = _execute_inout(item)
                     figname = None
-                    ce_status = "None"
-                    try:
-                        compile(script, "<>", "exec")
-                        ce_status = "compiled"
-                    except SyntaxError:
-                        ce_status = "syntax_error"
-                        pass
                     raise_in_fig = None
                     did_except = False
-                    if config.exec and ce_status == "compiled":
+                    if config.exec and ce_status == ExecutionStatus.compiled:
                         try:
                             if not wait_for_show:
                                 assert len(fig_managers) == 0
                             try:
                                 res, fig_managers, sout, serr = executor.exec(script)
                                 ce_status = "execed"
-                                out = "\n".join(item.out)
-                                if (out == repr(res)) or (
-                                    res is None and item.out == []
-                                ):
+                                if (out == repr(res)) or (res is None and out == []):
                                     pass
                                     # captured aoutput is the same ! we are good.
                                 else:
@@ -336,12 +353,6 @@ def get_example_data(doc, *, obj, qa: str, config, log):
                                 assert len(fig_managers) == 0, fig_managers + [
                                     did_except,
                                 ]
-                    infer_exclude = config.exclude_jedi
-                    if qa in infer_exclude:
-                        print(f"Turning off type inference for func {qa!r}")
-                        inf = False
-                    else:
-                        inf = config.infer
                     entries = [("jedi failed", "jedi failed")]
                     try:
                         entries = list(
