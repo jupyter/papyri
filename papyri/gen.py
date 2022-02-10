@@ -117,7 +117,7 @@ def _jedi_set_cache(text, value):
 
 def parse_script(
     script: str, ns: Dict, prev, config, *, where=None
-) -> Optional[List[Tuple[str, str]]]:
+) -> Optional[List[Tuple[str, Optional[str]]]]:
     """
     Parse a script into tokens and use Jedi to infer the fully qualified names
     of each token.
@@ -157,7 +157,7 @@ def parse_script(
     jeds.append(jedi.Script(full_text))
     P = PythonLexer()
 
-    acc = []
+    acc: List[Tuple[str, Optional[str]]] = []
 
     for index, _type, text in P.get_tokens_unprocessed(script):
         line_n, col_n = pos_to_nl(script, index)
