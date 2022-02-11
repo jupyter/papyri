@@ -18,6 +18,7 @@ import os
 import re
 import site
 import sys
+import tempfile
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
@@ -550,6 +551,8 @@ def gen_main(
 
     if not target_dir.exists() and not config.dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
+    if dry_run:
+        target_dir = tempfile.mkdtemp()
 
     g = Gen(dummy_progress=dummy_progress, config=config)
     g.log.info("Will write data to %s", target_dir)
@@ -574,6 +577,8 @@ def gen_main(
         g.log.info("Saving current Doc bundle to %s", p)
         g.clean(p)
         g.write(p)
+    else:
+        os.rmdir(target_dir)
 
 
 def full_qual(obj):
