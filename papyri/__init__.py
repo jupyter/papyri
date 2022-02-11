@@ -401,6 +401,13 @@ def gen(
     _intro()
     from papyri.gen import gen_main
 
+    if len(files) > 1:
+        print(
+            """
+            Warning, it is not recommended to run papyri on multiple libraries at once,
+            as many libraries might have side effects. """
+        )
+
     for file in files:
         gen_main(
             infer=infer,

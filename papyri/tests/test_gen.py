@@ -24,3 +24,36 @@ def test_find_beyond_decorators():
     )
 
     assert doc.item_file.endswith("test_gen.py")
+
+
+def test_infer():
+    import scipy
+    from scipy._lib._uarray._backend import Dispatchable
+    from papyri.gen import parse_script, Config
+
+    c = Config(infer=True)
+    res = parse_script(
+        "\nx = Dispatchable(1, str)\nx",
+        {"Dispatchable": Dispatchable, "scipy": scipy},
+        "",
+        c,
+    )
+
+    expected = [
+        ("\n", ""),
+        ("x", "scipy._lib._uarray._backend.Dispatchable"),
+        (" ", ""),
+        ("=", ""),
+        (" ", ""),
+        ("Dispatchable", "scipy._lib._uarray._backend.Dispatchable"),
+        ("(", ""),
+        ("1", ""),
+        (",", ""),
+        (" ", ""),
+        ("str", "builtins.str"),
+        (")", ""),
+        ("\n", ""),
+        ("x", "scipy._lib._uarray._backend.Dispatchable"),
+    ]
+
+    assert res == expected
