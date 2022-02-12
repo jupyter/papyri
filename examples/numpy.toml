@@ -7,8 +7,12 @@ execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', '
 'numpy.ctypeslib', 'numpy.append', 'numpy.ma.core',
 
 # try to create a pager that waits for input
-'numpy.lookfor'
+'numpy.lookfor',
+# write directly to stdout
+'numpy.info',
 ]
+
+submodules = ['distutils','typing']
 
 # docs_path = '~/dev/numpy/doc/source'
 
@@ -16,6 +20,7 @@ exec = true
 exclude = [
    # multiline ref see also.
    "numpy._from_dlpack",
+   "numpy.lib.utils.get_include",
    
    # the docstring start with a block directive that gets
    # split between summary and extended summary. 
@@ -53,7 +58,9 @@ exclude = [
    # imbalanced backticks, fix upstream
    "numpy.polynomial.polynomial.polyvalfromroots",
    # `....`s not handeled well
-   "numpy.random.bit_generator.ISeedSequence.generate_state"
+   "numpy.random.bit_generator.ISeedSequence.generate_state",
+   # backticks in See Also
+   "numpy.typing._nested_sequence._NestedSequence",
 
    ]
 exec_failure = 'fallback'

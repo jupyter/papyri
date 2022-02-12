@@ -214,7 +214,7 @@ class TSVisitor:
         return acc
 
     def visit_citation(self, node, prev_end=None):
-        raise VisitCitationNotImplementedError()
+        # raise VisitCitationNotImplementedError()
         # just hlines, like ------
         return []
 

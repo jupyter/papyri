@@ -322,7 +322,7 @@ class Directive(Node):
 
     def __init__(self, value, domain, role):
         assert isinstance(value, str)
-        assert "`" not in value
+        assert "`" not in value, breakpoint()
         self.value = value
         self.domain = domain
         if domain is not None:
@@ -557,6 +557,10 @@ class Section(Node):
         tt = get_type_hints(type(self))["children"].__args__[0].__args__
         for c in children:
             assert isinstance(c, tt), f"{c} not in {tt}"
+        if title == "See also":
+            title = "See Also"
+        if title == "Arguments":
+            title = "Parameters"
         self.title = title
 
     def __getitem__(self, k):
