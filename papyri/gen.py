@@ -579,7 +579,7 @@ def gen_main(
     g.clean(p)
     g.write(p)
     if dry_run:
-        target_dir.cleanup()
+        temp_dir.cleanup()
 
 
 def full_qual(obj):
