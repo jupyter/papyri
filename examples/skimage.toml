@@ -34,4 +34,7 @@ exclude = ['skimage.transform.radon_transform.iradon',
            "skimage.feature.corner.corner_peaks",
            "skimage.feature.peak.peak_local_max",
            "skimage.draw._draw._circle_perimeter",
+           "skimage.transform._geometric.FundamentalMatrixTransform._setup_constraint_matrix",
+                        "skimage.transform._warps._stackcopy"
           ]
+exclude_jedi = ['skimage.viewer.plugins.base.Plugin']

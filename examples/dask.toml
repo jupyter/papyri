@@ -23,7 +23,11 @@ exclude = [ "dask.utils.Dispatch",
             # need fix in numpy
             "dask.array.ufunc.frexp", # https://github.com/numpy/numpy/pull/21020
             # imbalanced backticks, need dask fix. https://github.com/dask/dask/pull/8693
-            "dask.array.reductions.cumreduction"
+            "dask.array.reductions.cumreduction",
+            # "ErrorHelper1-<class 'AssertionError'>": [
+                        "dask.array.routines.tensordot",
+                        "dask.utils.tensordot",
+                        "dask.array.slicing.replace_ellipsis",
   ]
 
 #docs_path = "~/dev/dask/docs/source"

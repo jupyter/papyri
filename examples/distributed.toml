@@ -8,8 +8,11 @@ exclude = [
     "distributed.client.get_task_stream",
     "distributed.batched.BatchedSend",
     # imbalanced backticks https://github.com/dask/distributed/pull/5784
-    "distributed.utils_comm.retry"
-
-
+    "distributed.utils_comm.retry",
+    "distributed._concurrent_futures_thread.ThreadPoolExecutor.__init__",
+    #"ErrorHelper1-<class 'ValueError'>": [
+    "distributed.protocol.core.dumps",
+    "distributed.diagnostics.progress.MultiProgress",
+    "distributed.diagnostics.progress.Progress",
 ] #docs_path = "~/dev/dask/docs/source"
 exec_failure = 'fallback'

@@ -17,4 +17,13 @@ exclude = [
                         "IPython.core.magics.namespace.NamespaceMagics.whos",
                         "IPython.core.magics.namespace.NamespaceMagics.reset_selective",
                         "IPython.core.magics.pylab.PylabMagics.matplotlib",
+                        "IPython.core.magics.basic.BasicMagics.notebook",
+                        "IPython.core.magics.display.DisplayMagics.html",
+                        "IPython.core.magics.execution.ExecutionMagics.debug",
+                        "IPython.core.magics.namespace.NamespaceMagics.xdel",
+                        "IPython.core.magics.execution.ExecutionMagics.capture",
+                        "IPython.core.magics.history.HistoryMagics.history",
+                        "IPython.core.magics.osm.OSMagics.writefile",
+                        "IPython.core.magics.pylab.PylabMagics.pylab",
+                        "IPython.terminal.embed.EmbeddedMagics.kill_embedded"
 ]

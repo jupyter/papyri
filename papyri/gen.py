@@ -26,6 +26,7 @@ from pathlib import Path
 from itertools import count
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple
+from textwrap import dedent
 
 import jedi
 import toml
@@ -88,6 +89,16 @@ _JEDI_CACHE = Path("~/.cache/papyri/jedi/").expanduser()
 
 from hashlib import sha256
 import datetime
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def with_context(**kwargs):
+    try:
+        yield
+    except Exception as e:
+        raise type(e)(f"With context {kwargs}") from e
 
 
 def _hashf(text):
@@ -290,7 +301,7 @@ def get_example_data(
     import numpy as np
 
     acc = ""
-    figure_names = (f"fig-{qa}-{i}.png" for i in count(1))
+    figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
     ns = {"np": np, "plt": plt, obj.__name__: obj}
     executor = BlockExecutor(ns)
     figs = []
@@ -300,7 +311,7 @@ def get_example_data(
     wait_for_show = config.wait_for_plt_show
     if qa in config.exclude_jedi:
         config = config.replace(infer=False)
-        print(f"Turning off type inference for func {qa!r}")
+        log.debug(f"Turning off type inference for func {qa!r}")
     chunks = (it for block in blocks for it in block)
     with executor:
         for item in chunks:
@@ -328,8 +339,7 @@ def get_example_data(
                             ("plt.show" in script) or not wait_for_show
                         ):
                             raise_in_fig = True
-                            for fig in executor.get_figs():
-                                figname = next(figure_names)
+                            for fig, figname in zip(executor.get_figs(), figure_names):
                                 figs.append((figname, fig))
                             plt.close("all")
                             raise_in_fig = False
@@ -343,8 +353,9 @@ def get_example_data(
                     finally:
                         if not wait_for_show:
                             if fig_managers:
-                                for fig in executor.get_figs():
-                                    figname = next(figure_names)
+                                for fig, figname in zip(
+                                    executor.get_figs(), figure_names
+                                ):
                                     figs.append((figname, fig))
                                     print(
                                         f"Still fig manager(s) open for {qa}: {figname}"
@@ -889,6 +900,8 @@ _numpydoc_sections_with_text = {
 }
 _special = {"See Also", "Examples", "Signature"}
 
+from .take2 import NumpydocExample, NumpydocSeeAlso, NumpydocSignature
+
 
 class APIObjectInfo:
     """
@@ -906,30 +919,107 @@ class APIObjectInfo:
     def __init__(self, kind, docstring):
         self.kind = kind
         self.docstring = docstring
+        self.parsed = []
         if docstring is not None and kind != "module":
-            from textwrap import dedent
-
-            sections = ts.parse(dedent_but_first(docstring).encode())
             # TS is going to choke on this as See Also and other
             # sections are technically invalid.
             ndoc = NumpyDocString(dedent_but_first(docstring))
             ndoc_non_empty = set([k for k, v in ndoc._parsed_data.items() if v])
-            _parameters_sections = {
-                t for t in ndoc_non_empty if t in _numpydoc_sections_with_param
-            }
 
-            for k in _parameters_sections:
-                _numpy_data_to_section(ndoc._parsed_data[k], k)
+            for title in ndoc.ordered_sections:
+                if not ndoc[title]:
+                    continue
+                if title in _numpydoc_sections_with_param:
+                    section = _numpy_data_to_section(ndoc[title], title)
+                    assert isinstance(section, Section)
+                    self.parsed.append(section)
+                elif title in _numpydoc_sections_with_text:
+                    docs = ts.parse("\n".join(ndoc[title]).encode())
+                    assert len(docs) == 1, ("\n".join(ndoc[title]), docs)
+                    section = docs[0]
+                    assert isinstance(section, Section), section
+                    self.parsed.append(section)
+                elif title == "Signature":
+                    self.parsed.append(NumpydocSignature(ndoc[title]))
+                elif title == "Examples":
+                    self.parsed.append(NumpydocExample(ndoc[title]))
+                elif title == "See Also":
+                    see_also = ndoc[title]
+                    xx = NumpydocSeeAlso(_normalize_see_also(see_also, qa="??"))
+                    self.parsed.append(xx)
+                else:
+                    assert False
+        elif docstring and kind == "module":
+            self.parsed = ts.parse(docstring.encode())
+        self.validate()
 
-            _text_sections = {
-                t for t in ndoc_non_empty if t in _numpydoc_sections_with_text
-            }
-            for k in _text_sections:
-                ts.parse("\n".join(ndoc._parsed_data[k]).encode())
 
-            # do special.
-            # and order them
+    def special(self, title):
+        if self.kind == "module":
+            return []
+        res = [s for s in self.parsed if s.title == title]
+        if not res:
+            return []
+        assert len(res) == 1
+        assert not isinstance(res[0], Section), self.parsed
+        return res[0]
 
+    def validate(self):
+        for p in self.parsed:
+            assert isinstance(
+                p, (Section, NumpydocExample, NumpydocSeeAlso, NumpydocSignature)
+            )
+            p.validate()
+
+
+def _normalize_see_also(see_also: List[Any], qa):
+    """
+    numpydoc is complex, the See Also fields can be quite complicated,
+    so here we sort of try to normalise them.
+    from what I can remember,
+    See also can have
+    name1 : type1
+    name2 : type2
+        description for both name1 and name 2.
+
+    Though if description is empty, them the type is actually the description.
+    """
+    if not see_also:
+        return []
+    assert see_also is not None
+    new_see_also = []
+    section: Section
+    name_and_types: List[Tuple[str, str]]
+    name: str
+    type_or_description: str
+
+    for name_and_types, raw_description in see_also:
+        try:
+            for (name, type_or_description) in name_and_types:
+                if type_or_description and not raw_description:
+                    assert isinstance(type_or_description, str)
+                    type_ = None
+                    # we have all in a single line,
+                    # and there is no description, so the type field is
+                    # actually the description.
+                    desc = [paragraph([type_or_description])]
+                elif raw_description:
+                    assert isinstance(raw_description, list)
+                    type_ = type_or_description
+                    desc = [paragraph(raw_description)]
+                else:
+                    type_ = type_or_description
+                    desc = []
+
+                sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
+                new_see_also.append(sai)
+                del desc
+                del type_
+        except Exception as e:
+            raise ValueError(
+                f"Error {qa}: {see_also=} | {name_and_types=}  | {raw_description=}"
+            ) from e
+    return new_see_also
 
 class Gen:
     """
@@ -1079,7 +1169,14 @@ class Gen:
         self.bdata[path] = data
 
     def prepare_doc_for_one_object(
-        self, target_item: Any, ndoc, *, qa: str, config: Config, aliases: List[str]
+        self,
+        target_item: Any,
+        ndoc,
+        *,
+        qa: str,
+        config: Config,
+        aliases: List[str],
+        api_object,
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one python object
@@ -1113,6 +1210,7 @@ class Gen:
         blob = DocBlob()
 
         blob.content = {k: v for k, v in ndoc._parsed_data.items()}
+
         item_file = None
         item_line = None
         item_type = None
@@ -1177,15 +1275,24 @@ class Gen:
                 sig = None
             blob.content["Signature"] = sig
 
-
-        try:
-            example_section_data, figs = get_example_data(
-                ndoc["Examples"], obj=target_item, qa=qa, config=config, log=self.log
-            )
-        except Exception as e:
+        if api_object.special("Examples"):
+            # warnings this is true only for non-modules
+            # things.
+            try:
+                example_section_data, figs = get_example_data(
+                    api_object.special("Examples").value,
+                    obj=target_item,
+                    qa=qa,
+                    config=config,
+                    log=self.log,
+                )
+            except Exception as e:
+                example_section_data = Section()
+                self.log.error("Error getting example data in %s", repr(qa))
+                raise ValueError(f"Error getting example data in {qa!r}") from e
+        else:
             example_section_data = Section()
-            self.log.error("Error getting example data in %s", repr(qa))
-            raise ValueError(f"Error getting example data in {qa!r}") from e
+            figs = []
 
         refs_2 = list(
             {
@@ -1197,12 +1304,21 @@ class Gen:
             }
         )
         refs_I = []
+        refs_Ib = []
         if ndoc["See Also"]:
             for line in ndoc["See Also"]:
                 rt, desc = line
                 assert isinstance(desc, list), line
                 for ref, _type in rt:
                     refs_I.append(ref)
+        if api_object.special("See Also"):
+            for sa in api_object.special("See Also").value:
+                refs_Ib.append(sa.name.name)
+
+        if api_object.kind != "module":
+            # TODO: most module docstring are not properly parsed by numpydoc.
+            # but some are.
+            assert refs_I == refs_Ib, (refs_I, refs_Ib)
 
         blob.example_section_data = example_section_data
         blob.refs = [normalise_ref(r) for r in sorted(set(refs_I + refs_2))]
@@ -1276,58 +1392,10 @@ class Gen:
                 new_content.append(Param(param, type_, desc=items).validate())
             blob.content[s] = new_content
 
-        blob.see_also = self._normalize_see_also(blob.content.get("See Also", None), qa)
+        blob.see_also = _normalize_see_also(blob.content.get("See Also", None), qa)
         del blob.content["See Also"]
         return blob, figs
 
-    def _normalize_see_also(self, see_also: List[Any], qa):
-        """
-        numpydoc is complex, the See Also fields can be quite complicated,
-        so here we sort of try to normalise them.
-        from what I can remember,
-        See also can have
-        name1 : type1
-        name2 : type2
-            description for both name1 and name 2.
-
-        though if description is empty, them the type is actually the description.
-        """
-        if not see_also:
-            return []
-        assert see_also is not None
-        new_see_also = []
-        section: Section
-        nts: List[Tuple[str, str]]
-        name: str
-        type_or_description: str
-
-        for nts, raw_description in see_also:
-            try:
-                for (name, type_or_description) in nts:
-                    if type_or_description and not raw_description:
-                        assert isinstance(type_or_description, str)
-                        type_ = None
-                        # we have all in a single line,
-                        # and there is no description, so the type field is
-                        # actually the description.
-                        desc = [paragraph([type_or_description])]
-                    elif raw_description:
-                        assert isinstance(raw_description, list)
-                        type_ = type_or_description
-                        desc = [paragraph(raw_description)]
-                    else:
-                        type_ = type_or_description
-                        desc = []
-
-                    sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
-                    new_see_also.append(sai)
-                    del desc
-                    del type_
-            except Exception as e:
-                raise ValueError(
-                    f"Error {qa}: {see_also=} | {nts=}  | {raw_description=}"
-                ) from e
-        return new_see_also
 
     def collect_examples(self, folder, config):
         acc = []
@@ -1562,15 +1630,16 @@ class Gen:
                 p2.advance(taskp)
 
                 try:
-                    item_docstring, arbitrary, api_object = self.helper_1(
-                        qa=qa,
-                        target_item=target_item,
-                        # mutable, not great.
-                        failure_collection=failure_collection,
-                    )
+                    with with_context(qa=qa):
+                        item_docstring, arbitrary, api_object = self.helper_1(
+                            qa=qa,
+                            target_item=target_item,
+                            # mutable, not great.
+                            failure_collection=failure_collection,
+                        )
                 except Exception as e:
                     failure_collection["ErrorHelper1-" + str(type(e))].append(qa)
-                    raise
+                    # raise
                     # continue
 
                 try:
@@ -1613,6 +1682,7 @@ class Gen:
                         qa=qa,
                         config=self.config.replace(exec=ex),
                         aliases=collector.aliases[qa],
+                        api_object=api_object,
                     )
                     doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 except Exception as e:

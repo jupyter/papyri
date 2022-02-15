@@ -10,6 +10,8 @@ execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', '
 'numpy.lookfor',
 # write directly to stdout
 'numpy.info',
+# Misc
+'numpy.distutils',
 ]
 
 submodules = ['distutils','typing']
@@ -61,6 +63,11 @@ exclude = [
    "numpy.random.bit_generator.ISeedSequence.generate_state",
    # backticks in See Also
    "numpy.typing._nested_sequence._NestedSequence",
+   # MISC:
+   "numpy.tensordot",
+   "numpy.lib._datasource.DataSource._splitzipext",
+   "numpy.core._internal._view_is_safe",
+   "numpy.distutils.misc_util.Configuration.__init__",
 
    ]
 exec_failure = 'fallback'

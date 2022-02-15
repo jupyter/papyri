@@ -517,6 +517,34 @@ class BulletList(_XList):
     pass
 
 
+class Unparsed(Node):
+    value: Any
+
+
+class NumpydocExample(Node):
+    value: List[str]
+
+    def __init__(self, value):
+        self.title = "Examples"
+        self.value = value
+
+
+class NumpydocSeeAlso(Node):
+    value: List[SeeAlsoItem]
+
+    def __init__(self, value):
+        self.title = "See Also"
+        self.value = value
+
+
+class NumpydocSignature(Node):
+    value: str
+
+    def __init__(self, value):
+        self.title = "Signature"
+        self.value = value
+
+
 class Section(Node):
     children: List[
         Union[
