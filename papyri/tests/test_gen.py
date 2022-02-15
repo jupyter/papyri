@@ -1,11 +1,17 @@
 from functools import lru_cache
 
-from papyri.gen import Config, Gen, NumpyDocString
+from papyri.gen import Config, Gen, NumpyDocString, BlockExecutor, APIObjectInfo
 
 
 @lru_cache
 def ex1():
     pass
+
+
+def test_BlockExecutor():
+
+    b = BlockExecutor({})
+    b.exec("# this is a comment")
 
 
 def test_find_beyond_decorators():
@@ -15,12 +21,15 @@ def test_find_beyond_decorators():
     """
     config = Config(exec=True, infer=True)
     gen = Gen(dummy_progress=True, config=config)
-    doc, figs = gen.do_one_item(
+
+    api_object = APIObjectInfo("function", "")
+    doc, figs = gen.prepare_doc_for_one_object(
         ex1,
         NumpyDocString(""),
         qa="irrelevant",
         config=config,
         aliases=[],
+        api_object=api_object,
     )
 
     assert doc.item_file.endswith("test_gen.py")
@@ -39,7 +48,7 @@ def test_infer():
         c,
     )
 
-    expected = [
+    expected = (
         ("\n", ""),
         ("x", "scipy._lib._uarray._backend.Dispatchable"),
         (" ", ""),
@@ -54,6 +63,6 @@ def test_infer():
         (")", ""),
         ("\n", ""),
         ("x", "scipy._lib._uarray._backend.Dispatchable"),
-    ]
+    )
 
     assert res == expected
