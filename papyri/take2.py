@@ -175,6 +175,11 @@ class Base:
 
 
 class Node(Base):
+    def __init__(self, *args):
+        tt = get_type_hints(type(self))
+        for attr, val in zip(tt, args):
+            setattr(self, attr, val)
+
     def __eq__(self, other):
         if not (type(self) == type(other)):
             return False
@@ -516,6 +521,9 @@ class EnumeratedList(_XList):
 class BulletList(_XList):
     pass
 
+
+class Signature(Node):
+    value: Optional[str]
 
 class NumpydocExample(Node):
     value: List[str]
