@@ -552,7 +552,8 @@ def gen_main(
     if not target_dir.exists() and not config.dry_run:
         target_dir.mkdir(parents=True, exist_ok=True)
     if dry_run:
-        target_dir = tempfile.mkdtemp()
+        temp_dir = tempfile.TemporaryDirectory()
+        target_dir = Path(temp_dir.name)
 
     g = Gen(dummy_progress=dummy_progress, config=config)
     g.log.info("Will write data to %s", target_dir)
@@ -570,15 +571,15 @@ def gen_main(
         g.collect_api_docs(target_module_name)
     if narrative:
         g.collect_narrative_docs()
-    if not config.dry_run:
-        p = target_dir / (g.root + "_" + g.version)
-        p.mkdir(exist_ok=True)
 
-        g.log.info("Saving current Doc bundle to %s", p)
-        g.clean(p)
-        g.write(p)
-    else:
-        os.rmdir(target_dir)
+    p = target_dir / (g.root + "_" + g.version)
+    p.mkdir(exist_ok=True)
+
+    g.log.info("Saving current Doc bundle to %s", p)
+    g.clean(p)
+    g.write(p)
+    if dry_run:
+        target_dir.cleanup()
 
 
 def full_qual(obj):
