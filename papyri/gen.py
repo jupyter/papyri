@@ -26,7 +26,6 @@ from pathlib import Path
 from itertools import count
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple
-from textwrap import dedent
 
 import jedi
 import toml
@@ -231,7 +230,7 @@ def _execute_inout(item):
 
 def get_example_data(
     example_section, *, obj, qa: str, config, log
-) -> Tuple(Section, List[Any]):
+) -> Tuple[Section, List[Any]]:
     """Extract example section data from a NumpyDocstring
 
     One of the section in numpydoc is "examples" that usually consist of number
@@ -865,7 +864,7 @@ class DocBlob(Node):
         assert self._content is not None
 
 
-def _numpy_data_to_section(data: List[str], title: str):
+def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str):
     assert isinstance(data, list), repr(data)
     acc = []
     for param, type_, desc in data:
@@ -924,7 +923,6 @@ class APIObjectInfo:
             # TS is going to choke on this as See Also and other
             # sections are technically invalid.
             ndoc = NumpyDocString(dedent_but_first(docstring))
-            ndoc_non_empty = set([k for k, v in ndoc._parsed_data.items() if v])
 
             for title in ndoc.ordered_sections:
                 if not ndoc[title]:
@@ -952,7 +950,6 @@ class APIObjectInfo:
         elif docstring and kind == "module":
             self.parsed = ts.parse(docstring.encode())
         self.validate()
-
 
     def special(self, title):
         if self.kind == "module":
@@ -1020,6 +1017,7 @@ def _normalize_see_also(see_also: List[Any], qa):
                 f"Error {qa}: {see_also=} | {name_and_types=}  | {raw_description=}"
             ) from e
     return new_see_also
+
 
 class Gen:
     """
@@ -1265,7 +1263,7 @@ class Gen:
                 self.log.debug(
                     "Could not find item_line for %s, (TYPEERROR)", target_item
                 )
-
+        sig: Optional[str]
         if not blob.content["Signature"]:
             try:
                 sig = str(inspect.signature(target_item))
@@ -1395,7 +1393,6 @@ class Gen:
         blob.see_also = _normalize_see_also(blob.content.get("See Also", None), qa)
         del blob.content["See Also"]
         return blob, figs
-
 
     def collect_examples(self, folder, config):
         acc = []

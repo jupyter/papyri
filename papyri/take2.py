@@ -517,10 +517,6 @@ class BulletList(_XList):
     pass
 
 
-class Unparsed(Node):
-    value: Any
-
-
 class NumpydocExample(Node):
     value: List[str]
 
