@@ -65,4 +65,4 @@ def test_infer():
         ("x", "scipy._lib._uarray._backend.Dispatchable"),
     )
 
-    assert res == expected
+    assert list(res) == list(expected)
