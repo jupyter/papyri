@@ -4,7 +4,6 @@ from tree_sitter import Language, Parser
 
 from . import errors
 from .errors import (
-    VisitCitationNotImplementedError,
     VisitCitationReferenceNotImplementedError,
     VisitSubstitutionDefinitionNotImplementedError,
 )
@@ -214,9 +213,9 @@ class TSVisitor:
         return acc
 
     def visit_citation(self, node, prev_end=None):
-        raise VisitCitationNotImplementedError()
+        # raise VisitCitationNotImplementedError()
         # just hlines, like ------
-        return []
+        return [Unimplemented("citation", self.as_text(node))]
 
     def visit_citation_reference(self, node, prev_end=None):
         raise VisitCitationReferenceNotImplementedError()
@@ -554,7 +553,7 @@ class TSVisitor:
         # TODO
         # that is actually used for references
         # assert False, self.bytes[node.start_byte : node.end_byte].decode()
-        return []
+        return [Unimplemented("footnote", self.as_text(node))]
 
     def visit_ERROR(self, node, prev_end=None):
         """

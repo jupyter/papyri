@@ -88,8 +88,12 @@ class BlockExecutor:
         and capture sys_displayhook
         """
         module = ast.parse(text)
-
-        *nodes, interactive_node = module.body
+        if not module.body:  # this can happen if we execute purely a comment.
+            return None
+        try:
+            *nodes, interactive_node = module.body
+        except Exception as e:
+            raise type(e)(f"{module.body} {text}")
         exec(compile(ast.Module(nodes, []), "<papyri>", "exec"), ns)
         acc = []
         with capture_displayhook(acc):
@@ -105,12 +109,9 @@ class BlockExecutor:
 
         stdout = io.StringIO()
         stderr = io.StringIO()
-        acc = []
-
         with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
             with redirect_stdout(stdout), redirect_stderr(stderr):
-                with capture_displayhook(acc):
-                    res = self._exec(text, self.ns)
+                res = self._exec(text, self.ns)
 
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
 

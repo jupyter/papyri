@@ -322,7 +322,7 @@ class Directive(Node):
 
     def __init__(self, value, domain, role):
         assert isinstance(value, str)
-        assert "`" not in value
+        assert "`" not in value, breakpoint()
         self.value = value
         self.domain = domain
         if domain is not None:
@@ -517,6 +517,30 @@ class BulletList(_XList):
     pass
 
 
+class NumpydocExample(Node):
+    value: List[str]
+
+    def __init__(self, value):
+        self.title = "Examples"
+        self.value = value
+
+
+class NumpydocSeeAlso(Node):
+    value: List[SeeAlsoItem]
+
+    def __init__(self, value):
+        self.title = "See Also"
+        self.value = value
+
+
+class NumpydocSignature(Node):
+    value: str
+
+    def __init__(self, value):
+        self.title = "Signature"
+        self.value = value
+
+
 class Section(Node):
     children: List[
         Union[
@@ -557,6 +581,10 @@ class Section(Node):
         tt = get_type_hints(type(self))["children"].__args__[0].__args__
         for c in children:
             assert isinstance(c, tt), f"{c} not in {tt}"
+        if title == "See also":
+            title = "See Also"
+        if title == "Arguments":
+            title = "Parameters"
         self.title = title
 
     def __getitem__(self, k):
