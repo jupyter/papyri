@@ -1174,6 +1174,68 @@ class Gen:
         """
         self.bdata[path] = data
 
+    def _transform_1(self, blob, ndoc):
+        blob.content = {k: v for k, v in ndoc._parsed_data.items()}
+        return blob
+
+    def _transform_2(self, blob, target_item):
+        # try to find relative path WRT site package.
+        # will not work for dev install. Maybe an option to set the root location ?
+        item_file = find_file(target_item)
+        if item_file is not None:
+            for s in SITE_PACKAGE + [os.path.expanduser("~")]:
+                if item_file.startswith(s):
+                    item_file = item_file[len(s) :]
+
+        blob.item_file = item_file
+        if item_file is None:
+            if type(target_item).__name__ in (
+                "builtin_function_or_method",
+                "fused_cython_function",
+                "cython_function_or_method",
+            ):
+                self.log.debug(
+                    "Could not find source file for built-in function method."
+                    "Likely compiled extension %s %s %s, will not be able to link to it.",
+                    repr(qa),
+                    target_item,
+                    repr(type(target_item).__name__),
+                )
+            else:
+
+                self.log.warn(
+                    "Could not find source file for %s (%s) [%s], will not be able to link to it.",
+                    repr(qa),
+                    target_item,
+                    type(target_item).__name__,
+                )
+
+        return blob
+
+    def _transform_3(self, blob, target_item):
+        item_line = None
+        try:
+            item_line = inspect.getsourcelines(target_item)[1]
+        except OSError:
+            self.log.debug("Could not find item_line for %s, (OSERROR)", target_item)
+        except TypeError:
+            if type(target_item).__name__ in (
+                "builtin_function_or_method",
+                "fused_cython_function",
+                "cython_function_or_method",
+            ):
+                self.log.debug(
+                    "Could not find item_line for %s, (TYPEERROR), likely from a .so file",
+                    target_item,
+                )
+            else:
+                self.log.debug(
+                    "Could not find item_line for %s, (TYPEERROR)", target_item
+                )
+        blob.item_line = item_line
+
+        return blob
+
     def prepare_doc_for_one_object(
         self,
         target_item: Any,
@@ -1215,62 +1277,12 @@ class Gen:
         assert isinstance(aliases, list)
         blob = DocBlob()
 
-        blob.content = {k: v for k, v in ndoc._parsed_data.items()}
+        blob = self._transform_1(blob, ndoc)
+        blob = self._transform_2(blob, target_item)
+        blob = self._transform_3(blob, target_item)
 
-        item_file = None
-        item_line = None
-        item_type = None
-
-        # that is not going to be the case because we fallback on execution failure.
-
-        # try to find relative path WRT site package.
-        # will not work for dev install. Maybe an option to set the root location ?
-        item_file = find_file(target_item)
-        if item_file is not None:
-            for s in SITE_PACKAGE + [os.path.expanduser("~")]:
-                if item_file.startswith(s):
-                    item_file = item_file[len(s) :]
-        else:
-            if type(target_item).__name__ in (
-                "builtin_function_or_method",
-                "fused_cython_function",
-                "cython_function_or_method",
-            ):
-                self.log.debug(
-                    "Could not find source file for built-in function method."
-                    "Likely compiled extension %s %s %s, will not be able to link to it.",
-                    repr(qa),
-                    target_item,
-                    repr(type(target_item).__name__),
-                )
-            else:
-
-                self.log.warn(
-                    "Could not find source file for %s (%s) [%s], will not be able to link to it.",
-                    repr(qa),
-                    target_item,
-                    type(target_item).__name__,
-                )
 
         item_type = str(type(target_item))
-        try:
-            item_line = inspect.getsourcelines(target_item)[1]
-        except OSError:
-            self.log.debug("Could not find item_line for %s, (OSERROR)", target_item)
-        except TypeError:
-            if type(target_item).__name__ in (
-                "builtin_function_or_method",
-                "fused_cython_function",
-                "cython_function_or_method",
-            ):
-                self.log.debug(
-                    "Could not find item_line for %s, (TYPEERROR), likely from a .so file",
-                    target_item,
-                )
-            else:
-                self.log.debug(
-                    "Could not find item_line for %s, (TYPEERROR)", target_item
-                )
         if blob.content["Signature"]:
             blob.signature = Signature(blob.content.pop("Signature"))
         else:
@@ -1326,8 +1338,6 @@ class Gen:
         blob.refs = [normalise_ref(r) for r in sorted(set(refs_I + refs_2))]
 
         blob.ordered_sections = ndoc.ordered_sections
-        blob.item_file = item_file
-        blob.item_line = item_line
         blob.item_type = item_type
 
         blob.references = blob.content.pop("References")
