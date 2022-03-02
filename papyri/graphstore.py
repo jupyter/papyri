@@ -89,13 +89,17 @@ class GraphStore:
         p = _Path("~/.papyri/ingest/papyri.db")
         p = p.expanduser()
         if not p.exists():
-            self.table = sqlite3.connect(str(p))
-            print("Creating link table")
-            self.table.cursor().execute(
-                "CREATE TABLE links(source, dest, reason, unique(source, dest, reason))"
+            self.conn = sqlite3.connect(str(p))
+            print("Creating documents table")
+            self.conn.cursor().execute(
+                "CREATE TABLE documents(id, package, version, category, identifier)"
+            )
+            print("Creating links table")
+            self.conn.cursor().execute(
+                "CREATE TABLE links(source, dest, metadata)"
             )
         else:
-            self.table = sqlite3.connect(str(p))
+            self.conn = sqlite3.connect(str(p))
 
         # assert isinstance(link_finder, dict)
         assert isinstance(root, _Path)
@@ -151,8 +155,8 @@ class GraphStore:
         data.unlink()
         #  this is likely incorrect if we want to deal with dangling links.
         backrefs.unlink()
-        print("Removign link from table")
-        self.table.execute(
+        print("Removing link from table")
+        self.conn.execute(
             "delete from links where source=?",
             (str(key),),
         )
@@ -170,7 +174,7 @@ class GraphStore:
         else:
             backrefs = set()
 
-        sql_backref_unparsed = self.table.execute(
+        sql_backref_unparsed = self.conn.execute(
             "select distinct source from links where dest=?", (str(key),)
         )
 
@@ -191,7 +195,7 @@ class GraphStore:
         _, pathbr = self._key_to_paths(key)
 
         # print("getting backrefs from table")
-        self.table.execute(
+        self.conn.execute(
             "select source, reason from links where dest=?",
             (str(key),),
         )
@@ -267,18 +271,18 @@ class GraphStore:
         #            for n in sorted(added_refs):
         #                print("    +", n)
 
-        with self.table:
+        with self.conn:
             for ref in added_refs:
                 self._add_edge(key, ref)
                 refkey = Key(*ref)
-                self.table.execute(
+                self.conn.execute(
                     "insert or ignore into links values (?,?,?)",
                     (str(key), str(refkey), "debug"),
                 )
             for ref in removed_refs:
                 refkey = Key(*ref)
                 self._remove_edge(key, refkey)
-                self.table.execute(
+                self.conn.execute(
                     "delete from links where source=? and dest=? and reason=?",
                     (str(key), str(refkey), "debug"),
                 )
