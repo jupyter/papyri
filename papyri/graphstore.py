@@ -90,7 +90,7 @@ class GraphStore:
         p = p.expanduser()
         if not p.exists():
             self.conn = sqlite3.connect(str(p))
-            self.conn.execute("PRAGMA foreign_keys = 2")
+            self.conn.execute("PRAGMA foreign_keys = 1")
 
             print("Creating documents table")
             self.conn.cursor().execute(
@@ -112,10 +112,12 @@ class GraphStore:
                 source INTEGER NOT NULL,
                 dest INTEGER NOT NULL,
                 metadata TEXT,
-                FOREIGN KEY (source) REFERENCES documents(id)
-                FOREIGN KEY (dest) REFERENCES documents(id))
+                FOREIGN KEY (source) REFERENCES documents(id) ON DELETE CASCADE
+                FOREIGN KEY (dest) REFERENCES documents(id) ON DELETE CASCADE)
                 """
             )
+
+            self.conn.commit()
         else:
             self.conn = sqlite3.connect(str(p))
 
