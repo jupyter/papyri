@@ -90,13 +90,31 @@ class GraphStore:
         p = p.expanduser()
         if not p.exists():
             self.conn = sqlite3.connect(str(p))
+            self.conn.execute("PRAGMA foreign_keys = 2")
+
             print("Creating documents table")
             self.conn.cursor().execute(
-                "CREATE TABLE documents(id, package, version, category, identifier)"
+                """
+                CREATE TABLE documents(
+                id INTEGER PRIMARY KEY,
+                package TEXT NOT NULL,
+                version TEXT NOT NULL,
+                category TEXT NOT NULL,
+                identifier NOT NULL)
+                """
             )
+
             print("Creating links table")
             self.conn.cursor().execute(
-                "CREATE TABLE links(source, dest, metadata)"
+                """
+                CREATE TABLE links(
+                id INTEGER PRIMARY KEY,
+                source INTEGER NOT NULL,
+                dest INTEGER NOT NULL,
+                metadata TEXT,
+                FOREIGN KEY (source) REFERENCES documents(id)
+                FOREIGN KEY (dest) REFERENCES documents(id))
+                """
             )
         else:
             self.conn = sqlite3.connect(str(p))
