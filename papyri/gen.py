@@ -11,6 +11,8 @@ likely be separated into a separate module at some point.
 from __future__ import annotations
 
 import dataclasses
+import datetime
+import importlib
 import inspect
 import json
 import logging
@@ -20,12 +22,12 @@ import site
 import sys
 import tempfile
 import warnings
-import importlib
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
+from hashlib import sha256
 from itertools import count
+from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple
 
@@ -40,28 +42,27 @@ from rich.progress import BarColumn, Progress, TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
+from .errors import IncorrectInternalDocsLen, NumpydocParseError
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
     Code,
-    Signature,
     Fig,
     Node,
+    NumpydocExample,
+    NumpydocSeeAlso,
+    NumpydocSignature,
     Param,
     Ref,
     RefInfo,
     Section,
     SeeAlsoItem,
+    Signature,
     Text,
     parse_rst_section,
 )
 from .tree import DirectiveVisiter
 from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
-from .errors import IncorrectInternalDocsLen, NumpydocParseError
-from .take2 import NumpydocExample, NumpydocSeeAlso, NumpydocSignature
-
-
-from contextlib import contextmanager
 
 
 class ErrorCollector:
@@ -133,20 +134,6 @@ def paragraph(lines: List[str]) -> Any:
 
 
 _JEDI_CACHE = Path("~/.cache/papyri/jedi/").expanduser()
-
-
-from hashlib import sha256
-import datetime
-
-from contextlib import contextmanager
-
-
-@contextmanager
-def with_context(**kwargs):
-    try:
-        yield
-    except Exception as e:
-        raise type(e)(f"With context {kwargs}") from e
 
 
 def _hashf(text):
