@@ -74,5 +74,5 @@ exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
 homepage = 'https://numpy.org'
 docs = 'https://numpy.org/doc/stable/'
-logo = '../numpy_logo.png'
+logo = './numpy_logo.png'
 

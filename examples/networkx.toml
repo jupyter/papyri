@@ -26,6 +26,7 @@ exclude = [ 'networkx.algorithms.distance_measures.barycenter',
            # "ErrorHelper1-<class 'papyri.errors.VisitSubstitutionDefinitionNotImplementedError'>"
              "networkx.algorithms.approximation.vertex_cover",
              ]
+logo = './nx.png'
 [networkx.implied_imports]
 nx = 'networkx'
 it = 'itertools'

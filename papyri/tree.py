@@ -431,7 +431,7 @@ class DirectiveVisiter(TreeReplacer):
                 "file",
                 "command",
                 "sup",
-                "samp", # networkx
+                "samp",  # networkx
                 "rc",  # matplotlib
             ):
                 print("TODO role:", directive.role)

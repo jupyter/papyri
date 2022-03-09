@@ -130,17 +130,16 @@ def _jedi_set_cache(text, value):
 
 def obj_from_qualname(name):
 
-    mod_name, sep, obj = name.partition(':')
-    module =  importlib.import_module(mod_name)
+    mod_name, sep, obj = name.partition(":")
+    module = importlib.import_module(mod_name)
     if not sep:
         return module
     else:
         obj = module
-        parts = obj.split('.')
+        parts = obj.split(".")
         for p in parts:
             obj = getattr(obj, p)
         return obj
-
 
 
 def parse_script(
@@ -320,7 +319,7 @@ def get_example_data(
     acc = ""
     figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
     ns = {"np": np, "plt": plt, obj.__name__: obj}
-    for k,v in config.implied_imports.items():
+    for k, v in config.implied_imports.items():
         ns[k] = obj_from_qualname(v)
     executor = BlockExecutor(ns)
     figs = []
@@ -506,7 +505,7 @@ class Config:
     wait_for_plt_show: Optional[bool] = True
     examples_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
-    implied_imports : Dict[str, str] = dataclasses.field(default_factory=dict)
+    implied_imports: Dict[str, str] = dataclasses.field(default_factory=dict)
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -745,6 +744,10 @@ class DFSCollector:
 
     def visit_ModuleType(self, mod, stack):
         for k in dir(mod):
+            # TODO: scipy 1.8 workaround, remove.
+            if not hasattr(mod, k):
+                print(f"({mod.__name__!r},{k!r}),")
+                continue
             self._open_list.append((getattr(mod, k), stack + [k]))
 
     def visit_ClassType(self, klass, stack):
@@ -1197,7 +1200,7 @@ class Gen:
         blob.content = {k: v for k, v in ndoc._parsed_data.items()}
         return blob
 
-    def _transform_2(self, blob, target_item):
+    def _transform_2(self, blob, target_item, qa):
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
         item_file = find_file(target_item)
@@ -1297,9 +1300,8 @@ class Gen:
         blob = DocBlob()
 
         blob = self._transform_1(blob, ndoc)
-        blob = self._transform_2(blob, target_item)
+        blob = self._transform_2(blob, target_item, qa)
         blob = self._transform_3(blob, target_item)
-
 
         item_type = str(type(target_item))
         if blob.content["Signature"]:
@@ -1674,7 +1676,7 @@ class Gen:
                         )
                 except Exception as e:
                     failure_collection["ErrorHelper1-" + str(type(e))].append(qa)
-                    raise
+                    # raise
                     continue
 
                 try:
