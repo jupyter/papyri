@@ -101,7 +101,7 @@ def resolve_(
     Parameters
     ----------
     qa : str
-        fully qualified path of the current object (TODO: this will be weird for
+        fully qualified path of the current object (.valueTODO: this will be weird for
         non object, like example).
     known_refs : list of RefInfo
         All the known objects we can refer to in current universe.
@@ -431,6 +431,7 @@ class DirectiveVisiter(TreeReplacer):
                 "file",
                 "command",
                 "sup",
+                "samp",  # networkx
                 "rc",  # matplotlib
             ):
                 print("TODO role:", directive.role)

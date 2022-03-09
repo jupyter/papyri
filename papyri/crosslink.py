@@ -14,7 +14,7 @@ from there import print
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
-from .take2 import Node, Param, RefInfo, Section, SeeAlsoItem
+from .take2 import Node, Param, RefInfo, Section, SeeAlsoItem, Signature
 from .tree import DVR, DirectiveVisiter, resolve_
 from .utils import progress
 
@@ -100,7 +100,7 @@ class IngestedBlobs(Node):
     example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
     version: str
-    signature: Optional[str]
+    signature: Signature
     references: Optional[List[str]]
     logo: Optional[str]
     backrefs: List[RefInfo]
@@ -530,6 +530,7 @@ class Ingester:
             assert mod_root == root, f"{mod_root}, {root}"
             doc_blob.version = version
             assert hasattr(doc_blob, "arbitrary")
+
             try:
                 doc_blob.validate()
             except Exception as e:

@@ -20,6 +20,7 @@ import site
 import sys
 import tempfile
 import warnings
+import importlib
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
@@ -42,6 +43,7 @@ from velin.examples_section_utils import InOut, splitblank, splitcode
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
     Code,
+    Signature,
     Fig,
     Node,
     Param,
@@ -124,6 +126,20 @@ def _jedi_set_cache(text, value):
 
     _cache = _JEDI_CACHE / _hashf(text)
     _cache.write_text(json.dumps(value))
+
+
+def obj_from_qualname(name):
+
+    mod_name, sep, obj = name.partition(":")
+    module = importlib.import_module(mod_name)
+    if not sep:
+        return module
+    else:
+        obj = module
+        parts = obj.split(".")
+        for p in parts:
+            obj = getattr(obj, p)
+        return obj
 
 
 def parse_script(
@@ -303,6 +319,8 @@ def get_example_data(
     acc = ""
     figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
     ns = {"np": np, "plt": plt, obj.__name__: obj}
+    for k, v in config.implied_imports.items():
+        ns[k] = obj_from_qualname(v)
     executor = BlockExecutor(ns)
     figs = []
     # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
@@ -487,6 +505,7 @@ class Config:
     wait_for_plt_show: Optional[bool] = True
     examples_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
+    implied_imports: Dict[str, str] = dataclasses.field(default_factory=dict)
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -725,6 +744,10 @@ class DFSCollector:
 
     def visit_ModuleType(self, mod, stack):
         for k in dir(mod):
+            # TODO: scipy 1.8 workaround, remove.
+            if not hasattr(mod, k):
+                print(f"({mod.__name__!r},{k!r}),")
+                continue
             self._open_list.append((getattr(mod, k), stack + [k]))
 
     def visit_ClassType(self, klass, stack):
@@ -787,7 +810,7 @@ class DocBlob(Node):
     aliases: List[str]
     example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
-    signature: Optional[str]
+    signature: Signature
     references: Optional[List[str]]
     arbitrary: List[Section]
 
@@ -834,7 +857,7 @@ class DocBlob(Node):
         self.item_line = None
         self.item_type = None
         self.aliases = []
-        self.signature = None
+        self.signature = Signature(None)
 
     @property
     def content(self):
@@ -903,7 +926,6 @@ _numpydoc_sections_with_text = {
     "References",
     "Warnings",
 }
-_special = {"See Also", "Examples", "Signature"}
 
 from .take2 import NumpydocExample, NumpydocSeeAlso, NumpydocSignature
 
@@ -921,10 +943,12 @@ class APIObjectInfo:
     kind: str
     docstring: str
 
-    def __init__(self, kind, docstring):
+    def __init__(self, kind, docstring, signature):
         self.kind = kind
         self.docstring = docstring
         self.parsed = []
+        self.signature = signature
+
         if docstring is not None and kind != "module":
             # TS is going to choke on this as See Also and other
             # sections are technically invalid.
@@ -959,10 +983,10 @@ class APIObjectInfo:
 
     def special(self, title):
         if self.kind == "module":
-            return []
+            return None
         res = [s for s in self.parsed if s.title == title]
         if not res:
-            return []
+            return None
         assert len(res) == 1
         assert not isinstance(res[0], Section), self.parsed
         return res[0]
@@ -1110,7 +1134,7 @@ class Gen:
             blob.aliases = []
             blob.example_section_data = Section()
             blob.see_also = []
-            blob.signature = None
+            blob.signature = Signature(None)
             blob.references = None
             blob.refs = []
 
@@ -1172,6 +1196,68 @@ class Gen:
         """
         self.bdata[path] = data
 
+    def _transform_1(self, blob, ndoc):
+        blob.content = {k: v for k, v in ndoc._parsed_data.items()}
+        return blob
+
+    def _transform_2(self, blob, target_item, qa):
+        # try to find relative path WRT site package.
+        # will not work for dev install. Maybe an option to set the root location ?
+        item_file = find_file(target_item)
+        if item_file is not None:
+            for s in SITE_PACKAGE + [os.path.expanduser("~")]:
+                if item_file.startswith(s):
+                    item_file = item_file[len(s) :]
+
+        blob.item_file = item_file
+        if item_file is None:
+            if type(target_item).__name__ in (
+                "builtin_function_or_method",
+                "fused_cython_function",
+                "cython_function_or_method",
+            ):
+                self.log.debug(
+                    "Could not find source file for built-in function method."
+                    "Likely compiled extension %s %s %s, will not be able to link to it.",
+                    repr(qa),
+                    target_item,
+                    repr(type(target_item).__name__),
+                )
+            else:
+
+                self.log.warn(
+                    "Could not find source file for %s (%s) [%s], will not be able to link to it.",
+                    repr(qa),
+                    target_item,
+                    type(target_item).__name__,
+                )
+
+        return blob
+
+    def _transform_3(self, blob, target_item):
+        item_line = None
+        try:
+            item_line = inspect.getsourcelines(target_item)[1]
+        except OSError:
+            self.log.debug("Could not find item_line for %s, (OSERROR)", target_item)
+        except TypeError:
+            if type(target_item).__name__ in (
+                "builtin_function_or_method",
+                "fused_cython_function",
+                "cython_function_or_method",
+            ):
+                self.log.debug(
+                    "Could not find item_line for %s, (TYPEERROR), likely from a .so file",
+                    target_item,
+                )
+            else:
+                self.log.debug(
+                    "Could not find item_line for %s, (TYPEERROR)", target_item
+                )
+        blob.item_line = item_line
+
+        return blob
+
     def prepare_doc_for_one_object(
         self,
         target_item: Any,
@@ -1213,71 +1299,16 @@ class Gen:
         assert isinstance(aliases, list)
         blob = DocBlob()
 
-        blob.content = {k: v for k, v in ndoc._parsed_data.items()}
-
-        item_file = None
-        item_line = None
-        item_type = None
-
-        # that is not going to be the case because we fallback on execution failure.
-
-        # try to find relative path WRT site package.
-        # will not work for dev install. Maybe an option to set the root location ?
-        item_file = find_file(target_item)
-        if item_file is not None:
-            for s in SITE_PACKAGE + [os.path.expanduser("~")]:
-                if item_file.startswith(s):
-                    item_file = item_file[len(s) :]
-        else:
-            if type(target_item).__name__ in (
-                "builtin_function_or_method",
-                "fused_cython_function",
-                "cython_function_or_method",
-            ):
-                self.log.debug(
-                    "Could not find source file for built-in function method."
-                    "Likely compiled extension %s %s %s, will not be able to link to it.",
-                    repr(qa),
-                    target_item,
-                    repr(type(target_item).__name__),
-                )
-            else:
-
-                self.log.warn(
-                    "Could not find source file for %s (%s) [%s], will not be able to link to it.",
-                    repr(qa),
-                    target_item,
-                    type(target_item).__name__,
-                )
+        blob = self._transform_1(blob, ndoc)
+        blob = self._transform_2(blob, target_item, qa)
+        blob = self._transform_3(blob, target_item)
 
         item_type = str(type(target_item))
-        try:
-            item_line = inspect.getsourcelines(target_item)[1]
-        except OSError:
-            self.log.debug("Could not find item_line for %s, (OSERROR)", target_item)
-        except TypeError:
-            if type(target_item).__name__ in (
-                "builtin_function_or_method",
-                "fused_cython_function",
-                "cython_function_or_method",
-            ):
-                self.log.debug(
-                    "Could not find item_line for %s, (TYPEERROR), likely from a .so file",
-                    target_item,
-                )
-            else:
-                self.log.debug(
-                    "Could not find item_line for %s, (TYPEERROR)", target_item
-                )
-        sig: Optional[str]
-        if not blob.content["Signature"]:
-            try:
-                sig = str(inspect.signature(target_item))
-                sig = qa.split(".")[-1] + sig
-                sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
-            except (ValueError, TypeError):
-                sig = None
-            blob.content["Signature"] = sig
+        if blob.content["Signature"]:
+            blob.signature = Signature(blob.content.pop("Signature"))
+        else:
+            blob.signature = Signature(api_object.signature)
+            del blob.content["Signature"]
 
         if api_object.special("Examples"):
             # warnings this is true only for non-modules
@@ -1328,11 +1359,8 @@ class Gen:
         blob.refs = [normalise_ref(r) for r in sorted(set(refs_I + refs_2))]
 
         blob.ordered_sections = ndoc.ordered_sections
-        blob.item_file = item_file
-        blob.item_line = item_line
         blob.item_type = item_type
 
-        blob.signature = blob.content.pop("Signature")
         blob.references = blob.content.pop("References")
 
         del blob.content["Examples"]
@@ -1530,13 +1558,19 @@ class Gen:
         builtin_function_or_method = type(sum)
 
         if isinstance(target_item, ModuleType):
-            api_object = APIObjectInfo("module", target_item.__doc__)
+            api_object = APIObjectInfo("module", target_item.__doc__, None)
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
-            api_object = APIObjectInfo("function", target_item.__doc__)
+            try:
+                sig = str(inspect.signature(target_item))
+                sig = qa.split(".")[-1] + sig
+                sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
+            except (ValueError, TypeError):
+                sig = None
+            api_object = APIObjectInfo("function", target_item.__doc__, sig)
         elif isinstance(target_item, type):
-            api_object = APIObjectInfo("class", target_item.__doc__)
+            api_object = APIObjectInfo("class", target_item.__doc__, None)
         else:
-            api_object = APIObjectInfo("other", target_item.__doc__)
+            api_object = APIObjectInfo("other", target_item.__doc__, None)
             # print("Other", target_item)
             # assert False, type(target_item)
 
@@ -1643,7 +1677,7 @@ class Gen:
                 except Exception as e:
                     failure_collection["ErrorHelper1-" + str(type(e))].append(qa)
                     # raise
-                    # continue
+                    continue
 
                 try:
                     if item_docstring is None:
