@@ -11,6 +11,8 @@ likely be separated into a separate module at some point.
 from __future__ import annotations
 
 import dataclasses
+import datetime
+import importlib
 import inspect
 import json
 import logging
@@ -20,12 +22,12 @@ import site
 import sys
 import tempfile
 import warnings
-import importlib
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
+from hashlib import sha256
 from itertools import count
+from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple
 
@@ -40,23 +42,68 @@ from rich.progress import BarColumn, Progress, TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
+from .errors import IncorrectInternalDocsLen, NumpydocParseError
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
     Code,
-    Signature,
     Fig,
     Node,
+    NumpydocExample,
+    NumpydocSeeAlso,
+    NumpydocSignature,
     Param,
     Ref,
     RefInfo,
     Section,
     SeeAlsoItem,
+    Signature,
     Text,
     parse_rst_section,
 )
 from .tree import DirectiveVisiter
 from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress
 from .vref import NumpyDocString
+
+
+class ErrorCollector:
+    def __init__(self, config, log):
+        self.config = config
+        self.log = log
+
+        self._expected_unseen = {}
+        for err, names in self.config.expected_errors.items():
+            for name in names:
+                self._expected_unseen.setdefault(name, []).append(err)
+        self._errors = {}
+
+    def __call__(self, qa):
+        self._qa = qa
+        return self
+
+    def __enter__(self):
+        self.errored = False
+        return self
+
+    def raise_if_unseen_errors(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if isinstance(exc_type, KeyboardInterrupt):
+            return
+        if exc_type:
+            self.errored = True
+            ename = exc_type.__name__
+            if ename in self._expected_unseen.get(self._qa, []):
+                self._expected_unseen[self._qa].remove(ename)
+                if not self._expected_unseen[self._qa]:
+                    del self._expected_unseen[self._qa]
+            else:
+                self._errors.setdefault(ename, []).append(self._qa)
+                self.log.exception("Unexpected error")
+            if not self.config.early_error:
+                return True
+        # return True
+
 
 try:
     from . import ts
@@ -87,20 +134,6 @@ def paragraph(lines: List[str]) -> Any:
 
 
 _JEDI_CACHE = Path("~/.cache/papyri/jedi/").expanduser()
-
-
-from hashlib import sha256
-import datetime
-
-from contextlib import contextmanager
-
-
-@contextmanager
-def with_context(**kwargs):
-    try:
-        yield
-    except Exception as e:
-        raise type(e)(f"With context {kwargs}") from e
 
 
 def _hashf(text):
@@ -248,7 +281,7 @@ def _execute_inout(item):
 def get_example_data(
     example_section, *, obj, qa: str, config, log
 ) -> Tuple[Section, List[Any]]:
-    """Extract example section data from a NumpyDocstring
+    """Extract example section data from a NumpyDocString
 
     One of the section in numpydoc is "examples" that usually consist of number
     if paragraph, interleaved with examples starting with >>> and ...,
@@ -349,7 +382,8 @@ def get_example_data(
                             res, fig_managers, sout, serr = executor.exec(script)
                             ce_status = "execed"
                         except Exception:
-                            log.exception("error in execution: %s", qa)
+                            if "Traceback" not in "\n".join(out):
+                                log.exception("error in execution: %s", qa)
                             ce_status = "exception_in_exec"
                             if config.exec_failure != "fallback":
                                 raise
@@ -506,6 +540,8 @@ class Config:
     examples_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
     implied_imports: Dict[str, str] = dataclasses.field(default_factory=dict)
+    expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
+    early_error: bool = True
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -746,7 +782,7 @@ class DFSCollector:
         for k in dir(mod):
             # TODO: scipy 1.8 workaround, remove.
             if not hasattr(mod, k):
-                print(f"({mod.__name__!r},{k!r}),")
+                print(f"scipy 1.8 workround : ({mod.__name__!r},{k!r}),")
                 continue
             self._open_list.append((getattr(mod, k), stack + [k]))
 
@@ -927,8 +963,6 @@ _numpydoc_sections_with_text = {
     "Warnings",
 }
 
-from .take2 import NumpydocExample, NumpydocSeeAlso, NumpydocSignature
-
 
 class APIObjectInfo:
     """
@@ -952,7 +986,10 @@ class APIObjectInfo:
         if docstring is not None and kind != "module":
             # TS is going to choke on this as See Also and other
             # sections are technically invalid.
-            ndoc = NumpyDocString(dedent_but_first(docstring))
+            try:
+                ndoc = NumpyDocString(dedent_but_first(docstring))
+            except Exception as e:
+                raise NumpydocParseError("APIObjectInfoParse Error in numpydoc") from e
 
             for title in ndoc.ordered_sections:
                 if not ndoc[title]:
@@ -963,7 +1000,8 @@ class APIObjectInfo:
                     self.parsed.append(section)
                 elif title in _numpydoc_sections_with_text:
                     docs = ts.parse("\n".join(ndoc[title]).encode())
-                    assert len(docs) == 1, ("\n".join(ndoc[title]), docs)
+                    if len(docs) != 1:
+                        raise IncorrectInternalDocsLen("\n".join(ndoc[title]), docs)
                     section = docs[0]
                     assert isinstance(section, Section), section
                     self.parsed.append(section)
@@ -1324,7 +1362,9 @@ class Gen:
             except Exception as e:
                 example_section_data = Section()
                 self.log.error("Error getting example data in %s", repr(qa))
-                raise ValueError(f"Error getting example data in {qa!r}") from e
+                from .errors import ExampleError1
+
+                raise ExampleError1(f"Error getting example data in {qa!r}") from e
         else:
             example_section_data = Section()
             figs = []
@@ -1546,7 +1586,7 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(name, data)
 
-    def helper_1(self, *, qa: str, target_item, failure_collection):
+    def helper_1(self, *, qa: str, target_item):
         """
         Parameters
         ----------
@@ -1655,6 +1695,7 @@ class Gen:
             {RefInfo(root, self.version, "module", qa) for qa in collected.keys()}
         )
 
+        error_collector = ErrorCollector(self.config, self.log)
         with p() as p2:
 
             # just nice display of progression.
@@ -1666,17 +1707,12 @@ class Gen:
                 p2.update(taskp, description=qa)
                 p2.advance(taskp)
 
-                try:
-                    with with_context(qa=qa):
-                        item_docstring, arbitrary, api_object = self.helper_1(
-                            qa=qa,
-                            target_item=target_item,
-                            # mutable, not great.
-                            failure_collection=failure_collection,
-                        )
-                except Exception as e:
-                    failure_collection["ErrorHelper1-" + str(type(e))].append(qa)
-                    # raise
+                with error_collector(qa=qa) as c:
+                    item_docstring, arbitrary, api_object = self.helper_1(
+                        qa=qa,
+                        target_item=target_item,
+                    )
+                if c.errored:
                     continue
 
                 try:
@@ -1711,8 +1747,8 @@ class Gen:
                     ex = False
                 dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
 
-                try:
-                    # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
+                # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
+                with error_collector(qa=qa) as c:
                     doc_blob, figs = self.prepare_doc_for_one_object(
                         target_item,
                         ndoc,
@@ -1721,13 +1757,9 @@ class Gen:
                         aliases=collector.aliases[qa],
                         api_object=api_object,
                     )
-                    doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
-                except Exception as e:
-                    self.log.error("Execution error in %s", repr(qa))
-                    failure_collection["ExecError-" + str(type(e))].append(qa)
-                    # continue
-                    raise
-
+                if c.errored:
+                    continue
+                doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
 
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
@@ -1748,6 +1780,12 @@ class Gen:
                 self.put(qa, json.dumps(doc_blob.to_json(), indent=2, sort_keys=True))
                 for name, data in figs:
                     self.put_raw(name, data)
+            if error_collector._errors:
+                self.log.info("ERRORS:" + toml.dumps(error_collector._errors))
+            if error_collector._expected_unseen:
+                self.log.info(
+                    "UNSEEN ERRORS:" + toml.dumps(error_collector._expected_unseen)
+                )
             if failure_collection:
                 self.log.info(
                     "The following parsing failed \n%s",

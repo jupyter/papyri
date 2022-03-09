@@ -616,8 +616,8 @@ def main(qualname: str):
         R = Renderer(frame, walk, gen_content, stack)
         doc = []
         doc.append(blank)
-        if blob.signature:
-            doc.append(Text([("signature", blob.signature)]))
+        if blob.signature.value:
+            doc.append(Text([("signature", blob.signature.value)]))
 
         for k, v in blob.content.items():
 

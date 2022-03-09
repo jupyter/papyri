@@ -327,7 +327,7 @@ class Directive(Node):
 
     def __init__(self, value, domain, role):
         assert isinstance(value, str)
-        assert "`" not in value, breakpoint()
+        assert "`" not in value, value
         self.value = value
         self.domain = domain
         if domain is not None:
