@@ -32,7 +32,7 @@
 
 
 {% if doc.signature %}
-    <code class='signature'>{{doc.signature}}</code>
+    <code class='signature'>{{doc.signature.value}}</code>
 {% endif %}
 
 {% for section in doc.content.keys() if doc.content[section] %}

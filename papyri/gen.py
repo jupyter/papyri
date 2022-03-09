@@ -506,7 +506,7 @@ class Config:
     wait_for_plt_show: Optional[bool] = True
     examples_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
-    implied_imports : Dict[str, str] = None
+    implied_imports : Dict[str, str] = dataclasses.field(default_factory=dict)
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)

@@ -525,6 +525,9 @@ class BulletList(_XList):
 class Signature(Node):
     value: Optional[str]
 
+    def __init__(self, value):
+        self.value = value
+
 class NumpydocExample(Node):
     value: List[str]
 
