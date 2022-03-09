@@ -20,6 +20,7 @@ exclude_jedi = [
 execute_exclude_patterns = []
 exec_failure = "fallback"
 jedi_failure_mode = "log"
+early_error = false
 
 [scipy.expected_errors]
 IncorrectInternalDocsLen = [
@@ -73,7 +74,7 @@ AssertionError = [
     "scipy.integrate._quadrature.trapz", "scipy.optimize._linprog_ip._ip_hsd",
     "scipy.special._orthogonal._compute_tauk",
     ]
-ValueError = [
+NumpydocParseError = [
     "scipy.optimize._linprog_highs._linprog_highs", "scipy.optimize._linprog_doc._linprog_highs_doc",
     "scipy.optimize._linprog_doc._linprog_highs_ds_doc", "scipy.optimize._linprog_doc._linprog_highs_ipm_doc",
     "scipy.optimize._linprog_ip._linprog_ip", "scipy.optimize._linprog_doc._linprog_ip_doc",

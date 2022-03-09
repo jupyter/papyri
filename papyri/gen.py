@@ -1721,6 +1721,8 @@ class Gen:
             # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
 
+            failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
+
             for qa, target_item in collected.items():
                 p2.update(taskp, description=qa)
                 p2.advance(taskp)
@@ -1733,11 +1735,29 @@ class Gen:
                 if c.errored:
                     continue
 
-                if item_docstring is None:
-                    continue
-                else:
-                    ndoc = NumpyDocString(dedent_but_first(item_docstring))
-
+                try:
+                    if item_docstring is None:
+                        continue
+                    else:
+                        ndoc = NumpyDocString(dedent_but_first(item_docstring))
+                        # note currentlu in ndoc we use:
+                        # _parsed_data
+                        # direct access to  ["See Also"], and [""]
+                        # and :
+                        # ndoc.ordered_sections
+                except Exception as e:
+                    if not isinstance(target_item, ModuleType):
+                        self.log.exception(
+                            "Unexpected error parsing %s – %s",
+                            qa,
+                            target_item.__name__,
+                        )
+                        failure_collection["NumpydocError-" + str(type(e))].append(qa)
+                    if isinstance(target_item, ModuleType):
+                        # TODO: ndoc-placeholder : remove placeholder here
+                        ndoc = NumpyDocString(f"To remove in the future –– {qa}")
+                    else:
+                        continue
                 if not isinstance(target_item, ModuleType):
                     arbitrary = []
                 ex = self.config.exec
@@ -1784,6 +1804,11 @@ class Gen:
                 self.log.info('ERRORS:'+toml.dumps(error_collector._errors))
             if error_collector._expected_unseen:
                 self.log.info('UNSEEN ERRORS:'+toml.dumps(error_collector._expected_unseen))
+            if failure_collection:
+                self.log.info(
+                    "The following parsing failed \n%s",
+                    json.dumps(failure_collection, indent=2, sort_keys=True),
+                )
             found = {}
             not_found = []
             for k, v in collector.aliases.items():
