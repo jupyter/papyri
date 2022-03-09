@@ -1,3 +1,12 @@
+class IncorrectInternalDocsLen(AssertionError):
+    pass
+
+class NumpydocParseError(ValueError):
+    pass
+
+class ExampleError1(ValueError):
+    pass
+
 class StrictParsingError(Exception):
     pass
 

@@ -19,60 +19,36 @@ submodules = ['distutils','typing']
 # docs_path = '~/dev/numpy/doc/source'
 
 exec = true
-exclude = [
-   # multiline ref see also.
-   "numpy._from_dlpack",
-   "numpy.lib.utils.get_include",
-   
-   # the docstring start with a block directive that gets
-   # split between summary and extended summary. 
-   # Which is incorrect and leadt to further parsing issues.
-   "numpy.ma.core.MaskedArray.resize",
-
-   # substitution Reference not implemented
-   'numpy.isscalar',
-   # substitution definition not implmented
-   'numpy.rollaxis',
-
-    
-   # Error in example expected, to implement in papyri:
-   "numpy.linalg.LinAlgError",
-   "numpy.lib._version.NumpyVersion",
-   "numpy.rec.fromstring",
-   "numpy.AxisError",
-   "numpy.lib.utils.safe_eval",
-   # missparsing of example sections.
-   "numpy.percentile",
-   # Citation Reference not implemented
-   "numpy.fft",
-   # Improper "Class Attributes" section.
-   "numpy.polynomial._polybase.ABCPolyBase",
-
-   # Error in example, fixed upstream
-   "numpy.polynomial.chebyshev.chebinterpolate",
-   "numpy.polynomial.polynomial.polyfit",
-   "numpy.polynomial.legendre.leg2poly",
-   "numpy.lib.npyio.NpzFile",
-
-   # numpy.core.shape_base._concatenate_shapes has markdown and fences in the middle
-   # of this documentation. https://github.com/numpy/numpy/pull/20944
-   "numpy.core.shape_base._concatenate_shapes",
-   # imbalanced backticks, fix upstream
-   "numpy.polynomial.polynomial.polyvalfromroots",
-   # `....`s not handeled well
-   "numpy.random.bit_generator.ISeedSequence.generate_state",
-   # backticks in See Also
-   "numpy.typing._nested_sequence._NestedSequence",
-   # MISC:
-   "numpy.tensordot",
-   "numpy.lib._datasource.DataSource._splitzipext",
-   "numpy.core._internal._view_is_safe",
-   "numpy.distutils.misc_util.Configuration.__init__",
-
-   ]
+exclude = []
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
 homepage = 'https://numpy.org'
 docs = 'https://numpy.org/doc/stable/'
 logo = './numpy_logo.png'
+early_error = false
+
+[numpy.expected_errors]
+ValueError = [
+    "numpy.core.shape_base._concatenate_shapes",
+    ]
+NumpydocParseError = [
+    "numpy._from_dlpack",
+    "numpy.typing._nested_sequence._NestedSequence",
+    "numpy.polynomial._polybase.ABCPolyBase",
+    ]
+VisitCitationReferenceNotImplementedError = [
+    "numpy.fft",
+    ]
+VisitSubstitutionDefinitionNotImplementedError = [
+    "numpy.rollaxis",
+    ]
+IncorrectInternalDocsLen = [
+    "numpy.tensordot",
+    "numpy.lib._datasource.DataSource._splitzipext",
+    "numpy.core._internal._view_is_safe",
+    "numpy.distutils.misc_util.Configuration.__init__",]
+AssertionError = [ 
+    "numpy.polynomial.polynomial.polyvalfromroots",
+    "numpy.random.bit_generator.ISeedSequence.generate_state",
+]
 
