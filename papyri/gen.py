@@ -20,6 +20,7 @@ import site
 import sys
 import tempfile
 import warnings
+import importlib
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
@@ -125,6 +126,21 @@ def _jedi_set_cache(text, value):
 
     _cache = _JEDI_CACHE / _hashf(text)
     _cache.write_text(json.dumps(value))
+
+
+def obj_from_qualname(name):
+
+    mod_name, sep, obj = name.partition(':')
+    module =  importlib.import_module(mod_name)
+    if not sep:
+        return module
+    else:
+        obj = module
+        parts = obj.split('.')
+        for p in parts:
+            obj = getattr(obj, p)
+        return obj
+
 
 
 def parse_script(
@@ -304,6 +320,8 @@ def get_example_data(
     acc = ""
     figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
     ns = {"np": np, "plt": plt, obj.__name__: obj}
+    for k,v in config.implied_imports.items():
+        ns[k] = obj_from_qualname(v)
     executor = BlockExecutor(ns)
     figs = []
     # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
@@ -488,6 +506,7 @@ class Config:
     wait_for_plt_show: Optional[bool] = True
     examples_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
+    implied_imports : Dict[str, str] = None
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
