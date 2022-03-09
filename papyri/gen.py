@@ -65,22 +65,19 @@ from contextlib import contextmanager
 
 
 class ErrorCollector:
-
-
     def __init__(self, config, log):
         self.config = config
         self.log = log
 
         self._expected_unseen = {}
-        for err,names in self.config.expected_errors.items():
+        for err, names in self.config.expected_errors.items():
             for name in names:
-                self._expected_unseen.setdefault(name,[]).append(err)
+                self._expected_unseen.setdefault(name, []).append(err)
         self._errors = {}
-            
-    def __call__(self, qa):
-        self._qa= qa
-        return self
 
+    def __call__(self, qa):
+        self._qa = qa
+        return self
 
     def __enter__(self):
         self.errored = False
@@ -88,7 +85,6 @@ class ErrorCollector:
 
     def raise_if_unseen_errors(self):
         pass
-
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if isinstance(exc_type, KeyboardInterrupt):
@@ -102,13 +98,10 @@ class ErrorCollector:
                     del self._expected_unseen[self._qa]
             else:
                 self._errors.setdefault(ename, []).append(self._qa)
-                self.log.exception('Unexpected error')
+                self.log.exception("Unexpected error")
             if not self.config.early_error:
                 return True
-        #return True
-
-
-
+        # return True
 
 
 try:
@@ -402,7 +395,7 @@ def get_example_data(
                             res, fig_managers, sout, serr = executor.exec(script)
                             ce_status = "execed"
                         except Exception:
-                            if 'Traceback' not in '\n'.join(out):
+                            if "Traceback" not in "\n".join(out):
                                 log.exception("error in execution: %s", qa)
                             ce_status = "exception_in_exec"
                             if config.exec_failure != "fallback":
@@ -561,7 +554,7 @@ class Config:
     exclude_jedi: Sequence[str] = ()
     implied_imports: Dict[str, str] = dataclasses.field(default_factory=dict)
     expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
-    early_error : bool = True
+    early_error: bool = True
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -984,7 +977,6 @@ _numpydoc_sections_with_text = {
 }
 
 
-
 class APIObjectInfo:
     """
     Info about an API object
@@ -1010,7 +1002,7 @@ class APIObjectInfo:
             try:
                 ndoc = NumpyDocString(dedent_but_first(docstring))
             except Exception as e:
-                raise NumpydocParseError('APIObjectInfoParse Error in numpydoc') from e
+                raise NumpydocParseError("APIObjectInfoParse Error in numpydoc") from e
 
             for title in ndoc.ordered_sections:
                 if not ndoc[title]:
@@ -1384,6 +1376,7 @@ class Gen:
                 example_section_data = Section()
                 self.log.error("Error getting example data in %s", repr(qa))
                 from .errors import ExampleError1
+
                 raise ExampleError1(f"Error getting example data in {qa!r}") from e
         else:
             example_section_data = Section()
@@ -1801,9 +1794,11 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(name, data)
             if error_collector._errors:
-                self.log.info('ERRORS:'+toml.dumps(error_collector._errors))
+                self.log.info("ERRORS:" + toml.dumps(error_collector._errors))
             if error_collector._expected_unseen:
-                self.log.info('UNSEEN ERRORS:'+toml.dumps(error_collector._expected_unseen))
+                self.log.info(
+                    "UNSEEN ERRORS:" + toml.dumps(error_collector._expected_unseen)
+                )
             if failure_collection:
                 self.log.info(
                     "The following parsing failed \n%s",
