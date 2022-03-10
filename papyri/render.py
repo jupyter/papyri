@@ -37,7 +37,7 @@ log = logging.getLogger("papyri")
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
-def url(info, prefix="/p/"):
+def url(info, prefix):
     assert isinstance(info, RefInfo)
     assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
     # assume same package/version for now.
@@ -305,7 +305,7 @@ def compute_graph(gs, blob, key):
         else:
             # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
             latest_version = list(sorted(candidates))[-1]
-            uu = url(RefInfo(*latest_version))
+            uu = url(RefInfo(*latest_version), "/p/")
 
         data["nodes"].append(
             {
@@ -330,21 +330,40 @@ async def _route_data(gstore, ref, version, known_refs):
 
 
 class HtmlRenderer:
-    def __init__(self, store, *, sidebar, old_store):
+    def __init__(self, store, *, sidebar, old_store, prefix):
         self.store = store
         self.old_store = old_store
-        prefix = "/p/"
         self.env = Environment(
             loader=FileSystemLoader(os.path.dirname(__file__)),
             autoescape=select_autoescape(["html", "tpl.j2"]),
             undefined=StrictUndefined,
         )
+        self.prefix = prefix
         self.env.globals["len"] = len
         self.env.globals["url"] = lambda x: url(x, prefix)
         self.env.globals["unreachable"] = unreachable
-        self.env.globals["prefix"] = prefix
         self.env.globals["sidebar"] = sidebar
         self.sidebar = sidebar
+
+    async def _write_gallery(self, config):
+        """ """
+        mv2 = self.store.glob((None, None))
+        for _, (module, version) in progress(
+            set(mv2), description="Rendering galleries..."
+        ):
+            # version, module = item.path.name, item.path.parent.name
+            data = await self.gallery(
+                module,
+                version,
+                ext=".html",
+            )
+            if config.output_dir:
+                (config.output_dir / module / version / "gallery").mkdir(
+                    parents=True, exist_ok=True
+                )
+                (
+                    config.output_dir / module / version / "gallery" / "index.html"
+                ).write_text(data)
 
     async def gallery(self, module, version, ext=""):
 
@@ -367,8 +386,8 @@ class HtmlRenderer:
             ]:
                 module, v, kind, _path = key
                 # module, filename, link
-                impath = f"/p/{module}/{v}/img/{k}"
-                link = f"/p/{module}/{v}/api/{_path}"
+                impath = f"{self.prefix}/{module}/{v}/img/{k}"
+                link = f"{self.prefix}/{module}/{v}/api/{_path}"
                 # figmap.append((impath, link, name)
                 figmap[module].append((impath, link, _path))
 
@@ -382,8 +401,8 @@ class HtmlRenderer:
                 module, v, _, _path = target_path.path.parts[-4:]
 
                 # module, filename, link
-                impath = f"/p/{module}/{v}/img/{k}"
-                link = f"/p/{module}/{v}/examples/{target_path.name}"
+                impath = f"{self.prefix}{module}/{v}/img/{k}"
+                link = f"{self.prefix}{module}/{v}/examples/{target_path.name}"
                 name = target_path.name
                 # figmap.append((impath, link, name)
                 figmap[module].append((impath, link, name))
@@ -583,7 +602,10 @@ def serve(*, sidebar: bool):
 
     store = Store(str(ingest_dir))
     gstore = GraphStore(ingest_dir)
-    html_renderer = HtmlRenderer(gstore, sidebar=sidebar, old_store=store)
+    prefix = "/p/"
+    html_renderer = HtmlRenderer(
+        gstore, sidebar=sidebar, old_store=store, prefix=prefix
+    )
 
     async def full(package, version, ref):
         return await html_renderer._route(ref, store, version)
@@ -601,7 +623,7 @@ def serve(*, sidebar: bool):
         import papyri
 
         v = str(papyri.__version__)
-        return redirect(f"/p/papyri/{v}/api/papyri")
+        return redirect(f"{prefix}papyri/{v}/api/papyri")
 
     async def ex(module, version, subpath):
         return await examples(
@@ -615,11 +637,11 @@ def serve(*, sidebar: bool):
     app.route("/logo.png")(logo)
     app.route("/favicon.ico")(static("favicon.ico"))
     # sub here is likely incorrect
-    app.route("/p/<package>/<version>/img/<path:subpath>")(img)
-    app.route("/p/<module>/<version>/examples/<path:subpath>")(ex)
-    app.route("/p/<module>/<version>/gallery")(full_gallery)
-    app.route("/p/<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
-    app.route("/p/<package>/<version>/api/<ref>")(full)
+    app.route(f"{prefix}/<package>/<version>/img/<path:subpath>")(img)
+    app.route(f"{prefix}<module>/<version>/examples/<path:subpath>")(ex)
+    app.route(f"{prefix}<module>/<version>/gallery")(full_gallery)
+    app.route(f"{prefix}<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
+    app.route(f"{prefix}<package>/<version>/api/<ref>")(full)
     app.route("/gallery/")(gr)
     app.route("/gallery/<module>")(g)
     app.route("/")(index)
@@ -760,8 +782,6 @@ async def _ascii_render(key, store, known_refs=None, template=None):
     # exercise the reprs
     assert str(doc_blob)
 
-    data = compute_graph(store, doc_blob, key)
-    json_str = json.dumps(data)
     return render_one(
         template=template,
         doc=doc_blob,
@@ -769,7 +789,7 @@ async def _ascii_render(key, store, known_refs=None, template=None):
         ext="",
         backrefs=doc_blob.backrefs,
         pygment_css=None,
-        graph=json_str,
+        graph="{}",
         sidebar=False,  # no effects
     )
 
@@ -950,26 +970,6 @@ async def _self_render_as_index_page(
             f.write(data)
 
 
-async def _write_gallery(store, gstore, config):
-    """ """
-    mv2 = gstore.glob((None, None))
-    html_renderer = HtmlRenderer(gstore, sidebar=config.html_sidebar, old_store=store)
-    for _, (module, version) in progress(
-        set(mv2), description="Rendering galleries..."
-    ):
-        # version, module = item.path.name, item.path.parent.name
-        data = await html_renderer.gallery(
-            module,
-            version,
-            ext=".html",
-        )
-        if config.output_dir:
-            (config.output_dir / module / version / "gallery").mkdir(
-                parents=True, exist_ok=True
-            )
-            (
-                config.output_dir / module / version / "gallery" / "index.html"
-            ).write_text(data)
 
 
 @dataclass
@@ -1008,6 +1008,7 @@ async def main(ascii: bool, html, dry_run, sidebar):
         output_dir = html_dir_ / "p"
         output_dir.mkdir(exist_ok=True)
     config = StaticRenderingConfig(html, sidebar, ascii, output_dir)
+    prefix = "/p/"
 
     gstore = GraphStore(ingest_dir, {})
     store = Store(ingest_dir)
@@ -1021,7 +1022,7 @@ async def main(ascii: bool, html, dry_run, sidebar):
     )
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
-    env.globals["url"] = url
+    env.globals["url"] = lambda x: url(x, prefix)
     template = env.get_template("html.tpl.j2")
     document: Store
 
@@ -1044,9 +1045,12 @@ async def main(ascii: bool, html, dry_run, sidebar):
     random.shuffle(gfiles)
     # Gallery
 
-    await _write_gallery(store, gstore, config)
+    html_renderer = HtmlRenderer(
+        gstore, sidebar=config.html_sidebar, old_store=store, prefix=prefix
+    )
+    await html_renderer._write_gallery(config)
 
-    await _write_example_files(gstore, config)
+    await _write_example_files(gstore, config, prefix=prefix)
 
     await _write_api_file(
         gfiles,
@@ -1065,7 +1069,7 @@ async def main(ascii: bool, html, dry_run, sidebar):
     await copy_assets(config, gstore)
 
 
-async def _write_example_files(gstore, config):
+async def _write_example_files(gstore, config, prefix):
     if not config.html:
         return
 
@@ -1076,7 +1080,7 @@ async def _write_example_files(gstore, config):
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["url"] = url
+    env.globals["url"] = lambda x: url(x, prefix)
     env.globals["unreachable"] = unreachable
     for _, example in progress(examples, description="Rendering Examples..."):
         module, version, _, path = example
