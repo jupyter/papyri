@@ -497,6 +497,7 @@ class _XList(Node):
             BlockQuote,
             BlockVerbatim,
             BlockDirective,
+            BlockMath,
             Unimplemented,
             Admonition,
         ]

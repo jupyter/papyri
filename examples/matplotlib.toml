@@ -4,6 +4,7 @@ wait_for_plt_show = false
 exec_failure = "fallback"
 submodules = [ "image", "pyplot", "axes", "axes._base", "dviread", "image","figure",'colors', 'transforms']
 examples_folder = '/Users/bussonniermatthias/dev/matplotlib/examples/'
+early_error = false
 examples_exclude = [
 # jedi inference issue
 "logos2.py",
@@ -77,114 +78,43 @@ examples_exclude = [
 "lines_bars_and_markers/marker_reference.py",
 "lines_bars_and_markers/multivariate_marker_plot.py",
 ]
-exclude = ['matplotlib._api',
-           'matplotlib.pyplot.step',
-           'matplotlib.pyplot.subplot_mosaic',
-           'matplotlib._api.deprecation',
-           'matplotlib.cm.unregister_cmap',
-           'matplotlib.artist.Artist.set_sketch_params',
-           'matplotlib.artist.Artist.set_clip_path',
-           'matplotlib.artist.Artist.set_agg_filter',
-           # .. ACCEPTS: comment
-           'matplotlib.axes._axes.Axes.step',# .. Accepts:
-           'matplotlib.axes._axes.Axes.pcolorfast',# .. Accepts:
-           'matplotlib.patches.Rectangle.set_bounds',# .. Accepts:
-           'matplotlib.axes._base._AxesBase.set_xlim',# .. Accepts:
-           'matplotlib.axes._base._AxesBase.set_ylim', # .. Accepts:
-           'matplotlib.spines.Spine.set_bounds', 
-           # directive with space
-           'matplotlib.axes._base._AxesBase.set_navigate_mode', # space directive
-           'matplotlib.cm.ScalarMappable.set_clim', # .. ACCEPTS:
-           'matplotlib.figure.FigureBase.subplot_mosaic', # .. note :: < with space
-           # .. misc comments:
-           'matplotlib.pyplot.fill_between',
-           'matplotlib.pyplot.fill_betweenx',
-           "matplotlib.patches.FancyBboxPatch.set_boxstyle",
-           # visit_targets:
-           "matplotlib.dates",
-           "matplotlib.image.thumbnail",
-           "matplotlib.backends.backend_agg.FigureCanvasAgg.print_png",
-           'matplotlib.pyplot.pcolor',
-           'matplotlib.pyplot.pcolormesh',
-           'matplotlib.font_manager.FontProperties',
-           'matplotlib.font_manager.FontManager.findfont',
-           'matplotlib.fontconfig_pattern.FontconfigPatternParser',
-           'matplotlib.colors',
-           'matplotlib.fontconfig_pattern',
-           'matplotlib.markers',
-           'matplotlib.mathtext',
-           'matplotlib.image.pil_to_array',
-           'matplotlib.backend_bases.GraphicsContextBase.set_dashes',
-           'matplotlib.backend_bases.GraphicsContextBase.get_dashes',
-           'matplotlib.axes._axes.Axes.pcolormesh',
-           'matplotlib.axes._axes.Axes.pcolor',
-           'matplotlib.axes._axes.Axes.fill_betweenx',
-           'matplotlib.axes._axes.Axes.fill_between',
-           'matplotlib.axes._axes.Axes._fill_between_x_or_y', 
-           "matplotlib.mlab",
-           "matplotlib.backends.backend_agg",
-           "matplotlib.pyplot.switch_backend.<locals>.backend_mod",
-           # substitution reference
-           "matplotlib.pyplot.boxplot",
-           "matplotlib.axes._axes.Axes.boxplot",
-           # serailisation error
-           "matplotlib.pyplot.colorbar",
-           "matplotlib.pyplot.errorbar",
-           "matplotlib.pyplot.eventplot",
-           "matplotlib.pyplot.setp",
-           "matplotlib.artist.setp",
-           "matplotlib.cbook._array_perimeter",
-           "matplotlib.axes._axes.Axes.eventplot",
-           "matplotlib.axes._axes.Axes.errorbar",
-           "matplotlib.figure.FigureBase.colorbar",
-           # split blocks messes that up with warnings being alone.
-           "matplotlib.transforms.Bbox",
-           # directive len children 4
-           "matplotlib.axes._axes.Axes.secondary_xaxis",
-           "matplotlib.axes._axes.Axes.secondary_yaxis",
-           "matplotlib.dates.ConciseDateFormatter",
-           # index error
-           "matplotlib.backend_bases.ToolContainerBase.add_toolitem",
-           # Parso error
-           "matplotlib.widgets.SpanSelector",
-           #"ExecError-<class 'ValueError'>": [
-           "matplotlib.rc_context",
-           "matplotlib.pyplot.axhline",
-           "matplotlib.pyplot.axline",
-           "matplotlib.pyplot.axvline",
-           "matplotlib.figure.figaspect",
-           "matplotlib.pyplot.locator_params",
-           "matplotlib.pyplot.rc_context",
-           "matplotlib.pyplot.text",
-           "matplotlib.afm._parse_composites",
-           "matplotlib.backend_bases.PickEvent",
-           "matplotlib.axes._axes.Axes.inset_axes",
-           "matplotlib.axes._axes.Axes.text",
-           "matplotlib.axes._axes.Axes.axhline",
-           "matplotlib.axes._axes.Axes.axvline",
-           "matplotlib.axes._axes.Axes.axline",
-           "matplotlib.gridspec.SubplotSpec.subgridspec",
-           "matplotlib.axes._base._AxesBase.locator_params",
-           "matplotlib.figure.FigureBase.add_axes",
-           "matplotlib.figure.FigureBase.align_xlabels",
-           "matplotlib.figure.FigureBase.align_ylabels",
-           "matplotlib.figure.FigureBase.add_gridspec",
-           "matplotlib.colors.TwoSlopeNorm.__init__",
-           "matplotlib.collections.RegularPolyCollection.__init__",
-           "matplotlib.textpath.TextPath.__init__",
-           "matplotlib.textpath.TextToPath.get_text_path",
-           # imbalanced backticks https://github.com/matplotlib/matplotlib/pull/22434
-           "matplotlib.ticker.ScalarFormatter.set_powerlimits",
-           "matplotlib.rc",
-           "matplotlib.pyplot.rc",
-           "matplotlib.axes._base._process_plot_var_args",
-           "matplotlib.font_manager.win32FontDirectory",
-           "matplotlib.transforms.Affine2D.__init__",
-           "matplotlib.transforms.Affine2D.get_matrix",
-           "matplotlib.transforms.Affine2D.set_matrix",
-           "matplotlib.ticker.LogLocator.__init__",
-           "matplotlib.figure.FigureBase._process_projection_requirements",
-           "matplotlib.transforms.Transform.__sub__",
-           "matplotlib.patches.ConnectionStyle._Base",
-           "matplotlib.tri.triinterpolate._safe_inv22_vectorized",
-           ]
+
+[matplotlib.expected_errors]
+VisitSubstitutionDefinitionNotImplementedError = [
+    "matplotlib.markers",
+    ]                                                                        
+IncorrectInternalDocsLen = [
+    "matplotlib.rc",
+    "matplotlib.pyplot.rc",
+    "matplotlib.axes._base._process_plot_var_args",
+    "matplotlib.dates.ConciseDateFormatter",
+    "matplotlib.font_manager.win32FontDirectory",
+    "matplotlib.transforms.Affine2D.__init__",
+    "matplotlib.transforms.Affine2D.get_matrix",
+    "matplotlib.transforms.Affine2D.set_matrix",
+    "matplotlib.ticker.LogLocator.__init__",
+    "matplotlib.figure.FigureBase._process_projection_requirements",
+    "matplotlib.transforms.Transform.__sub__",
+    "matplotlib.patches.ConnectionStyle._Base",
+    "matplotlib.tri.triinterpolate._safe_inv22_vectorized",
+    ]
+ValueError = [ 
+    "matplotlib.image.thumbnail",
+    "matplotlib.artist.Artist.set_sketch_params",
+    "matplotlib.artist.Artist.set_agg_filter",
+    "matplotlib.axes._base._AxesBase.set_xlim",
+    "matplotlib.axes._base._AxesBase.set_ylim",
+    "matplotlib.cm.ScalarMappable.set_clim",
+    "matplotlib.patches.FancyBboxPatch.set_boxstyle",
+    "matplotlib.spines.Spine.set_bounds",
+    "matplotlib.backends.backend_agg.FigureCanvasAgg.print_png",
+    ]
+SpaceAfterBlockDirectiveError = [
+    "matplotlib.pyplot.subplot_mosaic",
+    "matplotlib.cm.unregister_cmap",
+    "matplotlib.axes._base._AxesBase.set_navigate_mode",
+    "matplotlib.figure.FigureBase.subplot_mosaic",
+    ]
+AssertionError = [
+    "matplotlib.ticker.ScalarFormatter.set_powerlimits",
+]

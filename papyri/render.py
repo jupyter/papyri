@@ -90,7 +90,7 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["url"] = url
+    env.globals["url"] = lambda x: url(x, "/p/")
     env.globals["unreachable"] = unreachable
 
     pap_files = store.glob("*/*/papyri.json")

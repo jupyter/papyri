@@ -1,5 +1,6 @@
 {% extends "skeleton.tpl.j2" %}
 
+{% set current_type = 'api' %}
 {% block plus %}
     {%- for section in doc.content.keys() if doc.content[section] and len(doc.content[section]) -%}
     {%- if section not in ['Extended Summary','Signature', 'Summary'] -%}
@@ -31,7 +32,7 @@
 
 
 
-{% if doc.signature %}
+{% if doc.signature.value %}
     <code class='signature'>{{doc.signature.value}}</code>
 {% endif %}
 

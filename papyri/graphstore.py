@@ -1,4 +1,5 @@
 import json
+import cbor2
 import sqlite3
 from collections import namedtuple
 from pathlib import Path as _Path

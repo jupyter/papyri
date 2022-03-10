@@ -1,4 +1,5 @@
 {% extends "skeleton.tpl.j2" %}
+{% set current_type = 'Gallery' %}
 {%block api%}
         {% for m,figs in figmap.items() %}
             <h2>{{m}}</h2>
