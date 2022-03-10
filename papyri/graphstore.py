@@ -1,4 +1,4 @@
-import json
+# import json
 import cbor2
 import sqlite3
 from collections import namedtuple
@@ -14,10 +14,14 @@ class Path:
         self.path = path
 
     def read_json(self):
-        return json.loads(self.path.read_text())
+        with open(self.path, "rb") as f:
+            return cbor2.load(f)
+            # return json.loads(self.path.read_text())
 
     def write_json(self, data):
-        self.path.write_text(json.dumps(data))
+        with open(self.path, "wb") as f:
+            return cbor2.dump(data, f)
+        # self.path.write_text(json.dumps(data))
 
     def __truediv__(self, other):
         return type(self)(self.path / other)
@@ -245,7 +249,10 @@ class GraphStore:
         path.path.parent.mkdir(parents=True, exist_ok=True)
 
         if "assets" not in key and path.exists():
-            __tmp = json.loads(path.read_bytes().decode())
+            try:
+                __tmp = cbor2.loads(path.read_bytes())
+            except Exception as e:
+                raise type(e)(path.path)
 
             old_refs = {
                 (b["module"], b["version"], b["kind"], b["path"])

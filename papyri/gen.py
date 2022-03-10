@@ -1495,6 +1495,7 @@ class Gen:
         with p() as p2:
             failed = []
             from IPython.utils.path import compress_user
+
             taskp = p2.add_task(description="Collecting examples", total=len(examples))
             for example in examples:
                 p2.update(taskp, description=compress_user(str(example)).ljust(7))

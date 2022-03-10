@@ -970,8 +970,6 @@ async def _self_render_as_index_page(
             f.write(data)
 
 
-
-
 @dataclass
 class StaticRenderingConfig:
     """Class for keeping track of an item in inventory."""
