@@ -1098,9 +1098,6 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
         assert isinstance(ver, str)
         parts[module].append((RefInfo(mod, ver, "api", mod), mod))
 
-    from .take2 import Section
-
-    # ex = Section.from_json(json.loads(data))
     ex = encoder.decode(data)
 
     class Doc:
