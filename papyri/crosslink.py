@@ -387,7 +387,11 @@ def load_one_uningested(
 def load_one(
     bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None, strict=False
 ) -> IngestedBlobs:
-    data = json.loads(bytes_)
+    assert isinstance(bytes_, bytes), bytes_
+    try:
+        data = json.loads(bytes_)
+    except Exception:
+        data = encoder.decode(bytes_)
     assert "backrefs" not in data
     # OK to mutate we are the only owners and don't return it.
     data["backrefs"] = json.loads(bytes2_) if bytes2_ else []

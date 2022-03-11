@@ -24,7 +24,7 @@ from .config import ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
 from .graphstore import GraphStore, Key
 from .stores import Store
-from .take2 import RefInfo
+from .take2 import RefInfo, encoder
 from .utils import progress
 
 FORMAT = "%(message)s"
@@ -323,7 +323,7 @@ async def _route_data(gstore, ref, version, known_refs):
     print("!!", ref)
     root = ref.split("/")[0].split(".")[0]
     key = Key(root, version, "module", ref)
-    gbytes = gstore.get(key).decode()
+    gbytes = gstore.get(key)
     x_, y_ = find_all_refs(gstore)
     doc_blob = load_one(gbytes, b"[]", known_refs=known_refs, strict=True)
     return x_, y_, doc_blob
@@ -375,7 +375,7 @@ class HtmlRenderer:
             backrefs = backrefs.union(brs)
 
         for key in backrefs:
-            data = json.loads(self.store.get(Key(*key)).decode())
+            data = encoder.decode(self.store.get(Key(*key)))
             data["backrefs"] = []
 
             i = IngestedBlobs.from_json(data)
@@ -392,7 +392,7 @@ class HtmlRenderer:
                 figmap[module].append((impath, link, _path))
 
         for target_path in self.old_store.glob(f"{module}/{version}/examples/*"):
-            data = json.loads(await target_path.read_text())
+            data = encoder.decode(await target_path.read_bytes())
             from .take2 import Section
 
             s = Section.from_json(data)
@@ -503,14 +503,6 @@ class HtmlRenderer:
             # bytes_ = await file_.read_text()
             assert root is not None
             # assert version is not None
-            brpath = store / root / version / "module" / f"{ref}.br"
-            print(brpath)
-            if await brpath.exists():
-                br = await brpath.read_text()
-                # TODO: update to new way of getting backrefs.
-                br = None
-            else:
-                br = None
 
             data = compute_graph(self.store, doc_blob, (root, version, "module", ref))
             json_str = json.dumps(data)
@@ -549,11 +541,6 @@ class HtmlRenderer:
                 set(x2) - set(this_module_known_refs),
                 (set(this_module_known_refs) - set(x2)),
             )
-            brpath = store / "__phantom__" / f"{ref}.json"
-            if await brpath.exists():
-                br = json.loads(await brpath.read_text())
-            else:
-                br = []
 
             # compute a tree from all the references we have to have a nice browsing
             # interfaces.
@@ -569,7 +556,7 @@ class HtmlRenderer:
                 sub["__link__"] = f
 
             error = env.get_template("404.tpl.j2")
-            return error.render(backrefs=list(set(br)), tree=tree, ref=ref, module=root)
+            return error.render(backrefs=list(set()), tree=tree, ref=ref, module=root)
 
 
 async def img(package, version, subpath=None) -> Optional[bytes]:
@@ -766,7 +753,7 @@ async def _ascii_render(key, store, known_refs=None, template=None):
     # version = keys[0][-1]
 
     env, template = _ascii_env()
-    bytes_ = store.get(key).decode()
+    bytes_: bytes = store.get(key)
 
     # TODO:
     # brpath = store / root / rsion / "module" / f"{ref}.br"
@@ -1113,7 +1100,8 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
 
     from .take2 import Section
 
-    ex = Section.from_json(json.loads(data))
+    # ex = Section.from_json(json.loads(data))
+    ex = encoder.decode(data)
 
     class Doc:
         pass
