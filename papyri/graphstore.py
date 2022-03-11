@@ -142,7 +142,7 @@ class GraphStore:
         self._root = Path(root)
         self._link_finder = link_finder
 
-    def _key_to_path(self, key: Key) -> Tuple[Path, Path]:
+    def _key_to_path(self, key: Key) -> Path:
         """
         Given A key, return path to the current file
         and the back referenced.
