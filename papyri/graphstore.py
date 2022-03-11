@@ -216,15 +216,13 @@ class GraphStore:
 
         sql_backrefs = {Key(*s[1:]) for s in rows}
 
-
         return path.read_bytes(), sql_backrefs
 
     def get_backref(self, key: Key) -> Set[Key]:
         return self._get(key)[1]
-    
+
     def get(self, key: Key) -> bytes:
         return self._get(key)[0]
-
 
     def _maybe_insert_source(self, key):
         with self.conn:
@@ -319,7 +317,6 @@ class GraphStore:
 
         removed_refs = old_refs - new_refs
         added_refs = new_refs - old_refs
-
 
         with self.conn:
             source_id = self._maybe_insert_source(key)
