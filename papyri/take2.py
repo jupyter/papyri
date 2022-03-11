@@ -76,7 +76,7 @@ UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 
 import typing
-from typing import List
+from typing import List, Dict, Any
 
 from papyri.miniserde import deserialize, get_type_hints, serialize
 
@@ -174,11 +174,21 @@ class Base:
         return cls(**kwargs)
 
 
+TAG_MAP: Dict[Any, int] = {}
+
+
 class Node(Base):
     def __init__(self, *args):
         tt = get_type_hints(type(self))
         for attr, val in zip(tt, args):
             setattr(self, attr, val)
+
+    def cbor(self, encoder):
+        import cbor2
+
+        tag = TAG_MAP[type(self)]
+        attrs = get_type_hints(type(self))
+        encoder.encode(cbor2.CBORTag(tag, [getattr(self, k) for k in attrs]))
 
     def __eq__(self, other):
         if not (type(self) == type(other)):
@@ -497,6 +507,7 @@ class _XList(Node):
             BlockQuote,
             BlockVerbatim,
             BlockDirective,
+            BlockMath,
             Unimplemented,
             Admonition,
         ]
@@ -1049,7 +1060,7 @@ class BlockDirective(Block):
         else:
             self.inner = value[0]
 
-    def __init__(self, *, directive_name, args0, inner):
+    def __init__(self, directive_name, args0, inner):
         self.directive_name = directive_name
         self.args0 = args0
         self.inner = inner
@@ -1254,6 +1265,79 @@ def parse_rst_section(text):
         [section] = items
         return section.children
     raise ValueError("Multiple sections present")
+
+
+TAG_MAP.update(
+    {
+        RefInfo: 4000,
+        Verbatim: 4001,
+        Link: 4002,
+        Directive: 4003,
+        BlockMath: 4004,
+        Math: 4005,
+        Word: 4006,
+        Words: 4007,
+        Emph: 4008,
+        Strong: 4009,
+        # _XList: 4010,
+        Signature: 4011,
+        NumpydocExample: 4012,
+        NumpydocSeeAlso: 4013,
+        NumpydocSignature: 4014,
+        Section: 4015,
+        Param: 4016,
+        Token: 4017,
+        Unimplemented: 4018,
+        _Dummy: 4019,
+        Code2: 4020,
+        Code: 4021,
+        Text: 4022,
+        BlockQuote: 4023,
+        Fig: 4024,
+        Paragraph: 4025,
+        Block: 4026,
+        Ref: 4027,
+        SeeAlsoItem: 4028,
+        BlockError: 4029,
+        Comment: 4030,
+        BlockDirective: 4031,
+        BlockVerbatim: 4032,
+        DefList: 4033,
+        Options: 4034,
+        FieldList: 4035,
+        FieldListItem: 4036,
+        DefListItem: 4037,
+        Admonition: 4038,
+        EnumeratedList: 4039,
+        BulletList: 4040,
+        SubstitutionRef: 4041,
+        Target: 4042,
+    }
+)
+
+
+import cbor2
+
+
+class Encoder:
+    def __init__(self, tag_map):
+        self._tag_map = tag_map
+
+    def encode(self, obj):
+        return cbor2.dumps(obj, default=lambda encoder, obj: obj.cbor(encoder))
+
+    def _tag_hook(self, decoder, tag, shareable_index=None):
+        rev_map = {v: k for k, v in self._tag_map.items()}
+        type_ = rev_map[tag.tag]
+
+        tt = get_type_hints(type_)
+        return type_(**{k: t for k, t in zip(tt, tag.value)})
+
+    def decode(self, bytes):
+        return cbor2.loads(bytes, tag_hook=self._tag_hook)
+
+
+encoder = Encoder(TAG_MAP)
 
 
 if __name__ == "__main__":

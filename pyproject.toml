@@ -31,6 +31,7 @@ dependencies = [
     "flatlatex",
     "tree_sitter", 
     "matplotlib",
+    "cbor2",
 ]
 
 [project.scripts]

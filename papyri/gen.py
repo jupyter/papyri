@@ -554,7 +554,7 @@ def load_configuration(path: str) -> Tuple[str, MutableMapping[str, Any]]:
     conffile = Path(path).expanduser()
     if conffile.exists():
         conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
-        assert len(conf.keys()) == 1
+        assert len(conf.keys()) == 1, conf.keys()
         root = next(iter(conf.keys()))
         return root, conf[root]
     else:
@@ -1494,9 +1494,11 @@ class Gen:
         )
         with p() as p2:
             failed = []
+            from IPython.utils.path import compress_user
+
             taskp = p2.add_task(description="Collecting examples", total=len(examples))
             for example in examples:
-                p2.update(taskp, description=str(example).ljust(7))
+                p2.update(taskp, description=compress_user(str(example)).ljust(7))
                 p2.advance(taskp)
                 executor = BlockExecutor({})
                 script = example.read_text()
@@ -1506,7 +1508,6 @@ class Gen:
                     with executor:
                         try:
                             executor.exec(script)
-                            print(script)
                             figs = [
                                 (f"ex-{example.name}-{i}.png", f)
                                 for i, f in enumerate(executor.get_figs())
@@ -1515,7 +1516,7 @@ class Gen:
                         except Exception as e:
                             failed.append(str(example))
                             if config.exec_failure == "fallback":
-                                self.log.error("%s failed %s", example, type(e))
+                                self.log.exception("%s failed %s", example, type(e))
                             else:
                                 raise type(e)(f"Within {example}")
                 entries = parse_script(
@@ -1600,6 +1601,7 @@ class Gen:
         if isinstance(target_item, ModuleType):
             api_object = APIObjectInfo("module", target_item.__doc__, None)
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
+            sig: Optional[str]
             try:
                 sig = str(inspect.signature(target_item))
                 sig = qa.split(".")[-1] + sig

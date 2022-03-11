@@ -36,6 +36,9 @@ class BaseStore:
     async def read_text(self):
         return self.path.read_text()
 
+    async def read_bytes(self):
+        return self.path.read_bytes()
+
     def glob(self, arg) -> List[Path]:
         return [self._other()(x) for x in glob_cache(self.path, arg)]
 

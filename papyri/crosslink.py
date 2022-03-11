@@ -9,12 +9,22 @@ from pathlib import Path
 from typing import Dict, FrozenSet, List, Optional, Tuple
 
 from rich.logging import RichHandler
+import cbor2
 from there import print
 
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
-from .take2 import Node, Param, RefInfo, Section, SeeAlsoItem, Signature
+from .take2 import (
+    Node,
+    Param,
+    RefInfo,
+    Section,
+    SeeAlsoItem,
+    Signature,
+    TAG_MAP,
+    encoder,
+)
 from .tree import DVR, DirectiveVisiter, resolve_
 from .utils import progress
 
@@ -132,8 +142,17 @@ class IngestedBlobs(Node):
         self.item_file = kwargs.pop("item_file", None)
         self.item_line = kwargs.pop("item_line", None)
         self.item_type = kwargs.pop("item_type", None)
-        self.aliases = []
+        self.aliases = kwargs.pop("aliases", [])
+        self.see_also = kwargs.pop("see_also", None)
+        self.version = kwargs.pop("version", None)
+        self.signature = kwargs.pop("signature", None)
+        self.references = kwargs.pop("references", None)
+        self.logo = kwargs.pop("logo", None)
+        self.backrefs = kwargs.pop("backrefs", None)
+        self.qa = kwargs.pop("qa", None)
+        self.arbitrary = kwargs.pop("arbitrary", None)
         assert not kwargs, kwargs
+        assert not args, args
 
     def __setattr__(self, key, value):
         if self.__isfrozen and not hasattr(self, key):
@@ -260,6 +279,9 @@ class IngestedBlobs(Node):
         return inst
 
 
+TAG_MAP[IngestedBlobs] = 4010
+
+
 # iii = 0
 
 
@@ -365,7 +387,11 @@ def load_one_uningested(
 def load_one(
     bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None, strict=False
 ) -> IngestedBlobs:
-    data = json.loads(bytes_)
+    assert isinstance(bytes_, bytes), bytes_
+    try:
+        data = json.loads(bytes_)
+    except Exception:
+        data = encoder.decode(bytes_)
     assert "backrefs" not in data
     # OK to mutate we are the only owners and don't return it.
     data["backrefs"] = json.loads(bytes2_) if bytes2_ else []
@@ -409,7 +435,8 @@ class Ingester:
             del js["backrefs"]
             gstore.put(
                 key,
-                json.dumps(js, indent=2).encode(),
+                cbor2.dumps(js),
+                # json.dumps(js, indent=2).encode(),
                 [],
             )
 
@@ -418,7 +445,7 @@ class Ingester:
         for _, fe in progress(
             (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
         ):
-            s = Section.from_json(json.loads(fe.read_text()))
+            s = Section.from_json(json.loads(fe.read_bytes()))
             visitor = DVR(
                 "TBD, supposed to be QA", known_refs, {}, aliases, version=version
             )
@@ -426,7 +453,8 @@ class Ingester:
             refs = list(map(tuple, visitor._targets))
             gstore.put(
                 Key(root, version, "examples", fe.name),
-                json.dumps(s_code.to_json(), indent=2).encode(),
+                cbor2.dumps(s_code.to_json()),
+                # json.dumps(s_code.to_json(), indent=2).encode(),
                 refs,
             )
 
@@ -439,7 +467,8 @@ class Ingester:
 
         gstore.put(
             Key(root, version, "meta", "papyri.json"),
-            json.dumps(aliases, indent=2).encode(),
+            cbor2.dumps(aliases),
+            # json.dumps(aliases, indent=2).encode(),
             [],
         )
 
@@ -536,6 +565,11 @@ class Ingester:
             except Exception as e:
                 raise type(e)(f"from {qa}")
             js = doc_blob.to_json()
+
+            cb = encoder.encode(doc_blob)
+
+            orig = encoder.decode(cb)
+            assert orig.to_json() == js
             del js["backrefs"]
 
             # TODO: FIX
@@ -563,7 +597,8 @@ class Ingester:
                 assert None not in key
                 gstore.put(
                     key,
-                    json.dumps(js, indent=2).encode(),
+                    cbor2.dumps(js),
+                    # json.dumps(js, indent=2).encode(),
                     refs,
                 )
 
@@ -575,7 +610,7 @@ class Ingester:
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}
         for key in gstore.glob((None, None, "meta", "papyri.json")):
-            aliases.update(json.loads(gstore.get(key)))
+            aliases.update(cbor2.loads(gstore.get(key)))
 
         rev_aliases = {v: k for k, v in aliases.items()}
 
@@ -588,7 +623,7 @@ class Ingester:
             gstore.glob((None, None, "module", None)), description="Relinking..."
         ):
             try:
-                data = json.loads(gstore.get(key))
+                data = cbor2.loads(gstore.get(key))
             except Exception as e:
                 raise ValueError(str(key)) from e
             data["backrefs"] = []
@@ -624,13 +659,13 @@ class Ingester:
                 (b["module"], b["version"], b["kind"], b["path"])
                 for b in data.get("refs", [])
             ]
-            gstore.put(key, json.dumps(data, indent=2).encode(), refs)
+            gstore.put(key, cbor2.dumps(data), refs)
 
         for _, key in progress(
             gstore.glob((None, None, "examples", None)),
             description="Relinking Examples...",
         ):
-            s = Section.from_json(json.loads(gstore.get(key)))
+            s = Section.from_json(cbor2.loads(gstore.get(key)))
             visitor = DVR(
                 "TBD, supposed to be QA", known_refs, {}, aliases, version="?"
             )
@@ -638,7 +673,7 @@ class Ingester:
             refs = list(map(tuple, visitor._targets))
             gstore.put(
                 key,
-                json.dumps(s_code.to_json(), indent=2).encode(),
+                cbor2.dumps(s_code.to_json()),
                 refs,
             )
 
