@@ -22,8 +22,11 @@ var color = d3.scaleOrdinal()
 var canvas_simulation = d3.forceSimulation()
     .force("charge", d3.forceManyBody().strength(-100))
     .force("link", d3.forceLink().distance(30).strength(0.1).iterations(1).id(function(d) { return d.id; }))
-    .force("x", d3.forceX().strength(0.1))
-    .force("y", d3.forceY().strength(0.2));
+    //.force("x", d3.forceX().strength(0.1))
+    //.force("center", d3.forceCenter(width / 2, height / 2))
+    .force("r", d3.forceRadial(150))
+    //.force("y", d3.forceY().strength(0.2));
+
 
 
 var canvas_graph = {{graph|safe}};
@@ -145,10 +148,11 @@ function drawNode(d) {
 
 
     var svg_simulation = d3.forceSimulation()
-        .force("charge", d3.forceManyBody().strength(-100))
+        .force("charge", d3.forceManyBody().strength(-30))
+        .force("r", d3.forceRadial(200,width/2, height/2))
         .force("link", d3.forceLink().distance(80).strength(0.01).iterations(10).id(function(d) { return d.id; }))
-        .force("x", d3.forceX(width/2).strength(0.04))
-        .force("y", d3.forceY(height/2).strength(0.06));
+        //.force("x", d3.forceX(width/2).strength(0.04))
+        //.force("y", d3.forceY(height/2).strength(0.06));
 
 
 
