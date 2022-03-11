@@ -16,7 +16,7 @@ from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
 from .take2 import Node, Param, RefInfo, Section, SeeAlsoItem, Signature
 from .tree import DVR, DirectiveVisiter, resolve_
-from .utils import progress
+from .utils import progress, dummy_progress
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -381,13 +381,14 @@ def load_one(
 
 
 class Ingester:
-    def __init__(self):
+    def __init__(self, dp):
         self.ingest_dir = ingest_dir
         self.gstore = GraphStore(self.ingest_dir)
+        self.progress = dummy_progress if dp else progress
 
     def _ingest_narrative(self, path, gstore):
 
-        for _console, document in progress(
+        for _console, document in self.progress(
             (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
         ):
             doc = load_one_uningested(
@@ -415,7 +416,7 @@ class Ingester:
 
     def _ingest_examples(self, path: Path, gstore, known_refs, aliases, version, root):
 
-        for _, fe in progress(
+        for _, fe in self.progress(
             (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
         ):
             s = Section.from_json(json.loads(fe.read_text()))
@@ -431,7 +432,7 @@ class Ingester:
             )
 
     def _ingest_assets(self, path, root, version, aliases, gstore):
-        for _, f2 in progress(
+        for _, f2 in self.progress(
             (path / "assets").glob("*"),
             description=f"{path.name} Reading image files ...",
         ):
@@ -466,7 +467,7 @@ class Ingester:
         self._ingest_assets(path, root, version, aliases, gstore)
         self._ingest_narrative(path, gstore)
 
-        for _, f1 in progress(
+        for _, f1 in self.progress(
             (path / "module").glob("*"),
             description=f"{path.name} Reading doc bundle files ...",
         ):
@@ -500,7 +501,7 @@ class Ingester:
             RefInfo(root, version, "module", qa) for qa in known_refs_II
         ).union(known_refs)
 
-        for _, (qa, doc_blob) in progress(
+        for _, (qa, doc_blob) in self.progress(
             nvisited_items.items(), description=f"{path.name} Cross referencing"
         ):
             refs = doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
@@ -519,7 +520,7 @@ class Ingester:
                     sa.name.exists = True
                     sa.name.ref = resolved
 
-        for _, (qa, doc_blob) in progress(
+        for _, (qa, doc_blob) in self.progress(
             nvisited_items.items(), description=f"{path.name} Writing..."
         ):
             # for qa, doc_blob in nvisited_items.items():
@@ -584,7 +585,7 @@ class Ingester:
         )
         builtins.print("Press Ctrl-C to abort...")
 
-        for _, key in progress(
+        for _, key in self.progress(
             gstore.glob((None, None, "module", None)), description="Relinking..."
         ):
             try:
@@ -659,11 +660,12 @@ def main(path, check, *, dummy_progress):
 
     assert path.exists(), f"{path} does not exists"
     assert path.is_dir(), f"{path} is not a directory"
-    Ingester().ingest(path, check)
+    Ingester(dp=dummy_progress).ingest(path, check)
     delta = perf_counter() - now
 
     builtins.print(f"{path.name} Ingesting done in {delta:0.2f}s")
 
 
-def relink():
-    Ingester().relink()
+def relink(dummy_progress):
+    print(dummy_progress)
+    Ingester(dp=dummy_progress).relink()

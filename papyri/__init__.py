@@ -259,7 +259,7 @@ def ingest(
     for p in paths:
         cr.main(Path(p), check, dummy_progress=dummy_progress)
     if relink:
-        cr.relink()
+        cr.relink(dummy_progress=dummy_progress)
 
 
 @app.command()
@@ -360,18 +360,20 @@ def install(
                 )
         else:
             print(f"Could not find docs for {name}=={version}")
-    cr.relink()
+    cr.relink(dummy_progress=dummy_progress)
 
 
 @app.command()
-def relink():
+def relink(
+    dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
+):
     """
     Rescan all the documentation to find potential new crosslinks.
     """
     _intro()
     from . import crosslink as cr
 
-    cr.relink()
+    cr.relink(dummy_progress=dummy_progress)
 
 
 @app.command()

@@ -100,7 +100,18 @@ class GraphStore:
                 package TEXT NOT NULL,
                 version TEXT NOT NULL,
                 category TEXT NOT NULL,
-                identifier NOT NULL)
+                identifier TEXT NOT NULL, unique(package, version, category, identifier))
+                """
+            )
+
+            self.conn.cursor().execute(
+                """
+                CREATE TABLE destinations(
+                id INTEGER PRIMARY KEY,
+                package TEXT NOT NULL,
+                version TEXT NOT NULL,
+                category TEXT NOT NULL,
+                identifier TEXT NOT NULL, unique(package, version, category, identifier))
                 """
             )
 
@@ -113,7 +124,7 @@ class GraphStore:
                 dest INTEGER NOT NULL,
                 metadata TEXT,
                 FOREIGN KEY (source) REFERENCES documents(id) ON DELETE CASCADE
-                FOREIGN KEY (dest) REFERENCES documents(id) ON DELETE CASCADE)
+                FOREIGN KEY (dest) REFERENCES destinations(id) ON DELETE CASCADE)
                 """
             )
 
@@ -194,11 +205,22 @@ class GraphStore:
         else:
             backrefs = set()
 
-        sql_backref_unparsed = self.conn.execute(
-            "select distinct source from links where dest=?", (str(key),)
+        # TODO: this is partially incorrect.
+        # as we only match on the identifier,
+        # we should match on more.
+        rows = list(
+            self.conn.execute(
+                """
+        select documents.*
+        from links
+            inner join documents on links.source=documents.id
+            inner join destinations on links.dest=destinations.id
+        where destinations.identifier=?""",
+                (key.path,),
+            )
         )
 
-        sql_backrefs = {eval(s[0]) for s in sql_backref_unparsed}
+        sql_backrefs = {Key(*s[1:]) for s in rows}
 
         if not sql_backrefs == backrefs:
             print(f"Backreferences for {key} differ:")
@@ -216,7 +238,7 @@ class GraphStore:
 
         # print("getting backrefs from table")
         self.conn.execute(
-            "select source, reason from links where dest=?",
+            "select source from links where dest=?",
             (str(key),),
         )
 
@@ -251,6 +273,64 @@ class GraphStore:
             data.discard(source)
             p.write_json(list(sorted(data)))
 
+    def _maybe_insert_source(self, key):
+        with self.conn:
+            c1 = self.conn.cursor()
+            rows = list(
+                c1.execute(
+                    """
+                select id from documents where (
+                    package=?
+                AND version=?
+                AND category=?
+                AND identifier=?)
+                """,
+                    list(key),
+                )
+            )
+            if not rows:
+                c1.execute(
+                    """
+                    insert into documents values
+                    (Null, ?, ?, ?, ?)
+                    """,
+                    list(key),
+                )
+                source_id = c1.lastrowid
+            else:
+                [(source_id,)] = rows
+
+        return source_id
+
+    def _maybe_insert_dest(self, ref):
+        with self.conn:
+            c1 = self.conn.cursor()
+            rows = list(
+                c1.execute(
+                    """
+                select id from destinations where (
+                    package=?
+                AND version=?
+                AND category=?
+                AND identifier=?)
+                """,
+                    list(ref),
+                )
+            )
+            if not rows:
+                c1.execute(
+                    """
+                    insert into destinations values
+                    (Null, ?, ?, ?, ?)
+                    """,
+                    list(ref),
+                )
+                dest_id = c1.lastrowid
+            else:
+                [(dest_id,)] = rows
+
+        return dest_id
+
     def put(self, key: Key, bytes_, refs) -> None:
         """
         Store object ``bytes``, as path ``key`` with the corresponding
@@ -280,6 +360,7 @@ class GraphStore:
         path.write_bytes(bytes_)
 
         new_refs = set(refs)
+        del refs
 
         removed_refs = old_refs - new_refs
         added_refs = new_refs - old_refs
@@ -292,19 +373,24 @@ class GraphStore:
         #                print("    +", n)
 
         with self.conn:
+            source_id = self._maybe_insert_source(key)
             for ref in added_refs:
+                dest_id = self._maybe_insert_dest(ref)
                 self._add_edge(key, ref)
                 refkey = Key(*ref)
-                self.conn.execute(
-                    "insert or ignore into links values (?,?,?)",
-                    (str(key), str(refkey), "debug"),
+                self.conn.commit()
+                c3 = self.conn.cursor()
+                c3.execute(
+                    "insert or ignore into links values (NULL, ?,?,?)",
+                    (source_id, dest_id, "debug"),
                 )
             for ref in removed_refs:
                 refkey = Key(*ref)
                 self._remove_edge(key, refkey)
+                dest_id = self._maybe_insert_dest(ref)
                 self.conn.execute(
-                    "delete from links where source=? and dest=? and reason=?",
-                    (str(key), str(refkey), "debug"),
+                    "delete from links where source=? and dest=? ",
+                    (source_id, dest_id),
                 )
 
     def glob(self, pattern) -> List[Key]:

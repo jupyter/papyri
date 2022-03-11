@@ -40,6 +40,35 @@ class TimeElapsedColumn(ProgressColumn):
         )
 
 
+def dummy_progress(
+    iterable,
+    *,
+    description="Progress",
+    transient=True,
+):
+    items = list(iterable)
+    it = iter(items)
+    now = time.monotonic()
+
+    def gen():
+        try:
+            c = 0
+            while True:
+                yield None, next(it)
+                c += 1
+        except StopIteration:
+            if transient:
+                print(
+                    description,
+                    f"Done {c} items in {time.monotonic() - now:.2f} seconds",
+                )
+            return
+        except BaseException:
+            raise
+
+    return gen()
+
+
 def progress(iterable, *, description="Progress", transient=True):
     items = list(iterable)
     p = Progress(
