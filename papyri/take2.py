@@ -76,7 +76,7 @@ UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
 
 
 import typing
-from typing import List
+from typing import List, Dict, Any
 
 from papyri.miniserde import deserialize, get_type_hints, serialize
 
@@ -174,7 +174,7 @@ class Base:
         return cls(**kwargs)
 
 
-TAG_MAP = {}
+TAG_MAP: Dict[Any, int] = {}
 
 
 class Node(Base):

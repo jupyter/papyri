@@ -1601,6 +1601,7 @@ class Gen:
         if isinstance(target_item, ModuleType):
             api_object = APIObjectInfo("module", target_item.__doc__, None)
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
+            sig: Optional[str]
             try:
                 sig = str(inspect.signature(target_item))
                 sig = qa.split(".")[-1] + sig

@@ -402,8 +402,6 @@ def load_one(
     return blob
 
 
-
-
 class Ingester:
     def __init__(self):
         self.ingest_dir = ingest_dir
