@@ -3,7 +3,7 @@ import cbor2
 import sqlite3
 from collections import namedtuple
 from pathlib import Path as _Path
-from typing import List, Tuple
+from typing import List, Tuple, Set
 
 
 class Path:
@@ -142,7 +142,7 @@ class GraphStore:
         self._root = Path(root)
         self._link_finder = link_finder
 
-    def _key_to_paths(self, key: Key) -> Tuple[Path, Path]:
+    def _key_to_path(self, key: Key) -> Path:
         """
         Given A key, return path to the current file
         and the back referenced.
@@ -162,8 +162,7 @@ class GraphStore:
         for k in key[:-1]:
             path = path / k
         path0 = path / (key[-1])
-        path_br = path / (key[-1] + ".br")
-        return path0, path_br
+        return path0
 
     def _path_to_key(self, path: Path):
         """
@@ -187,28 +186,18 @@ class GraphStore:
             return path.parts
 
     def remove(self, key: Key) -> None:
-        data, backrefs = self._key_to_paths(key)
-        data.unlink()
+        path = self._key_to_path(key)
+        path.unlink()
         #  this is likely incorrect if we want to deal with dangling links.
-        backrefs.unlink()
         print("Removing link from table")
         self.conn.execute(
             "delete from links where source=?",
             (str(key),),
         )
 
-    def get(self, key: Key) -> bytes:
+    def _get(self, key: Key) -> Tuple[bytes, Set[Key]]:
         assert isinstance(key, Key)
-        path, _ = self._key_to_paths(key)
-
-        ## Verification block
-        path_br = _
-
-        if path_br.path.exists():
-            xx = path_br.read_json()
-            backrefs = {Key(*item) for item in xx}
-        else:
-            backrefs = set()
+        path = self._key_to_path(key)
 
         # TODO: this is partially incorrect.
         # as we only match on the identifier,
@@ -227,56 +216,13 @@ class GraphStore:
 
         sql_backrefs = {Key(*s[1:]) for s in rows}
 
-        if not sql_backrefs == backrefs:
-            print(f"Backreferences for {key} differ:")
-            print(f"    there are {len(sql_backrefs)=}")
-            print(f"    and {len(backrefs)=}")
-            print(" + sql : ", sql_backrefs - backrefs)
-            print(" - json:", backrefs - sql_backrefs)
+        return path.read_bytes(), sql_backrefs
 
-        ## end verification block
+    def get_backref(self, key: Key) -> Set[Key]:
+        return self._get(key)[1]
 
-        return path.read_bytes()
-
-    def get_backref(self, key: Key):
-        _, pathbr = self._key_to_paths(key)
-
-        # print("getting backrefs from table")
-        self.conn.execute(
-            "select source from links where dest=?",
-            (str(key),),
-        )
-
-        if pathbr.path.exists():
-            return pathbr.read_json()
-        else:
-            return []
-
-    def _add_edge(self, source: Key, dest: Key):
-        """
-        Add a backward edge from source to dest in dest br file.
-        """
-        _, p = self._key_to_paths(dest)
-        if p.path.exists():
-            data = {tuple(x) for x in p.read_json()}
-        else:
-            p.parent.mkdir(parents=True, exist_ok=True)
-            data = set()
-        data.add(source)
-        p.write_json(list(sorted(data)))
-
-    def _remove_edge(self, source: Key, dest: Key):
-        """
-        Remove the edge from `source` to `dest`,
-        that is to say, goes in to `dest` backrefs and remove it.
-        """
-        assert isinstance(source, Key)
-        assert isinstance(dest, Key)
-        _, p = self._key_to_paths(dest)
-        if p.exists():
-            data = {Key(*x) for x in p.read_json()}
-            data.discard(source)
-            p.write_json(list(sorted(data)))
+    def get(self, key: Key) -> bytes:
+        return self._get(key)[0]
 
     def _maybe_insert_source(self, key):
         with self.conn:
@@ -343,13 +289,12 @@ class GraphStore:
 
         refs : List[Key] ?
 
-        TODO: refs is forward refs, and we are updating backward believe
         """
         assert isinstance(key, Key)
         for r in refs:
             assert isinstance(r, tuple), r
             assert len(r) == 4
-        path, _ = self._key_to_paths(key)
+        path = self._key_to_path(key)
         path.path.parent.mkdir(parents=True, exist_ok=True)
 
         if "assets" not in key and path.exists():
@@ -373,19 +318,10 @@ class GraphStore:
         removed_refs = old_refs - new_refs
         added_refs = new_refs - old_refs
 
-        #        if removed_refs or added_refs:
-        #            print(key)
-        #            for o in sorted(removed_refs):
-        #                print("    -", o)
-        #            for n in sorted(added_refs):
-        #                print("    +", n)
-
         with self.conn:
             source_id = self._maybe_insert_source(key)
             for ref in added_refs:
                 dest_id = self._maybe_insert_dest(ref)
-                self._add_edge(key, ref)
-                refkey = Key(*ref)
                 self.conn.commit()
                 c3 = self.conn.cursor()
                 c3.execute(
@@ -393,8 +329,6 @@ class GraphStore:
                     (source_id, dest_id, "debug"),
                 )
             for ref in removed_refs:
-                refkey = Key(*ref)
-                self._remove_edge(key, refkey)
                 dest_id = self._maybe_insert_dest(ref)
                 self.conn.execute(
                     "delete from links where source=? and dest=? ",
