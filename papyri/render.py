@@ -250,7 +250,7 @@ def compute_graph(gs, blob, key):
     raw_edges = []
     for k in blob.backrefs + blob.refs:
         name = tuple(k)[3]
-        neighbors_refs = gs.get_backref(tuple(k))
+        neighbors_refs = gs.get_backref(Key(*k))
         weights[name] = len(neighbors_refs)
         orig = [x[3] for x in neighbors_refs]
         all_nodes.extend([tuple(x) for x in neighbors_refs])
