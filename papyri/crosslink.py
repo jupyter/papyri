@@ -101,7 +101,7 @@ class IngestedBlobs(Node):
     )
 
     _content: Dict[str, Section]
-    refs: List[RefInfo]
+    # refs: List[RefInfo]
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
@@ -194,13 +194,15 @@ class IngestedBlobs(Node):
         }
         self._content = new
 
-    def process(self, known_refs, aliases, verbose=True):
+    def process(
+        self, known_refs, aliases: Optional[Dict[str, str]], verbose=True
+    ) -> None:
         """
         Process a doc blob, to find all local and nonlocal references.
         """
         assert isinstance(known_refs, frozenset)
         assert self._content is not None
-        local_refs = []
+        _local_refs: List[List[str]] = []
         sections_ = [
             "Parameters",
             "Returns",
@@ -229,7 +231,7 @@ class IngestedBlobs(Node):
             aliases = {}
         for s in sections_:
 
-            local_refs = local_refs + [
+            _local_refs = _local_refs + [
                 [u.strip() for u in x[0].split(",")]
                 for x in self.content.get(s, [])
                 if isinstance(x, Param)
@@ -238,7 +240,7 @@ class IngestedBlobs(Node):
         def flat(l):
             return [y for x in l for y in x]
 
-        local_refs = frozenset(flat(local_refs))
+        local_refs = frozenset(flat(_local_refs))
 
         assert self.version not in ("", "??"), self.version
         visitor = DVR(self.qa, known_refs, local_refs, aliases, version=self.version)
@@ -533,7 +535,7 @@ class Ingester:
         for _, (qa, doc_blob) in self.progress(
             nvisited_items.items(), description=f"{path.name} Cross referencing"
         ):
-            refs = doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
+            doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
             doc_blob.logo = logo
             # todo: warning mutation.
             for sa in doc_blob.see_also:
@@ -577,20 +579,13 @@ class Ingester:
             # when walking the tree of figure we can't properly crosslink
             # as we don't know the version number.
             # fix it at serialisation time.
-            rr = []
-            for rq in js["refs"]:
-                assert rq["version"] != "??"
-                if rq["version"] == "??":
-                    rq["version"] = version
-                rr.append(rq)
-            js["refs"] = rr
+            forward_refs = []
+            for rq in doc_blob.refs:
+                assert rq.version != "??"
+                assert None not in rq
+                forward_refs.append(tuple(rq))
+            assert "refs" not in js
 
-            refs = [
-                (b["module"], b["version"], b["kind"], b["path"])
-                for b in js.get("refs", [])
-            ]
-            for xr in refs:
-                assert None not in xr
             try:
                 key = Key(mod_root, version, "module", qa)
                 assert mod_root is not None
@@ -599,8 +594,7 @@ class Ingester:
                 gstore.put(
                     key,
                     cbor2.dumps(js),
-                    # json.dumps(js, indent=2).encode(),
-                    refs,
+                    forward_refs,
                 )
 
             except Exception as e:

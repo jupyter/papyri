@@ -195,14 +195,14 @@ class GraphStore:
             (str(key),),
         )
 
-    def _get(self, key: Key) -> Tuple[bytes, Set[Key]]:
+    def _get(self, key: Key) -> Tuple[bytes, Set[Key], Set[Key]]:
         assert isinstance(key, Key)
         path = self._key_to_path(key)
 
         # TODO: this is partially incorrect.
         # as we only match on the identifier,
         # we should match on more.
-        rows = list(
+        backrows = list(
             self.conn.execute(
                 """
         select documents.*
@@ -214,12 +214,29 @@ class GraphStore:
             )
         )
 
-        sql_backrefs = {Key(*s[1:]) for s in rows}
+        sql_backrefs = {Key(*s[1:]) for s in backrows}
 
-        return path.read_bytes(), sql_backrefs
+        forward_rows = list(
+            self.conn.execute(
+                """
+        select destinations.*
+        from links
+            inner join documents on links.source=documents.id
+            inner join destinations on links.dest=destinations.id
+        where documents.identifier=?""",
+                (key.path,),
+            )
+        )
+
+        sql_forward_ref = {Key(*s[1:]) for s in forward_rows}
+
+        return path.read_bytes(), sql_backrefs, sql_forward_ref
 
     def get_backref(self, key: Key) -> Set[Key]:
         return self._get(key)[1]
+
+    def get_forwardref(self, key: Key) -> Set[Key]:
+        return self._get(key)[2]
 
     def get(self, key: Key) -> bytes:
         return self._get(key)[0]
@@ -298,15 +315,7 @@ class GraphStore:
         path.path.parent.mkdir(parents=True, exist_ok=True)
 
         if "assets" not in key and path.exists():
-            try:
-                __tmp = cbor2.loads(path.read_bytes())
-            except Exception as e:
-                raise type(e)(path.path)
-
-            old_refs = {
-                (b["module"], b["version"], b["kind"], b["path"])
-                for b in __tmp.get("refs", [])
-            }
+            old_refs = self.get_forwardref(key)
         else:
             old_refs = set()
 
@@ -320,20 +329,16 @@ class GraphStore:
 
         with self.conn:
             source_id = self._maybe_insert_source(key)
+            params = []
             for ref in added_refs:
-                dest_id = self._maybe_insert_dest(ref)
-                self.conn.commit()
-                c3 = self.conn.cursor()
-                c3.execute(
-                    "insert or ignore into links values (NULL, ?,?,?)",
-                    (source_id, dest_id, "debug"),
-                )
+                params.append((source_id, self._maybe_insert_dest(ref), "debug"))
+
+            to_del = []
             for ref in removed_refs:
-                dest_id = self._maybe_insert_dest(ref)
-                self.conn.execute(
-                    "delete from links where source=? and dest=? ",
-                    (source_id, dest_id),
-                )
+                to_del.append((source_id, self._maybe_insert_dest(ref)))
+            c3 = self.conn.cursor()
+            c3.executemany("insert or ignore into links values (NULL, ?,?,?)", params)
+            c3.executemany("delete from links where source=? and dest=? ", to_del)
 
     def glob(self, pattern) -> List[Key]:
         acc = ""
