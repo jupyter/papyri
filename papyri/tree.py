@@ -206,6 +206,50 @@ def resolve_(
     return RefInfo(None, None, "missing", ref)
 
 
+class TreeVisitor:
+    def __init__(self):
+        self.skipped = set()
+
+    def visit_Code2(self, node):
+        acc = []
+        for token in node.entries:
+            acc.extend(self.generic_visit(token.link))
+        return acc
+
+    def visit_str(self, s):
+        return []
+
+    def visit_Fig(self, fig):
+        # TODO : fix me, need meta of current.
+        return []
+        return [RefInfo(None, None, None, fig.value)]
+
+    def generic_visit(self, node):
+        name = node.__class__.__name__
+        if method := getattr(self, "visit_" + name, None):
+            return method(node)
+        elif hasattr(node, "children"):
+            acc = []
+            for c in node.children:
+                assert c is not None, f"{node=} has a None child"
+                assert isinstance(c, Node), c
+                acc.extend(self.generic_visit(c))
+            return acc
+        elif hasattr(node, "value"):
+            if type(node) not in self.skipped:
+                print("Skip", type(node))
+                self.skipped.add(type(node))
+            return []
+        else:
+            raise ValueError(f"{node.__class__} has no children, no values {node}")
+
+    def visit_RefInfo(self, node):
+        print("Found !", node)
+        return [node]
+
+    def visit_Link(self, node):
+        return [node.reference]
+
 class TreeReplacer:
     """
     Tree visitor with methods to replace nodes.

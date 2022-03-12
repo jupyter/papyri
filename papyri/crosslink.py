@@ -101,7 +101,6 @@ class IngestedBlobs(Node):
     )
 
     _content: Dict[str, Section]
-    # refs: List[RefInfo]
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
@@ -601,6 +600,7 @@ class Ingester:
                 raise RuntimeError(f"error writing to {path}") from e
 
     def relink(self):
+        from .tree import TreeVisitor
         gstore = self.gstore
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}
@@ -614,22 +614,55 @@ class Ingester:
         )
         builtins.print("Press Ctrl-C to abort...")
 
+        visitor = TreeVisitor()
         for _, key in self.progress(
             gstore.glob((None, None, "module", None)), description="Relinking..."
         ):
             try:
-                data = cbor2.loads(gstore.get(key))
+                data, back, forward = gstore.get_all(key)
+                data = cbor2.loads(data)
             except Exception as e:
                 raise ValueError(str(key)) from e
             data["backrefs"] = []
             try:
                 doc_blob = IngestedBlobs.from_json(data)
+                # if res:
+                # print("Refinfos...", len(res))
             except Exception as e:
                 raise type(e)(key)
             assert doc_blob.content is not None, data
             doc_blob.process(known_refs, aliases=aliases)
 
             # TODO: Move this into process ?
+            res = []
+            for sec in (
+                list(doc_blob.content.values())
+                + [doc_blob.example_section_data]
+                + doc_blob.arbitrary
+            ):
+                res += visitor.generic_visit(sec)
+
+            for d in doc_blob.see_also:
+                new_desc = []
+                for dsc in d.descriptions:
+                    res += visitor.generic_visit(dsc)
+
+            sf = set(forward)
+            assets_refs = {k for k in forward if k.kind == "assets"}
+            sr = set([Key(*r) for r in res if r.kind != "local"]).union(assets_refs)
+
+            if sr != sf:
+                added = sr - sf
+                removed = sf - sr
+                print("+", len(added), "-", len(removed))
+                if removed:
+                    print("in", key)
+                    for a in added:
+                        print("     new:", a)
+                    for r in removed:
+
+                        print(" removed:", r)
+                    breakpoint()
 
             for sa in doc_blob.see_also:
                 if sa.name.exists:
@@ -650,11 +683,8 @@ class Ingester:
 
             data = doc_blob.to_json()
             data.pop("backrefs")
-            refs = [
-                (b["module"], b["version"], b["kind"], b["path"])
-                for b in data.get("refs", [])
-            ]
-            gstore.put(key, cbor2.dumps(data), refs)
+            if set(sr) != set(forward):
+                gstore.put(key, cbor2.dumps(data), [tuple(x) for x in sr])
 
         for _, key in progress(
             gstore.glob((None, None, "examples", None)),

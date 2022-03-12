@@ -133,6 +133,16 @@ class GraphStore:
                 """
             )
 
+            # we may want to think about indices.
+            # CREATE INDEX module on documents(package)
+            # ;
+            # CREATE INDEX qa on destinations(identifier);
+            # CREATE INDEX sx on links(source)
+            # ;
+            # CREATE INDEX dx on links(dest);
+            # CREATE INDEX ax on destinations(package, version, category, identifier);
+            # CREATE INDEX px on documents(identifier);
+
             self.conn.commit()
         else:
             self.conn = sqlite3.connect(str(p))
@@ -202,8 +212,9 @@ class GraphStore:
         # TODO: this is partially incorrect.
         # as we only match on the identifier,
         # we should match on more.
+        cur = self.conn.cursor()
         backrows = list(
-            self.conn.execute(
+            cur.execute(
                 """
         select documents.*
         from links
@@ -217,7 +228,7 @@ class GraphStore:
         sql_backrefs = {Key(*s[1:]) for s in backrows}
 
         forward_rows = list(
-            self.conn.execute(
+            cur.execute(
                 """
         select destinations.*
         from links
@@ -231,6 +242,9 @@ class GraphStore:
         sql_forward_ref = {Key(*s[1:]) for s in forward_rows}
 
         return path.read_bytes(), sql_backrefs, sql_forward_ref
+
+    def get_all(self, key):
+        return self._get(key)
 
     def get_backref(self, key: Key) -> Set[Key]:
         return self._get(key)[1]
