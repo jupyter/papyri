@@ -248,6 +248,7 @@ class TreeVisitor:
     # def visit_Link(self, node):
     #    return [node.reference]
 
+
 class TreeReplacer:
     """
     Tree visitor with methods to replace nodes.

@@ -1594,7 +1594,7 @@ class Gen:
 
     def helper_1(
         self, *, qa: str, target_item
-    ) -> Tuple[str, List[Section], Optional[APIObjectInfo]]:
+    ) -> Tuple[Optional[str], List[Section], Optional[APIObjectInfo]]:
         """
         Parameters
         ----------
@@ -1624,7 +1624,7 @@ class Gen:
             # assert False, type(target_item)
 
         if item_docstring is None and not isinstance(target_item, ModuleType):
-            return None, None, api_object
+            return None, [], api_object
 
         elif item_docstring is None and isinstance(target_item, ModuleType):
             item_docstring = """This module has no documentation"""

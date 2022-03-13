@@ -1214,6 +1214,10 @@ class Ref(Node):
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.name} {self.ref} {self.exists}>"
 
+    @property
+    def children(self):
+        return [self.name, self.ref, self.exists]
+
 
 class SeeAlsoItem(Node):
     name: Ref
@@ -1228,6 +1232,10 @@ class SeeAlsoItem(Node):
                 assert isinstance(d, Paragraph), repr(d)
         self.descriptions = descriptions
         self.type = type
+
+    @property
+    def children(self):
+        return [self.name, self.type, *self.descriptions]
 
     # @classmethod
     # def from_json(cls, name, descriptions, type):

@@ -3,7 +3,7 @@ import cbor2
 import sqlite3
 from collections import namedtuple
 from pathlib import Path as _Path
-from typing import List, Tuple, Set
+from typing import List, Set
 
 
 class Path:

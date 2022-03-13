@@ -602,6 +602,7 @@ class Ingester:
 
     def relink(self):
         from .tree import TreeVisitor
+
         gstore = self.gstore
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}
@@ -640,15 +641,10 @@ class Ingester:
                 list(doc_blob.content.values())
                 + [doc_blob.example_section_data]
                 + doc_blob.arbitrary
+                + doc_blob.see_also
             ):
                 for k, v in visitor.generic_visit(sec).items():
                     res.setdefault(k, []).extend(v)
-
-            for d in doc_blob.see_also:
-                new_desc = []
-                for dsc in d.descriptions:
-                    for k, v in visitor.generic_visit(dsc).items():
-                        res.setdefault(k, []).extend(v)
 
             sf = set(forward)
             assets_refs = {k for k in forward if k.kind == "assets"}
