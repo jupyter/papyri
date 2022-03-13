@@ -211,11 +211,6 @@ class TreeVisitor:
         self.skipped = set()
         self.find = find
 
-    # def visit_Fig(self, fig):
-    #    # TODO : fix me, need meta of current.
-    #    return []
-    #    return [RefInfo(None, None, None, fig.value)]
-
     def generic_visit(self, node):
         name = node.__class__.__name__
         if method := getattr(self, "visit_" + name, None):
@@ -235,18 +230,10 @@ class TreeVisitor:
             return acc
         elif hasattr(node, "value"):
             if type(node) not in self.skipped:
-                print("Skip", type(node))
                 self.skipped.add(type(node))
             return {}
         else:
             raise ValueError(f"{node.__class__} has no children, no values {node}")
-
-    # def visit_RefInfo(self, node):
-    #    print("Found !", node)
-    #    return [node]
-
-    # def visit_Link(self, node):
-    #    return [node.reference]
 
 
 class TreeReplacer:
@@ -264,8 +251,6 @@ class TreeReplacer:
         assert not isinstance(node, list)
         res = self.generic_visit(node)
         assert len(res) == 1
-        # if self._replacements:
-        #    print("Done ", self._replacements, "replacements")
         return res[0]
 
     def generic_visit(self, node) -> List[Node]:
