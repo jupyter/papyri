@@ -205,13 +205,16 @@ class GraphStore:
             (str(key),),
         )
 
-    def _get(self, key: Key) -> Tuple[bytes, Set[Key], Set[Key]]:
+    def _get(self, key: Key) -> bytes:
         assert isinstance(key, Key)
         path = self._key_to_path(key)
 
         # TODO: this is partially incorrect.
         # as we only match on the identifier,
         # we should match on more.
+        return path.read_bytes()
+
+    def _get_backrefs(self, key: Key) -> Set[Key]:
         cur = self.conn.cursor()
         backrows = list(
             cur.execute(
@@ -226,7 +229,10 @@ class GraphStore:
         )
 
         sql_backrefs = {Key(*s[1:]) for s in backrows}
+        return sql_backrefs
 
+    def _get_forwardrefs(self, key: Key):
+        cur = self.conn.cursor()
         forward_rows = list(
             cur.execute(
                 """
@@ -240,20 +246,19 @@ class GraphStore:
         )
 
         sql_forward_ref = {Key(*s[1:]) for s in forward_rows}
-
-        return path.read_bytes(), sql_backrefs, sql_forward_ref
+        return sql_forward_ref
 
     def get_all(self, key):
-        return self._get(key)
+        return self._get(key), self._get_backrefs(key), self._get_forwardrefs(key)
 
     def get_backref(self, key: Key) -> Set[Key]:
-        return self._get(key)[1]
+        return self._get_backrefs(key)
 
     def get_forwardref(self, key: Key) -> Set[Key]:
-        return self._get(key)[2]
+        return self._get_forwardrefs(key)
 
     def get(self, key: Key) -> bytes:
-        return self._get(key)[0]
+        return self._get(key)
 
     def _maybe_insert_source(self, key):
         with self.conn:
