@@ -207,48 +207,46 @@ def resolve_(
 
 
 class TreeVisitor:
-    def __init__(self):
+    def __init__(self, find):
         self.skipped = set()
+        self.find = find
 
-    def visit_Code2(self, node):
-        acc = []
-        for token in node.entries:
-            acc.extend(self.generic_visit(token.link))
-        return acc
-
-    def visit_str(self, s):
-        return []
-
-    def visit_Fig(self, fig):
-        # TODO : fix me, need meta of current.
-        return []
-        return [RefInfo(None, None, None, fig.value)]
+    # def visit_Fig(self, fig):
+    #    # TODO : fix me, need meta of current.
+    #    return []
+    #    return [RefInfo(None, None, None, fig.value)]
 
     def generic_visit(self, node):
         name = node.__class__.__name__
         if method := getattr(self, "visit_" + name, None):
             return method(node)
         elif hasattr(node, "children"):
-            acc = []
+            acc = {}
             for c in node.children:
+                if c is None or isinstance(c, (str, bool)):
+                    continue
                 assert c is not None, f"{node=} has a None child"
-                assert isinstance(c, Node), c
-                acc.extend(self.generic_visit(c))
+                assert isinstance(c, Node), repr(c)
+                if type(c) in self.find:
+                    acc.setdefault(type(c), []).append(c)
+                else:
+                    for k, v in self.generic_visit(c).items():
+                        acc.setdefault(k, []).extend(v)
             return acc
         elif hasattr(node, "value"):
             if type(node) not in self.skipped:
                 print("Skip", type(node))
                 self.skipped.add(type(node))
-            return []
+            return {}
         else:
             raise ValueError(f"{node.__class__} has no children, no values {node}")
 
-    def visit_RefInfo(self, node):
-        print("Found !", node)
-        return [node]
+    # def visit_RefInfo(self, node):
+    #    print("Found !", node)
+    #    return [node]
 
-    def visit_Link(self, node):
-        return [node.reference]
+    # def visit_Link(self, node):
+    #    return [node.reference]
 
 class TreeReplacer:
     """

@@ -19,6 +19,7 @@ from .take2 import (
     Node,
     Param,
     RefInfo,
+    Fig,
     Section,
     SeeAlsoItem,
     Signature,
@@ -614,7 +615,7 @@ class Ingester:
         )
         builtins.print("Press Ctrl-C to abort...")
 
-        visitor = TreeVisitor()
+        visitor = TreeVisitor({RefInfo, Fig})
         for _, key in self.progress(
             gstore.glob((None, None, "module", None)), description="Relinking..."
         ):
@@ -634,22 +635,31 @@ class Ingester:
             doc_blob.process(known_refs, aliases=aliases)
 
             # TODO: Move this into process ?
-            res = []
+            res = {}
             for sec in (
                 list(doc_blob.content.values())
                 + [doc_blob.example_section_data]
                 + doc_blob.arbitrary
             ):
-                res += visitor.generic_visit(sec)
+                for k, v in visitor.generic_visit(sec).items():
+                    res.setdefault(k, []).extend(v)
 
             for d in doc_blob.see_also:
                 new_desc = []
                 for dsc in d.descriptions:
-                    res += visitor.generic_visit(dsc)
+                    for k, v in visitor.generic_visit(dsc).items():
+                        res.setdefault(k, []).extend(v)
 
             sf = set(forward)
             assets_refs = {k for k in forward if k.kind == "assets"}
-            sr = set([Key(*r) for r in res if r.kind != "local"]).union(assets_refs)
+            assets_II = {
+                Key(key.module, key.version, "assets", f.value)
+                for f in res.get(Fig, [])
+            }
+            assert assets_II == assets_refs
+            sr = set(
+                [Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]
+            ).union(assets_refs)
 
             if sr != sf:
                 added = sr - sf
