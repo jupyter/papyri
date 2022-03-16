@@ -646,29 +646,14 @@ class Ingester:
                 for k, v in visitor.generic_visit(sec).items():
                     res.setdefault(k, []).extend(v)
 
-            sf = set(forward)
-            assets_refs = {k for k in forward if k.kind == "assets"}
             assets_II = {
                 Key(key.module, key.version, "assets", f.value)
                 for f in res.get(Fig, [])
             }
-            assert assets_II == assets_refs
             sr = set(
                 [Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]
-            ).union(assets_refs)
+            ).union(assets_II)
 
-            if sr != sf:
-                added = sr - sf
-                removed = sf - sr
-                print("+", len(added), "-", len(removed))
-                if removed:
-                    print("in", key)
-                    for a in added:
-                        print("     new:", a)
-                    for r in removed:
-
-                        print(" removed:", r)
-                    breakpoint()
 
             for sa in doc_blob.see_also:
                 if sa.name.exists:
@@ -682,6 +667,7 @@ class Ingester:
                 )
                 resolved, exists = r.path, r.kind
                 if exists == "module":
+                    print("unresolved ok...", r, key)
                     sa.name.exists = True
                     sa.name.ref = resolved
 
