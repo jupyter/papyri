@@ -132,16 +132,15 @@ class GraphStore:
                 FOREIGN KEY (dest) REFERENCES destinations(id) ON DELETE CASCADE)
                 """
             )
-            self.conn.cursor().execute(
-                """
-                CREATE INDEX module on documents(package) ;
-                CREATE INDEX px on documents(identifier);
-                CREATE INDEX qa on destinations(identifier);
-                CREATE INDEX ax on destinations(package, version, category, identifier);
-                CREATE INDEX sx on links(source);
-                CREATE INDEX dx on links(dest);
-                """
-            )
+            for cid in [
+                "CREATE INDEX module on documents(package) ;",
+                "CREATE INDEX px on documents(identifier);",
+                "CREATE INDEX qa on destinations(identifier);",
+                "CREATE INDEX ax on destinations(package, version, category, identifier);",
+                "CREATE INDEX sx on links(source);",
+                "CREATE INDEX dx on links(dest);",
+            ]:
+                self.conn.cursor().execute(cid)
 
             self.conn.commit()
         else:

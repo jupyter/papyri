@@ -377,11 +377,11 @@ class HtmlRenderer:
 
         for key in backrefs:
             data = encoder.decode(self.store.get(Key(*key)))
-            data["backrefs"] = []
             if "examples" in key:
                 continue
             # TODO: examples can actuallly be just Sections.
-            i = IngestedBlobs.from_json(data)
+            assert isinstance(data, IngestedBlobs)
+            i = data
             i.process(frozenset(), {})
 
             for k in [

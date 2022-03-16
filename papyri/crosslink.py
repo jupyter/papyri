@@ -383,13 +383,11 @@ def load_one(
     bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None, strict=False
 ) -> IngestedBlobs:
     assert isinstance(bytes_, bytes), bytes_
-    try:
-        data = json.loads(bytes_)
-    except Exception:
-        data = encoder.decode(bytes_)
-    assert "backrefs" not in data
+    data = encoder.decode(bytes_)
     # OK to mutate we are the only owners and don't return it.
-    blob = IngestedBlobs.from_json(data)
+    assert isinstance(data, IngestedBlobs)
+    blob = data
+    # blob = IngestedBlobs.from_json(data)
     # TODO move that one up.
     if known_refs is None:
         known_refs = frozenset()
@@ -448,7 +446,7 @@ class Ingester:
             refs = list(map(lambda s: Key(*s), visitor._targets))
             gstore.put(
                 Key(root, version, "examples", fe.name),
-                cbor2.dumps(s_code.to_json()),
+                encoder.encode(s_code),
                 # json.dumps(s_code.to_json(), indent=2).encode(),
                 refs,
             )
@@ -562,10 +560,6 @@ class Ingester:
             doc_blob.version = version
             assert hasattr(doc_blob, "arbitrary")
 
-            js = doc_blob.to_json()
-
-            assert "backrefs" not in js
-
             # TODO: FIX
             # when walking the tree of figure we can't properly crosslink
             # as we don't know the version number.
@@ -575,7 +569,6 @@ class Ingester:
                 assert rq.version != "??"
                 assert None not in rq
                 forward_refs.append(Key(*rq))
-            assert "refs" not in js
 
             try:
                 key = Key(mod_root, version, "module", qa)
@@ -584,7 +577,7 @@ class Ingester:
                 assert None not in key
                 gstore.put(
                     key,
-                    cbor2.dumps(js),
+                    encoder.encode(doc_blob),
                     forward_refs,
                 )
 
@@ -613,11 +606,11 @@ class Ingester:
         ):
             try:
                 data, back, forward = gstore.get_all(key)
-                data = cbor2.loads(data)
             except Exception as e:
                 raise ValueError(str(key)) from e
             try:
-                doc_blob = IngestedBlobs.from_json(data)
+                doc_blob = encoder.decode(data)
+                assert isinstance(doc_blob, IngestedBlobs)
                 # if res:
                 # print("Refinfos...", len(res))
             except Exception as e:
@@ -663,11 +656,10 @@ class Ingester:
 
             # end todo
 
-            data = doc_blob.to_json()
-            assert "backrefs" not in data
+            data = encoder.encode(doc_blob)
             if set(sr) != set(forward):
                 try:
-                    gstore.put(key, cbor2.dumps(data), [Key(*x) for x in sr])
+                    gstore.put(key, data, [Key(*x) for x in sr])
                 except:
                     breakpoint()
 
@@ -675,7 +667,8 @@ class Ingester:
             gstore.glob((None, None, "examples", None)),
             description="Relinking Examples...",
         ):
-            s = Section.from_json(cbor2.loads(gstore.get(key)))
+            s = encoder.decode(gstore.get(key))
+            assert isinstance(s, Section)
             visitor = DVR(
                 "TBD, supposed to be QA", known_refs, {}, aliases, version="?"
             )
