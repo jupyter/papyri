@@ -113,7 +113,6 @@ class IngestedBlobs(Node):
     signature: Signature
     references: Optional[List[str]]
     logo: Optional[str]
-    backrefs: List[RefInfo]
     qa: str
     arbitrary: List[Section]
 
@@ -134,7 +133,6 @@ class IngestedBlobs(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.backrefs = []
         self._content = kwargs.pop("_content", None)
         self.example_section_data = kwargs.pop("example_section_data", None)
         self.refs = kwargs.pop("refs", None)
@@ -148,7 +146,6 @@ class IngestedBlobs(Node):
         self.signature = kwargs.pop("signature", None)
         self.references = kwargs.pop("references", None)
         self.logo = kwargs.pop("logo", None)
-        self.backrefs = kwargs.pop("backrefs", None)
         self.qa = kwargs.pop("qa", None)
         self.arbitrary = kwargs.pop("arbitrary", None)
         assert not kwargs, kwargs
@@ -309,11 +306,7 @@ def load_one_uningested(
         setattr(blob, k, getattr(old_data, k))
 
     blob.refs = data.pop("refs", [])
-    if bytes2_ is not None:
-        backrefs = json.loads(bytes2_)
-    else:
-        backrefs = []
-    blob.backrefs = backrefs
+    assert bytes2_ is None
     blob.version = data.pop("version", version)
     assert blob.version == version
 
@@ -396,7 +389,6 @@ def load_one(
         data = encoder.decode(bytes_)
     assert "backrefs" not in data
     # OK to mutate we are the only owners and don't return it.
-    data["backrefs"] = json.loads(bytes2_) if bytes2_ else []
     blob = IngestedBlobs.from_json(data)
     # TODO move that one up.
     if known_refs is None:
@@ -435,7 +427,7 @@ class Ingester:
             doc.version = version
             doc.validate()
             js = doc.to_json()
-            del js["backrefs"]
+            assert "backrefs" not in js
             gstore.put(
                 key,
                 cbor2.dumps(js),
@@ -453,7 +445,7 @@ class Ingester:
                 "TBD, supposed to be QA", known_refs, {}, aliases, version=version
             )
             s_code = visitor.visit(s)
-            refs = list(map(tuple, visitor._targets))
+            refs = list(map(lambda s: Key(*s), visitor._targets))
             gstore.put(
                 Key(root, version, "examples", fe.name),
                 cbor2.dumps(s_code.to_json()),
@@ -552,28 +544,27 @@ class Ingester:
                     sa.name.ref = resolved
 
         for _, (qa, doc_blob) in self.progress(
-            nvisited_items.items(), description=f"{path.name} Writing..."
+            nvisited_items.items(), description=f"{path.name} Validating..."
         ):
-            # for qa, doc_blob in nvisited_items.items():
-            # we might update other modules with backrefs
             for k, v in doc_blob.content.items():
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
-            mod_root = qa.split(".")[0]
-            assert mod_root == root, f"{mod_root}, {root}"
-            doc_blob.version = version
-            assert hasattr(doc_blob, "arbitrary")
-
             try:
                 doc_blob.validate()
             except Exception as e:
                 raise type(e)(f"from {qa}")
+            mod_root = qa.split(".")[0]
+            assert mod_root == root, f"{mod_root}, {root}"
+        for _, (qa, doc_blob) in self.progress(
+            nvisited_items.items(), description=f"{path.name} Writing..."
+        ):
+            # for qa, doc_blob in nvisited_items.items():
+            # we might update other modules with backrefs
+            doc_blob.version = version
+            assert hasattr(doc_blob, "arbitrary")
+
             js = doc_blob.to_json()
 
-            cb = encoder.encode(doc_blob)
-
-            orig = encoder.decode(cb)
-            assert orig.to_json() == js
-            del js["backrefs"]
+            assert "backrefs" not in js
 
             # TODO: FIX
             # when walking the tree of figure we can't properly crosslink
@@ -583,7 +574,7 @@ class Ingester:
             for rq in doc_blob.refs:
                 assert rq.version != "??"
                 assert None not in rq
-                forward_refs.append(tuple(rq))
+                forward_refs.append(Key(*rq))
             assert "refs" not in js
 
             try:
@@ -625,7 +616,6 @@ class Ingester:
                 data = cbor2.loads(data)
             except Exception as e:
                 raise ValueError(str(key)) from e
-            data["backrefs"] = []
             try:
                 doc_blob = IngestedBlobs.from_json(data)
                 # if res:
@@ -674,9 +664,12 @@ class Ingester:
             # end todo
 
             data = doc_blob.to_json()
-            data.pop("backrefs")
+            assert "backrefs" not in data
             if set(sr) != set(forward):
-                gstore.put(key, cbor2.dumps(data), [tuple(x) for x in sr])
+                try:
+                    gstore.put(key, cbor2.dumps(data), [Key(*x) for x in sr])
+                except:
+                    breakpoint()
 
         for _, key in progress(
             gstore.glob((None, None, "examples", None)),
@@ -687,7 +680,7 @@ class Ingester:
                 "TBD, supposed to be QA", known_refs, {}, aliases, version="?"
             )
             s_code = visitor.visit(s)
-            refs = list(map(tuple, visitor._targets))
+            refs = [Key(*x) for x in visitor._targets]
             gstore.put(
                 key,
                 cbor2.dumps(s_code.to_json()),

@@ -38,7 +38,7 @@ CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
 def url(info, prefix):
-    assert isinstance(info, RefInfo)
+    assert isinstance(info, RefInfo), info
     assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
     # assume same package/version for now.
     if info.module is None:
@@ -241,7 +241,6 @@ def cs2(ref, tree, ref_map):
 
 
 def compute_graph(gs, backrefs, refs, key):
-    # nodes_names = [b.path for b in blob.backrefs + blob.refs] + [key[3]]
     # nodes_names = [n for n in nodes_names if n.startswith('numpy')]
     weights = {}
     backrefs = list(backrefs)
@@ -263,9 +262,9 @@ def compute_graph(gs, backrefs, refs, key):
 
     if len(weights) > 50:
         for thresh in sorted(set(weights.values())):
-            log.info("%s items ; remove items %s or lower", len(weights), thresh)
+            log.debug("%s items ; remove items %s or lower", len(weights), thresh)
             weights = {k: v for k, v in weights.items() if v > thresh}
-            log.info("down to %s items", len(weights))
+            log.debug("down to %s items", len(weights))
             if len(weights) < 50:
                 break
 
@@ -783,7 +782,7 @@ async def _ascii_render(key, store, known_refs=None, template=None):
         doc=doc_blob,
         qa=ref,
         ext="",
-        backrefs=doc_blob.backrefs,
+        backrefs=[],
         pygment_css=None,
         graph="{}",
         sidebar=False,  # no effects
@@ -952,6 +951,7 @@ async def _self_render_as_index_page(
         known_refs=known_refs,
         ref_map=ref_map,
     )
+    backward = [RefInfo(*x) for x in backward]
     data = render_one(
         sidebar=config.html_sidebar,
         template=template,
@@ -960,7 +960,7 @@ async def _self_render_as_index_page(
         ext=".html",
         parts=siblings,
         parts_links=parts_links,
-        backrefs=doc_blob.backrefs,
+        backrefs=backward,
         pygment_css=css_data,
     )
     if html_dir:
@@ -1153,6 +1153,7 @@ async def _write_api_file(
                 known_refs=known_refs,
                 ref_map=ref_map,
             )
+            backward = [RefInfo(*x) for x in backward]
             data = compute_graph(gstore, backward, forward, key)
             json_str = json.dumps(data)
             data = render_one(
@@ -1162,7 +1163,7 @@ async def _write_api_file(
                 ext=".html",
                 parts=siblings,
                 parts_links=parts_links,
-                backrefs=doc_blob.backrefs,
+                backrefs=backward,
                 pygment_css=css_data,
                 graph=json_str,
                 sidebar=config.html_sidebar,

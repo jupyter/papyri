@@ -231,7 +231,7 @@ class GraphStore:
         sql_backrefs = {Key(*s[1:]) for s in backrows}
         return sql_backrefs
 
-    def _get_forwardrefs(self, key: Key):
+    def get_forwardrefs(self, key: Key) -> Set[Key]:
         cur = self.conn.cursor()
         forward_rows = list(
             cur.execute(
@@ -249,13 +249,10 @@ class GraphStore:
         return sql_forward_ref
 
     def get_all(self, key):
-        return self._get(key), self._get_backrefs(key), self._get_forwardrefs(key)
+        return self._get(key), self._get_backrefs(key), self.get_forwardrefs(key)
 
     def get_backref(self, key: Key) -> Set[Key]:
         return self._get_backrefs(key)
-
-    def get_forwardref(self, key: Key) -> Set[Key]:
-        return self._get_forwardrefs(key)
 
     def get(self, key: Key) -> bytes:
         return self._get(key)
@@ -328,13 +325,12 @@ class GraphStore:
         """
         assert isinstance(key, Key)
         for r in refs:
-            assert isinstance(r, tuple), r
-            assert len(r) == 4
+            assert isinstance(r, Key), r
         path = self._key_to_path(key)
         path.path.parent.mkdir(parents=True, exist_ok=True)
 
         if "assets" not in key and path.exists():
-            old_refs = self.get_forwardref(key)
+            old_refs = self.get_forwardrefs(key)
         else:
             old_refs = set()
 
