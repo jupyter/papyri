@@ -3,7 +3,7 @@ import cbor2
 import sqlite3
 from collections import namedtuple
 from pathlib import Path as _Path
-from typing import List, Tuple, Set
+from typing import List, Set
 
 
 class Path:
@@ -132,6 +132,15 @@ class GraphStore:
                 FOREIGN KEY (dest) REFERENCES destinations(id) ON DELETE CASCADE)
                 """
             )
+            for cid in [
+                "CREATE INDEX module on documents(package) ;",
+                "CREATE INDEX px on documents(identifier);",
+                "CREATE INDEX qa on destinations(identifier);",
+                "CREATE INDEX ax on destinations(package, version, category, identifier);",
+                "CREATE INDEX sx on links(source);",
+                "CREATE INDEX dx on links(dest);",
+            ]:
+                self.conn.cursor().execute(cid)
 
             self.conn.commit()
         else:
@@ -195,15 +204,19 @@ class GraphStore:
             (str(key),),
         )
 
-    def _get(self, key: Key) -> Tuple[bytes, Set[Key]]:
+    def _get(self, key: Key) -> bytes:
         assert isinstance(key, Key)
         path = self._key_to_path(key)
 
         # TODO: this is partially incorrect.
         # as we only match on the identifier,
         # we should match on more.
-        rows = list(
-            self.conn.execute(
+        return path.read_bytes()
+
+    def _get_backrefs(self, key: Key) -> Set[Key]:
+        cur = self.conn.cursor()
+        backrows = list(
+            cur.execute(
                 """
         select documents.*
         from links
@@ -214,15 +227,34 @@ class GraphStore:
             )
         )
 
-        sql_backrefs = {Key(*s[1:]) for s in rows}
+        sql_backrefs = {Key(*s[1:]) for s in backrows}
+        return sql_backrefs
 
-        return path.read_bytes(), sql_backrefs
+    def get_forwardrefs(self, key: Key) -> Set[Key]:
+        cur = self.conn.cursor()
+        forward_rows = list(
+            cur.execute(
+                """
+        select destinations.*
+        from links
+            inner join documents on links.source=documents.id
+            inner join destinations on links.dest=destinations.id
+        where documents.identifier=?""",
+                (key.path,),
+            )
+        )
+
+        sql_forward_ref = {Key(*s[1:]) for s in forward_rows}
+        return sql_forward_ref
+
+    def get_all(self, key):
+        return self._get(key), self._get_backrefs(key), self.get_forwardrefs(key)
 
     def get_backref(self, key: Key) -> Set[Key]:
-        return self._get(key)[1]
+        return self._get_backrefs(key)
 
     def get(self, key: Key) -> bytes:
-        return self._get(key)[0]
+        return self._get(key)
 
     def _maybe_insert_source(self, key):
         with self.conn:
@@ -292,21 +324,12 @@ class GraphStore:
         """
         assert isinstance(key, Key)
         for r in refs:
-            assert isinstance(r, tuple), r
-            assert len(r) == 4
+            assert isinstance(r, Key), r
         path = self._key_to_path(key)
         path.path.parent.mkdir(parents=True, exist_ok=True)
 
         if "assets" not in key and path.exists():
-            try:
-                __tmp = cbor2.loads(path.read_bytes())
-            except Exception as e:
-                raise type(e)(path.path)
-
-            old_refs = {
-                (b["module"], b["version"], b["kind"], b["path"])
-                for b in __tmp.get("refs", [])
-            }
+            old_refs = self.get_forwardrefs(key)
         else:
             old_refs = set()
 
@@ -320,20 +343,16 @@ class GraphStore:
 
         with self.conn:
             source_id = self._maybe_insert_source(key)
+            params = []
             for ref in added_refs:
-                dest_id = self._maybe_insert_dest(ref)
-                self.conn.commit()
-                c3 = self.conn.cursor()
-                c3.execute(
-                    "insert or ignore into links values (NULL, ?,?,?)",
-                    (source_id, dest_id, "debug"),
-                )
+                params.append((source_id, self._maybe_insert_dest(ref), "debug"))
+
+            to_del = []
             for ref in removed_refs:
-                dest_id = self._maybe_insert_dest(ref)
-                self.conn.execute(
-                    "delete from links where source=? and dest=? ",
-                    (source_id, dest_id),
-                )
+                to_del.append((source_id, self._maybe_insert_dest(ref)))
+            c3 = self.conn.cursor()
+            c3.executemany("insert or ignore into links values (NULL, ?,?,?)", params)
+            c3.executemany("delete from links where source=? and dest=? ", to_del)
 
     def glob(self, pattern) -> List[Key]:
         acc = ""

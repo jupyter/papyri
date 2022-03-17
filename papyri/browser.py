@@ -643,10 +643,10 @@ def main(qualname: str):
             for s in blob.arbitrary:
                 doc.append(R.render(s))
 
-        if blob.backrefs:
+        if []:  # todo backrefs
             doc.append(Text(("section", "Back References")))
             doc.append(Text("All the following items Refer to this page:"))
-            for b in blob.backrefs:
+            for b in []:  # backrefs:
                 doc.append(
                     urwid.Padding(
                         TextWithLink(

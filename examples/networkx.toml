@@ -6,6 +6,7 @@ submodules = []
 # docs_path = '~/dev/numpy/doc/source'
 
 exec = true
+exclude_jedi = ['networkx.algorithms.planarity.PlanarEmbedding']
 exec_failure = 'fallback'
 source = 'https://github.com/networkx/networkx'
 exclude = [ 'networkx.algorithms.distance_measures.barycenter',

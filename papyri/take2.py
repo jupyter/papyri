@@ -319,6 +319,10 @@ class Link(Node):
         self.kind = kind
         self.exists = exists
 
+    @property
+    def children(self):
+        return [self.value, self.reference, self.kind, self.exists]
+
     def __len__(self):
         return len(self.value)
 
@@ -694,6 +698,10 @@ class Token(Node):
         self.link = link
         self.type = type
 
+    @property
+    def children(self):
+        return [self.link, self.type]
+
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.link=} {self.type=} >"
 
@@ -734,6 +742,10 @@ class Code2(Node):
         self.entries = entries
         self.out = out
         self.ce_status = ce_status
+
+    @property
+    def children(self):
+        return [*self.entries, self.out, self.ce_status]
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
@@ -1202,6 +1214,10 @@ class Ref(Node):
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.name} {self.ref} {self.exists}>"
 
+    @property
+    def children(self):
+        return [self.name, self.ref, self.exists]
+
 
 class SeeAlsoItem(Node):
     name: Ref
@@ -1216,6 +1232,10 @@ class SeeAlsoItem(Node):
                 assert isinstance(d, Paragraph), repr(d)
         self.descriptions = descriptions
         self.type = type
+
+    @property
+    def children(self):
+        return [self.name, self.type, *self.descriptions]
 
     # @classmethod
     # def from_json(cls, name, descriptions, type):

@@ -53,10 +53,16 @@ jobs:
         ls -al
     - name: Self gen
       run: |
+        coverage run -a -m papyri gen examples/numpy.toml  --no-exec --no-infer
+        sleep 1 # time for coverage to write its stuff
+        coverage run -a -m papyri gen examples/scipy.toml  --no-exec --no-infer
+        sleep 1 # time for coverage to write its stuff
         coverage run -a -m papyri gen examples/papyri.toml  --exec
         sleep 1 # time for coverage to write its stuff
         coverage run -a -m papyri ingest  --no-relink ~/.papyri/data/papyri_0.0.8
+        coverage run -a -m papyri relink
         coverage run -a -m papyri render --ascii
+
         # coverage html
         # papyri serve
         ls -al
