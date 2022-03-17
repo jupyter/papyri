@@ -26,7 +26,7 @@ from .take2 import (
     TAG_MAP,
     encoder,
 )
-from .tree import DVR, DirectiveVisiter, resolve_
+from .tree import DVR, DirectiveVisiter, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
 
 warnings.simplefilter("ignore", UserWarning)
@@ -40,7 +40,10 @@ logging.basicConfig(
 log = logging.getLogger("papyri")
 
 
-def g_find_all_refs(graph_store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
+def g_find_all_refs(
+    graph_store: GraphStore,
+) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
+    assert isinstance(graph_store, GraphStore)
     o_family = sorted(list(graph_store.glob((None, None, "module", None))))
 
     # TODO
@@ -402,7 +405,7 @@ class Ingester:
         self.gstore = GraphStore(self.ingest_dir)
         self.progress = dummy_progress if dp else progress
 
-    def _ingest_narrative(self, path, gstore):
+    def _ingest_narrative(self, path, gstore: GraphStore) -> None:
 
         for _console, document in self.progress(
             (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
@@ -431,7 +434,9 @@ class Ingester:
                 [],
             )
 
-    def _ingest_examples(self, path: Path, gstore, known_refs, aliases, version, root):
+    def _ingest_examples(
+        self, path: Path, gstore: GraphStore, known_refs, aliases, version, root
+    ):
 
         for _, fe in self.progress(
             (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
@@ -463,7 +468,7 @@ class Ingester:
             [],
         )
 
-    def ingest(self, path: Path, check: bool):
+    def ingest(self, path: Path, check: bool) -> None:
 
         gstore = self.gstore
 
@@ -582,8 +587,7 @@ class Ingester:
             except Exception as e:
                 raise RuntimeError(f"error writing to {path}") from e
 
-    def relink(self):
-        from .tree import TreeVisitor
+    def relink(self) -> None:
 
         gstore = self.gstore
         known_refs, _ = find_all_refs(gstore)
