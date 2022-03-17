@@ -42,7 +42,7 @@ from rich.progress import BarColumn, Progress, TextColumn
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
-from .errors import IncorrectInternalDocsLen, NumpydocParseError
+from .errors import IncorrectInternalDocsLen, NumpydocParseError, UnseenError
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
     Code,
@@ -102,6 +102,8 @@ class ErrorCollector:
                 self.log.exception("Unexpected error")
             if not self.config.early_error:
                 return True
+            if not self._expected_unseen and self.config.fail_unseen_error:
+                raise UnseenError()
         # return True
 
 
@@ -542,6 +544,7 @@ class Config:
     implied_imports: Dict[str, str] = dataclasses.field(default_factory=dict)
     expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
     early_error: bool = True
+    fail_unseen_error: bool = False
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -573,6 +576,8 @@ def gen_main(
     examples: bool,
     fail,
     narrative,
+    fail_early: bool,
+    fail_unseen_error: bool,
 ) -> None:
     """
     Main entry point to generate docbundle files,
@@ -604,6 +609,10 @@ def gen_main(
         don't write to disk
     debug : bool
         set log level to debug
+    fail_early: bool
+        overwrite early_error option in config file
+    fail_unseen_error: bool
+        raise an exception if the error is unseen
 
     Returns
     -------
@@ -611,6 +620,8 @@ def gen_main(
 
     """
     target_module_name, conf = load_configuration(target_file)
+    conf['early_error'] = fail_early
+    conf['fail_unseen_error'] = fail_unseen_error
     config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
     if exec_ is not None:
         config.exec = exec_

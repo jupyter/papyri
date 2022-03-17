@@ -32,3 +32,7 @@ class VisitCitationNotImplementedError(NotImplementedError):
 
 class SerialisationError(Exception):
     pass
+
+
+class UnseenError(Exception):
+    pass
