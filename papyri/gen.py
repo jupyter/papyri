@@ -987,6 +987,7 @@ class APIObjectInfo:
 
     kind: str
     docstring: str
+    signature: Optional[Signature]
 
     def __init__(self, kind, docstring, signature):
         self.kind = kind
@@ -1356,6 +1357,9 @@ class Gen:
         if blob.content["Signature"]:
             blob.signature = Signature(blob.content.pop("Signature"))
         else:
+            assert blob is not None
+            assert api_object is not None
+
             blob.signature = Signature(api_object.signature)
             del blob.content["Signature"]
 
@@ -1598,7 +1602,9 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(name, data)
 
-    def helper_1(self, *, qa: str, target_item):
+    def helper_1(
+        self, *, qa: str, target_item
+    ) -> Tuple[Optional[str], List[Section], Optional[APIObjectInfo]]:
         """
         Parameters
         ----------
@@ -1628,7 +1634,7 @@ class Gen:
             # assert False, type(target_item)
 
         if item_docstring is None and not isinstance(target_item, ModuleType):
-            return None, None, None
+            return None, [], api_object
 
         elif item_docstring is None and isinstance(target_item, ModuleType):
             item_docstring = """This module has no documentation"""
@@ -1641,6 +1647,7 @@ class Gen:
         except Exception as e:
             raise type(e)(f"from {qa}")
 
+        assert api_object is not None
         return item_docstring, sections, api_object
 
     def collect_package_metadata(self, root, relative_dir):
@@ -1727,10 +1734,11 @@ class Gen:
                     )
                 if c.errored:
                     continue
+                assert api_object is not None, c.errored
 
                 try:
                     if item_docstring is None:
-                        continue
+                        ndoc = NumpyDocString(dedent_but_first("No Docstrings"))
                     else:
                         ndoc = NumpyDocString(dedent_but_first(item_docstring))
                         # note currentlu in ndoc we use:
@@ -1761,6 +1769,7 @@ class Gen:
                 dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
 
                 # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
+                assert api_object is not None
                 with error_collector(qa=qa) as c:
                     doc_blob, figs = self.prepare_doc_for_one_object(
                         target_item,

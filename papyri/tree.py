@@ -87,7 +87,7 @@ def resolve_(
     known_refs: FrozenSet[RefInfo],
     local_refs: FrozenSet[str],
     ref: str,
-    rev_aliases=None,
+    rev_aliases,
 ) -> RefInfo:
     """
     Given the current context (qa), and a str (ref), compute the RefInfo object.
@@ -118,8 +118,7 @@ def resolve_(
     # print('resolve', qa)
     hk = hash(known_refs)
     hash(local_refs)
-    if rev_aliases is None:
-        rev_aliases = {}
+    assert rev_aliases is not None
     if ref in rev_aliases:
         new_ref = rev_aliases[ref]
         # print(f'now looking for {new_ref} instead of {ref}')
@@ -206,6 +205,36 @@ def resolve_(
     return RefInfo(None, None, "missing", ref)
 
 
+class TreeVisitor:
+    def __init__(self, find):
+        self.skipped = set()
+        self.find = find
+
+    def generic_visit(self, node):
+        name = node.__class__.__name__
+        if method := getattr(self, "visit_" + name, None):
+            return method(node)
+        elif hasattr(node, "children"):
+            acc = {}
+            for c in node.children:
+                if c is None or isinstance(c, (str, bool)):
+                    continue
+                assert c is not None, f"{node=} has a None child"
+                assert isinstance(c, Node), repr(c)
+                if type(c) in self.find:
+                    acc.setdefault(type(c), []).append(c)
+                else:
+                    for k, v in self.generic_visit(c).items():
+                        acc.setdefault(k, []).extend(v)
+            return acc
+        elif hasattr(node, "value"):
+            if type(node) not in self.skipped:
+                self.skipped.add(type(node))
+            return {}
+        else:
+            raise ValueError(f"{node.__class__} has no children, no values {node}")
+
+
 class TreeReplacer:
     """
     Tree visitor with methods to replace nodes.
@@ -221,8 +250,6 @@ class TreeReplacer:
         assert not isinstance(node, list)
         res = self.generic_visit(node)
         assert len(res) == 1
-        # if self._replacements:
-        #    print("Done ", self._replacements, "replacements")
         return res[0]
 
     def generic_visit(self, node) -> List[Node]:
@@ -254,8 +281,6 @@ class TreeReplacer:
                 "SubstitutionRef",
             ]:
                 return [node]
-            elif name in ["Text"]:
-                assert False, "Text still present"
             else:
                 new_children = []
                 if not hasattr(node, "children"):

@@ -38,7 +38,7 @@ CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
 def url(info, prefix):
-    assert isinstance(info, RefInfo)
+    assert isinstance(info, RefInfo), info
     assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
     # assume same package/version for now.
     if info.module is None:
@@ -240,15 +240,16 @@ def cs2(ref, tree, ref_map):
     return siblings
 
 
-def compute_graph(gs, blob, key):
-    # nodes_names = [b.path for b in blob.backrefs + blob.refs] + [key[3]]
+def compute_graph(gs, backrefs, refs, key):
     # nodes_names = [n for n in nodes_names if n.startswith('numpy')]
     weights = {}
+    backrefs = list(backrefs)
+    refs = list(refs)
 
-    all_nodes = [tuple(x) for x in blob.backrefs + blob.refs]
+    all_nodes = [tuple(x) for x in backrefs + refs]
 
     raw_edges = []
-    for k in blob.backrefs + blob.refs:
+    for k in backrefs + refs:
         name = tuple(k)[3]
         neighbors_refs = gs.get_backref(Key(*k))
         weights[name] = len(neighbors_refs)
@@ -261,9 +262,9 @@ def compute_graph(gs, blob, key):
 
     if len(weights) > 50:
         for thresh in sorted(set(weights.values())):
-            log.info("%s items ; remove items %s or lower", len(weights), thresh)
+            log.debug("%s items ; remove items %s or lower", len(weights), thresh)
             weights = {k: v for k, v in weights.items() if v > thresh}
-            log.info("down to %s items", len(weights))
+            log.debug("down to %s items", len(weights))
             if len(weights) < 50:
                 break
 
@@ -323,10 +324,10 @@ async def _route_data(gstore, ref, version, known_refs):
     print("!!", ref)
     root = ref.split("/")[0].split(".")[0]
     key = Key(root, version, "module", ref)
-    gbytes = gstore.get(key)
+    gbytes, backward, forward = gstore.get_all(key)
     x_, y_ = find_all_refs(gstore)
     doc_blob = load_one(gbytes, b"[]", known_refs=known_refs, strict=True)
-    return x_, y_, doc_blob
+    return x_, y_, doc_blob, backward, forward
 
 
 class HtmlRenderer:
@@ -376,9 +377,11 @@ class HtmlRenderer:
 
         for key in backrefs:
             data = encoder.decode(self.store.get(Key(*key)))
-            data["backrefs"] = []
-
-            i = IngestedBlobs.from_json(data)
+            if "examples" in key:
+                continue
+            # TODO: examples can actuallly be just Sections.
+            assert isinstance(data, IngestedBlobs)
+            i = data
             i.process(frozenset(), {})
 
             for k in [
@@ -484,7 +487,9 @@ class HtmlRenderer:
         known_refs, ref_map = find_all_refs(store)
 
         # technically incorrect we don't load backrefs
-        x_, y_, doc_blob = await _route_data(self.store, ref, version, known_refs)
+        x_, y_, doc_blob, backward, forward = await _route_data(
+            self.store, ref, version, known_refs
+        )
         assert x_ == known_refs
         assert y_ == ref_map
         assert version is not None
@@ -504,7 +509,10 @@ class HtmlRenderer:
             assert root is not None
             # assert version is not None
 
-            data = compute_graph(self.store, doc_blob, (root, version, "module", ref))
+            assert doc_blob.refs is None
+            data = compute_graph(
+                self.store, backward, forward, (root, version, "module", ref)
+            )
             json_str = json.dumps(data)
             parts_links = {}
             acc = ""
@@ -512,7 +520,7 @@ class HtmlRenderer:
                 acc += k
                 parts_links[k] = acc
                 acc += "."
-
+            backrefs = [RefInfo(*k) for k in backward]
             return render_one(
                 template=template,
                 doc=doc_blob,
@@ -520,7 +528,7 @@ class HtmlRenderer:
                 ext="",
                 parts=siblings,
                 parts_links=parts_links,
-                backrefs=doc_blob.backrefs,
+                backrefs=backrefs,
                 pygment_css=CSS_DATA,
                 graph=json_str,
                 sidebar=self.sidebar,
@@ -774,7 +782,7 @@ async def _ascii_render(key, store, known_refs=None, template=None):
         doc=doc_blob,
         qa=ref,
         ext="",
-        backrefs=doc_blob.backrefs,
+        backrefs=[],
         pygment_css=None,
         graph="{}",
         sidebar=False,  # no effects
@@ -852,10 +860,12 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
     try:
         if isinstance(document, tuple):
             assert isinstance(store, GraphStore)
-            bytes_ = store.get(document)
+            bytes_, backward, forward = store.get_all(document)
         else:
+            assert False
             bytes_ = await document.read_text()
         if isinstance(store, Store):
+            assert False
             brpath = store / root / version / "module" / f"{qa}.br"
             assert await brpath.exists()
             br = await brpath.read_text()
@@ -881,7 +891,7 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
         parts_links[k] = acc
         acc += "."
     try:
-        return doc_blob, qa, siblings, parts_links
+        return doc_blob, qa, siblings, parts_links, backward, forward
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
 
@@ -934,13 +944,14 @@ async def _self_render_as_index_page(
 
     key = Key("papyri", str(papyri.__version__), "module", "papyri")
 
-    doc_blob, qa, siblings, parts_links = await loc(
+    doc_blob, qa, siblings, parts_links, backward, forward = await loc(
         key,
         store=gstore,
         tree=tree,
         known_refs=known_refs,
         ref_map=ref_map,
     )
+    backward = [RefInfo(*x) for x in backward]
     data = render_one(
         sidebar=config.html_sidebar,
         template=template,
@@ -949,7 +960,7 @@ async def _self_render_as_index_page(
         ext=".html",
         parts=siblings,
         parts_links=parts_links,
-        backrefs=doc_blob.backrefs,
+        backrefs=backward,
         pygment_css=css_data,
     )
     if html_dir:
@@ -1135,14 +1146,15 @@ async def _write_api_file(
         if config.ascii:
             await _ascii_render(key, store=gstore)
         if config.html:
-            doc_blob, qa, siblings, parts_links = await loc(
+            doc_blob, qa, siblings, parts_links, backward, forward = await loc(
                 key,
                 store=gstore,
                 tree=tree,
                 known_refs=known_refs,
                 ref_map=ref_map,
             )
-            data = compute_graph(gstore, doc_blob, key)
+            backward = [RefInfo(*x) for x in backward]
+            data = compute_graph(gstore, backward, forward, key)
             json_str = json.dumps(data)
             data = render_one(
                 template=template,
@@ -1151,7 +1163,7 @@ async def _write_api_file(
                 ext=".html",
                 parts=siblings,
                 parts_links=parts_links,
-                backrefs=doc_blob.backrefs,
+                backrefs=backward,
                 pygment_css=css_data,
                 graph=json_str,
                 sidebar=config.html_sidebar,

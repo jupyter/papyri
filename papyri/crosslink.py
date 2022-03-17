@@ -6,7 +6,7 @@ import logging
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, FrozenSet, List, Optional, Tuple
+from typing import Dict, FrozenSet, List, Optional, Tuple, Any
 
 from rich.logging import RichHandler
 import cbor2
@@ -19,14 +19,16 @@ from .take2 import (
     Node,
     Param,
     RefInfo,
+    Fig,
     Section,
     SeeAlsoItem,
     Signature,
     TAG_MAP,
     encoder,
 )
-from .tree import DVR, DirectiveVisiter, resolve_
+from .tree import DVR, DirectiveVisiter, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
+
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -39,7 +41,10 @@ logging.basicConfig(
 log = logging.getLogger("papyri")
 
 
-def g_find_all_refs(graph_store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
+def g_find_all_refs(
+    graph_store: GraphStore,
+) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
+    assert isinstance(graph_store, GraphStore)
     o_family = sorted(list(graph_store.glob((None, None, "module", None))))
 
     # TODO
@@ -101,7 +106,6 @@ class IngestedBlobs(Node):
     )
 
     _content: Dict[str, Section]
-    refs: List[RefInfo]
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
@@ -113,28 +117,13 @@ class IngestedBlobs(Node):
     signature: Signature
     references: Optional[List[str]]
     logo: Optional[str]
-    backrefs: List[RefInfo]
     qa: str
     arbitrary: List[Section]
 
     __isfrozen = False
 
-    @classmethod
-    def _deserialise(cls, **kwargs):
-        # print("will deserialise", cls)
-        try:
-            instance = cls._instance()
-        except Exception as e:
-            raise type(e)(f"Error deserialising {cls}, {kwargs})") from e
-        assert "_content" in kwargs
-        assert kwargs["_content"] is not None
-        for k, v in kwargs.items():
-            setattr(instance, k, v)
-        return instance
-
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.backrefs = []
         self._content = kwargs.pop("_content", None)
         self.example_section_data = kwargs.pop("example_section_data", None)
         self.refs = kwargs.pop("refs", None)
@@ -148,11 +137,11 @@ class IngestedBlobs(Node):
         self.signature = kwargs.pop("signature", None)
         self.references = kwargs.pop("references", None)
         self.logo = kwargs.pop("logo", None)
-        self.backrefs = kwargs.pop("backrefs", None)
         self.qa = kwargs.pop("qa", None)
         self.arbitrary = kwargs.pop("arbitrary", None)
         assert not kwargs, kwargs
         assert not args, args
+        self._freeze()
 
     def __setattr__(self, key, value):
         if self.__isfrozen and not hasattr(self, key):
@@ -194,13 +183,15 @@ class IngestedBlobs(Node):
         }
         self._content = new
 
-    def process(self, known_refs, aliases, verbose=True):
+    def process(
+        self, known_refs, aliases: Optional[Dict[str, str]], verbose=True
+    ) -> None:
         """
         Process a doc blob, to find all local and nonlocal references.
         """
         assert isinstance(known_refs, frozenset)
         assert self._content is not None
-        local_refs = []
+        _local_refs: List[List[str]] = []
         sections_ = [
             "Parameters",
             "Returns",
@@ -229,7 +220,7 @@ class IngestedBlobs(Node):
             aliases = {}
         for s in sections_:
 
-            local_refs = local_refs + [
+            _local_refs = _local_refs + [
                 [u.strip() for u in x[0].split(",")]
                 for x in self.content.get(s, [])
                 if isinstance(x, Param)
@@ -238,7 +229,7 @@ class IngestedBlobs(Node):
         def flat(l):
             return [y for x in l for y in x]
 
-        local_refs = frozenset(flat(local_refs))
+        local_refs = frozenset(flat(_local_refs))
 
         assert self.version not in ("", "??"), self.version
         visitor = DVR(self.qa, known_refs, local_refs, aliases, version=self.version)
@@ -272,11 +263,8 @@ class IngestedBlobs(Node):
         except Exception as e:
             raise type(e)(self.refs)
 
-    @classmethod
     def from_json(cls, data):
-        inst = super().from_json(data)
-        inst._freeze()
-        return inst
+        assert False
 
 
 TAG_MAP[IngestedBlobs] = 4010
@@ -307,11 +295,7 @@ def load_one_uningested(
         setattr(blob, k, getattr(old_data, k))
 
     blob.refs = data.pop("refs", [])
-    if bytes2_ is not None:
-        backrefs = json.loads(bytes2_)
-    else:
-        backrefs = []
-    blob.backrefs = backrefs
+    assert bytes2_ is None
     blob.version = data.pop("version", version)
     assert blob.version == version
 
@@ -388,21 +372,16 @@ def load_one(
     bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None, strict=False
 ) -> IngestedBlobs:
     assert isinstance(bytes_, bytes), bytes_
-    try:
-        data = json.loads(bytes_)
-    except Exception:
-        data = encoder.decode(bytes_)
-    assert "backrefs" not in data
+    data = encoder.decode(bytes_)
     # OK to mutate we are the only owners and don't return it.
-    data["backrefs"] = json.loads(bytes2_) if bytes2_ else []
-    blob = IngestedBlobs.from_json(data)
+    assert isinstance(data, IngestedBlobs)
+    blob = data
+    # blob = IngestedBlobs.from_json(data)
     # TODO move that one up.
     if known_refs is None:
         known_refs = frozenset()
     if not strict:
-        targets = blob.process(known_refs=known_refs, aliases=None)
-        if targets:
-            print("OA", len(targets))
+        blob.process(known_refs=known_refs, aliases=None)
     return blob
 
 
@@ -412,7 +391,7 @@ class Ingester:
         self.gstore = GraphStore(self.ingest_dir)
         self.progress = dummy_progress if dp else progress
 
-    def _ingest_narrative(self, path, gstore):
+    def _ingest_narrative(self, path, gstore: GraphStore) -> None:
 
         for _console, document in self.progress(
             (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
@@ -433,7 +412,7 @@ class Ingester:
             doc.version = version
             doc.validate()
             js = doc.to_json()
-            del js["backrefs"]
+            assert "backrefs" not in js
             gstore.put(
                 key,
                 cbor2.dumps(js),
@@ -441,7 +420,9 @@ class Ingester:
                 [],
             )
 
-    def _ingest_examples(self, path: Path, gstore, known_refs, aliases, version, root):
+    def _ingest_examples(
+        self, path: Path, gstore: GraphStore, known_refs, aliases, version, root
+    ):
 
         for _, fe in self.progress(
             (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
@@ -451,10 +432,10 @@ class Ingester:
                 "TBD, supposed to be QA", known_refs, {}, aliases, version=version
             )
             s_code = visitor.visit(s)
-            refs = list(map(tuple, visitor._targets))
+            refs = list(map(lambda s: Key(*s), visitor._targets))
             gstore.put(
                 Key(root, version, "examples", fe.name),
-                cbor2.dumps(s_code.to_json()),
+                encoder.encode(s_code),
                 # json.dumps(s_code.to_json(), indent=2).encode(),
                 refs,
             )
@@ -473,7 +454,7 @@ class Ingester:
             [],
         )
 
-    def ingest(self, path: Path, check: bool):
+    def ingest(self, path: Path, check: bool) -> None:
 
         gstore = self.gstore
 
@@ -533,7 +514,7 @@ class Ingester:
         for _, (qa, doc_blob) in self.progress(
             nvisited_items.items(), description=f"{path.name} Cross referencing"
         ):
-            refs = doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
+            doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
             doc_blob.logo = logo
             # todo: warning mutation.
             for sa in doc_blob.see_also:
@@ -550,47 +531,34 @@ class Ingester:
                     sa.name.ref = resolved
 
         for _, (qa, doc_blob) in self.progress(
-            nvisited_items.items(), description=f"{path.name} Writing..."
+            nvisited_items.items(), description=f"{path.name} Validating..."
         ):
-            # for qa, doc_blob in nvisited_items.items():
-            # we might update other modules with backrefs
             for k, v in doc_blob.content.items():
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
-            mod_root = qa.split(".")[0]
-            assert mod_root == root, f"{mod_root}, {root}"
-            doc_blob.version = version
-            assert hasattr(doc_blob, "arbitrary")
-
             try:
                 doc_blob.validate()
             except Exception as e:
                 raise type(e)(f"from {qa}")
-            js = doc_blob.to_json()
-
-            cb = encoder.encode(doc_blob)
-
-            orig = encoder.decode(cb)
-            assert orig.to_json() == js
-            del js["backrefs"]
+            mod_root = qa.split(".")[0]
+            assert mod_root == root, f"{mod_root}, {root}"
+        for _, (qa, doc_blob) in self.progress(
+            nvisited_items.items(), description=f"{path.name} Writing..."
+        ):
+            # for qa, doc_blob in nvisited_items.items():
+            # we might update other modules with backrefs
+            doc_blob.version = version
+            assert hasattr(doc_blob, "arbitrary")
 
             # TODO: FIX
             # when walking the tree of figure we can't properly crosslink
             # as we don't know the version number.
             # fix it at serialisation time.
-            rr = []
-            for rq in js["refs"]:
-                assert rq["version"] != "??"
-                if rq["version"] == "??":
-                    rq["version"] = version
-                rr.append(rq)
-            js["refs"] = rr
+            forward_refs = []
+            for rq in doc_blob.refs:
+                assert rq.version != "??"
+                assert None not in rq
+                forward_refs.append(Key(*rq))
 
-            refs = [
-                (b["module"], b["version"], b["kind"], b["path"])
-                for b in js.get("refs", [])
-            ]
-            for xr in refs:
-                assert None not in xr
             try:
                 key = Key(mod_root, version, "module", qa)
                 assert mod_root is not None
@@ -598,15 +566,15 @@ class Ingester:
                 assert None not in key
                 gstore.put(
                     key,
-                    cbor2.dumps(js),
-                    # json.dumps(js, indent=2).encode(),
-                    refs,
+                    encoder.encode(doc_blob),
+                    forward_refs,
                 )
 
             except Exception as e:
                 raise RuntimeError(f"error writing to {path}") from e
 
-    def relink(self):
+    def relink(self) -> None:
+
         gstore = self.gstore
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}
@@ -620,22 +588,42 @@ class Ingester:
         )
         builtins.print("Press Ctrl-C to abort...")
 
+        visitor = TreeVisitor({RefInfo, Fig})
         for _, key in self.progress(
             gstore.glob((None, None, "module", None)), description="Relinking..."
         ):
             try:
-                data = cbor2.loads(gstore.get(key))
+                data, back, forward = gstore.get_all(key)
             except Exception as e:
                 raise ValueError(str(key)) from e
-            data["backrefs"] = []
             try:
-                doc_blob = IngestedBlobs.from_json(data)
+                doc_blob = encoder.decode(data)
+                assert isinstance(doc_blob, IngestedBlobs)
+                # if res:
+                # print("Refinfos...", len(res))
             except Exception as e:
                 raise type(e)(key)
             assert doc_blob.content is not None, data
             doc_blob.process(known_refs, aliases=aliases)
 
             # TODO: Move this into process ?
+            res: Dict[Any, List[Any]] = {}
+            for sec in (
+                list(doc_blob.content.values())
+                + [doc_blob.example_section_data]
+                + doc_blob.arbitrary
+                + doc_blob.see_also
+            ):
+                for k, v in visitor.generic_visit(sec).items():
+                    res.setdefault(k, []).extend(v)
+
+            assets_II = {
+                Key(key.module, key.version, "assets", f.value)
+                for f in res.get(Fig, [])
+            }
+            sr = set(
+                [Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]
+            ).union(assets_II)
 
             for sa in doc_blob.see_also:
                 if sa.name.exists:
@@ -649,29 +637,25 @@ class Ingester:
                 )
                 resolved, exists = r.path, r.kind
                 if exists == "module":
+                    print("unresolved ok...", r, key)
                     sa.name.exists = True
                     sa.name.ref = resolved
 
             # end todo
 
-            data = doc_blob.to_json()
-            data.pop("backrefs")
-            refs = [
-                (b["module"], b["version"], b["kind"], b["path"])
-                for b in data.get("refs", [])
-            ]
-            gstore.put(key, cbor2.dumps(data), refs)
+            data = encoder.encode(doc_blob)
+            if set(sr) != set(forward):
+                gstore.put(key, data, [Key(*x) for x in sr])
 
         for _, key in progress(
             gstore.glob((None, None, "examples", None)),
             description="Relinking Examples...",
         ):
-            s = Section.from_json(cbor2.loads(gstore.get(key)))
-            visitor = DVR(
-                "TBD, supposed to be QA", known_refs, {}, aliases, version="?"
-            )
-            s_code = visitor.visit(s)
-            refs = list(map(tuple, visitor._targets))
+            s = encoder.decode(gstore.get(key))
+            assert isinstance(s, Section)
+            dvr = DVR("TBD, supposed to be QA", known_refs, {}, aliases, version="?")
+            s_code = dvr.visit(s)
+            refs = [Key(*x) for x in dvr._targets]
             gstore.put(
                 key,
                 cbor2.dumps(s_code.to_json()),
@@ -702,5 +686,4 @@ def main(path, check, *, dummy_progress):
 
 
 def relink(dummy_progress):
-    print(dummy_progress)
     Ingester(dp=dummy_progress).relink()
