@@ -392,9 +392,7 @@ def load_one(
     if known_refs is None:
         known_refs = frozenset()
     if not strict:
-        targets = blob.process(known_refs=known_refs, aliases=None)
-        if targets:
-            print("OA", len(targets))
+        blob.process(known_refs=known_refs, aliases=None)
     return blob
 
 
@@ -637,7 +635,6 @@ class Ingester:
                 [Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]
             ).union(assets_II)
 
-
             for sa in doc_blob.see_also:
                 if sa.name.exists:
                     continue
@@ -658,10 +655,7 @@ class Ingester:
 
             data = encoder.encode(doc_blob)
             if set(sr) != set(forward):
-                try:
-                    gstore.put(key, data, [Key(*x) for x in sr])
-                except:
-                    breakpoint()
+                gstore.put(key, data, [Key(*x) for x in sr])
 
         for _, key in progress(
             gstore.glob((None, None, "examples", None)),
