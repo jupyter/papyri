@@ -121,18 +121,6 @@ class IngestedBlobs(Node):
 
     __isfrozen = False
 
-    @classmethod
-    def _deserialise(cls, **kwargs):
-        # print("will deserialise", cls)
-        try:
-            instance = cls._instance()
-        except Exception as e:
-            raise type(e)(f"Error deserialising {cls}, {kwargs})") from e
-        assert "_content" in kwargs
-        assert kwargs["_content"] is not None
-        for k, v in kwargs.items():
-            setattr(instance, k, v)
-        return instance
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -153,6 +141,7 @@ class IngestedBlobs(Node):
         self.arbitrary = kwargs.pop("arbitrary", None)
         assert not kwargs, kwargs
         assert not args, args
+        self._freeze()
 
     def __setattr__(self, key, value):
         if self.__isfrozen and not hasattr(self, key):
@@ -274,11 +263,8 @@ class IngestedBlobs(Node):
         except Exception as e:
             raise type(e)(self.refs)
 
-    @classmethod
     def from_json(cls, data):
-        inst = super().from_json(data)
-        inst._freeze()
-        return inst
+        assert False
 
 
 TAG_MAP[IngestedBlobs] = 4010
