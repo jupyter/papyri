@@ -704,5 +704,4 @@ def main(path, check, *, dummy_progress):
 
 
 def relink(dummy_progress):
-    print(dummy_progress)
     Ingester(dp=dummy_progress).relink()
