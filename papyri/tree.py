@@ -87,7 +87,7 @@ def resolve_(
     known_refs: FrozenSet[RefInfo],
     local_refs: FrozenSet[str],
     ref: str,
-    rev_aliases=None,
+    rev_aliases,
 ) -> RefInfo:
     """
     Given the current context (qa), and a str (ref), compute the RefInfo object.
@@ -118,8 +118,7 @@ def resolve_(
     # print('resolve', qa)
     hk = hash(known_refs)
     hash(local_refs)
-    if rev_aliases is None:
-        rev_aliases = {}
+    assert rev_aliases is not None
     if ref in rev_aliases:
         new_ref = rev_aliases[ref]
         # print(f'now looking for {new_ref} instead of {ref}')
@@ -282,8 +281,6 @@ class TreeReplacer:
                 "SubstitutionRef",
             ]:
                 return [node]
-            elif name in ["Text"]:
-                assert False, "Text still present"
             else:
                 new_children = []
                 if not hasattr(node, "children"):

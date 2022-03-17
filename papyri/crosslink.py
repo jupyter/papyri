@@ -6,7 +6,7 @@ import logging
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, FrozenSet, List, Optional, Tuple
+from typing import Dict, FrozenSet, List, Optional, Tuple, Any
 
 from rich.logging import RichHandler
 import cbor2
@@ -28,6 +28,7 @@ from .take2 import (
 )
 from .tree import DVR, DirectiveVisiter, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
+
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -120,7 +121,6 @@ class IngestedBlobs(Node):
     arbitrary: List[Section]
 
     __isfrozen = False
-
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -607,7 +607,7 @@ class Ingester:
             doc_blob.process(known_refs, aliases=aliases)
 
             # TODO: Move this into process ?
-            res = {}
+            res: Dict[Any, List[Any]] = {}
             for sec in (
                 list(doc_blob.content.values())
                 + [doc_blob.example_section_data]
@@ -653,11 +653,9 @@ class Ingester:
         ):
             s = encoder.decode(gstore.get(key))
             assert isinstance(s, Section)
-            visitor = DVR(
-                "TBD, supposed to be QA", known_refs, {}, aliases, version="?"
-            )
-            s_code = visitor.visit(s)
-            refs = [Key(*x) for x in visitor._targets]
+            dvr = DVR("TBD, supposed to be QA", known_refs, {}, aliases, version="?")
+            s_code = dvr.visit(s)
+            refs = [Key(*x) for x in dvr._targets]
             gstore.put(
                 key,
                 cbor2.dumps(s_code.to_json()),
