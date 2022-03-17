@@ -424,7 +424,8 @@ def gen(
             examples=examples,
             fail=fail,
             narrative=narrative,
-            fail_early=fail_early
+            fail_early=fail_early,
+            fail_unseen_error=fail_unseen_error
         )
 
 
