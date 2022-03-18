@@ -28,7 +28,7 @@ You may need to get a modified version of numpydoc depending on the stage of dev
 
 Build the TreeSitter rst parser:
 
-Some functionality require ``tree_sitter_rst``, see run `papyri build-parser`, and CI config file on how to build the tree-sitter
+Some functionality require ``tree_sitter_rst``, see run ``papyri build-parser``, and CI config file on how to build the tree-sitter
 shared object locally::
 
     git clone https://github.com/stsewd/tree-sitter-rst
@@ -75,7 +75,7 @@ Of Interest
 
 Here are a couple of function that are of interest to explore what papyri can do and render.
 
-`dask.delayed.delayed`
+`dask.delayed`
     one of the parameter of the docstring has multiple paragraphs.
 
 `IPython.core.display.Video.__init__`

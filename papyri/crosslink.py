@@ -429,7 +429,7 @@ class Ingester:
         ):
             s = Section.from_json(json.loads(fe.read_bytes()))
             visitor = DVR(
-                "TBD, supposed to be QA", known_refs, {}, aliases, version=version
+                "TBD, supposed to be QA", known_refs, set(), aliases, version=version
             )
             s_code = visitor.visit(s)
             refs = list(map(lambda s: Key(*s), visitor._targets))
@@ -653,7 +653,7 @@ class Ingester:
         ):
             s = encoder.decode(gstore.get(key))
             assert isinstance(s, Section)
-            dvr = DVR("TBD, supposed to be QA", known_refs, {}, aliases, version="?")
+            dvr = DVR("TBD, supposed to be QA", known_refs, set(), aliases, version="?")
             s_code = dvr.visit(s)
             refs = [Key(*x) for x in dvr._targets]
             gstore.put(

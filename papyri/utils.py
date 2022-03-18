@@ -5,6 +5,26 @@ from typing import Tuple
 
 from rich.progress import BarColumn, Progress, ProgressColumn, Task, TextColumn
 from rich.text import Text
+from types import ModuleType
+
+
+def full_qual(obj):
+    if isinstance(obj, ModuleType):
+        return obj.__name__
+    else:
+        try:
+            if hasattr(obj, "__qualname__") and (
+                getattr(obj, "__module__", None) is not None
+            ):
+                return obj.__module__ + "." + obj.__qualname__
+            elif hasattr(obj, "__name__") and (
+                getattr(obj, "__module__", None) is not None
+            ):
+                return obj.__module__ + "." + obj.__name__
+        except Exception:
+            pass
+        return None
+    return None
 
 
 class TimeElapsedColumn(ProgressColumn):

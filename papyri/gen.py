@@ -61,7 +61,7 @@ from .take2 import (
     parse_rst_section,
 )
 from .tree import DirectiveVisiter
-from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress
+from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress, full_qual
 from .vref import NumpyDocString
 
 
@@ -167,13 +167,13 @@ def _jedi_set_cache(text, value):
 
 def obj_from_qualname(name):
 
-    mod_name, sep, obj = name.partition(":")
+    mod_name, sep, objs = name.partition(":")
     module = importlib.import_module(mod_name)
     if not sep:
         return module
     else:
         obj = module
-        parts = obj.split(".")
+        parts = objs.split(".")
         for p in parts:
             obj = getattr(obj, p)
         return obj
@@ -665,23 +665,6 @@ def gen_main(
         temp_dir.cleanup()
 
 
-def full_qual(obj):
-    if isinstance(obj, ModuleType):
-        return obj.__name__
-    else:
-        try:
-            if hasattr(obj, "__qualname__") and (
-                getattr(obj, "__module__", None) is not None
-            ):
-                return obj.__module__ + "." + obj.__qualname__
-            elif hasattr(obj, "__name__") and (
-                getattr(obj, "__module__", None) is not None
-            ):
-                return obj.__module__ + "." + obj.__name__
-        except Exception:
-            pass
-        return None
-    return None
 
 
 class DFSCollector:
@@ -1768,7 +1751,7 @@ class Gen:
                     qa.startswith(pat) for pat in self.config.execute_exclude_patterns
                 ):
                     ex = False
-                dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
+                dv = DirectiveVisiter(qa, known_refs, local_refs=set(), aliases={})
 
                 # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
                 assert api_object is not None

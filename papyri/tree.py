@@ -6,6 +6,7 @@ usually trees, and update nodes.
 
 from collections import Counter, defaultdict
 from functools import lru_cache
+import re
 from typing import Any, Dict, FrozenSet, List, Set, Tuple
 
 from .take2 import (
@@ -21,6 +22,8 @@ from .take2 import (
     Token,
     Verbatim,
 )
+from .utils import full_qual
+
 
 _cache: Dict[int, Tuple[Dict[str, RefInfo], FrozenSet[str]]] = {}
 
@@ -310,10 +313,23 @@ class DirectiveVisiter(TreeReplacer):
 
     """
 
-    def __init__(self, qa, known_refs: FrozenSet[RefInfo], local_refs, aliases):
+    def __init__(self, qa: str, known_refs: FrozenSet[RefInfo], local_refs, aliases):
+        """
+        qa: str
+            current object fully qualified name
+        known_refs: set of RefInfo
+            list of all currently know objects
+        locals_refs:
+            pass
+        aliases:
+            pass
+
+
+        """
         super().__init__()
         assert isinstance(qa, str), qa
-        assert isinstance(known_refs, (list, set, frozenset)), known_refs
+        assert isinstance(known_refs, (set, frozenset)), known_refs
+        assert isinstance(local_refs, (set, frozenset)), local_refs
         self.known_refs = frozenset(known_refs)
         self.local_refs = frozenset(local_refs)
         self.qa = qa
@@ -493,7 +509,62 @@ class DirectiveVisiter(TreeReplacer):
                 assert None not in r, r
                 self._targets.add(r)
             return [Link(text, r, exists, exists != "missing")]
+        if (directive.domain, directive.role) in [(None, None), (None, "func")]:
+            parts = directive.value.split(".")
+
+            are_id = [x.isidentifier() for x in parts]
+
+            if all(are_id):
+                try:
+                    target_qa = full_qual(_obj_from_path(parts))
+                    if target_qa is not None:
+                        ri = RefInfo(
+                            module=target_qa.split(".")[0],
+                            version="*",
+                            kind="api",
+                            path=target_qa,
+                        )
+                        print("Solve ri", ri)
+                        return [Link(target_qa, ri, "module", True)]
+                except Exception:
+                    raise
+            else:
+                print("Not all identifier", directive, "in", self.qa)
+        else:
+            print(
+                "could not match",
+                directive,
+                (directive.role, directive.domain),
+                "in ",
+                self.qa,
+            )
         return [directive]
+
+
+def _import_max(parts):
+
+    p = parts[0]
+    try:
+        __import__(p)
+    except ImportError:
+        return
+    for k in parts[1:]:
+        p = p + "." + k
+        try:
+            __import__(p)
+        except ImportError:
+            return
+
+
+def _obj_from_path(parts):
+    _import_max(parts)
+    try:
+        target = __import__(parts[0])
+        for p in parts[1:]:
+            target = getattr(target, p)
+    except Exception:
+        return
+    return target
 
 
 class DVR(DirectiveVisiter):
