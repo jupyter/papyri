@@ -102,8 +102,10 @@ class ErrorCollector:
                 self.log.exception("Unexpected error")
             if not self.config.early_error:
                 return True
-            if not self._expected_unseen and self.config.fail_unseen_error:
-                raise UnseenError()
+        expecting = self._expected_unseen.get(self._qa, [])
+        if expecting and self.config.fail_unseen_error:
+            raise UnseenError(f"Expecting one of {expecting}")
+
         # return True
 
 
