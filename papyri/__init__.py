@@ -393,7 +393,9 @@ def gen(
     narrative: bool = True,
     fail: bool = typer.Option(False, help="Fail on first error"),
     fail_early: bool = typer.Option(False, help="Overwrite early error option"),
-    fail_unseen_error: bool = typer.Option(False, help="Overwrite fail on unseen error option")
+    fail_unseen_error: bool = typer.Option(
+        False, help="Overwrite fail on unseen error option"
+    ),
 ):
     """
     Generate documentation for a given package.
@@ -425,7 +427,7 @@ def gen(
             fail=fail,
             narrative=narrative,
             fail_early=fail_early,
-            fail_unseen_error=fail_unseen_error
+            fail_unseen_error=fail_unseen_error,
         )
 
 

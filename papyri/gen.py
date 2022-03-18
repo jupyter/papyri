@@ -620,8 +620,8 @@ def gen_main(
 
     """
     target_module_name, conf = load_configuration(target_file)
-    conf['early_error'] = fail_early
-    conf['fail_unseen_error'] = fail_unseen_error
+    conf["early_error"] = fail_early
+    conf["fail_unseen_error"] = fail_unseen_error
     config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
     if exec_ is not None:
         config.exec = exec_
