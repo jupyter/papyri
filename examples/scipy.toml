@@ -4,6 +4,11 @@ exec = true
 submodules = [ "signal",]
 exclude = [ "scipy.sparse.csgraph._traversal.breadth_first_tree",
     "scipy.sparse.csgraph._traversal.depth_first_tree",
+
+    # this just prints quad docs to stdout and should be removed.
+    "scipy.integrate._quadpack_py.quad_explain",
+    # Example is incorrect https://github.com/scipy/scipy/issues/15595
+    "scipy.signal._peak_finding._identify_ridge_lines",
             ]
 exclude_jedi = [
     "scipy.linalg._sketches.clarkson_woodruff_transform",
@@ -17,11 +22,17 @@ exclude_jedi = [
     "scipy.signal.bsplines.bspline",
     ]
 
-execute_exclude_patterns = []
+execute_exclude_patterns = [
+    'scipy._lib._uarray._backend.determine_backend_multi',
+    'scipy.interpolate._bspl.evaluate_all_bspl']
 exec_failure = "fallback"
 jedi_failure_mode = "log"
 early_error = false
 
+[scipy.implied_imports]
+ua = 'scipy._lib.uarray'
+array = 'numpy:array'
+arange = 'numpy:arange'
 [scipy.expected_errors]
 IncorrectInternalDocsLen = [
     "scipy.signal._spline.symiirorder1", "scipy.signal._spline.symiirorder2",
@@ -30,7 +41,7 @@ IncorrectInternalDocsLen = [
     "scipy.interpolate._fitpack_py.spalde", "scipy.interpolate._fitpack_impl.spalde",
     "scipy.optimize._lsq.common.regularized_lsq_operator",
     "scipy.optimize._trustregion_constr.tr_interior_point.tr_interior_point",
-    "scipy.sparse._bsr.bsr_matrix.check_format",
+    "scipy.sparse._bsr.bsr_matrix.check_format",    
     "scipy.optimize._trustregion_constr.tr_interior_point.BarrierSubproblem.gradient_and_jacobian",
     ]
 VisitCitationReferenceNotImplementedError = [
@@ -66,7 +77,9 @@ VisitCitationReferenceNotImplementedError = [
     "scipy.spatial._spherical_voronoi.SphericalVoronoi",
     "scipy.spatial._spherical_voronoi.calculate_solid_angles",
     ]
-ExampleError1 = [ "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree",]   
+ExampleError1 = [ "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree",
+                  "scipy.optimize._root.root", "scipy.interpolate._fitpack2.LSQSphereBivariateSpline",
+                    "scipy.interpolate._fitpack2.SmoothSphereBivariateSpline", "scipy.sparse.linalg._eigen._svds.svds",]
 AssertionError = [
     "scipy.signal._peak_finding.find_peaks_cwt",
     "scipy.signal._peak_finding._filter_ridge_lines", "scipy.integrate._quadrature.cumtrapz",

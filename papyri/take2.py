@@ -148,7 +148,7 @@ def _invalidate(obj, depth=0):
         else:
             sub = _invalidate(item, depth + 1)
             if sub is not None:
-                return f"{k}.{ii}." + sub
+                return f"{k}.{sub}." + sub
 
     # return outcome,s
 

@@ -61,7 +61,7 @@ from .take2 import (
     parse_rst_section,
 )
 from .tree import DirectiveVisiter
-from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress
+from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress, full_qual
 from .vref import NumpyDocString
 
 
@@ -167,13 +167,13 @@ def _jedi_set_cache(text, value):
 
 def obj_from_qualname(name):
 
-    mod_name, sep, obj = name.partition(":")
+    mod_name, sep, objs = name.partition(":")
     module = importlib.import_module(mod_name)
     if not sep:
         return module
     else:
         obj = module
-        parts = obj.split(".")
+        parts = objs.split(".")
         for p in parts:
             obj = getattr(obj, p)
         return obj
@@ -282,6 +282,29 @@ def _execute_inout(item):
     return script, item.out, ce_status.value
 
 
+def _get_implied_imports(obj):
+    """
+    Most examples in methods or modules needs names defined in current module,
+    or name of the class they are part of.
+    """
+    if hasattr(obj, "__qualname__"):
+        if "." not in obj.__qualname__:
+            return {}
+        else:
+            c_o = obj.__qualname__.split(".")
+            if len(c_o) > 2:
+                print(obj.__qualname__)
+                return {}
+            cname, oname = c_o
+            mod_name = obj.__module__
+            import importlib
+
+            mod = importlib.import_module(mod_name)
+            return {cname: getattr(mod, cname)}
+
+    return {}
+
+
 def get_example_data(
     example_section, *, obj, qa: str, config, log
 ) -> Tuple[Section, List[Any]]:
@@ -356,6 +379,7 @@ def get_example_data(
     acc = ""
     figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
     ns = {"np": np, "plt": plt, obj.__name__: obj}
+    ns.update(_get_implied_imports(obj))
     for k, v in config.implied_imports.items():
         ns[k] = obj_from_qualname(v)
     executor = BlockExecutor(ns)
@@ -663,25 +687,6 @@ def gen_main(
     g.write(p)
     if dry_run:
         temp_dir.cleanup()
-
-
-def full_qual(obj):
-    if isinstance(obj, ModuleType):
-        return obj.__name__
-    else:
-        try:
-            if hasattr(obj, "__qualname__") and (
-                getattr(obj, "__module__", None) is not None
-            ):
-                return obj.__module__ + "." + obj.__qualname__
-            elif hasattr(obj, "__name__") and (
-                getattr(obj, "__module__", None) is not None
-            ):
-                return obj.__module__ + "." + obj.__name__
-        except Exception:
-            pass
-        return None
-    return None
 
 
 class DFSCollector:
@@ -1768,7 +1773,7 @@ class Gen:
                     qa.startswith(pat) for pat in self.config.execute_exclude_patterns
                 ):
                     ex = False
-                dv = DirectiveVisiter(qa, known_refs, local_refs={}, aliases={})
+                dv = DirectiveVisiter(qa, known_refs, local_refs=set(), aliases={})
 
                 # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
                 assert api_object is not None
