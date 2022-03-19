@@ -7,6 +7,8 @@ exclude = [
     'IPython.core.magics.script.ScriptMagics.shebang',
     'IPython.core.magics.basic.BasicMagics.alias_magic',
     'IPython.utils.text.strip_email_quotes',
+    # requires IPython instance
+    'IPython.core.display_functions.display',
     #"ExecError-<class 'ValueError'>": [
                         "IPython.core.magics.basic.BasicMagics.colors",
                         "IPython.core.magics.config.ConfigMagics.config",

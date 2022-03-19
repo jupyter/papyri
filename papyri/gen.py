@@ -282,6 +282,29 @@ def _execute_inout(item):
     return script, item.out, ce_status.value
 
 
+def _get_implied_imports(obj):
+    """
+    Most examples in methods or modules needs names defined in current module,
+    or name of the class they are part of.
+    """
+    if hasattr(obj, "__qualname__"):
+        if "." not in obj.__qualname__:
+            return {}
+        else:
+            c_o = obj.__qualname__.split(".")
+            if len(c_o) > 2:
+                print(obj.__qualname__)
+                return {}
+            cname, oname = c_o
+            mod_name = obj.__module__
+            import importlib
+
+            mod = importlib.import_module(mod_name)
+            return {cname: getattr(mod, cname)}
+
+    return {}
+
+
 def get_example_data(
     example_section, *, obj, qa: str, config, log
 ) -> Tuple[Section, List[Any]]:
@@ -356,6 +379,7 @@ def get_example_data(
     acc = ""
     figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
     ns = {"np": np, "plt": plt, obj.__name__: obj}
+    ns.update(_get_implied_imports(obj))
     for k, v in config.implied_imports.items():
         ns[k] = obj_from_qualname(v)
     executor = BlockExecutor(ns)
