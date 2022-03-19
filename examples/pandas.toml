@@ -90,8 +90,10 @@ exclude = [
 ]
 [pandas.expected_errors]
 ValueError =[ "pandas.io.pickle.to_pickle", "pandas.core.generic.NDFrame.to_pickle",]           
-IncorrectInternalDocsLen = [ "pandas.core.indexes.period.PeriodIndex.asof_locs",
-                    "pandas.core.indexes.range.RangeIndex._extended_gcd", "pandas._testing._io.optional_args",
-                    "pandas.core.missing._rolling_window", "pandas.io.html._HtmlFrameParser",
-                    "pandas.io.stata._dtype_to_default_stata_fmt", "pandas.io.pytables.Selection.generate",
-                    "pandas.core.internals.managers.BaseBlockManager.take",]
+IncorrectInternalDocsLen = [
+    "pandas.core.indexes.period.PeriodIndex.asof_locs",
+    "pandas.core.indexes.range.RangeIndex._extended_gcd", "pandas._testing._io.optional_args",
+    "pandas.core.missing._rolling_window", "pandas.io.html._HtmlFrameParser",
+    "pandas.io.stata._dtype_to_default_stata_fmt", "pandas.io.pytables.Selection.generate",
+    "pandas.core.internals.managers.BaseBlockManager.take",
+]

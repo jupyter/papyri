@@ -689,8 +689,6 @@ def gen_main(
         temp_dir.cleanup()
 
 
-
-
 class DFSCollector:
     """
     Depth first search collector.

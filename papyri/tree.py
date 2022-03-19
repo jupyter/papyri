@@ -6,7 +6,6 @@ usually trees, and update nodes.
 
 from collections import Counter, defaultdict
 from functools import lru_cache
-import re
 from typing import Any, Dict, FrozenSet, List, Set, Tuple
 
 from .take2 import (
