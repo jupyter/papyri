@@ -72,7 +72,7 @@ from typing import get_type_hints as gth
 base_types = {int, str, bool, type(None)}
 
 
-@lru_cache
+@lru_cache(50)
 def get_type_hints(type_):
     return gth(type_)
 

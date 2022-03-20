@@ -256,6 +256,8 @@ class TreeReplacer:
 
     def generic_visit(self, node) -> List[Node]:
         assert node is not None
+        assert not isinstance(node, str), breakpoint()
+        assert isinstance(node, Node)
         try:
             name = node.__class__.__name__
             if method := getattr(self, "replace_" + name, None):
@@ -508,8 +510,28 @@ class DirectiveVisiter(TreeReplacer):
                 assert None not in r, r
                 self._targets.add(r)
             return [Link(text, r, exists, exists != "missing")]
-        if (directive.domain, directive.role) in [(None, None), (None, "func")]:
-            parts = directive.value.split(".")
+        if (directive.domain, directive.role) in [
+            (None, None),
+            (None, "mod"),
+            (None, "func"),
+            (None, "any"),
+            (None, "meth"),
+            (None, "class"),
+        ]:
+            text = directive.value
+            tqa = directive.value
+
+            if text.startswith("@"):
+                tqa = tqa[1:]
+            if text.startswith("~"):
+                tqa = tqa[1:]
+                text = tqa.split(".")[-1]
+            # TODO: this may not be correct, is it's start with `.` it should be relative to current object.
+            if tqa.startswith("."):
+                tqa = tqa[1:]
+            if tqa.endswith("()"):
+                tqa = tqa[:-2]
+            parts = tqa.split(".")
 
             are_id = [x.isidentifier() for x in parts]
 
@@ -523,8 +545,8 @@ class DirectiveVisiter(TreeReplacer):
                             kind="api",
                             path=target_qa,
                         )
-                        print("Solve ri", ri)
-                        return [Link(target_qa, ri, "module", True)]
+                        print("Solve ri", ri, directive.value)
+                        return [Link(text, ri, "module", True)]
                 except Exception:
                     raise
             else:
