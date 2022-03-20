@@ -116,7 +116,6 @@ class IngestedBlobs(Node):
     version: str
     signature: Signature
     references: Optional[List[str]]
-    logo: Optional[str]
     qa: str
     arbitrary: List[Section]
 
@@ -136,9 +135,12 @@ class IngestedBlobs(Node):
         self.version = kwargs.pop("version", None)
         self.signature = kwargs.pop("signature", None)
         self.references = kwargs.pop("references", None)
-        self.logo = kwargs.pop("logo", None)
+        assert "logo" not in kwargs
         self.qa = kwargs.pop("qa", None)
         self.arbitrary = kwargs.pop("arbitrary", None)
+        if self.arbitrary:
+            for a in self.arbitrary:
+                assert isinstance(a, Section), a
         assert not kwargs, kwargs
         assert not args, args
         self._freeze()
@@ -372,11 +374,8 @@ def load_one(
     bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None, strict=False
 ) -> IngestedBlobs:
     assert isinstance(bytes_, bytes), bytes_
-    data = encoder.decode(bytes_)
-    # OK to mutate we are the only owners and don't return it.
-    assert isinstance(data, IngestedBlobs)
-    blob = data
-    # blob = IngestedBlobs.from_json(data)
+    blob = encoder.decode(bytes_)
+    assert isinstance(blob, IngestedBlobs)
     # TODO move that one up.
     if known_refs is None:
         known_refs = frozenset()
@@ -436,7 +435,6 @@ class Ingester:
             gstore.put(
                 Key(root, version, "examples", fe.name),
                 encoder.encode(s_code),
-                # json.dumps(s_code.to_json(), indent=2).encode(),
                 refs,
             )
 
@@ -472,6 +470,10 @@ class Ingester:
         # long : short
         aliases: Dict[str, str] = data.get("aliases", {})
         rev_aliases = {v: k for k, v in aliases.items()}
+
+        gstore.put_meta(
+            root, version, encoder.encode({"logo": logo, "version": version})
+        )
 
         self._ingest_examples(path, gstore, known_refs, aliases, version, root)
         self._ingest_assets(path, root, version, aliases, gstore)
@@ -515,7 +517,6 @@ class Ingester:
             nvisited_items.items(), description=f"{path.name} Cross referencing"
         ):
             doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
-            doc_blob.logo = logo
             # todo: warning mutation.
             for sa in doc_blob.see_also:
                 r = resolve_(
@@ -652,13 +653,13 @@ class Ingester:
             description="Relinking Examples...",
         ):
             s = encoder.decode(gstore.get(key))
-            assert isinstance(s, Section)
+            assert isinstance(s, Section), (s, key)
             dvr = DVR("TBD, supposed to be QA", known_refs, set(), aliases, version="?")
             s_code = dvr.visit(s)
             refs = [Key(*x) for x in dvr._targets]
             gstore.put(
                 key,
-                cbor2.dumps(s_code.to_json()),
+                encoder.encode(s_code),
                 refs,
             )
 

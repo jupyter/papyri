@@ -312,11 +312,11 @@ user-select: none;
     </header>
 <div class='container'>
     <div class="sidenav">
-    {% if not doc.logo %}
+    {% if not logo %}
         <i class="fab fa-python"></i>
         <a href="#">Project Logo ^</a>
     {% else %}
-        <img src="/p/{{module}}/{{version}}/img/{{doc.logo}}"/>
+        <img src="/p/{{module}}/{{version}}/img/{{logo}}"/>
     {% endif %}
     <a href="#">Library: {{module}}</a>
     <a href="#">Version: {{version}}</a>

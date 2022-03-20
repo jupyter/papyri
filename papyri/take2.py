@@ -1342,16 +1342,23 @@ import cbor2
 class Encoder:
     def __init__(self, tag_map):
         self._tag_map = tag_map
+        self._rev_map = {}
 
     def encode(self, obj):
         return cbor2.dumps(obj, default=lambda encoder, obj: obj.cbor(encoder))
 
+    def _type_from_tag(self, tag):
+        if tag.tag in self._rev_map:
+            return self._rev_map[tag.tag]
+        self._rev_map = {v: k for k, v in self._tag_map.items()}
+        return self._rev_map[tag.tag]
+
     def _tag_hook(self, decoder, tag, shareable_index=None):
-        rev_map = {v: k for k, v in self._tag_map.items()}
-        type_ = rev_map[tag.tag]
+        type_ = self._type_from_tag(tag)
 
         tt = get_type_hints(type_)
-        return type_(**{k: t for k, t in zip(tt, tag.value)})
+        kwds = {k: t for k, t in zip(tt, tag.value)}
+        return type_(**kwds)
 
     def decode(self, bytes):
         return cbor2.loads(bytes, tag_hook=self._tag_hook)

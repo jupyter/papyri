@@ -9,7 +9,7 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Set, Any, Dict, List
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
@@ -21,10 +21,10 @@ from there import print
 
 from . import config as default_config
 from .config import ingest_dir
-from .crosslink import IngestedBlobs, RefInfo, find_all_refs, load_one
+from .crosslink import IngestedBlobs, RefInfo, find_all_refs
 from .graphstore import GraphStore, Key
 from .stores import Store
-from .take2 import RefInfo, encoder
+from .take2 import RefInfo, encoder, Section
 from .utils import progress
 
 FORMAT = "%(message)s"
@@ -41,6 +41,7 @@ def url(info, prefix):
     assert isinstance(info, RefInfo), info
     assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
     # assume same package/version for now.
+    assert info.module is not None
     if info.module is None:
         assert info.version is None
         return info.path
@@ -82,7 +83,7 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-async def examples(module, store, version, subpath, ext="", sidebar=None):
+async def examples(module, store, version, subpath, ext="", sidebar=None, gstore=None):
     assert sidebar is not None
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -93,6 +94,8 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
     env.globals["url"] = lambda x: url(x, "/p/")
     env.globals["unreachable"] = unreachable
 
+    meta = encoder.decode(gstore.get_mete(module, version))
+
     pap_files = store.glob("*/*/papyri.json")
     parts = {module: []}
     for pp in pap_files:
@@ -100,7 +103,6 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
         parts[module].append((RefInfo(mod, ver, "api", mod), mod) + ext)
 
     efile = store / module / version / "examples" / subpath
-    from .take2 import Section
 
     ex = Section.from_json(json.loads(await efile.read_text()))
 
@@ -108,9 +110,9 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
         pass
 
     doc = Doc()
-    doc.logo = None
 
     return env.get_template("examples.tpl.j2").render(
+        logo=meta["logo"],
         pygment_css=CSS_DATA,
         module=module,
         parts=parts,
@@ -240,25 +242,46 @@ def cs2(ref, tree, ref_map):
     return siblings
 
 
-def compute_graph(gs, backrefs, refs, key):
+def compute_graph(
+    gs: GraphStore, backrefs: Set[Key], refs: Set[Key], key: Key
+) -> Dict[Any, Any]:
+    """
+    Compute local reference graph for a given item.
+
+
+    gs: Graphstore
+        the graphstore to get data out of.
+    backrefs:
+        list of backreferences
+    refs:
+        list of forward references
+    keys:
+        current iten
+
+    """
     # nodes_names = [n for n in nodes_names if n.startswith('numpy')]
     weights = {}
-    backrefs = list(backrefs)
-    refs = list(refs)
+    assert isinstance(backrefs, set)
+    for b in backrefs:
+        assert isinstance(b, Key)
+    assert isinstance(refs, set)
+    for f in refs:
+        assert isinstance(f, Key)
 
-    all_nodes = [tuple(x) for x in backrefs + refs]
+    all_nodes = set(backrefs).union(set(refs))
+    # all_nodes = set(Key(*k) for k in all_nodes)
 
     raw_edges = []
-    for k in backrefs + refs:
+    for k in set(all_nodes):
         name = tuple(k)[3]
-        neighbors_refs = gs.get_backref(Key(*k))
+        neighbors_refs = gs.get_backref(k)
         weights[name] = len(neighbors_refs)
         orig = [x[3] for x in neighbors_refs]
-        all_nodes.extend([tuple(x) for x in neighbors_refs])
+        all_nodes = all_nodes.union(neighbors_refs)
         for o in orig:
             raw_edges.append((k.path, o))
 
-    data = {"nodes": [], "links": []}
+    data: Dict[str, List[Any]] = {"nodes": [], "links": []}
 
     if len(weights) > 50:
         for thresh in sorted(set(weights.values())):
@@ -291,14 +314,14 @@ def compute_graph(gs, backrefs, refs, key):
         data["links"].append({"source": nums[from_], "target": nums[to], "id": i})
 
     for node in nodes:
-        diam = 8
+        diam = 8.0
         if node == key[3]:
             continue
-            diam = 18
+            diam = 18.0
         elif node in weights:
             import math
 
-            diam = 8 + math.sqrt(weights[node])
+            diam = 8.0 + math.sqrt(weights[node])
 
         candidates = [n for n in all_nodes if n[3] == node and "??" not in n]
         if not candidates:
@@ -326,7 +349,7 @@ async def _route_data(gstore, ref, version, known_refs):
     key = Key(root, version, "module", ref)
     gbytes, backward, forward = gstore.get_all(key)
     x_, y_ = find_all_refs(gstore)
-    doc_blob = load_one(gbytes, b"[]", known_refs=known_refs, strict=True)
+    doc_blob = encoder.decode(gbytes)
     return x_, y_, doc_blob, backward, forward
 
 
@@ -369,6 +392,8 @@ class HtmlRenderer:
     async def gallery(self, module, version, ext=""):
 
         figmap = defaultdict(lambda: [])
+        assert isinstance(self.store, GraphStore)
+        meta = encoder.decode(self.store.get_meta(Key(module, version, None, None)))
         res = self.store.glob((module, version, "assets", None))
         backrefs = set()
         for key in res:
@@ -382,7 +407,6 @@ class HtmlRenderer:
             # TODO: examples can actuallly be just Sections.
             assert isinstance(data, IngestedBlobs)
             i = data
-            i.process(frozenset(), {})
 
             for k in [
                 u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
@@ -395,12 +419,11 @@ class HtmlRenderer:
                 figmap[module].append((impath, link, _path))
 
         for target_path in self.old_store.glob(f"{module}/{version}/examples/*"):
-            data = encoder.decode(await target_path.read_bytes())
-            from .take2 import Section
+            section = encoder.decode(await target_path.read_bytes())
 
-            s = Section.from_json(data)
-
-            for k in [u.value for u in s.children if u.__class__.__name__ == "Fig"]:
+            for k in [
+                u.value for u in section.children if u.__class__.__name__ == "Fig"
+            ]:
                 module, v, _, _path = target_path.path.parts[-4:]
 
                 # module, filename, link
@@ -423,8 +446,7 @@ class HtmlRenderer:
             pass
 
         doc = D()
-        doc.logo = "logo.png"
-
+        logo = meta["logo"]
         pap_files = self.old_store.glob("*/*/papyri.json")
         parts = {module: []}
         for pp in pap_files:
@@ -432,6 +454,7 @@ class HtmlRenderer:
             parts[module].append((RefInfo(mod, ver, "api", mod), mod))
 
         return env.get_template("gallery.tpl.j2").render(
+            logo=logo,
             figmap=figmap,
             pygment_css="",
             module=module,
@@ -447,15 +470,17 @@ class HtmlRenderer:
         Serve the narrative part of the documentation for given package
         """
         # return "Not Implemented"
-        bytes = self.store.get(Key(package, version, "docs", ref))
-        doc_blob = load_one(bytes, b"[]", known_refs=frozenset(), strict=True)
-        print(doc_blob)
+        key = Key(package, version, "docs", ref)
+        bytes = self.store.get(key)
+        doc_blob = encoder.decode(bytes)
+        meta = self.store.get_meta(key)
         # return "OK"
 
         template = self.env.get_template("html.tpl.j2")
 
         # ...
         return render_one(
+            logo=meta["logo"],
             template=template,
             doc=doc_blob,
             qa="numpy",
@@ -478,11 +503,13 @@ class HtmlRenderer:
         assert not ref.endswith(".html")
         assert version is not None
         assert ref != ""
+        assert gstore is not None
 
         env = self.env
 
         template = env.get_template("html.tpl.j2")
         root = ref.split(".")[0]
+        meta = encoder.decode(gstore.get_meta(Key(root, version, None, None)))
 
         known_refs, ref_map = find_all_refs(store)
 
@@ -532,6 +559,7 @@ class HtmlRenderer:
                 pygment_css=CSS_DATA,
                 graph=json_str,
                 sidebar=self.sidebar,
+                logo=meta["logo"],
             )
         else:
             # The reference we are trying to render does not exists
@@ -583,7 +611,7 @@ def static(name):
     return f
 
 
-def logo() -> bytes:
+def plogo() -> bytes:
 
     path = os.path.abspath(__file__)
     dir_path = Path(os.path.dirname(path))
@@ -603,7 +631,7 @@ def serve(*, sidebar: bool):
     )
 
     async def full(package, version, ref):
-        return await html_renderer._route(ref, store, version)
+        return await html_renderer._route(ref, store, version, gstore=gstore)
 
     async def full_gallery(module, version):
         return await html_renderer.gallery(module, version)
@@ -629,7 +657,7 @@ def serve(*, sidebar: bool):
             sidebar=sidebar,
         )
 
-    app.route("/logo.png")(logo)
+    app.route("/logo.png")(plogo)
     app.route("/favicon.ico")(static("favicon.ico"))
     # sub here is likely incorrect
     app.route(f"{prefix}/<package>/<version>/img/<path:subpath>")(img)
@@ -661,6 +689,7 @@ def render_one(
     parts_links=(),
     graph="{}",
     sidebar,
+    logo,
 ):
     """
     Return the rendering of one document
@@ -685,6 +714,7 @@ def render_one(
     """
     # TODO : move this to ingest likely.
     # Here if we have too many references we group them on where they come from.
+    assert not hasattr(doc, "logo")
     if len(backrefs) > 30:
 
         b2 = defaultdict(lambda: [])
@@ -702,6 +732,7 @@ def render_one(
     try:
         return template.render(
             doc=doc,
+            logo=logo,
             qa=qa,
             version=doc.version,
             module=qa.split(".")[0],
@@ -763,21 +794,13 @@ async def _ascii_render(key, store, known_refs=None, template=None):
     env, template = _ascii_env()
     bytes_: bytes = store.get(key)
 
-    # TODO:
-    # brpath = store / root / rsion / "module" / f"{ref}.br"
-    # if await brpath.exists():
-    #    br = await brpath.read_text()
-    #    br = None
-    # else:
-    #    br = None
-    br = None
-
-    doc_blob = load_one(bytes_, br, strict=True)
+    doc_blob = encoder.decode(bytes_)
 
     # exercise the reprs
     assert str(doc_blob)
 
     return render_one(
+        logo=None,
         template=template,
         doc=doc_blob,
         qa=ref,
@@ -841,46 +864,10 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
 
     """
     assert isinstance(document, Key), type(document)
-    if isinstance(document, Key):
-        qa = document.path
-        version = document.version
-        root = document.module
-        # qa = document.name[:-5]
-        # version = document.path.parts[-3]
-        # help to keep ascii bug free.
-        # await _ascii_render(qa, store, known_refs=known_refs)
-        root = qa.split(".")[0]
-    elif isinstance(document, tuple):
-        assert False, f"Document is {document}"  # happens in render.
-        qa = document.path
-        version = document.version
-        root = document.module
-    else:
-        assert False
-    try:
-        if isinstance(document, tuple):
-            assert isinstance(store, GraphStore)
-            bytes_, backward, forward = store.get_all(document)
-        else:
-            assert False
-            bytes_ = await document.read_text()
-        if isinstance(store, Store):
-            assert False
-            brpath = store / root / version / "module" / f"{qa}.br"
-            assert await brpath.exists()
-            br = await brpath.read_text()
-        elif isinstance(store, GraphStore):
-            gbr_data = store.get_backref(document)
-            gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
-            br = gbr_bytes
-        else:
-            assert False
-        doc_blob: IngestedBlobs = load_one(
-            bytes_, br, known_refs=known_refs, strict=True
-        )
-
-    except Exception as e:
-        raise RuntimeError(f"error with {document}") from e
+    assert isinstance(store, GraphStore)
+    qa = document.path
+    bytes_, backward, forward = store.get_all(document)
+    doc_blob: IngestedBlobs = encoder.decode(bytes_)
 
     siblings = cs2(qa, tree, ref_map)
 
@@ -943,6 +930,7 @@ async def _self_render_as_index_page(
     import papyri
 
     key = Key("papyri", str(papyri.__version__), "module", "papyri")
+    meta = encoder.decode(gstore.get_meta(key))
 
     doc_blob, qa, siblings, parts_links, backward, forward = await loc(
         key,
@@ -962,6 +950,7 @@ async def _self_render_as_index_page(
         parts_links=parts_links,
         backrefs=backward,
         pygment_css=css_data,
+        logo=meta["logo"],
     )
     if html_dir:
         with (html_dir / "index.html").open("w") as f:
@@ -978,7 +967,7 @@ class StaticRenderingConfig:
     output_dir: Optional[Path]
 
 
-async def main(ascii: bool, html, dry_run, sidebar):
+async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     """
     This does static rendering of all the given files.
 
@@ -992,6 +981,7 @@ async def main(ascii: bool, html, dry_run, sidebar):
         do not write the output.
     Sidebar:bool
         render the sidebar in html
+    graph: bool
 
     """
 
@@ -1057,6 +1047,7 @@ async def main(ascii: bool, html, dry_run, sidebar):
         template,
         css_data,
         config,
+        graph,
     )
 
     await _self_render_as_index_page(
@@ -1103,6 +1094,8 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
     css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
     mod_vers = gstore.glob((None, None))
+    meta = encoder.decode(gstore.get_meta(Key(module, version, None, None)))
+    logo = meta["logo"]
     parts = {module: []}
     for mod, ver in mod_vers:
         assert isinstance(mod, str)
@@ -1115,9 +1108,9 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
         pass
 
     doc = Doc()
-    doc.logo = None
 
     return env.get_template("examples.tpl.j2").render(
+        logo=logo,
         pygment_css=css_data,
         module=module,
         parts=parts,
@@ -1139,6 +1132,7 @@ async def _write_api_file(
     template,
     css_data,
     config,
+    graph,
 ):
 
     for _, key in progress(gfiles, description="Rendering API..."):
@@ -1153,9 +1147,13 @@ async def _write_api_file(
                 known_refs=known_refs,
                 ref_map=ref_map,
             )
-            backward = [RefInfo(*x) for x in backward]
-            data = compute_graph(gstore, backward, forward, key)
+            backward_r = [RefInfo(*x) for x in backward]
+            if graph:
+                data = compute_graph(gstore, set(backward), set(forward), key)
+            else:
+                data = {}
             json_str = json.dumps(data)
+            meta = encoder.decode(gstore.get_meta(key))
             data = render_one(
                 template=template,
                 doc=doc_blob,
@@ -1163,10 +1161,11 @@ async def _write_api_file(
                 ext=".html",
                 parts=siblings,
                 parts_links=parts_links,
-                backrefs=backward,
+                backrefs=backward_r,
                 pygment_css=css_data,
                 graph=json_str,
                 sidebar=config.html_sidebar,
+                logo=meta["logo"],
             )
             if config.output_dir:
                 (config.output_dir / module / version / "api").mkdir(

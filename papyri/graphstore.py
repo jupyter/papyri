@@ -248,7 +248,10 @@ class GraphStore:
         return sql_forward_ref
 
     def get_all(self, key):
-        return self._get(key), self._get_backrefs(key), self.get_forwardrefs(key)
+        a = self._get(key)
+        b = self._get_backrefs(key)
+        c = self.get_forwardrefs(key)
+        return (a, b, c)
 
     def get_backref(self, key: Key) -> Set[Key]:
         return self._get_backrefs(key)
@@ -313,6 +316,23 @@ class GraphStore:
                 [(dest_id,)] = rows
 
         return dest_id
+
+    def _meta_path(self, module: str, version: str):
+        assert isinstance(module, str)
+        assert isinstance(version, str)
+        return self._root / module / version / "meta.json"
+
+    def put_meta(self, module: str, version: str, data: bytes) -> None:
+        assert isinstance(data, bytes)
+
+        mp = self._meta_path(module, version)
+        mp.path.parent.mkdir(parents=True, exist_ok=True)
+
+        mp.write_bytes(data)
+
+    def get_meta(self, key: Key) -> bytes:
+        mp = self._meta_path(key.module, key.version)
+        return mp.read_bytes()
 
     def put(self, key: Key, bytes_, refs) -> None:
         """
