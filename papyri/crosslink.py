@@ -375,7 +375,7 @@ def load_one(
 ) -> IngestedBlobs:
     assert isinstance(bytes_, bytes), bytes_
     blob = encoder.decode(bytes_)
-    assert isinstance(data, IngestedBlobs)
+    assert isinstance(blob, IngestedBlobs)
     # TODO move that one up.
     if known_refs is None:
         known_refs = frozenset()

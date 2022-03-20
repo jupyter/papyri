@@ -256,7 +256,7 @@ class TreeReplacer:
 
     def generic_visit(self, node) -> List[Node]:
         assert node is not None
-        assert not isinstance(node, str), breakpoint()
+        assert not isinstance(node, str)
         assert isinstance(node, Node)
         try:
             name = node.__class__.__name__
@@ -289,7 +289,7 @@ class TreeReplacer:
                 new_children = []
                 if not hasattr(node, "children"):
                     raise ValueError(f"{node.__class__} has no children {node}")
-                for c in node.children:
+                for c in node.children:  # type: ignore
                     assert c is not None, f"{node=} has a None child"
                     assert isinstance(c, Node), c
                     replacement = self.generic_visit(c)
@@ -300,7 +300,7 @@ class TreeReplacer:
                     #    )
                     assert isinstance(replacement, list)
                     new_children.extend(replacement)
-                node.children = new_children
+                node.children = new_children  # type: ignore
                 new_nodes = [node]
             assert isinstance(new_nodes, list)
             return new_nodes

@@ -9,7 +9,7 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Set, Any, Dict
+from typing import Optional, Set, Any, Dict, List
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
@@ -83,7 +83,7 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-async def examples(module, store, version, subpath, ext="", sidebar=None):
+async def examples(module, store, version, subpath, ext="", sidebar=None, gstore=None):
     assert sidebar is not None
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
@@ -94,6 +94,8 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
     env.globals["url"] = lambda x: url(x, "/p/")
     env.globals["unreachable"] = unreachable
 
+    meta = encoder.decode(gstore.get_mete(module, version))
+
     pap_files = store.glob("*/*/papyri.json")
     parts = {module: []}
     for pp in pap_files:
@@ -101,7 +103,6 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
         parts[module].append((RefInfo(mod, ver, "api", mod), mod) + ext)
 
     efile = store / module / version / "examples" / subpath
-    from .take2 import Section
 
     ex = Section.from_json(json.loads(await efile.read_text()))
 
@@ -111,7 +112,7 @@ async def examples(module, store, version, subpath, ext="", sidebar=None):
     doc = Doc()
 
     return env.get_template("examples.tpl.j2").render(
-        logo=logo,
+        logo=meta["logo"],
         pygment_css=CSS_DATA,
         module=module,
         parts=parts,
@@ -260,11 +261,15 @@ def compute_graph(
     """
     # nodes_names = [n for n in nodes_names if n.startswith('numpy')]
     weights = {}
-    backrefs = list(backrefs)
-    refs = list(refs)
+    assert isinstance(backrefs, set)
+    for b in backrefs:
+        assert isinstance(b, Key)
+    assert isinstance(refs, set)
+    for f in refs:
+        assert isinstance(f, Key)
 
     all_nodes = set(backrefs).union(set(refs))
-    all_nodes = set(Key(*k) for k in all_nodes)
+    # all_nodes = set(Key(*k) for k in all_nodes)
 
     raw_edges = []
     for k in set(all_nodes):
@@ -276,7 +281,7 @@ def compute_graph(
         for o in orig:
             raw_edges.append((k.path, o))
 
-    data = {"nodes": [], "links": []}
+    data: Dict[str, List[Any]] = {"nodes": [], "links": []}
 
     if len(weights) > 50:
         for thresh in sorted(set(weights.values())):
@@ -309,14 +314,14 @@ def compute_graph(
         data["links"].append({"source": nums[from_], "target": nums[to], "id": i})
 
     for node in nodes:
-        diam = 8
+        diam = 8.0
         if node == key[3]:
             continue
-            diam = 18
+            diam = 18.0
         elif node in weights:
             import math
 
-            diam = 8 + math.sqrt(weights[node])
+            diam = 8.0 + math.sqrt(weights[node])
 
         candidates = [n for n in all_nodes if n[3] == node and "??" not in n]
         if not candidates:
@@ -414,9 +419,11 @@ class HtmlRenderer:
                 figmap[module].append((impath, link, _path))
 
         for target_path in self.old_store.glob(f"{module}/{version}/examples/*"):
-            data = encoder.decode(await target_path.read_bytes())
+            section = encoder.decode(await target_path.read_bytes())
 
-            for k in [u.value for u in s.children if u.__class__.__name__ == "Fig"]:
+            for k in [
+                u.value for u in section.children if u.__class__.__name__ == "Fig"
+            ]:
                 module, v, _, _path = target_path.path.parts[-4:]
 
                 # module, filename, link
@@ -463,14 +470,17 @@ class HtmlRenderer:
         Serve the narrative part of the documentation for given package
         """
         # return "Not Implemented"
-        bytes = self.store.get(Key(package, version, "docs", ref))
+        key = Key(package, version, "docs", ref)
+        bytes = self.store.get(key)
         doc_blob = encoder.decode(bytes)
+        meta = self.store.get_meta(key)
         # return "OK"
 
         template = self.env.get_template("html.tpl.j2")
 
         # ...
         return render_one(
+            logo=meta["logo"],
             template=template,
             doc=doc_blob,
             qa="numpy",
@@ -784,21 +794,13 @@ async def _ascii_render(key, store, known_refs=None, template=None):
     env, template = _ascii_env()
     bytes_: bytes = store.get(key)
 
-    # TODO:
-    # brpath = store / root / rsion / "module" / f"{ref}.br"
-    # if await brpath.exists():
-    #    br = await brpath.read_text()
-    #    br = None
-    # else:
-    #    br = None
-    br = None
-
     doc_blob = encoder.decode(bytes_)
 
     # exercise the reprs
     assert str(doc_blob)
 
     return render_one(
+        logo=None,
         template=template,
         doc=doc_blob,
         qa=ref,
@@ -864,17 +866,8 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
     assert isinstance(document, Key), type(document)
     assert isinstance(store, GraphStore)
     qa = document.path
-    version = document.version
-    root_ = document.module
-    root = qa.split(".")[0]
-    assert root == root_
-    try:
-        bytes_, backward, forward = store.get_all(document)
-        gbr_data = store.get_backref(document)
-        gbr_bytes = json.dumps([RefInfo(*x).to_json() for x in gbr_data]).encode()
-        doc_blob: IngestedBlobs = encoder.decode(bytes_)
-    except Exception as e:
-        raise RuntimeError(f"error with {document}") from e
+    bytes_, backward, forward = store.get_all(document)
+    doc_blob: IngestedBlobs = encoder.decode(bytes_)
 
     siblings = cs2(qa, tree, ref_map)
 
@@ -1154,9 +1147,9 @@ async def _write_api_file(
                 known_refs=known_refs,
                 ref_map=ref_map,
             )
-            backward = [RefInfo(*x) for x in backward]
+            backward_r = [RefInfo(*x) for x in backward]
             if graph:
-                data = compute_graph(gstore, backward, forward, key)
+                data = compute_graph(gstore, set(backward), set(forward), key)
             else:
                 data = {}
             json_str = json.dumps(data)
@@ -1168,7 +1161,7 @@ async def _write_api_file(
                 ext=".html",
                 parts=siblings,
                 parts_links=parts_links,
-                backrefs=backward,
+                backrefs=backward_r,
                 pygment_css=css_data,
                 graph=json_str,
                 sidebar=config.html_sidebar,
