@@ -23,7 +23,6 @@ from . import config as default_config
 from .config import ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs
 from .graphstore import GraphStore, Key
-from .stores import Store
 from .take2 import RefInfo, encoder, Section
 from .utils import progress, dummy_progress
 
@@ -499,23 +498,19 @@ class HtmlRenderer:
     async def _route(
         self,
         ref,
-        store: Store,
         version=None,
-        gstore=None,
     ):
         assert not ref.endswith(".html")
         assert version is not None
         assert ref != ""
-        assert gstore is not None
-        assert gstore == self.store
 
         env = self.env
 
         template = env.get_template("html.tpl.j2")
         root = ref.split(".")[0]
-        meta = encoder.decode(gstore.get_meta(Key(root, version, None, None)))
+        meta = encoder.decode(self.store.get_meta(Key(root, version, None, None)))
 
-        known_refs, ref_map = find_all_refs(gstore)
+        known_refs, ref_map = find_all_refs(self.store)
 
         # technically incorrect we don't load backrefs
         x_, y_, doc_blob, backward, forward = await _route_data(
@@ -561,36 +556,9 @@ class HtmlRenderer:
             )
         else:
             # The reference we are trying to render does not exists
-            # just try to have a nice  error page and try to find local reference and
-            # use the phantom file to list the backreferences to this.
-            # it migt be a page, or a module we do not have documentation about.
-            r = ref.split(".")[0]
-            this_module_known_refs = [
-                str(s.name)
-                for s in store.glob(f"{r}/*/module/{ref}")
-                if not s.name.endswith(".br")
-            ]
-            x2 = [x.path for x in self.store.glob((r, None, "module", ref))]
-            assert set(x2) == set(this_module_known_refs), (
-                set(x2) - set(this_module_known_refs),
-                (set(this_module_known_refs) - set(x2)),
-            )
-
-            # compute a tree from all the references we have to have a nice browsing
-            # interfaces.
-            tree: Dict[Any, Any] = {}
-            for f in this_module_known_refs:
-                sub = tree
-                parts = f.split(".")[len(ref.split(".")) :]
-                for part in parts:
-                    if part not in sub:
-                        sub[part] = {}
-                    sub = sub[part]
-
-                sub["__link__"] = f
-
+            # TODO
             error = env.get_template("404.tpl.j2")
-            return error.render(backrefs=list(set()), tree=tree, ref=ref, module=root)
+            return error.render(backrefs=list(set()), tree={}, ref=ref, module=root)
 
 
 async def img(package, version, subpath=None) -> Optional[bytes]:
@@ -621,13 +589,12 @@ def serve(*, sidebar: bool):
 
     app = QuartTrio(__name__)
 
-    store = Store(str(ingest_dir))
     gstore = GraphStore(ingest_dir)
     prefix = "/p/"
     html_renderer = HtmlRenderer(gstore, sidebar=sidebar, prefix=prefix)
 
     async def full(package, version, ref):
-        return await html_renderer._route(ref, store, version, gstore=gstore)
+        return await html_renderer._route(ref, version)
 
     async def full_gallery(module, version):
         return await html_renderer.gallery(module, version)
@@ -856,7 +823,6 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
 
     """
     assert isinstance(document, Key), type(document)
-    assert isinstance(store, GraphStore)
     qa = document.path
     bytes_, backward, forward = store.get_all(document)
     doc_blob: IngestedBlobs = encoder.decode(bytes_)
@@ -1001,7 +967,6 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     env.globals["unreachable"] = unreachable
     env.globals["url"] = lambda x: url(x, prefix)
     template = env.get_template("html.tpl.j2")
-    document: Store
 
     known_refs, ref_map = find_all_refs(gstore)
     # end
