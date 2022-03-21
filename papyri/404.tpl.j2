@@ -45,10 +45,10 @@
     
 {%- for k,v in entries.items() %}
     {% if len(v) == 1  and '__link__' in v %}
-        <a href='{{v['__link__']}}'>{{v['__link__']}}</a></br>
+        <a href='{{v['__link__']}}'>{{v['__link__']}}</a><br/>
     {% else %}
             {% if k == '__link__' %}
-                <a href='{{v}}'>{{v}}</a></br>
+                <a href='{{v}}'>{{v}}</a><br/>
 
             {% else %}
            <details>

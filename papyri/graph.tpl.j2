@@ -1,10 +1,9 @@
 {% macro d3script(graph) %}
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <script src="https://d3js.org/d3-selection-multi.v1.js"></script>
-        <style type="text/css">
-        .node {}
-
-        .link { stroke: #999; stroke-opacity: .6; stroke-width: 1px; }
+    <style type="text/css">
+        .node {};
+        .link { stroke: #999; stroke-opacity: .6; stroke-width: 1px; };
     </style>
 <script>
 
@@ -13,8 +12,6 @@ var canvas = document.querySelector("canvas"),
     width = canvas.width,
     height = canvas.height;
 var searchRadius = 40;
-
-
 
 var color = d3.scaleOrdinal()
     .range(d3.schemeCategory10);

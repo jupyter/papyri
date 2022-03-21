@@ -18,6 +18,7 @@ from quart import redirect
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
 from there import print
+import minify_html
 
 from . import config as default_config
 from .config import ingest_dir
@@ -34,6 +35,12 @@ logging.basicConfig(
 log = logging.getLogger("papyri")
 
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
+
+
+def minify(s):
+    return minify_html.minify(
+        s, minify_js=True, remove_processing_instructions=True, keep_closing_tags=True
+    )
 
 
 def url(info, prefix, suffix):
@@ -1073,7 +1080,7 @@ async def _write_api_file(
                 )
                 (
                     config.output_dir / module / version / "api" / f"{qa}.html"
-                ).write_text(data)
+                ).write_text(minify(data))
 
 
 async def copy_assets(config, gstore):
