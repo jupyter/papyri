@@ -195,11 +195,14 @@ def parse_script(
         implicit imports, for example that `np` is interpreted as numpy.
     prev : str
         previous lines that lead to this.
+    where : <Insert Type here>
+        <Multiline Description Here>
+    config : <Insert Type here>
+        <Multiline Description Here>
 
-    Return
-    ------
+    Returns
+    -------
     List of tuples with:
-
     index: int
         index in the tokenstream
     reference : str
@@ -635,9 +638,9 @@ def gen_main(
         don't write to disk
     debug : bool
         set log level to debug
-    fail_early: bool
+    fail_early : bool
         overwrite early_error option in config file
-    fail_unseen_error: bool
+    fail_unseen_error : bool
         raise an exception if the error is unseen
 
     Returns
@@ -1340,6 +1343,8 @@ class Gen:
             current configuratin
         aliases : sequence
             other aliases for cuttent object.
+        api_object : <Insert Type here>
+            <Multiline Description Here>
 
         Returns
         -------
@@ -1563,7 +1568,6 @@ class Gen:
 
     def _get_collector(self):
         """
-
         Construct a depth first search collector that will try to find all
         the objects it can.
 
@@ -1618,6 +1622,8 @@ class Gen:
         qa : str
             fully qualified name of the object we are extracting the
             documentation from .
+        target_item : <Insert Type here>
+            <Multiline Description Here>
         """
         item_docstring = target_item.__doc__
         builtin_function_or_method = type(sum)

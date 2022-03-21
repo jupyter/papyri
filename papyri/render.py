@@ -249,7 +249,6 @@ def compute_graph(
     """
     Compute local reference graph for a given item.
 
-
     gs: Graphstore
         the graphstore to get data out of.
     backrefs:
@@ -673,6 +672,16 @@ def render_one(
     parts : Dict[str, list[(str, str)]
         used for navigation and for parts of the breakcrumbs to have navigation to siblings.
         This is not directly related to current object.
+    pygment_css : <Insert Type here>
+        <Multiline Description Here>
+    parts_links : <Insert Type here>
+        <Multiline Description Here>
+    graph : <Insert Type here>
+        <Multiline Description Here>
+    sidebar : <Insert Type here>
+        <Multiline Description Here>
+    logo : <Insert Type here>
+        <Multiline Description Here>
 
     """
     # TODO : move this to ingest likely.
@@ -860,7 +869,7 @@ async def _self_render_as_index_page(
     html : bool
         whether we are building html docs.
     html_dir: path
-        where should the index be writte
+        where should the index be write
     tree:
     known_refs:
     ref_map:
@@ -874,9 +883,6 @@ async def _self_render_as_index_page(
     Returns
     -------
     None
-
-
-
     """
 
     if html_dir is not None:

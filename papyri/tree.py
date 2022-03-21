@@ -109,7 +109,9 @@ def resolve_(
         All the known objects we can refer to in current universe.
     local_refs : list of str
         All the current objects in current scope (same docstring).
-    rev_aliases:
+    ref : str
+        ???
+    rev_aliases
         Reverse alias map. As the import name of object may not be the
         fully qualified names, we may need a reverse alias map to resolve
         with respect to the import name.
@@ -324,7 +326,6 @@ class DirectiveVisiter(TreeReplacer):
             pass
         aliases:
             pass
-
 
         """
         super().__init__()

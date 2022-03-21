@@ -648,6 +648,10 @@ def main(path, check, *, dummy_progress):
         whether to use a dummy progress bar instead of the rich one.
         Usefull when dropping into PDB.
         To be implemented. See gen step.
+    check : <Insert Type here>
+        <Multiline Description Here>
+    path : <Insert Type here>
+        <Multiline Description Here>
     """
     builtins.print("Ingesting", path.name, "...")
     from time import perf_counter
