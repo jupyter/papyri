@@ -309,6 +309,7 @@ class ExternalLink(Node):
         self.value = value
         self.target = target
 
+
 class Link(Node):
     """
     Links are usually the end goal of a directive,

@@ -11,7 +11,7 @@
     </div>
     <div class='cards'>
         {% for module, version, logo in data %}
-            <a class="card" href="/p/{{module}}/{{version}}/api/{{module}}">
+            <a class="card" href="/p/{{module}}/{{version}}/api/{{module}}{{dothtml}}">
                 <div>
                 {% if logo %}
                     <span class="helper">

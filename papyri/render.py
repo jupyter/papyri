@@ -355,7 +355,7 @@ async def _route_data(gstore: GraphStore, ref, version, known_refs):
 
 
 class HtmlRenderer:
-    def __init__(self, store, *, sidebar, prefix):
+    def __init__(self, store, *, sidebar, prefix, trailing_html):
         self.progress = progress
         self.store = store
         self.env = Environment(
@@ -368,6 +368,7 @@ class HtmlRenderer:
         self.env.globals["url"] = lambda x: url(x, prefix)
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
+        self.env.globals["dothtml"] = ".html" if trailing_html else ""
 
         self.sidebar = sidebar
 
@@ -378,9 +379,12 @@ class HtmlRenderer:
             # print(encoder.decode(self.store.get(k)))
             meta = encoder.decode(self.store.get_meta(k))
             data.append((k.module, k.version, meta["logo"]))
-        print(data)
 
         return self.env.get_template("index.tpl.j2").render(pygment_css="", data=data)
+
+    async def _write_index(self, html_dir):
+        if html_dir:
+            (html_dir / "index.html").write_text(await self.index())
 
     async def _write_gallery(self, config):
         """ """
@@ -446,7 +450,6 @@ class HtmlRenderer:
                 link = f"{self.prefix}{module}/{v}/examples/{_path}"
                 name = _path
                 figmap[module].append((impath, link, name))
-
 
         class D:
             pass
@@ -594,7 +597,9 @@ def serve(*, sidebar: bool):
 
     gstore = GraphStore(ingest_dir)
     prefix = "/p/"
-    html_renderer = HtmlRenderer(gstore, sidebar=sidebar, prefix=prefix)
+    html_renderer = HtmlRenderer(
+        gstore, sidebar=sidebar, prefix=prefix, trailing_html=False
+    )
 
     async def full(package, version, ref):
         return await html_renderer._route(ref, version)
@@ -856,79 +861,6 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
         raise type(e)(f"Error in {qa}") from e
 
 
-
-
-async def _self_render_as_index_page(
-    html_dir: Optional[Path],
-    gstore,
-    tree,
-    known_refs,
-    ref_map,
-    config,
-    template,
-    css_data,
-) -> None:
-    """
-    Currently we do not have any logic for an index page (we should).
-    So we'll just render the documentation for the papyri module itself.
-
-    Parameters
-    ----------
-    html : bool
-        whether we are building html docs.
-    html_dir: path
-        where should the index be write
-    tree:
-    known_refs:
-    ref_map:
-    sidebar: bool
-        whether to render the sidebar.
-    template:
-        which template to use
-    css_data:
-
-
-    Returns
-    -------
-    None
-    """
-
-    if html_dir is not None:
-        assert isinstance(html_dir, Path)
-
-    if not config.html:
-        return
-
-    import papyri
-
-    key = Key("papyri", str(papyri.__version__), "module", "papyri")
-    meta = encoder.decode(gstore.get_meta(key))
-
-    doc_blob, qa, siblings, parts_links, backward, forward = await loc(
-        key,
-        store=gstore,
-        tree=tree,
-        known_refs=known_refs,
-        ref_map=ref_map,
-    )
-    backward = [RefInfo(*x) for x in backward]
-    data = render_one(
-        sidebar=config.html_sidebar,
-        template=template,
-        doc=doc_blob,
-        qa=qa,
-        ext=".html",
-        parts=siblings,
-        parts_links=parts_links,
-        backrefs=backward,
-        pygment_css=css_data,
-        logo=meta["logo"],
-    )
-    if html_dir:
-        with (html_dir / "index.html").open("w") as f:
-            f.write(data)
-
-
 @dataclass
 class StaticRenderingConfig:
     """Class for keeping track of an item in inventory."""
@@ -998,10 +930,14 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     random.shuffle(gfiles)
     # Gallery
 
-    html_renderer = HtmlRenderer(gstore, sidebar=config.html_sidebar, prefix=prefix)
+    html_renderer = HtmlRenderer(
+        gstore, sidebar=config.html_sidebar, prefix=prefix, trailing_html=True
+    )
     await html_renderer._write_gallery(config)
 
     await _write_example_files(gstore, config, prefix=prefix)
+    await html_renderer._write_index(html_dir_)
+    await copy_assets(config, gstore)
 
     await _write_api_file(
         gfiles,
@@ -1014,11 +950,6 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
         config,
         graph,
     )
-
-    await _self_render_as_index_page(
-        html_dir_, gstore, tree, known_refs, ref_map, config, template, css_data
-    )
-    await copy_assets(config, gstore)
 
 
 async def _write_example_files(gstore, config, prefix):
