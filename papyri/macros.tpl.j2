@@ -42,10 +42,10 @@
 {% macro block_paragraph(prg) -%}
     <p>
         {%- for obj in prg.inline -%}
-            {{- render_inner(obj.__class__.__name__, obj) -}} 
+            {{- render_inner(obj.__class__.__name__, obj) -}}
         {%- endfor -%}
         {%- for obj in prg.inner -%}
-            {{- render_II(obj) -}} 
+            {{- render_II(obj) -}}
         {%- endfor -%}
     </p>
 {% endmacro %}
@@ -81,7 +81,8 @@
 
 {% macro block_directive(dve) -%}
 <div class='block_directive'>
-    <div class='head'>.. {{dve.directive_name}}:: {{dve.args0}}</div>
+    <div class='head'>.. {{dve.directive_name}}:: {{dve.args0}}
+    </div>
     {% if dve.inner %}
         {{block_paragraph(dve.inner)}}
     {% endif %}
@@ -106,14 +107,13 @@
        {%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim','Words') -%}
            {# {{unreachable(obj)}} #}
            {{obj.value}}  {# TODO : likely smth wrong with field list #}
-        
        {%- elif type == 'Directive' -%}
            {{unreachable()}}
-       {% elif type == 'Math' %}
+       {%- elif type == 'Math' -%}
            {{unreachable()}}
-       {% elif type == 'BlockDirective' %}
+       {%- elif type == 'BlockDirective' -%}
            {{block_directive(obj)}}
-        {% elif type == 'Admonition' %}
+       {% elif type == 'Admonition' %}
             {{block_admonition(obj)}}
        {% elif type == 'Verbatim' %}
            {{unreachable()}}
@@ -135,7 +135,7 @@
                        {{render_II(it)}}
                   {% endfor %}
                </dd>
-               {%endfor %}  
+               {%endfor %}
            </dl>
        {% elif type == 'DefListItem' %}
            <pre>DEFLIST ITEM
@@ -173,7 +173,7 @@
                 {% endfor %}
                </dd>
                {% endfor %}
-               </dl>
+           </dl>
 
         {% elif type == 'FieldListItem' %}
            # TODO : finish FieldListItem rendering
@@ -193,7 +193,6 @@
        {% else %}
            <code>Some A {{type}} Not implemented yet</code>
            {{unreachable(type, obj)}}
-           </pre>
        {%- endif -%}
     {%- endif %}
 {%- endmacro %}
@@ -220,7 +219,7 @@
 <span class='nsl'>{{'>>> ' -}}</span>{{ '' -}}
 {%- for token in entries -%}
         {%- if token.link.__class__.__name__ == 'Link' -%}
-            <a class="foo {{token.type}}", href="{{url(token.link.reference)}}{{ext}}">{{token.link.value}}</a>
+            <a class="foo {{token.type}}" href="{{url(token.link.reference)}}{{ext}}">{{token.link.value}}</a>
         {%- else -%}
             {%- if token.link == '\n' -%}
                 <br><span class='nsl'>...&nbsp;</span>

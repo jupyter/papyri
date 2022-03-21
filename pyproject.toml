@@ -32,6 +32,7 @@ dependencies = [
     "tree_sitter", 
     "matplotlib",
     "cbor2",
+    "minify_html",
 ]
 
 [project.scripts]

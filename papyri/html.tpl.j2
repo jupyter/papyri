@@ -56,21 +56,20 @@
     {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] and doc.content[section]  %}
        <dl>
            {% for p in doc.content[section] %}
-            {% if p[0] %}
-                <dt><a id="{{p[0]}}">{{p[0]}}</a> : {{p[1]}}</dt>
-            {% else %}
-                <dt>{{p[1]}}</dt>
-            {% endif %}
-        </dl>
+               {% if p[0] %}
+                   <dt><a id="{{p[0]}}">{{p[0]}}</a> : {{p[1]}}</dt>
+               {% else %}
+                   <dt>{{p[1]}}</dt>
+               {% endif %}
 
-        <dd>
-            {% for item in p[2] %}
-                {{render_II(item)}}
-            {% endfor %}
-        </dd>
-       {% endfor %}
+               <dd>
+                    {% for item in p[2] %}
+                        {{render_II(item)}}
+                    {% endfor %}
+               </dd>
+           {% endfor %}
+       </dl>
 
-   </pre>
    {% else %}
        {% if doc.content[section] == True %}
         <pre>
@@ -125,22 +124,22 @@
     {% endif%}
     {% if backrefs[1] is not none %}
         {% for k,v in backrefs[1].items() %}
-         <h4>{{k}}</h4>
-         {% if len(v) < 10 %}
-         <dl>
-         {% for r in v %}
-             <dd>{{ render_inner('RefInfo', r) }}</dd>
-        {% endfor %}
-         </dl>
-         {% else %}
-        <details>
-        <summary>{{v | length}} Elements</summary>
-         <dl>
-        {% for r in v %}
-            <dd>{{ render_inner('RefInfo', r) }}</dd>
-        {% endfor %}
-         </dl>
-        </details>
+        <h4>{{k}}</h4>
+        {% if len(v) < 10 %}
+            <dl>
+            {% for r in v %}
+                <dd>{{ render_inner('RefInfo', r) }}</dd>
+            {% endfor %}
+            </dl>
+        {% else %}
+            <details>
+                <summary>{{v | length}} Elements</summary>
+                <dl>
+                {% for r in v %}
+                    <dd>{{ render_inner('RefInfo', r) }}</dd>
+                {% endfor %}
+                </dl>
+            </details>
         {% endif %}
     {% endfor %}
     {% endif%}
@@ -170,9 +169,8 @@ they belong to, and scaled with the number of references pointing them</p>
     File: {{doc.item_file}}#{{doc.item_line}}
 {%endif%}<br/>
 
-type: {{doc.item_type}} </br>
-Commit: </br>
-</div>
+type: {{doc.item_type}} <br/>
+Commit: <br/>
 
 {% if graph is defined %}
     {{d3script(graph)}}

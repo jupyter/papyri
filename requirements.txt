@@ -1,4 +1,5 @@
 numpydoc
+minify_html
 matplotlib
 tree_sitter
 pygments
