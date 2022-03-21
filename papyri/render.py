@@ -25,7 +25,7 @@ from .crosslink import IngestedBlobs, RefInfo, find_all_refs
 from .graphstore import GraphStore, Key
 from .stores import Store
 from .take2 import RefInfo, encoder, Section
-from .utils import progress
+from .utils import progress, dummy_progress
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -83,8 +83,9 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-async def examples(module, store, version, subpath, ext="", sidebar=None, gstore=None):
+async def examples(module, version, subpath, ext="", sidebar=None, gstore=None):
     assert sidebar is not None
+    assert gstore is not None
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(__file__)),
         autoescape=select_autoescape(["html", "tpl.j2"]),
@@ -94,17 +95,18 @@ async def examples(module, store, version, subpath, ext="", sidebar=None, gstore
     env.globals["url"] = lambda x: url(x, "/p/")
     env.globals["unreachable"] = unreachable
 
-    meta = encoder.decode(gstore.get_mete(module, version))
+    meta = encoder.decode(gstore.get_meta(Key(module, version, None, None)))
 
-    pap_files = store.glob("*/*/papyri.json")
+    pap_keys = gstore.glob((None, None, "meta", "papyri.json"))
     parts = {module: []}
-    for pp in pap_files:
-        mod, ver = pp.path.parts[-3:-1]
-        parts[module].append((RefInfo(mod, ver, "api", mod), mod) + ext)
+    for pk in pap_keys:
+        mod, ver, _, _ = pk
+        parts[module].append((RefInfo(mod, ver, "api", mod), mod))
 
-    efile = store / module / version / "examples" / subpath
+    bytes_ = gstore.get(Key(module, version, "examples", subpath))
 
-    ex = Section.from_json(json.loads(await efile.read_text()))
+    ex = encoder.decode(bytes_)
+    assert isinstance(ex, Section)
 
     class Doc:
         pass
@@ -343,7 +345,8 @@ def compute_graph(
     return data
 
 
-async def _route_data(gstore, ref, version, known_refs):
+async def _route_data(gstore: GraphStore, ref, version, known_refs):
+    assert isinstance(gstore, GraphStore)
     print("!!", ref)
     root = ref.split("/")[0].split(".")[0]
     key = Key(root, version, "module", ref)
@@ -354,9 +357,9 @@ async def _route_data(gstore, ref, version, known_refs):
 
 
 class HtmlRenderer:
-    def __init__(self, store, *, sidebar, old_store, prefix):
+    def __init__(self, store, *, sidebar, prefix):
+        self.progress = progress
         self.store = store
-        self.old_store = old_store
         self.env = Environment(
             loader=FileSystemLoader(os.path.dirname(__file__)),
             autoescape=select_autoescape(["html", "tpl.j2"]),
@@ -372,7 +375,7 @@ class HtmlRenderer:
     async def _write_gallery(self, config):
         """ """
         mv2 = self.store.glob((None, None))
-        for _, (module, version) in progress(
+        for _, (module, version) in self.progress(
             set(mv2), description="Rendering galleries..."
         ):
             # version, module = item.path.name, item.path.parent.name
@@ -394,6 +397,7 @@ class HtmlRenderer:
         figmap = defaultdict(lambda: [])
         assert isinstance(self.store, GraphStore)
         meta = encoder.decode(self.store.get_meta(Key(module, version, None, None)))
+        logo = meta["logo"]
         res = self.store.glob((module, version, "assets", None))
         backrefs = set()
         for key in res:
@@ -418,19 +422,19 @@ class HtmlRenderer:
                 # figmap.append((impath, link, name)
                 figmap[module].append((impath, link, _path))
 
-        for target_path in self.old_store.glob(f"{module}/{version}/examples/*"):
-            section = encoder.decode(await target_path.read_bytes())
+        glist = self.store.glob((module, version, "examples", None))
+        for target_key in glist:
+            section = encoder.decode(self.store.get(target_key))
 
             for k in [
                 u.value for u in section.children if u.__class__.__name__ == "Fig"
             ]:
-                module, v, _, _path = target_path.path.parts[-4:]
+                module, v, _, _path = target_key
 
                 # module, filename, link
                 impath = f"{self.prefix}{module}/{v}/img/{k}"
-                link = f"{self.prefix}{module}/{v}/examples/{target_path.name}"
-                name = target_path.name
-                # figmap.append((impath, link, name)
+                link = f"{self.prefix}{module}/{v}/examples/{_path}"
+                name = _path
                 figmap[module].append((impath, link, name))
 
         env = Environment(
@@ -439,18 +443,17 @@ class HtmlRenderer:
             undefined=StrictUndefined,
         )
         env.globals["len"] = len
-        env.globals["url"] = url
+        env.globals["url"] = lambda x: url(x, "/p/")
         env.globals["sidebar"] = self.sidebar
 
         class D:
             pass
 
         doc = D()
-        logo = meta["logo"]
-        pap_files = self.old_store.glob("*/*/papyri.json")
+        pap_keys = self.store.glob((None, None, "meta", "papyri.json"))
         parts = {module: []}
-        for pp in pap_files:
-            mod, ver = pp.path.parts[-3:-1]
+        for pk in pap_keys:
+            mod, ver, kind, identifier = pk
             parts[module].append((RefInfo(mod, ver, "api", mod), mod))
 
         return env.get_template("gallery.tpl.j2").render(
@@ -496,7 +499,7 @@ class HtmlRenderer:
     async def _route(
         self,
         ref,
-        store,
+        store: Store,
         version=None,
         gstore=None,
     ):
@@ -504,6 +507,7 @@ class HtmlRenderer:
         assert version is not None
         assert ref != ""
         assert gstore is not None
+        assert gstore == self.store
 
         env = self.env
 
@@ -511,7 +515,7 @@ class HtmlRenderer:
         root = ref.split(".")[0]
         meta = encoder.decode(gstore.get_meta(Key(root, version, None, None)))
 
-        known_refs, ref_map = find_all_refs(store)
+        known_refs, ref_map = find_all_refs(gstore)
 
         # technically incorrect we don't load backrefs
         x_, y_, doc_blob, backward, forward = await _route_data(
@@ -521,24 +525,18 @@ class HtmlRenderer:
         assert y_ == ref_map
         assert version is not None
 
-        siblings = compute_siblings_II(ref, known_refs)
+        siblings = compute_siblings_II(ref, known_refs)  # type: ignore
 
         # End computing siblings.
-        if version is not None:
-            file_ = store / root / version / "module" / f"{ref}"
-        else:
-            assert False
-            # files = list((store / root).glob(f"*/module/{ge(ref)}"))
-        if await file_.exists():
+        if True:  # handle if thing don't exists.
             # The reference we are trying to view exists;
             # we will now just render it.
-            # bytes_ = await file_.read_text()
             assert root is not None
             # assert version is not None
 
             assert doc_blob.refs is None
             data = compute_graph(
-                self.store, backward, forward, (root, version, "module", ref)
+                self.store, backward, forward, Key(root, version, "module", ref)
             )
             json_str = json.dumps(data)
             parts_links = {}
@@ -580,7 +578,7 @@ class HtmlRenderer:
 
             # compute a tree from all the references we have to have a nice browsing
             # interfaces.
-            tree = {}
+            tree: Dict[Any, Any] = {}
             for f in this_module_known_refs:
                 sub = tree
                 parts = f.split(".")[len(ref.split(".")) :]
@@ -626,9 +624,7 @@ def serve(*, sidebar: bool):
     store = Store(str(ingest_dir))
     gstore = GraphStore(ingest_dir)
     prefix = "/p/"
-    html_renderer = HtmlRenderer(
-        gstore, sidebar=sidebar, old_store=store, prefix=prefix
-    )
+    html_renderer = HtmlRenderer(gstore, sidebar=sidebar, prefix=prefix)
 
     async def full(package, version, ref):
         return await html_renderer._route(ref, store, version, gstore=gstore)
@@ -651,10 +647,10 @@ def serve(*, sidebar: bool):
     async def ex(module, version, subpath):
         return await examples(
             module=module,
-            store=store,
             version=version,
             subpath=subpath,
             sidebar=sidebar,
+            gstore=gstore,
         )
 
     app.route("/logo.png")(plogo)
@@ -782,14 +778,10 @@ def _ascii_env():
     return env, template
 
 
-async def _ascii_render(key, store, known_refs=None, template=None):
-    if store is None:
-        store = GraphStore(ingest_dir)
+async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=None):
+    assert store is not None
     assert isinstance(store, GraphStore)
     ref = key.path
-
-    # keys = store.glob((root, None))
-    # version = keys[0][-1]
 
     env, template = _ascii_env()
     bytes_: bytes = store.get(key)
@@ -997,7 +989,6 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     prefix = "/p/"
 
     gstore = GraphStore(ingest_dir, {})
-    store = Store(ingest_dir)
     gfiles = list(gstore.glob((None, None, "module", None)))
 
     css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
@@ -1012,10 +1003,7 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     template = env.get_template("html.tpl.j2")
     document: Store
 
-    x_, y_ = find_all_refs(store)
     known_refs, ref_map = find_all_refs(gstore)
-    assert x_ == known_refs
-    assert y_ == ref_map
     # end
 
     family = frozenset(_.path for _ in known_refs)
@@ -1031,9 +1019,7 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     random.shuffle(gfiles)
     # Gallery
 
-    html_renderer = HtmlRenderer(
-        gstore, sidebar=config.html_sidebar, old_store=store, prefix=prefix
-    )
+    html_renderer = HtmlRenderer(gstore, sidebar=config.html_sidebar, prefix=prefix)
     await html_renderer._write_gallery(config)
 
     await _write_example_files(gstore, config, prefix=prefix)
@@ -1186,7 +1172,7 @@ async def copy_assets(config, gstore):
         return
 
     assets_2 = gstore.glob((None, None, "assets", None))
-    for _, asset in progress(assets_2, description="Copying assets"):
+    for _, asset in dummy_progress(assets_2, description="Copying assets"):
         b = config.output_dir / asset.module / asset.version / "img"
         b.mkdir(parents=True, exist_ok=True)
         data = gstore.get(asset)
