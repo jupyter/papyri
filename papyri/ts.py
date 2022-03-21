@@ -235,7 +235,6 @@ class TSVisitor:
         and according to https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#hyperlink-references,
         there might be one or two trailing underscore, which we should pay attention to.
 
-
         """
         full_text = self.bytes[node.start_byte : node.end_byte].decode()
         if "`" not in full_text:

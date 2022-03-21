@@ -27,6 +27,14 @@ docs = 'https://numpy.org/doc/stable/'
 logo = './numpy_logo.png'
 early_error = false
 
+[meta]
+github_slug = 'numpy/numpy'
+tag = 'v1.22.3'
+pypi = 'numpy'
+homepage = 'https://numpy.org/'
+docspage = 'https://numpy.org/doc/1.22//'
+
+
 [numpy.expected_errors]
 ValueError = [
     "numpy.core.shape_base._concatenate_shapes",

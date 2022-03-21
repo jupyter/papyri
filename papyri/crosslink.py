@@ -41,7 +41,7 @@ logging.basicConfig(
 log = logging.getLogger("papyri")
 
 
-def g_find_all_refs(
+def find_all_refs(
     graph_store: GraphStore,
 ) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
     assert isinstance(graph_store, GraphStore)
@@ -55,30 +55,6 @@ def g_find_all_refs(
     ref_map = {}
     for item in o_family:
         r = RefInfo(item.module, item.version, "module", item.path)
-        known_refs.append(r)
-        ref_map[r.path] = r
-    return frozenset(known_refs), ref_map
-
-
-def find_all_refs(store) -> Tuple[FrozenSet[RefInfo], Dict[str, RefInfo]]:
-    if isinstance(store, GraphStore):
-        return g_find_all_refs(store)
-
-    # Used in render. need to split somewhere else.
-
-    o_family = sorted(
-        list(r for r in store.glob("*/*/module/*") if not r.path.name.endswith(".br"))
-    )
-
-    # TODO
-    # here we can't compute just the dictionary and use frozenset(....values())
-    # as we may have multiple version of libraries; this is something that will
-    # need to be fixed in the long run
-    known_refs = []
-    ref_map = {}
-    for item in o_family:
-        module, v = item.path.parts[-4:-2]
-        r = RefInfo(module, v, "module", item.name)
         known_refs.append(r)
         ref_map[r.path] = r
     return frozenset(known_refs), ref_map
@@ -466,14 +442,12 @@ class Ingester:
         data = json.loads(meta_path.read_text())
         version = data["version"]
         root = data["module"]
-        logo = data.get("logo", None)
         # long : short
         aliases: Dict[str, str] = data.get("aliases", {})
         rev_aliases = {v: k for k, v in aliases.items()}
+        meta = {k: v for k, v in data.items() if k != "aliases"}
 
-        gstore.put_meta(
-            root, version, encoder.encode({"logo": logo, "version": version})
-        )
+        gstore.put_meta(root, version, encoder.encode(meta))
 
         self._ingest_examples(path, gstore, known_refs, aliases, version, root)
         self._ingest_assets(path, root, version, aliases, gstore)
@@ -672,6 +646,10 @@ def main(path, check, *, dummy_progress):
         whether to use a dummy progress bar instead of the rich one.
         Usefull when dropping into PDB.
         To be implemented. See gen step.
+    check : <Insert Type here>
+        <Multiline Description Here>
+    path : <Insert Type here>
+        <Multiline Description Here>
     """
     builtins.print("Ingesting", path.name, "...")
     from time import perf_counter

@@ -29,7 +29,7 @@ from hashlib import sha256
 from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple, FrozenSet
 
 import jedi
 import toml
@@ -195,11 +195,14 @@ def parse_script(
         implicit imports, for example that `np` is interpreted as numpy.
     prev : str
         previous lines that lead to this.
+    where : <Insert Type here>
+        <Multiline Description Here>
+    config : <Insert Type here>
+        <Multiline Description Here>
 
-    Return
-    ------
+    Returns
+    -------
     List of tuples with:
-
     index: int
         index in the tokenstream
     reference : str
@@ -576,16 +579,19 @@ class Config:
         return dataclasses.replace(self, **kwargs)
 
 
-def load_configuration(path: str) -> Tuple[str, MutableMapping[str, Any]]:
+def load_configuration(
+    path: str,
+) -> Tuple[str, MutableMapping[str, Any], Dict[str, Any]]:
     """
     Given a path, load a configuration from a File.
     """
     conffile = Path(path).expanduser()
     if conffile.exists():
         conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
-        assert len(conf.keys()) == 1, conf.keys()
+        ks = set(conf.keys()) - {"meta"}
+        assert len(ks) == 1, conf.keys()
         root = next(iter(conf.keys()))
-        return root, conf[root]
+        return root, conf[root], conf.get("meta", {})
     else:
         sys.exit(f"{conffile!r} does not exists.")
 
@@ -635,9 +641,9 @@ def gen_main(
         don't write to disk
     debug : bool
         set log level to debug
-    fail_early: bool
+    fail_early : bool
         overwrite early_error option in config file
-    fail_unseen_error: bool
+    fail_unseen_error : bool
         raise an exception if the error is unseen
 
     Returns
@@ -645,7 +651,7 @@ def gen_main(
     None
 
     """
-    target_module_name, conf = load_configuration(target_file)
+    target_module_name, conf, meta = load_configuration(target_file)
     conf["early_error"] = fail_early
     conf["fail_unseen_error"] = fail_unseen_error
     config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
@@ -671,6 +677,7 @@ def gen_main(
     g.collect_package_metadata(
         target_module_name,
         relative_dir=Path(target_file).parent,
+        meta=meta,
     )
     if examples:
         g.collect_examples_out()
@@ -1261,8 +1268,12 @@ class Gen:
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
         item_file = find_file(target_item)
+        r = qa.split(".")[0]
         if item_file is not None:
-            for s in SITE_PACKAGE + [os.path.expanduser("~")]:
+            for s in SITE_PACKAGE + [
+                os.path.expanduser(f"~/dev/{r}/"),
+                os.path.expanduser("~"),
+            ]:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
 
@@ -1340,6 +1351,8 @@ class Gen:
             current configuratin
         aliases : sequence
             other aliases for cuttent object.
+        api_object : <Insert Type here>
+            <Multiline Description Here>
 
         Returns
         -------
@@ -1563,7 +1576,6 @@ class Gen:
 
     def _get_collector(self):
         """
-
         Construct a depth first search collector that will try to find all
         the objects it can.
 
@@ -1618,6 +1630,8 @@ class Gen:
         qa : str
             fully qualified name of the object we are extracting the
             documentation from .
+        target_item : <Insert Type here>
+            <Multiline Description Here>
         """
         item_docstring = target_item.__doc__
         builtin_function_or_method = type(sum)
@@ -1657,7 +1671,7 @@ class Gen:
         assert api_object is not None
         return item_docstring, sections, api_object
 
-    def collect_package_metadata(self, root, relative_dir):
+    def collect_package_metadata(self, root, relative_dir, meta):
         """
         Try to gather generic metadata about the current package we are going to
         build the documentation for.
@@ -1670,6 +1684,7 @@ class Gen:
 
         module = __import__(root)
         self.version = module.__version__
+        self._meta = meta
 
     def collect_api_docs(
         self,
@@ -1773,7 +1788,6 @@ class Gen:
                     qa.startswith(pat) for pat in self.config.execute_exclude_patterns
                 ):
                     ex = False
-                dv = DirectiveVisiter(qa, known_refs, local_refs=set(), aliases={})
 
                 # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
                 assert api_object is not None
@@ -1788,8 +1802,40 @@ class Gen:
                     )
                 if c.errored:
                     continue
+                _local_refs: List[List[str]] = []
+
+                sections_ = [
+                    "Parameters",
+                    "Returns",
+                    "Raises",
+                    "Yields",
+                    "Attributes",
+                    "Other Parameters",
+                    "Warns",
+                    ##"Warnings",
+                    "Methods",
+                    # "Summary",
+                    "Receives",
+                ]
+                for s in sections_:
+
+                    _local_refs = _local_refs + [
+                        [u.strip() for u in x[0].split(",")]
+                        for x in doc_blob.content.get(s, [])
+                        if isinstance(x, Param)
+                    ]
+
+                def flat(l) -> List[str]:
+                    return [y for x in l for y in x]
+
+                lr: FrozenSet[str] = frozenset(flat(_local_refs))
+                dv = DirectiveVisiter(qa, known_refs, local_refs=lr, aliases={})
                 doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
+
+                for section in ["Extended Summary", "Summary", "Notes"] + sections_:
+                    if section in doc_blob.content:
+                        doc_blob.content[section] = dv.visit(doc_blob.content[section])
 
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
                 assert isinstance(doc_blob.references, (list, str, type(None))), (
@@ -1835,6 +1881,7 @@ class Gen:
                 "aliases": found,
                 "module": self.root,
             }
+            self.metadata.update(self._meta)
 
 
 def is_private(path):

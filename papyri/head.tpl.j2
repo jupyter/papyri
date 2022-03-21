@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
+    <link rel="stylesheet"
+          href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
+          integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf"
+          crossorigin="anonymous">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
+    <script type="text/x-mathjax-config">
+        // this should process only math inside  span with tex2jax_process class
+    MathJax.Hub.Config({
+        extensions: ["tex2jax.js"],
+        jax: ["input/TeX", "output/HTML-CSS"],
+        tex2jax: {
+        inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+        displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+        processEscapes: true
+        },
+        "HTML-CSS": { fonts: ["TeX"] }
+    });
+    </script>
+    <script type="text/javascript" async
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js">
+    </script>
+<style>
+    body{
+        font-family: 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+        color: #606c76;
+        font-weight: 350;
+        line-height: 1.6;
+        max-width: 100%;
+        margin-left:0;
+
+    }
+    
+
+.external:after {
+    font-weight: 900;
+    content: "\2009\f35d";
+    font-family: "Font Awesome 5 Free";
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    line-height: 1;
+    font-size: small;
+    
+}
+    .search {
+
+        text-align: center
+    }
+
+    .search input {
+        width: 80%;<D-r>
+        border-radius:0;
+
+
+    }
+    .cards {
+        display: grid;
+        /*grid-template-columns: repeat(3, 1fr);*/
+        grid-template-columns: repeat(auto-fill, 270px);
+        grid-auto-rows: auto;
+        justify-content: center;
+        align-content: center;
+        grid-gap: 1rem;
+    }
+
+    .helper {
+        display: inline-block;
+        height: 100%;
+        vertical-align: middle;
+    }
+    
+    .card {
+        /* Add shadows to create the "card" effect */
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+        width: 250px;
+        height: 300px;
+        padding: 10px;
+        text-align: center;
+    }
+
+    .card div:nth-child(1){
+        height: 200px;
+    }
+
+    /* On mouse-over, add a deeper shadow */
+    .card:hover {
+        box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    }
+    .card > div {
+        padding: 2px 16px;
+    }
+
+    .cards h4, .cards a {
+        text-decoration: none;
+        color: var(--nc-tx-1);
+    }
+
+    .card img {
+        display: inline-block;
+        max-width: 90%;
+        max-height: 90%;
+        vertical-align: middle;
+    }
+
+
+
+    .graph{border: 1px gray solid;}
+    .foo:hover{text-decoration:underline}
+    .foo{font-weight:bold; color:#4e4e4e}
+    .exists{font-weight:bold; color:#4e4e4e;text-decoration:none;}
+    .local{font-weight:bold; color:#1e6f04;text-decoration:none;}
+    .exists:hover{text-decoration:underline;color:black}
+    .missing,.missing:hover{color:darkred;text-decoration:none;font-weight:normal}
+    .signature {font-size:100%; margin-bottom: 2rem; display: block; border:none; background-color: #FFFFFF;
+        font-weight:600;}
+    h1, h2, h3 {color: #4e4e4e; font-weight:400;
+        margin-bottom: 1rem;border-bottom: 1px solid var(--nc-bg-3);
+    }
+    pre{border-radius:0;
+        padding:0.6rem;
+    border-left: 3px solid #AAA}
+    dt {font-weight: 400;}
+
+    header{
+        box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+
+        padding-top:0rem;
+        padding-bottom:0rem;
+        z-index: 2;
+        padding-left: 0;
+        position: fixed;
+        top: 30px;
+        left:0; 
+        width: 100%;
+        height: 42px;
+        backdrop-filter: blur(5px);
+        background-color: rgba(255, 255, 255, .15);
+    }
+      dd::before {
+        content: '';
+      }
+      header > brand, header>:first-child {
+          border-right: 1px solid #ccc;
+          border-left: 1px solid #ccc;
+          padding: 16px;
+          padding-top: 0.5rem;
+          padding-bottom: 0.5rem;
+          display: inline-block; 
+          width: 167px;
+          {% if not sidebar %}
+              display: none;
+        {% endif %}
+
+      }
+      brand > a {color:#606c76}
+      brand > i {
+          padding-right: 0.5rem;
+
+        }
+          nav{display:inline-block;
+              padding: 10px;
+              padding-left: 1rem;
+
+          }
+
+          dd {
+              margin-left: 1rem;
+              border-left:  solid #ddd;
+              padding-left: 1rem;
+          }
+          summary > h2 { display: inline }
+
+          .sidenav {
+                height: 100%; /* Full-height: remove this if you want "auto" height */
+                width: 200px; /* Set the width of the sidebar */
+                position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+                z-index: 1; /* Stay on top */
+                top: 0; /* Stay at the top */
+                left: 0;
+                background-color: var(--nc-bg-1);; /* Black */
+                border-right: thin solid #ccc;
+                overflow-x: hidden; /* Disable horizontal scroll */
+                padding-top: 3rem;
+ 
+                box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+                {% if not sidebar %}
+                    display: none;
+                {% endif%}
+          }
+
+          .sidenav a {
+            padding: 6px 8px 6px 16px;
+            text-decoration: none;
+            color: #818181;
+            display: block;
+          }
+          .sidenav a:hover{
+            text-decoration: underline;
+          }
+          .sidenav img {
+              width: 160px;
+              padding-left:20px;
+              padding-right:20px;
+              border-bottom: solid thin #DDD; 
+              padding-bottom: .5rem;
+              max-width: 100%;
+          }
+          .sidenav i {
+              font-size: 100;
+              padding-left: 3.5rem;
+              padding-right: 3.5rem;
+              padding-bottom: .5rem;
+              border-bottom: solid thin #DDD; 
+
+          }
+          .container {
+              padding-left: 210px;
+              {% if not sidebar %}
+                  padding-left: 10px;
+            {% endif %}
+              padding-top: 30px;
+
+          }
+
+          ::selection {
+	/* Set background color for selected text */
+                background: #59b4fd;
+                color: var(--nc-ac-tx);
+          }
+
+          img {max-width: 40%;}
+
+          pre.highlight.execed, .admonition {
+            border-left: 3px solid #0070f3;
+          }
+          .admonition {
+            padding-left: 1em;
+          }
+          .admonition > div {
+            background-color: rgba(0, 123, 255, 0.1);
+            position: relative;
+            margin: 0 -1rem;
+            padding: 0.4rem 0.1rem 0.4rem 1.5rem;
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+          .note {color: #7d77d2}
+          .warning {color: #af7b1a}
+          .error {color: #f44336}
+          pre.highlight.compiled {
+            border-left: 3px solid #7d77d2;
+          }
+          pre.highlight.syntax_error, pre.highlight.exception_in_exec {
+            border-left: 3px solid #f44336;
+          }
+
+        /* Dropdown Button */
+/* The container <div> - needed to position the dropdown content */
+.dropdown {
+  position: relative;
+  display: inline-block;
+  margin-left: -4px;
+}
+
+nav  a {
+    color: #606c76;
+    text-decoration: none;
+
+}
+
+/* Dropdown Content (Hidden by Default) */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f1f1f1;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+/* Links inside the dropdown */
+.dropdown-content a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+/* Change color of dropdown links on hover */
+.dropdown-content a:hover {background-color: #ddd;}
+
+/* Show the dropdown menu on hover */
+.dropdown:hover .dropdown-content {display: block;
+    max-height: 80vh;
+    overflow: scroll;}
+
+/* Change the background color of the dropdown button when the dropdown content is shown */
+.dropdown:hover .dropbtn {}
+
+
+{{pygment_css}}
+
+.nsl {
+-webkit-touch-callout: none;
+-webkit-user-select: none;
+-khtml-user-select: none;
+-moz-user-select: none;
+-ms-user-select: none;
+user-select: none;
+}
+
+
+.block_directive{
+
+    border-left: thin solid var(--nc-lk-1);
+    padding-bottom: 8px;
+    padding-left: 12px;
+}
+
+.block_directive.head{
+
+    border: thin solid var(--nc-lk-1);
+}
+
+
+.block_directive > p{
+    margin-left: 2em;
+    margin-top: 1em;
+}
+.head {
+    font-family: monospace;
+    color: var(--nc-lk-1);
+}
+</style>
+</head>

@@ -9,6 +9,8 @@
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
         <code>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
+    {%- elif type_ == 'ExternalLink' -%}
+    <a link href="{{obj.target}}" class='external'>{{obj.value}}</a>
     {%- elif type_ == 'Link' -%}
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
@@ -128,12 +130,11 @@
           <!-- deflist -->
            <dl>
                {% for item in obj.children %}
-               <dt>{{render_II(item.dt)}}<dt>
+               <dt>{{render_II(item.dt)}}</dt>
                <dd>{% for it in item.dd %}
-
                        {{render_II(it)}}
                   {% endfor %}
-               <dd>
+               </dd>
                {%endfor %}  
            </dl>
        {% elif type == 'DefListItem' %}

@@ -23,7 +23,6 @@ from . import config as default_config
 from .config import ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs
 from .graphstore import GraphStore, Key
-from .stores import Store
 from .take2 import RefInfo, encoder, Section
 from .utils import progress, dummy_progress
 
@@ -37,18 +36,18 @@ log = logging.getLogger("papyri")
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
-def url(info, prefix):
+def url(info, prefix, suffix):
     assert isinstance(info, RefInfo), info
     assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
     # assume same package/version for now.
     assert info.module is not None
     if info.module is None:
         assert info.version is None
-        return info.path
+        return info.path + suffix
     if info.kind == "examples":
         return f"{prefix}{info.module}/{info.version}/examples/{info.path}"
     else:
-        return f"{prefix}{info.module}/{info.version}/api/{info.path}"
+        return f"{prefix}{info.module}/{info.version}/api/{info.path}{suffix}"
 
 
 def unreachable(*obj):
@@ -92,7 +91,7 @@ async def examples(module, version, subpath, ext="", sidebar=None, gstore=None):
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["url"] = lambda x: url(x, "/p/")
+    env.globals["url"] = lambda x: url(x, "/p/", "")
     env.globals["unreachable"] = unreachable
 
     meta = encoder.decode(gstore.get_meta(Key(module, version, None, None)))
@@ -250,7 +249,6 @@ def compute_graph(
     """
     Compute local reference graph for a given item.
 
-
     gs: Graphstore
         the graphstore to get data out of.
     backrefs:
@@ -331,7 +329,7 @@ def compute_graph(
         else:
             # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
             latest_version = list(sorted(candidates))[-1]
-            uu = url(RefInfo(*latest_version), "/p/")
+            uu = url(RefInfo(*latest_version), "/p/", "")
 
         data["nodes"].append(
             {
@@ -357,7 +355,7 @@ async def _route_data(gstore: GraphStore, ref, version, known_refs):
 
 
 class HtmlRenderer:
-    def __init__(self, store, *, sidebar, prefix):
+    def __init__(self, store, *, sidebar, prefix, trailing_html):
         self.progress = progress
         self.store = store
         self.env = Environment(
@@ -366,11 +364,28 @@ class HtmlRenderer:
             undefined=StrictUndefined,
         )
         self.prefix = prefix
+        suf = ".html" if trailing_html else ""
         self.env.globals["len"] = len
-        self.env.globals["url"] = lambda x: url(x, prefix)
+        self.env.globals["url"] = lambda x: url(x, prefix, suf)
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
+        self.env.globals["dothtml"] = suf
+
         self.sidebar = sidebar
+
+    async def index(self):
+        keys = self.store.glob((None, None, "meta", "papyri.json"))
+        data = []
+        for k in keys:
+            # print(encoder.decode(self.store.get(k)))
+            meta = encoder.decode(self.store.get_meta(k))
+            data.append((k.module, k.version, meta["logo"]))
+
+        return self.env.get_template("index.tpl.j2").render(pygment_css="", data=data)
+
+    async def _write_index(self, html_dir):
+        if html_dir:
+            (html_dir / "index.html").write_text(await self.index())
 
     async def _write_gallery(self, config):
         """ """
@@ -437,15 +452,6 @@ class HtmlRenderer:
                 name = _path
                 figmap[module].append((impath, link, name))
 
-        env = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__)),
-            autoescape=select_autoescape(["html", "tpl.j2"]),
-            undefined=StrictUndefined,
-        )
-        env.globals["len"] = len
-        env.globals["url"] = lambda x: url(x, "/p/")
-        env.globals["sidebar"] = self.sidebar
-
         class D:
             pass
 
@@ -456,8 +462,9 @@ class HtmlRenderer:
             mod, ver, kind, identifier = pk
             parts[module].append((RefInfo(mod, ver, "api", mod), mod))
 
-        return env.get_template("gallery.tpl.j2").render(
+        return self.env.get_template("gallery.tpl.j2").render(
             logo=logo,
+            meta=meta,
             figmap=figmap,
             pygment_css="",
             module=module,
@@ -483,7 +490,7 @@ class HtmlRenderer:
 
         # ...
         return render_one(
-            logo=meta["logo"],
+            meta=meta,
             template=template,
             doc=doc_blob,
             qa="numpy",
@@ -499,23 +506,19 @@ class HtmlRenderer:
     async def _route(
         self,
         ref,
-        store: Store,
         version=None,
-        gstore=None,
     ):
         assert not ref.endswith(".html")
         assert version is not None
         assert ref != ""
-        assert gstore is not None
-        assert gstore == self.store
 
         env = self.env
 
         template = env.get_template("html.tpl.j2")
         root = ref.split(".")[0]
-        meta = encoder.decode(gstore.get_meta(Key(root, version, None, None)))
+        meta = encoder.decode(self.store.get_meta(Key(root, version, None, None)))
 
-        known_refs, ref_map = find_all_refs(gstore)
+        known_refs, ref_map = find_all_refs(self.store)
 
         # technically incorrect we don't load backrefs
         x_, y_, doc_blob, backward, forward = await _route_data(
@@ -557,40 +560,13 @@ class HtmlRenderer:
                 pygment_css=CSS_DATA,
                 graph=json_str,
                 sidebar=self.sidebar,
-                logo=meta["logo"],
+                meta=meta,
             )
         else:
             # The reference we are trying to render does not exists
-            # just try to have a nice  error page and try to find local reference and
-            # use the phantom file to list the backreferences to this.
-            # it migt be a page, or a module we do not have documentation about.
-            r = ref.split(".")[0]
-            this_module_known_refs = [
-                str(s.name)
-                for s in store.glob(f"{r}/*/module/{ref}")
-                if not s.name.endswith(".br")
-            ]
-            x2 = [x.path for x in self.store.glob((r, None, "module", ref))]
-            assert set(x2) == set(this_module_known_refs), (
-                set(x2) - set(this_module_known_refs),
-                (set(this_module_known_refs) - set(x2)),
-            )
-
-            # compute a tree from all the references we have to have a nice browsing
-            # interfaces.
-            tree: Dict[Any, Any] = {}
-            for f in this_module_known_refs:
-                sub = tree
-                parts = f.split(".")[len(ref.split(".")) :]
-                for part in parts:
-                    if part not in sub:
-                        sub[part] = {}
-                    sub = sub[part]
-
-                sub["__link__"] = f
-
+            # TODO
             error = env.get_template("404.tpl.j2")
-            return error.render(backrefs=list(set()), tree=tree, ref=ref, module=root)
+            return error.render(backrefs=list(set()), tree={}, ref=ref, module=root)
 
 
 async def img(package, version, subpath=None) -> Optional[bytes]:
@@ -621,13 +597,14 @@ def serve(*, sidebar: bool):
 
     app = QuartTrio(__name__)
 
-    store = Store(str(ingest_dir))
     gstore = GraphStore(ingest_dir)
     prefix = "/p/"
-    html_renderer = HtmlRenderer(gstore, sidebar=sidebar, prefix=prefix)
+    html_renderer = HtmlRenderer(
+        gstore, sidebar=sidebar, prefix=prefix, trailing_html=False
+    )
 
     async def full(package, version, ref):
-        return await html_renderer._route(ref, store, version, gstore=gstore)
+        return await html_renderer._route(ref, version)
 
     async def full_gallery(module, version):
         return await html_renderer.gallery(module, version)
@@ -640,6 +617,8 @@ def serve(*, sidebar: bool):
 
     async def index():
         import papyri
+
+        return await html_renderer.index()
 
         v = str(papyri.__version__)
         return redirect(f"{prefix}papyri/{v}/api/papyri")
@@ -685,7 +664,7 @@ def render_one(
     parts_links=(),
     graph="{}",
     sidebar,
-    logo,
+    meta,
 ):
     """
     Return the rendering of one document
@@ -706,6 +685,16 @@ def render_one(
     parts : Dict[str, list[(str, str)]
         used for navigation and for parts of the breakcrumbs to have navigation to siblings.
         This is not directly related to current object.
+    pygment_css : <Insert Type here>
+        <Multiline Description Here>
+    parts_links : <Insert Type here>
+        <Multiline Description Here>
+    graph : <Insert Type here>
+        <Multiline Description Here>
+    sidebar : <Insert Type here>
+        <Multiline Description Here>
+    logo : <Insert Type here>
+        <Multiline Description Here>
 
     """
     # TODO : move this to ingest likely.
@@ -728,7 +717,7 @@ def render_one(
     try:
         return template.render(
             doc=doc,
-            logo=logo,
+            logo=meta["logo"] if meta is not None else None,
             qa=qa,
             version=doc.version,
             module=qa.split(".")[0],
@@ -739,6 +728,7 @@ def render_one(
             pygment_css=pygment_css,
             graph=graph,
             sidebar=sidebar,
+            meta=meta,
         )
     except Exception as e:
         raise ValueError("qa=", qa) from e
@@ -792,7 +782,7 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
     assert str(doc_blob)
 
     return render_one(
-        logo=None,
+        meta=None,
         template=template,
         doc=doc_blob,
         qa=ref,
@@ -856,7 +846,6 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
 
     """
     assert isinstance(document, Key), type(document)
-    assert isinstance(store, GraphStore)
     qa = document.path
     bytes_, backward, forward = store.get_all(document)
     doc_blob: IngestedBlobs = encoder.decode(bytes_)
@@ -873,80 +862,6 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
         return doc_blob, qa, siblings, parts_links, backward, forward
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
-
-
-async def _self_render_as_index_page(
-    html_dir: Optional[Path],
-    gstore,
-    tree,
-    known_refs,
-    ref_map,
-    config,
-    template,
-    css_data,
-) -> None:
-    """
-    Currently we do not have any logic for an index page (we should).
-    So we'll just render the documentation for the papyri module itself.
-
-    Parameters
-    ----------
-    html : bool
-        whether we are building html docs.
-    html_dir: path
-        where should the index be writte
-    tree:
-    known_refs:
-    ref_map:
-    sidebar: bool
-        whether to render the sidebar.
-    template:
-        which template to use
-    css_data:
-
-
-    Returns
-    -------
-    None
-
-
-
-    """
-
-    if html_dir is not None:
-        assert isinstance(html_dir, Path)
-
-    if not config.html:
-        return
-
-    import papyri
-
-    key = Key("papyri", str(papyri.__version__), "module", "papyri")
-    meta = encoder.decode(gstore.get_meta(key))
-
-    doc_blob, qa, siblings, parts_links, backward, forward = await loc(
-        key,
-        store=gstore,
-        tree=tree,
-        known_refs=known_refs,
-        ref_map=ref_map,
-    )
-    backward = [RefInfo(*x) for x in backward]
-    data = render_one(
-        sidebar=config.html_sidebar,
-        template=template,
-        doc=doc_blob,
-        qa=qa,
-        ext=".html",
-        parts=siblings,
-        parts_links=parts_links,
-        backrefs=backward,
-        pygment_css=css_data,
-        logo=meta["logo"],
-    )
-    if html_dir:
-        with (html_dir / "index.html").open("w") as f:
-            f.write(data)
 
 
 @dataclass
@@ -999,9 +914,8 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     )
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
-    env.globals["url"] = lambda x: url(x, prefix)
+    env.globals["url"] = lambda x: url(x, prefix, "")
     template = env.get_template("html.tpl.j2")
-    document: Store
 
     known_refs, ref_map = find_all_refs(gstore)
     # end
@@ -1019,10 +933,14 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     random.shuffle(gfiles)
     # Gallery
 
-    html_renderer = HtmlRenderer(gstore, sidebar=config.html_sidebar, prefix=prefix)
+    html_renderer = HtmlRenderer(
+        gstore, sidebar=config.html_sidebar, prefix=prefix, trailing_html=True
+    )
     await html_renderer._write_gallery(config)
 
     await _write_example_files(gstore, config, prefix=prefix)
+    await html_renderer._write_index(html_dir_)
+    await copy_assets(config, gstore)
 
     await _write_api_file(
         gfiles,
@@ -1036,11 +954,6 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
         graph,
     )
 
-    await _self_render_as_index_page(
-        html_dir_, gstore, tree, known_refs, ref_map, config, template, css_data
-    )
-    await copy_assets(config, gstore)
-
 
 async def _write_example_files(gstore, config, prefix):
     if not config.html:
@@ -1053,7 +966,7 @@ async def _write_example_files(gstore, config, prefix):
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["url"] = lambda x: url(x, prefix)
+    env.globals["url"] = lambda x: url(x, prefix, "")
     env.globals["unreachable"] = unreachable
     for _, example in progress(examples, description="Rendering Examples..."):
         module, version, _, path = example
@@ -1096,6 +1009,7 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
     doc = Doc()
 
     return env.get_template("examples.tpl.j2").render(
+        meta=meta,
         logo=logo,
         pygment_css=css_data,
         module=module,
@@ -1151,7 +1065,7 @@ async def _write_api_file(
                 pygment_css=css_data,
                 graph=json_str,
                 sidebar=config.html_sidebar,
-                logo=meta["logo"],
+                meta=meta,
             )
             if config.output_dir:
                 (config.output_dir / module / version / "api").mkdir(

@@ -252,6 +252,10 @@ def ingest(
         yet.
     relink : bool
         after ingesting all the path, should we rescan the whole library to find new crosslinks ?
+    check : bool
+        <Multiline Description Here>
+    dummy_progress : bool
+        <Multiline Description Here>
     """
     _intro()
     from . import crosslink as cr
