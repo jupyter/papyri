@@ -717,7 +717,7 @@ def render_one(
     try:
         return template.render(
             doc=doc,
-            logo=meta["logo"],
+            logo=meta["logo"] if meta is not None else None,
             qa=qa,
             version=doc.version,
             module=qa.split(".")[0],
