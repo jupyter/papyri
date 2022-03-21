@@ -36,18 +36,18 @@ log = logging.getLogger("papyri")
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
-def url(info, prefix):
+def url(info, prefix, suffix):
     assert isinstance(info, RefInfo), info
     assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
     # assume same package/version for now.
     assert info.module is not None
     if info.module is None:
         assert info.version is None
-        return info.path
+        return info.path + suffix
     if info.kind == "examples":
         return f"{prefix}{info.module}/{info.version}/examples/{info.path}"
     else:
-        return f"{prefix}{info.module}/{info.version}/api/{info.path}"
+        return f"{prefix}{info.module}/{info.version}/api/{info.path}{suffix}"
 
 
 def unreachable(*obj):
@@ -91,7 +91,7 @@ async def examples(module, version, subpath, ext="", sidebar=None, gstore=None):
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["url"] = lambda x: url(x, "/p/")
+    env.globals["url"] = lambda x: url(x, "/p/", "")
     env.globals["unreachable"] = unreachable
 
     meta = encoder.decode(gstore.get_meta(Key(module, version, None, None)))
@@ -329,7 +329,7 @@ def compute_graph(
         else:
             # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
             latest_version = list(sorted(candidates))[-1]
-            uu = url(RefInfo(*latest_version), "/p/")
+            uu = url(RefInfo(*latest_version), "/p/", "")
 
         data["nodes"].append(
             {
@@ -364,11 +364,12 @@ class HtmlRenderer:
             undefined=StrictUndefined,
         )
         self.prefix = prefix
+        suf = ".html" if trailing_html else ""
         self.env.globals["len"] = len
-        self.env.globals["url"] = lambda x: url(x, prefix)
+        self.env.globals["url"] = lambda x: url(x, prefix, suf)
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
-        self.env.globals["dothtml"] = ".html" if trailing_html else ""
+        self.env.globals["dothtml"] = suf
 
         self.sidebar = sidebar
 
@@ -463,6 +464,7 @@ class HtmlRenderer:
 
         return self.env.get_template("gallery.tpl.j2").render(
             logo=logo,
+            meta=meta,
             figmap=figmap,
             pygment_css="",
             module=module,
@@ -488,7 +490,7 @@ class HtmlRenderer:
 
         # ...
         return render_one(
-            logo=meta["logo"],
+            meta=meta,
             template=template,
             doc=doc_blob,
             qa="numpy",
@@ -558,7 +560,7 @@ class HtmlRenderer:
                 pygment_css=CSS_DATA,
                 graph=json_str,
                 sidebar=self.sidebar,
-                logo=meta["logo"],
+                meta=meta,
             )
         else:
             # The reference we are trying to render does not exists
@@ -662,7 +664,7 @@ def render_one(
     parts_links=(),
     graph="{}",
     sidebar,
-    logo,
+    meta,
 ):
     """
     Return the rendering of one document
@@ -715,7 +717,7 @@ def render_one(
     try:
         return template.render(
             doc=doc,
-            logo=logo,
+            logo=meta["logo"],
             qa=qa,
             version=doc.version,
             module=qa.split(".")[0],
@@ -726,6 +728,7 @@ def render_one(
             pygment_css=pygment_css,
             graph=graph,
             sidebar=sidebar,
+            meta=meta,
         )
     except Exception as e:
         raise ValueError("qa=", qa) from e
@@ -779,7 +782,7 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
     assert str(doc_blob)
 
     return render_one(
-        logo=None,
+        meta=None,
         template=template,
         doc=doc_blob,
         qa=ref,
@@ -911,7 +914,7 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     )
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
-    env.globals["url"] = lambda x: url(x, prefix)
+    env.globals["url"] = lambda x: url(x, prefix, "")
     template = env.get_template("html.tpl.j2")
 
     known_refs, ref_map = find_all_refs(gstore)
@@ -963,7 +966,7 @@ async def _write_example_files(gstore, config, prefix):
         undefined=StrictUndefined,
     )
     env.globals["len"] = len
-    env.globals["url"] = lambda x: url(x, prefix)
+    env.globals["url"] = lambda x: url(x, prefix, "")
     env.globals["unreachable"] = unreachable
     for _, example in progress(examples, description="Rendering Examples..."):
         module, version, _, path = example
@@ -1006,6 +1009,7 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
     doc = Doc()
 
     return env.get_template("examples.tpl.j2").render(
+        meta=meta,
         logo=logo,
         pygment_css=css_data,
         module=module,
@@ -1061,7 +1065,7 @@ async def _write_api_file(
                 pygment_css=css_data,
                 graph=json_str,
                 sidebar=config.html_sidebar,
-                logo=meta["logo"],
+                meta=meta,
             )
             if config.output_dir:
                 (config.output_dir / module / version / "api").mkdir(

@@ -57,18 +57,21 @@
     {% else %}
         <img src="/p/{{module}}/{{version}}/img/{{logo}}"/>
     {% endif %}
-    <a href="#">Library: {{module}}</a>
-    <a href="#">Version: {{version}}</a>
-    <a href="#">Authors:</a>
-    <a href="#">PyPI:</a>
-    <a href="#">Source</a>
-    <a href="#">Homepage</a>
-    <a href="#">Fundings</a>
-    <a href="#">Stars</a>
-    <a href="#">Forks</a>
-    <a href="#">Related</a>
+    <a href="#">{{module}}</a>
+    <a href="#">{{version}}</a>
+    {% if meta and meta.get('pypi') %}
+        <a class='external'  href="https://pypi.org/project/{{meta.pypi}}">Pypi</a>
+    {% endif %}
+    {% if meta and meta.get('github_slug') %}
+        <a class='external' href="https://github.com/{{meta.github_slug}}">GitHub</a>
+    {% endif %}
+    {% if meta and meta.get('homepage') %}
+        <a class='external' href="{{meta.homepage}}">Homepage</a>
+    {% endif %}
     <hr/>
-    <a>Narrative Docs</a>
+    {% if meta and meta.get('docspage') %}
+        <a class='external' href="{{meta.docspage}}">Other Docs</a>
+    {% endif %}
     <hr/>
     {% block plus %}
     {% endblock %}

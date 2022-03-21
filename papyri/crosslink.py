@@ -442,14 +442,12 @@ class Ingester:
         data = json.loads(meta_path.read_text())
         version = data["version"]
         root = data["module"]
-        logo = data.get("logo", None)
         # long : short
         aliases: Dict[str, str] = data.get("aliases", {})
         rev_aliases = {v: k for k, v in aliases.items()}
+        meta = {k: v for k, v in data.items() if k != "aliases"}
 
-        gstore.put_meta(
-            root, version, encoder.encode({"logo": logo, "version": version})
-        )
+        gstore.put_meta(root, version, encoder.encode(meta))
 
         self._ingest_examples(path, gstore, known_refs, aliases, version, root)
         self._ingest_assets(path, root, version, aliases, gstore)

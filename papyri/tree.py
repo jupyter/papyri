@@ -252,6 +252,7 @@ class TreeReplacer:
 
     def visit(self, node):
         self._replacements = Counter()
+        self._cr = 0
         assert not isinstance(node, list)
         res = self.generic_visit(node)
         assert len(res) == 1
@@ -304,6 +305,9 @@ class TreeReplacer:
                     #    )
                     assert isinstance(replacement, list)
                     new_children.extend(replacement)
+                if node.children != new_children:  # type: ignore
+                    self._cr += 1
+                    # print("Replaced !", node.children, new_children)
                 node.children = new_children  # type: ignore
                 new_nodes = [node]
             assert isinstance(new_nodes, list)
@@ -443,6 +447,9 @@ class DirectiveVisiter(TreeReplacer):
         )
 
     def replace_Directive(self, directive: Directive):
+        #        if self.qa == "IPython.core.builtin_trap":
+        #            print("QA:", self.qa)
+        #            breakpoint()
         if (directive.domain, directive.role) == ("py", "func"):
             pass
         elif (directive.domain, directive.role) == (None, None) and directive.value in (
@@ -492,17 +499,16 @@ class DirectiveVisiter(TreeReplacer):
         assert "`" not in text
         # text = text.strip("`")
         to_resolve = text
-        if " <" in text and text.endswith(">"):
+        if (" <" in text or "\n<" in text) and text.endswith(">"):
             try:
-                text, to_resolve = text.split(" <")
+                text, to_resolve = text.split("<")
+                text = text.rstrip()
             except ValueError:
                 assert False, directive.value
             assert to_resolve.endswith(">"), (text, to_resolve)
             to_resolve = to_resolve.rstrip(">")
-        if to_resolve.startswith("https://"):
+        if to_resolve.startswith("https://") or to_resolve.startswith("http://"):
             return [ExternalLink(text, to_resolve)]
-        if "https" in to_resolve:
-            breakpoint()
 
         r = self._resolve(loc, to_resolve)
         # this is now likely incorrect as Ref kind should not be exists,
@@ -552,12 +558,13 @@ class DirectiveVisiter(TreeReplacer):
                             kind="api",
                             path=target_qa,
                         )
-                        print("Solve ri", ri, directive.value)
+                        print("Solve ri", ri, directive.value, self.qa)
                         return [Link(text, ri, "module", True)]
                 except Exception:
                     raise
             else:
-                print("Not all identifier", directive, "in", self.qa)
+                pass
+                # print("Not all identifier", directive, "in", self.qa)
         else:
             print(
                 "could not match",

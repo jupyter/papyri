@@ -29,6 +29,12 @@ exec_failure = "fallback"
 jedi_failure_mode = "log"
 early_error = false
 
+[meta]
+github_slug = 'scipy/scipy'
+tag = 'v1.8.0'
+pypi = 'scipy'
+homepage = 'https://scipy.org/'
+docspage = 'https://docs.scipy.org/doc/scipy/'
 [scipy.implied_imports]
 ua = 'scipy._lib.uarray'
 array = 'numpy:array'

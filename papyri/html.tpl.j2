@@ -164,14 +164,14 @@ they belong to, and scaled with the number of references pointing them</p>
 
 <hr>
 
-To Be Done: </br>
+{%if meta.get('github_slug')%}
+    GitHub : <a class='external' href='https://github.com/{{meta.github_slug}}/blob/{{meta.tag}}/{{doc.item_file}}#L{{doc.item_line}}'>{{doc.item_file}}#{{doc.item_line}}</a>
+{% else %}
+    File: {{doc.item_file}}#{{doc.item_line}}
+{%endif%}<br/>
 
-File: {{doc.item_file}} </br>
-Line: {{doc.item_line}} </br>
 type: {{doc.item_type}} </br>
 Commit: </br>
-Tag: </br>
-Link to the right github gitalab repository, file and line (maybe range?)</br>
 </div>
 
 {% if graph is defined %}
