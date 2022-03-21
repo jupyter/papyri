@@ -1,0 +1,29 @@
+
+{% include 'head.tpl.j2' %}
+<body>
+    
+    <p>The Papyri project attempt to provide most of the scientific Python docs in a single place will cross-projects
+    bidirectional crosslinking<p>
+
+    <p>Get started with one of the following projects</p>
+    <div class='search'>
+        <input type='search' placeholder='Search not functional yet.'>
+    </div>
+    <div class='cards'>
+        {% for module, version, logo in data %}
+            <a class="card" href="/p/{{module}}/{{version}}/api/{{module}}">
+                <div>
+                {% if logo %}
+                    <span class="helper">
+                    </span>
+                    <img src="/p/{{module}}/{{version}}/img/{{logo}}" alt="Project logo"/>
+                {% endif %}
+                </div>
+                <div>
+                    <h4><b>{{module}}</b></h4>
+                    <p>{{version}}</p>
+                </div>
+            </a>
+        {% endfor%}
+        <div>
+</body>

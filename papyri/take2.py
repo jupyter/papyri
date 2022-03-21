@@ -177,6 +177,10 @@ class Base:
 TAG_MAP: Dict[Any, int] = {}
 
 
+def register(value):
+    pass
+
+
 class Node(Base):
     def __init__(self, *args):
         tt = get_type_hints(type(self))
@@ -211,7 +215,12 @@ class Node(Base):
         return not bool(self.value.strip())
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}: \n{indent(repr(self.value))}>"
+        tt = get_type_hints(type(self))
+        acc = ""
+        for t in tt:
+            acc += f"{t}: {getattr(self, t)!r}\n"
+
+        return f"<{self.__class__.__name__}: \n{indent(acc)}>"
 
     def to_json(self):
         return serialize(self, type(self))
@@ -219,6 +228,10 @@ class Node(Base):
     @classmethod
     def from_json(cls, data):
         return deserialize(cls, cls, data)
+
+
+class Leaf(Node):
+    pass
 
 
 @dataclass(frozen=True)
@@ -282,6 +295,19 @@ class Verbatim(Node):
     def __repr__(self):
         return RED("``" + "".join(self.value) + "``")
 
+
+class ExternalLink(Node):
+    """
+    ExternalLinks are link to external resources.
+    Most of the time they will be URL to other web resources,
+    """
+
+    value: str
+    target: str
+
+    def __init__(self, value, target):
+        self.value = value
+        self.target = target
 
 class Link(Node):
     """
@@ -836,6 +862,7 @@ class Paragraph(Node):
             Directive,
             Verbatim,
             Link,
+            ExternalLink,
             Math,
             SubstitutionRef,
         ]
@@ -858,6 +885,7 @@ class Paragraph(Node):
                     Directive,
                     Verbatim,
                     Link,
+                    ExternalLink,
                     Math,
                     SubstitutionRef,
                 ),
@@ -883,6 +911,7 @@ class Paragraph(Node):
                     Directive,
                     Verbatim,
                     Link,
+                    ExternalLink,
                     Math,
                     Strong,
                     Emph,
@@ -1332,6 +1361,7 @@ TAG_MAP.update(
         BulletList: 4040,
         SubstitutionRef: 4041,
         Target: 4042,
+        ExternalLink: 4043,
     }
 )
 

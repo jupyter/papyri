@@ -15,6 +15,7 @@ from .take2 import (
     Code2,
     Directive,
     Link,
+    ExternalLink,
     Math,
     Node,
     RefInfo,
@@ -272,6 +273,7 @@ class TreeReplacer:
                 "BlockVerbatim",
                 "Math",
                 "Link",
+                "ExternalLink",
                 "Code",
                 "Fig",
                 "Words",
@@ -497,6 +499,10 @@ class DirectiveVisiter(TreeReplacer):
                 assert False, directive.value
             assert to_resolve.endswith(">"), (text, to_resolve)
             to_resolve = to_resolve.rstrip(">")
+        if to_resolve.startswith("https://"):
+            return [ExternalLink(text, to_resolve)]
+        if "https" in to_resolve:
+            breakpoint()
 
         r = self._resolve(loc, to_resolve)
         # this is now likely incorrect as Ref kind should not be exists,

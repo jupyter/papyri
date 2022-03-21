@@ -368,7 +368,19 @@ class HtmlRenderer:
         self.env.globals["url"] = lambda x: url(x, prefix)
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
+
         self.sidebar = sidebar
+
+    async def index(self):
+        keys = self.store.glob((None, None, "meta", "papyri.json"))
+        data = []
+        for k in keys:
+            # print(encoder.decode(self.store.get(k)))
+            meta = encoder.decode(self.store.get_meta(k))
+            data.append((k.module, k.version, meta["logo"]))
+        print(data)
+
+        return self.env.get_template("index.tpl.j2").render(pygment_css="", data=data)
 
     async def _write_gallery(self, config):
         """ """
@@ -435,14 +447,6 @@ class HtmlRenderer:
                 name = _path
                 figmap[module].append((impath, link, name))
 
-        env = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__)),
-            autoescape=select_autoescape(["html", "tpl.j2"]),
-            undefined=StrictUndefined,
-        )
-        env.globals["len"] = len
-        env.globals["url"] = lambda x: url(x, "/p/")
-        env.globals["sidebar"] = self.sidebar
 
         class D:
             pass
@@ -454,7 +458,7 @@ class HtmlRenderer:
             mod, ver, kind, identifier = pk
             parts[module].append((RefInfo(mod, ver, "api", mod), mod))
 
-        return env.get_template("gallery.tpl.j2").render(
+        return self.env.get_template("gallery.tpl.j2").render(
             logo=logo,
             figmap=figmap,
             pygment_css="",
@@ -606,6 +610,8 @@ def serve(*, sidebar: bool):
 
     async def index():
         import papyri
+
+        return await html_renderer.index()
 
         v = str(papyri.__version__)
         return redirect(f"{prefix}papyri/{v}/api/papyri")
@@ -848,6 +854,8 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
         return doc_blob, qa, siblings, parts_links, backward, forward
     except Exception as e:
         raise type(e)(f"Error in {qa}") from e
+
+
 
 
 async def _self_render_as_index_page(
