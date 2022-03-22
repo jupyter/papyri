@@ -77,8 +77,6 @@
    |   |   |{{block_paragraph(obj)}}
    |   |{% elif type == 'BlockVerbatim' %}
    |   |   |{{obj.value}}
-   |   |{% elif type == 'Block' %}
-   |   |   |   |   |{{unreachable()}}
    |   |{% elif type == 'DefList' %}
    |   |   |    {% for item in obj.children %}
    |   |   |    {{render_II(item.dt)}}
