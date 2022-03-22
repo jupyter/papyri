@@ -447,15 +447,16 @@ class Math(Node):
 
 
 class Word(Node):
+    """
+    This is a temporary node, while we visit the tree-sitter tree,
+    we will compress those into words with subsequent whitespace
+
+
+    """
     value: str
 
     def __init__(self, value):
-        assert False
         self.value = value
-
-    @classmethod
-    def _instance(cls):
-        return cls("")
 
     def __repr__(self):
         return self.value
@@ -596,6 +597,7 @@ class NumpydocSignature(Node):
 
     def __init__(self, value):
         self.value = value
+        self.title = "Signature"
 
 
 class Section(Node):
@@ -826,7 +828,7 @@ class Paragraph(Node):
 
     inline: List[
         Union[
-            Word,
+            # Word,
             Words,
             Strong,
             Unimplemented,
@@ -879,7 +881,7 @@ class Paragraph(Node):
             if isinstance(
                 n,
                 (
-                    Word,
+                    # Word,
                     Words,
                     Directive,
                     Verbatim,
@@ -1099,8 +1101,20 @@ class FieldList(Block):
 
 
 class FieldListItem(Block):
-    name: List[Union[Paragraph, Word, Words]]
-    body: List[Union[Words, Paragraph, Word]]
+    name: List[
+        Union[
+            Paragraph,
+            # Word,
+            Words,
+        ]
+    ]
+    body: List[
+        Union[
+            Words,
+            Paragraph,
+            # Word
+        ]
+    ]
 
     def __init__(self, name=None, body=None):
         if body is None:
@@ -1114,6 +1128,7 @@ class FieldListItem(Block):
 
     @property
     def children(self):
+        assert not isinstance(self.name, Word)
         if isinstance(self.name, Word):
             return [self.name, *self.body]
         else:
@@ -1260,7 +1275,7 @@ TAG_MAP.update(
         Directive: 4003,
         BlockMath: 4004,
         Math: 4005,
-        Word: 4006,
+        # Word: 4006,
         Words: 4007,
         Emph: 4008,
         Strong: 4009,
