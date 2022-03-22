@@ -23,8 +23,8 @@ from .take2 import (
     Section,
     SeeAlsoItem,
     Signature,
-    TAG_MAP,
     encoder,
+    register,
 )
 from .tree import DVR, DirectiveVisiter, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
@@ -60,6 +60,7 @@ def find_all_refs(
     return frozenset(known_refs), ref_map
 
 
+@register(4010)
 @dataclass
 class IngestedBlobs(Node):
 
@@ -243,9 +244,6 @@ class IngestedBlobs(Node):
 
     def from_json(cls, data):
         assert False
-
-
-TAG_MAP[IngestedBlobs] = 4010
 
 
 # iii = 0

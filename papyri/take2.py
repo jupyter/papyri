@@ -58,27 +58,14 @@ Unless your use case is widely adopted it is likely not worse the complexity
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union
-
-from papyri.utils import dedent_but_first
-
-# 3x -> 9x for bright
-WHAT = lambda x: "\033[36m" + x + "\033[0m"
-HEADER = lambda x: "\033[35m" + x + "\033[0m"
-BLUE = lambda x: "\033[34m" + x + "\033[0m"
-GREEN = lambda x: "\033[32m" + x + "\033[0m"
-ORANGE = lambda x: "\033[33m" + x + "\033[0m"
-RED = lambda x: "\033[31m" + x + "\033[0m"
-ENDC = lambda x: "\033[0m" + x + "\033[0m"
-BOLD = lambda x: "\033[1m" + x + "\033[0m"
-UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
-
-
 import typing
-from typing import List, Dict, Any
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import cbor2
 
 from papyri.miniserde import deserialize, get_type_hints, serialize
+from papyri.utils import dedent_but_first
 
 
 def not_type_check(item, annotation):
@@ -175,10 +162,20 @@ class Base:
 
 
 TAG_MAP: Dict[Any, int] = {}
+REV_TAG_MAP: Dict[int, Any] = {}
 
 
 def register(value):
-    pass
+    assert value not in REV_TAG_MAP
+
+    def _inner(type_):
+        assert type_ not in TAG_MAP
+        TAG_MAP[type_] = value
+        REV_TAG_MAP[value] = type_
+
+        return type_
+
+    return _inner
 
 
 class Node(Base):
@@ -188,7 +185,6 @@ class Node(Base):
             setattr(self, attr, val)
 
     def cbor(self, encoder):
-        import cbor2
 
         tag = TAG_MAP[type(self)]
         attrs = get_type_hints(type(self))
@@ -231,9 +227,55 @@ class Node(Base):
 
 
 class Leaf(Node):
+    value: str
+
+    def __init__(self, value):
+        self.value = value
+
+
+class IntermediateNode(Node):
+    """
+    This is just a dummy class for Intermediate node that should not make it to the final Product
+    """
+
     pass
 
 
+@register(4004)
+class BlockMath(Leaf):
+    pass
+
+
+@register(4041)
+class SubstitutionRef(Leaf):
+    pass
+
+
+@register(4042)
+class Target(Leaf):
+    pass
+
+
+@register(4030)
+class Comment(Leaf):
+    """
+    Comment should not make it in the final document,
+    but we store them for now, to help with error reporting and
+    custom transformations.
+    """
+
+
+@register(4022)
+class Text(Leaf):
+    pass
+
+
+@register(4024)
+class Fig(Leaf):
+    pass
+
+
+@register(4000)
 @dataclass(frozen=True)
 class RefInfo(Node):
     """
@@ -270,6 +312,7 @@ class RefInfo(Node):
         return iter([self.module, self.version, self.kind, self.path])
 
 
+@register(4001)
 class Verbatim(Node):
     value: List[str]
 
@@ -293,9 +336,10 @@ class Verbatim(Node):
         return sum(len(x) for x in self.value) + 4
 
     def __repr__(self):
-        return RED("``" + "".join(self.value) + "``")
+        return "``" + "".join(self.value) + "``"
 
 
+@register(4043)
 class ExternalLink(Node):
     """
     ExternalLinks are link to external resources.
@@ -310,6 +354,7 @@ class ExternalLink(Node):
         self.target = target
 
 
+@register(4002)
 class Link(Node):
     """
     Links are usually the end goal of a directive,
@@ -357,6 +402,7 @@ class Link(Node):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
 
 
+@register(4003)
 class Directive(Node):
 
     value: str
@@ -408,13 +454,7 @@ class Directive(Node):
         return f"<Directive {self.prefix}`{self.value}`>"
 
 
-class BlockMath(Node):
-    value: str
-
-    def __init__(self, value):
-        self.value = value
-
-
+@register(4005)
 class Math(Node):
     value: List[str]  # list of tokens not list of lines.
 
@@ -435,28 +475,24 @@ class Math(Node):
         # pass
 
 
-class Word(Node):
+class Word(IntermediateNode):
+    """
+    This is a temporary node, while we visit the tree-sitter tree,
+    we will compress those into words with subsequent whitespace
+
+
+    """
+
     value: str
 
     def __init__(self, value):
         self.value = value
 
-    @classmethod
-    def _instance(cls):
-        return cls("")
-
     def __repr__(self):
-        return UNDERLINE(self.value)
-
-    def __len__(self):
-        assert False
-        return len(self.value)
-
-    def __hash__(self):
-        assert False
-        return hash(self.value)
+        return self.value
 
 
+@register(4007)
 class Words(Node):
     """A sequence of words that does not start not ends with spaces"""
 
@@ -473,7 +509,7 @@ class Words(Node):
         return type(self) == type(other) and self.value.strip() == other.value.strip()
 
     def __repr__(self):
-        return UNDERLINE(self.value)
+        return self.value
 
     def __len__(self):
         return len(self.value)
@@ -482,6 +518,7 @@ class Words(Node):
         return hash(self.value)
 
 
+@register(4008)
 class Emph(Node):
     value: Words
 
@@ -503,6 +540,7 @@ class Emph(Node):
         return "*" + repr(self.value) + "*"
 
 
+@register(4009)
 class Strong(Node):
     content: Words
 
@@ -556,14 +594,17 @@ class _XList(Node):
         self.value = value
 
 
+@register(4039)
 class EnumeratedList(_XList):
     pass
 
 
+@register(4040)
 class BulletList(_XList):
     pass
 
 
+@register(4011)
 class Signature(Node):
     value: Optional[str]
 
@@ -571,6 +612,7 @@ class Signature(Node):
         self.value = value
 
 
+@register(4012)
 class NumpydocExample(Node):
     value: List[str]
 
@@ -579,6 +621,7 @@ class NumpydocExample(Node):
         self.value = value
 
 
+@register(4013)
 class NumpydocSeeAlso(Node):
     value: List[SeeAlsoItem]
 
@@ -587,14 +630,16 @@ class NumpydocSeeAlso(Node):
         self.value = value
 
 
+@register(4014)
 class NumpydocSignature(Node):
     value: str
 
     def __init__(self, value):
-        self.title = "Signature"
         self.value = value
+        self.title = "Signature"
 
 
+@register(4015)
 class Section(Node):
     children: List[
         Union[
@@ -653,13 +698,6 @@ class Section(Node):
     def append(self, item):
         self.children.append(item)
 
-    def __repr__(self):
-        rep = f"<{self.__class__.__name__} {self.title}:"
-        for c in self.children:
-            rep += "\n" + indent(repr(c).rstrip())
-        rep += "\n>"
-        return rep
-
     def empty(self):
         return len(self.children) == 0
 
@@ -670,6 +708,7 @@ class Section(Node):
         return len(self.children)
 
 
+@register(4016)
 class Param(Node):
     param: str
     type_: str
@@ -712,11 +751,8 @@ class Param(Node):
             f"<{self.__class__.__name__}: {self.param=}, {self.type_=}, {self.desc=}>"
         )
 
-    def __hash__(self):
-        assert False
-        return hash((self.param, self.type_, self.desc))
 
-
+@register(4017)
 class Token(Node):
     type: Optional[str]
     link: Union[Link, str]
@@ -733,6 +769,7 @@ class Token(Node):
         return f"<{self.__class__.__name__}: {self.link=} {self.type=} >"
 
 
+@register(4018)
 class Unimplemented(Node):
     value: str
     placeholder: str
@@ -745,21 +782,7 @@ class Unimplemented(Node):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
 
 
-class _Dummy(Node):
-    value: str
-
-    def __init__(self, value):
-        self.value = value
-
-
-class SubstitutionRef(_Dummy):
-    pass
-
-
-class Target(_Dummy):
-    pass
-
-
+@register(4020)
 class Code2(Node):
     entries: List[Token]
     out: str
@@ -778,6 +801,7 @@ class Code2(Node):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
 
+@register(4021)
 class Code(Node):
     entries: List[Tuple[Optional[str]]]
     out: str
@@ -806,22 +830,9 @@ class Code(Node):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
 
-class Text(Node):
-    value: str
-
-    def __init__(self, value):
-        self.value = value
-
-
+@register(4023)
 class BlockQuote(Node):
     value: List[str]
-
-    def __init__(self, value):
-        self.value = value
-
-
-class Fig(Node):
-    value: str
 
     def __init__(self, value):
         self.value = value
@@ -848,13 +859,13 @@ def compress_word(stream):
     return acc
 
 
+@register(4025)
 class Paragraph(Node):
 
     __slots__ = ["inner", "inline", "width"]
 
     inline: List[
         Union[
-            Word,
             Words,
             Strong,
             Unimplemented,
@@ -878,7 +889,6 @@ class Paragraph(Node):
             assert isinstance(
                 i,
                 (
-                    # Word,
                     Strong,
                     Emph,
                     Words,
@@ -907,7 +917,6 @@ class Paragraph(Node):
             if isinstance(
                 n,
                 (
-                    Word,
                     Words,
                     Directive,
                     Verbatim,
@@ -936,46 +945,6 @@ class Paragraph(Node):
     def _instance(cls):
         return cls([], [])
 
-    def __repr__(self):
-
-        rw = self.rewrap(self.children, self.width)
-
-        p = "\n".join(["".join(repr(x) for x in line) for line in rw])
-        return f"""<Paragraph:\n{p}>"""
-
-    @classmethod
-    def rewrap(cls, tokens, max_len):
-        acc = [[]]
-        clen = 0
-        for t in tokens:
-            try:
-                lent = len(t)
-            except TypeError:
-                lent = 0
-            if clen + lent > max_len:
-                # remove whitespace at EOL
-                try:
-                    while acc and acc[-1][-1].is_whitespace():
-                        acc[-1].pop()
-                except IndexError:
-                    pass
-                acc.append([])
-                clen = 0
-
-            # do no append whitespace at SOL
-            if clen == 0 and hasattr(t, "value") and t.is_whitespace():
-                continue
-            acc[-1].append(t)
-            clen += lent
-        # remove whitespace at EOF
-        try:
-            pass
-            # while acc and acc[-1][-1].is_whitespace():
-            #    acc[-1].pop()
-        except IndexError:
-            pass
-        return acc
-
     def __hash__(self):
         return hash((tuple(self.children), self.width))
 
@@ -991,71 +960,8 @@ def indent(text, marker="   |"):
     return "\n".join(marker + l for l in lines)
 
 
-class Block(Node):
-    """
-    The following is wrong for some case, in particular if there are many paragraph in a row with 0 indent.
-    we can't ignore blank lines.
-
-    ---
-
-    A chunk of lines that breaks when the indentation reaches::
-
-        - the last of a list of blank lines if indentation is consistant
-        - the last non-0  indented lines
-
-
-    Note we likely want the _body_ lines and then the _indented_ lines if any, which would mean we
-    cut after the first blank lines and expect indents, otherwise there is not indent.
-    and likely if there is a blank lnes as  a property.
-
-    ----
-
-    I think the correct alternative is that each block may get an indented children, and that a block is thus::
-
-        - 1) The sequence of consecutive non blank lines with 0 indentation
-        - 2) The (potentially absent) blank lines leading to the indent block
-        - 3) The Raw indent block (we can decide to recurse, or not later)
-        - 4) The trailing blank line at the end of the block leading to the next one.
-
-    """
-
-    def __repr__(self):
-        from typing import get_type_hints as gth
-
-        attrs = gth(type(self)).keys()
-        reprattr = ", ".join([f"{name}={getattr(self, name)}" for name in attrs])
-
-        return f"<{self.__class__.__name__} '" + reprattr + "'>"
-
-
-class BlockError(Block):
-    @classmethod
-    def from_block(cls, block):
-        return cls(block.lines, block.wh, block.ind)
-
-
-class Header:
-    """
-    a header node
-    """
-
-    def __init__(self, lines):
-        assert len(lines) >= 2, f"{lines=}"
-        self._lines = lines
-        self.level = None
-
-    def __repr__(self):
-        return (
-            f"<Header {self.level}> with\n"
-            + RED(indent(str(self._lines[0]), "    "))
-            + "\n"
-            + RED(indent(str(self._lines[1]), "    "))
-            + "\n"
-            + RED(indent("\n".join(str(x) for x in self._lines[2:]), "    "))
-        )
-
-
-class Admonition(Block):
+@register(4038)
+class Admonition(Node):
 
     kind: str
     title: Optional[str]
@@ -1067,20 +973,8 @@ class Admonition(Block):
         self.title = title
 
 
-class Comment(Block):
-
-    value: str
-
-    def __init__(self, value):
-        """
-        Comment should not make it in the final document,
-        but we store them for now, to help with error reporting and
-        custom transformations.
-        """
-        self.value = value
-
-
-class BlockDirective(Block):
+@register(4031)
+class BlockDirective(Node):
 
     directive_name: str
     args0: List[str]
@@ -1108,7 +1002,8 @@ class BlockDirective(Block):
         self.inner = inner
 
 
-class BlockVerbatim(Block):
+@register(4032)
+class BlockVerbatim(Node):
 
     value: str
 
@@ -1131,19 +1026,16 @@ class BlockVerbatim(Block):
         return serialize(self, type(self))
 
 
-class DefList(Block):
+@register(4033)
+class DefList(Node):
     children: List[DefListItem]
 
     def __init__(self, children=None):
         self.children = children
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__} '{len(self.children)}'> with\n" + indent(
-            "\n".join([str(l) for l in self.children]), "    "
-        )
 
-
-class Options(Block):
+@register(4034)
+class Options(Node):
 
     values: List[str]
 
@@ -1151,21 +1043,29 @@ class Options(Block):
         self.values = values
 
 
-class FieldList(Block):
+@register(4035)
+class FieldList(Node):
     children: List[FieldListItem]
 
     def __init__(self, children=None):
         self.children = children
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__} '{len(self.children)}'> with\n" + indent(
-            "\n".join([str(l) for l in self.children]), "    "
-        )
 
-
-class FieldListItem(Block):
-    name: List[Union[Paragraph, Word, Words]]
-    body: List[Union[Words, Paragraph, Word]]
+@register(4036)
+class FieldListItem(Node):
+    name: List[
+        Union[
+            Paragraph,
+            Words,
+        ]
+    ]
+    body: List[
+        Union[
+            Words,
+            Paragraph,
+            # Word
+        ]
+    ]
 
     def __init__(self, name=None, body=None):
         if body is None:
@@ -1179,10 +1079,7 @@ class FieldListItem(Block):
 
     @property
     def children(self):
-        if isinstance(self.name, Word):
-            return [self.name, *self.body]
-        else:
-            return [*self.name, *self.body]
+        return [*self.name, *self.body]
 
     @children.setter
     def children(self, value):
@@ -1191,7 +1088,8 @@ class FieldListItem(Block):
         self.body = y
 
 
-class DefListItem(Block):
+@register(4037)
+class DefListItem(Node):
     dt: Paragraph  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
     dd: List[
@@ -1228,6 +1126,7 @@ class DefListItem(Block):
         return inst
 
 
+@register(4027)
 class Ref(Node):
     name: str
     ref: Optional[str]
@@ -1249,6 +1148,7 @@ class Ref(Node):
         return [self.name, self.ref, self.exists]
 
 
+@register(4028)
 class SeeAlsoItem(Node):
     name: Ref
     descriptions: List[Paragraph]
@@ -1317,71 +1217,14 @@ def parse_rst_section(text):
     raise ValueError("Multiple sections present")
 
 
-TAG_MAP.update(
-    {
-        RefInfo: 4000,
-        Verbatim: 4001,
-        Link: 4002,
-        Directive: 4003,
-        BlockMath: 4004,
-        Math: 4005,
-        Word: 4006,
-        Words: 4007,
-        Emph: 4008,
-        Strong: 4009,
-        # _XList: 4010,
-        Signature: 4011,
-        NumpydocExample: 4012,
-        NumpydocSeeAlso: 4013,
-        NumpydocSignature: 4014,
-        Section: 4015,
-        Param: 4016,
-        Token: 4017,
-        Unimplemented: 4018,
-        _Dummy: 4019,
-        Code2: 4020,
-        Code: 4021,
-        Text: 4022,
-        BlockQuote: 4023,
-        Fig: 4024,
-        Paragraph: 4025,
-        Block: 4026,
-        Ref: 4027,
-        SeeAlsoItem: 4028,
-        BlockError: 4029,
-        Comment: 4030,
-        BlockDirective: 4031,
-        BlockVerbatim: 4032,
-        DefList: 4033,
-        Options: 4034,
-        FieldList: 4035,
-        FieldListItem: 4036,
-        DefListItem: 4037,
-        Admonition: 4038,
-        EnumeratedList: 4039,
-        BulletList: 4040,
-        SubstitutionRef: 4041,
-        Target: 4042,
-        ExternalLink: 4043,
-    }
-)
-
-
-import cbor2
-
-
 class Encoder:
-    def __init__(self, tag_map):
-        self._tag_map = tag_map
-        self._rev_map = {}
+    def __init__(self, rev_map):
+        self._rev_map = rev_map
 
     def encode(self, obj):
         return cbor2.dumps(obj, default=lambda encoder, obj: obj.cbor(encoder))
 
     def _type_from_tag(self, tag):
-        if tag.tag in self._rev_map:
-            return self._rev_map[tag.tag]
-        self._rev_map = {v: k for k, v in self._tag_map.items()}
         return self._rev_map[tag.tag]
 
     def _tag_hook(self, decoder, tag, shareable_index=None):
@@ -1395,7 +1238,7 @@ class Encoder:
         return cbor2.loads(bytes, tag_hook=self._tag_hook)
 
 
-encoder = Encoder(TAG_MAP)
+encoder = Encoder(REV_TAG_MAP)
 
 
 if __name__ == "__main__":
