@@ -58,27 +58,14 @@ Unless your use case is widely adopted it is likely not worse the complexity
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union
-
-from papyri.utils import dedent_but_first
-
-# 3x -> 9x for bright
-WHAT = lambda x: "\033[36m" + x + "\033[0m"
-HEADER = lambda x: "\033[35m" + x + "\033[0m"
-BLUE = lambda x: "\033[34m" + x + "\033[0m"
-GREEN = lambda x: "\033[32m" + x + "\033[0m"
-ORANGE = lambda x: "\033[33m" + x + "\033[0m"
-RED = lambda x: "\033[31m" + x + "\033[0m"
-ENDC = lambda x: "\033[0m" + x + "\033[0m"
-BOLD = lambda x: "\033[1m" + x + "\033[0m"
-UNDERLINE = lambda x: "\033[4m" + x + "\033[0m"
-
-
 import typing
-from typing import List, Dict, Any
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import cbor2
 
 from papyri.miniserde import deserialize, get_type_hints, serialize
+from papyri.utils import dedent_but_first
 
 
 def not_type_check(item, annotation):
@@ -188,7 +175,6 @@ class Node(Base):
             setattr(self, attr, val)
 
     def cbor(self, encoder):
-        import cbor2
 
         tag = TAG_MAP[type(self)]
         attrs = get_type_hints(type(self))
@@ -231,6 +217,37 @@ class Node(Base):
 
 
 class Leaf(Node):
+    value: str
+
+    def __init__(self, value):
+        self.value = value
+
+
+class BlockMath(Leaf):
+    pass
+
+
+class SubstitutionRef(Leaf):
+    pass
+
+
+class Target(Leaf):
+    pass
+
+
+class Comment(Leaf):
+    """
+    Comment should not make it in the final document,
+    but we store them for now, to help with error reporting and
+    custom transformations.
+    """
+
+
+class Text(Leaf):
+    pass
+
+
+class Fig(Leaf):
     pass
 
 
@@ -293,7 +310,7 @@ class Verbatim(Node):
         return sum(len(x) for x in self.value) + 4
 
     def __repr__(self):
-        return RED("``" + "".join(self.value) + "``")
+        return "``" + "".join(self.value) + "``"
 
 
 class ExternalLink(Node):
@@ -408,12 +425,6 @@ class Directive(Node):
         return f"<Directive {self.prefix}`{self.value}`>"
 
 
-class BlockMath(Node):
-    value: str
-
-    def __init__(self, value):
-        self.value = value
-
 
 class Math(Node):
     value: List[str]  # list of tokens not list of lines.
@@ -439,6 +450,7 @@ class Word(Node):
     value: str
 
     def __init__(self, value):
+        assert False
         self.value = value
 
     @classmethod
@@ -446,15 +458,7 @@ class Word(Node):
         return cls("")
 
     def __repr__(self):
-        return UNDERLINE(self.value)
-
-    def __len__(self):
-        assert False
-        return len(self.value)
-
-    def __hash__(self):
-        assert False
-        return hash(self.value)
+        return self.value
 
 
 class Words(Node):
@@ -473,7 +477,7 @@ class Words(Node):
         return type(self) == type(other) and self.value.strip() == other.value.strip()
 
     def __repr__(self):
-        return UNDERLINE(self.value)
+        return self.value
 
     def __len__(self):
         return len(self.value)
@@ -591,7 +595,6 @@ class NumpydocSignature(Node):
     value: str
 
     def __init__(self, value):
-        self.title = "Signature"
         self.value = value
 
 
@@ -712,10 +715,6 @@ class Param(Node):
             f"<{self.__class__.__name__}: {self.param=}, {self.type_=}, {self.desc=}>"
         )
 
-    def __hash__(self):
-        assert False
-        return hash((self.param, self.type_, self.desc))
-
 
 class Token(Node):
     type: Optional[str]
@@ -744,20 +743,6 @@ class Unimplemented(Node):
     def __repr__(self):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
 
-
-class _Dummy(Node):
-    value: str
-
-    def __init__(self, value):
-        self.value = value
-
-
-class SubstitutionRef(_Dummy):
-    pass
-
-
-class Target(_Dummy):
-    pass
 
 
 class Code2(Node):
@@ -806,22 +791,9 @@ class Code(Node):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
 
-class Text(Node):
-    value: str
-
-    def __init__(self, value):
-        self.value = value
-
 
 class BlockQuote(Node):
     value: List[str]
-
-    def __init__(self, value):
-        self.value = value
-
-
-class Fig(Node):
-    value: str
 
     def __init__(self, value):
         self.value = value
@@ -1028,32 +1000,6 @@ class Block(Node):
         return f"<{self.__class__.__name__} '" + reprattr + "'>"
 
 
-class BlockError(Block):
-    @classmethod
-    def from_block(cls, block):
-        return cls(block.lines, block.wh, block.ind)
-
-
-class Header:
-    """
-    a header node
-    """
-
-    def __init__(self, lines):
-        assert len(lines) >= 2, f"{lines=}"
-        self._lines = lines
-        self.level = None
-
-    def __repr__(self):
-        return (
-            f"<Header {self.level}> with\n"
-            + RED(indent(str(self._lines[0]), "    "))
-            + "\n"
-            + RED(indent(str(self._lines[1]), "    "))
-            + "\n"
-            + RED(indent("\n".join(str(x) for x in self._lines[2:]), "    "))
-        )
-
 
 class Admonition(Block):
 
@@ -1067,17 +1013,6 @@ class Admonition(Block):
         self.title = title
 
 
-class Comment(Block):
-
-    value: str
-
-    def __init__(self, value):
-        """
-        Comment should not make it in the final document,
-        but we store them for now, to help with error reporting and
-        custom transformations.
-        """
-        self.value = value
 
 
 class BlockDirective(Block):
@@ -1338,7 +1273,7 @@ TAG_MAP.update(
         Param: 4016,
         Token: 4017,
         Unimplemented: 4018,
-        _Dummy: 4019,
+        # nothing : 4019,
         Code2: 4020,
         Code: 4021,
         Text: 4022,
@@ -1348,7 +1283,7 @@ TAG_MAP.update(
         Block: 4026,
         Ref: 4027,
         SeeAlsoItem: 4028,
-        BlockError: 4029,
+        # nothing: 4029
         Comment: 4030,
         BlockDirective: 4031,
         BlockVerbatim: 4032,
@@ -1367,7 +1302,6 @@ TAG_MAP.update(
 )
 
 
-import cbor2
 
 
 class Encoder:
