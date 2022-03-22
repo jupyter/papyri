@@ -1,17 +1,16 @@
-{% extends "skeleton.tpl.j2" %}
+{%- extends "skeleton.tpl.j2" %}
 
-{% set current_type = 'api' %}
-{% block plus %}
+{%- set current_type = 'api' %}
+{%- block plus %}
     {%- for section in doc.content.keys() if doc.content[section] and len(doc.content[section]) -%}
-    {%- if section not in ['Extended Summary','Signature', 'Summary'] -%}
-    <a href="#section-{{section}}">{{section}}</a>
-
-    {%  endif -%}
-    {%  endfor -%}
+        {%- if section not in ['Extended Summary','Signature', 'Summary'] -%}
+        <a href="#section-{{section}}">{{section}}</a>
+        {%-  endif -%}
+    {%-  endfor -%}
     {%- if backrefs[0] or backrefs[1] -%}
         <a href="#section-backrefs">BackRef</a>
     {%  endif %}
-{% endblock %}
+{%- endblock %}
 
 {%block api %}
 
@@ -28,66 +27,66 @@
     {% else %}
                 <b class='missing'>{{r.name}}</b>
     {% endif %}
-{%- endmacro %}
+{%- endmacro -%}
 
 
 
-{% if doc.signature.value %}
+{% if doc.signature.value -%}
     <code class='signature'>{{doc.signature.value}}</code>
-{% endif %}
+{%- endif -%}
 
-{% for section in doc.content.keys() if doc.content[section] %}
+{%- for section in doc.content.keys() if doc.content[section] -%}
 
-    {% if (section not in ['Extended Summary','Signature', 'Summary']) and len(doc.content[section]) > 0 %}
+    {% if (section not in ['Extended Summary','Signature', 'Summary']) and len(doc.content[section]) > 0 -%}
         <h3 id="section-{{section}}">{{section}}</h3>
-    {% endif %}
-    {% if section in ['Extended Summary', 'Summary',  'Notes'] %}
+    {% endif -%}
+    {% if section in ['Extended Summary', 'Summary',  'Notes'] -%}
         <!-- rendering {{section}} -->
         {{render_II(doc.content[section])}}
-    {% elif section in ['See Also'] %}
-        {% for sa in doc.see_also %}
+    {% elif section in ['See Also'] -%}
+        {% for sa in doc.see_also -%}
             <dl>
                 <dt><a>{{ref(sa.name)}}</a></dt>
                 <!-- This See also will be incorrect as the SeeAlsoItems are improperly deserialised. -->
                 <dd>{{render_paragraph(sa.descriptions)}}</dd>
             </dl>
-        {% endfor %}
+        {% endfor -%}
 
-    {% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] and doc.content[section]  %}
+    {%- elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] and len(doc.content[section]) > 0  -%}
        <dl>
-           {% for p in doc.content[section] %}
-               {% if p[0] %}
+           {% for p in doc.content[section] -%}
+               {% if p[0] -%}
                    <dt><a id="{{p[0]}}">{{p[0]}}</a> : {{p[1]}}</dt>
-               {% else %}
+               {% else -%}
                    <dt>{{p[1]}}</dt>
-               {% endif %}
+               {% endif -%}
 
                <dd>
-                    {% for item in p[2] %}
+                    {% for item in p[2] -%}
                         {{render_II(item)}}
-                    {% endfor %}
+                    {% endfor -%}
                </dd>
-           {% endfor %}
+           {% endfor -%}
        </dl>
 
-   {% else %}
-       {% if doc.content[section] == True %}
+   {% else -%}
+       {% if doc.content[section] == True -%}
         <pre>
        {{doc.content[section]}}
        </pre>
-       {% endif %}
-   {% endif %}
+       {% endif -%}
+   {% endif -%}
 {% endfor%}
-{% for s in doc.arbitrary %}
-    {% if s.title %}
+{% for s in doc.arbitrary -%}
+    {% if s.title -%}
         <h1>{{s.title}}</h1>
-    {% endif %}
+    {% endif -%}
 
 {{render_II(s)}}
-{% endfor %}
-{% if doc.example_section_data %}
+{% endfor -%}
+{% if doc.example_section_data -%}
     <h3 id="section-Examples">Examples</h3>
-        {% for data in doc.example_section_data %}
+        {% for data in doc.example_section_data -%}
             {%- set type = data.__class__.__name__ -%}
             {% if type=='Text' %}
                 {{render_paragraph(data)}}
@@ -127,16 +126,16 @@
         <h4>{{k}}</h4>
         {% if len(v) < 10 %}
             <dl>
-            {% for r in v %}
-                <dd>{{ render_inner('RefInfo', r) }}</dd>
-            {% endfor %}
+            {%- for r in v -%}
+                <dd>{{- render_inner('RefInfo', r) -}}</dd>
+            {%- endfor -%}
             </dl>
         {% else %}
             <details>
                 <summary>{{v | length}} Elements</summary>
                 <dl>
                 {% for r in v %}
-                    <dd>{{ render_inner('RefInfo', r) }}</dd>
+                    <dd>{{ render_inner('RefInfo', r) -}}</dd>
                 {% endfor %}
                 </dl>
             </details>
