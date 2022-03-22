@@ -223,6 +223,14 @@ class Leaf(Node):
         self.value = value
 
 
+class IntermediateNode(Node):
+    """
+    This is just a dummy class for Intermediate node that should not make it to the final Product
+    """
+
+    pass
+
+
 class BlockMath(Leaf):
     pass
 
@@ -446,7 +454,7 @@ class Math(Node):
         # pass
 
 
-class Word(Node):
+class Word(IntermediateNode):
     """
     This is a temporary node, while we visit the tree-sitter tree,
     we will compress those into words with subsequent whitespace
@@ -828,7 +836,6 @@ class Paragraph(Node):
 
     inline: List[
         Union[
-            # Word,
             Words,
             Strong,
             Unimplemented,
@@ -852,7 +859,6 @@ class Paragraph(Node):
             assert isinstance(
                 i,
                 (
-                    # Word,
                     Strong,
                     Emph,
                     Words,
@@ -881,7 +887,6 @@ class Paragraph(Node):
             if isinstance(
                 n,
                 (
-                    # Word,
                     Words,
                     Directive,
                     Verbatim,
@@ -1104,7 +1109,6 @@ class FieldListItem(Block):
     name: List[
         Union[
             Paragraph,
-            # Word,
             Words,
         ]
     ]
@@ -1128,11 +1132,7 @@ class FieldListItem(Block):
 
     @property
     def children(self):
-        assert not isinstance(self.name, Word)
-        if isinstance(self.name, Word):
-            return [self.name, *self.body]
-        else:
-            return [*self.name, *self.body]
+        return [*self.name, *self.body]
 
     @children.setter
     def children(self, value):
@@ -1275,7 +1275,7 @@ TAG_MAP.update(
         Directive: 4003,
         BlockMath: 4004,
         Math: 4005,
-        # Word: 4006,
+        # Nothing: 4006,
         Words: 4007,
         Emph: 4008,
         Strong: 4009,
