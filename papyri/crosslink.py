@@ -25,6 +25,8 @@ from .take2 import (
     Signature,
     encoder,
     register,
+    FullQual,
+    Cannonical,
 )
 from .tree import DVR, DirectiveVisiter, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
@@ -442,7 +444,7 @@ class Ingester:
         root = data["module"]
         # long : short
         aliases: Dict[str, str] = data.get("aliases", {})
-        rev_aliases = {v: k for k, v in aliases.items()}
+        rev_aliases = {Cannonical(v): FullQual(k) for k, v in aliases.items()}
         meta = {k: v for k, v in data.items() if k != "aliases"}
 
         gstore.put_meta(root, version, encoder.encode(meta))
@@ -554,7 +556,7 @@ class Ingester:
         for key in gstore.glob((None, None, "meta", "papyri.json")):
             aliases.update(cbor2.loads(gstore.get(key)))
 
-        rev_aliases = {v: k for k, v in aliases.items()}
+        rev_aliases = {Cannonical(v): FullQual(k) for k, v in aliases.items()}
 
         builtins.print(
             "Relinking is safe to cancel, but some back references may be broken...."

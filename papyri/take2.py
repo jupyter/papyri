@@ -60,12 +60,15 @@ from __future__ import annotations
 import sys
 import typing
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, NewType
 
 import cbor2
 
 from papyri.miniserde import deserialize, get_type_hints, serialize
 from papyri.utils import dedent_but_first
+
+FullQual = NewType("FullQual", str)
+Cannonical = NewType("Cannonical", str)
 
 
 def not_type_check(item, annotation):
