@@ -45,6 +45,8 @@ from velin.examples_section_utils import InOut, splitblank, splitcode
 from .errors import IncorrectInternalDocsLen, NumpydocParseError, UnseenError
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
+    FullQual,
+    Cannonical,
     Code,
     Fig,
     Node,
@@ -818,6 +820,17 @@ class DFSCollector:
     def visit_FunctionType(self, fun, stack):
         pass
 
+    def compute_aliases(self) -> Tuple[Dict[FullQual, Cannonical], List[Any]]:
+        aliases = {}
+        not_found = []
+        for k, v in self.aliases.items():
+            if [item for item in v if item != k]:
+                if shorter := find_cannonical(k, v):
+                    aliases[FullQual(k)] = Cannonical(shorter)
+                else:
+                    not_found.append((k, v))
+        return aliases, not_found
+
 
 class DocBlob(Node):
     """
@@ -1574,7 +1587,7 @@ class Gen:
         assert len(failed) == 0, failed
         return acc
 
-    def _get_collector(self):
+    def _get_collector(self) -> DFSCollector:
         """
         Construct a depth first search collector that will try to find all
         the objects it can.
@@ -1712,7 +1725,7 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        collector = self._get_collector()
+        collector: DFSCollector = self._get_collector()
         collected: Dict[str, Any] = collector.items()
 
         # collect all items we want to document.
@@ -1732,6 +1745,9 @@ class Gen:
             )
 
         collected = {k: v for k, v in collected.items() if k not in excluded}
+        aliases: Dict[FullQual, Cannonical]
+        aliases, not_found = collector.compute_aliases()
+        rev_aliases: Dict[Cannonical, FullQual] = {v: k for k, v in aliases.items()}
 
         known_refs = frozenset(
             {RefInfo(root, self.version, "module", qa) for qa in collected.keys()}
@@ -1837,6 +1853,21 @@ class Gen:
                     if section in doc_blob.content:
                         doc_blob.content[section] = dv.visit(doc_blob.content[section])
 
+                for sa in doc_blob.see_also:
+                    from .tree import resolve_
+
+                    r = resolve_(
+                        qa,
+                        known_refs,
+                        frozenset(),
+                        sa.name.name,
+                        rev_aliases=rev_aliases,
+                    )
+                    resolved, exists = r.path, r.kind
+                    if exists == "module":
+                        sa.name.exists = True
+                        sa.name.ref = resolved
+
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
                 assert isinstance(doc_blob.references, (list, str, type(None))), (
                     repr(doc_blob.references),
@@ -1866,19 +1897,11 @@ class Gen:
                     "The following parsing failed \n%s",
                     json.dumps(failure_collection, indent=2, sort_keys=True),
                 )
-            found = {}
-            not_found = []
-            for k, v in collector.aliases.items():
-                if [item for item in v if item != k]:
-                    if shorter := find_cannonical(k, v):
-                        found[k] = shorter
-                    else:
-                        not_found.append((k, v))
 
             self.metadata = {
                 "version": self.version,
                 "logo": "logo.png",
-                "aliases": found,
+                "aliases": aliases,
                 "module": self.root,
             }
             self.metadata.update(self._meta)

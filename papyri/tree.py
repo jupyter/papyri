@@ -21,6 +21,8 @@ from .take2 import (
     RefInfo,
     Token,
     Verbatim,
+    FullQual,
+    Cannonical,
 )
 from .utils import full_qual
 
@@ -90,7 +92,7 @@ def resolve_(
     known_refs: FrozenSet[RefInfo],
     local_refs: FrozenSet[str],
     ref: str,
-    rev_aliases,
+    rev_aliases: Dict[Cannonical, FullQual],
 ) -> RefInfo:
     """
     Given the current context (qa), and a str (ref), compute the RefInfo object.
@@ -124,6 +126,7 @@ def resolve_(
     hk = hash(known_refs)
     hash(local_refs)
     assert rev_aliases is not None
+    ref = Cannonical(ref)
     if ref in rev_aliases:
         new_ref = rev_aliases[ref]
         # print(f'now looking for {new_ref} instead of {ref}')
