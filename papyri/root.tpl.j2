@@ -21,23 +21,22 @@
     <h1 style='display: block; margin-left: auto; margin-right: auto;'>PaPyRi</h1>
     <div>
 {% macro branch(entries) -%}
-    
-{%- for k,v in entries.items() %}
-    {% if len(v) == 1  and '__link__' in v %}
-        <a href='{{v['__link__']}}'>{{v['__link__']}}</a><br/>
-    {% else %}
-            {% if k == '__link__' %}
-                <a href='{{v}}'>{{v}}</a><br/>
+    {%- for k,v in entries.items() %}
+        {% if len(v) == 1  and '__link__' in v %}
+            <a href='{{v['__link__']}}'>{{v['__link__']}}</a><br/>
+        {% else %}
+                {% if k == '__link__' %}
+                    <a href='{{v}}'>{{v}}</a><br/>
 
-            {% else %}
-           <details>
-               <summary>{{k}}</summary>
-               {{branch(v)}}
-           </details>
-            {%endif %}
-       {%endif %}
+                {% else %}
+            <details>
+                <summary>{{k}}</summary>
+                {{branch(v)}}
+            </details>
+                {%endif %}
+        {%endif %}
 
-{%endfor %}
+    {%endfor %}
 {%- endmacro %}
 
 {{ branch(tree)}}

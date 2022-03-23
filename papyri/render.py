@@ -9,15 +9,14 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Set, Any, Dict, List
+from typing import Optional, Set, Any, Dict, List, Callable
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pygments.formatters import HtmlFormatter
-from quart import redirect
+from quart import send_from_directory
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
-from there import print
 import minify_html
 
 from . import config as default_config
@@ -97,6 +96,8 @@ async def examples(module, version, subpath, ext="", sidebar=None, gstore=None):
         autoescape=select_autoescape(["html", "tpl.j2"]),
         undefined=StrictUndefined,
     )
+    env.trim_blocks = True
+    env.lstrip_blocks = True
     env.globals["len"] = len
     env.globals["url"] = lambda x: url(x, "/p/", "")
     env.globals["unreachable"] = unreachable
@@ -363,6 +364,8 @@ async def _route_data(gstore: GraphStore, ref, version, known_refs):
 
 class HtmlRenderer:
     def __init__(self, store, *, sidebar, prefix, trailing_html):
+        assert prefix.startswith("/")
+        assert prefix.endswith("/")
         self.progress = progress
         self.store = store
         self.env = Environment(
@@ -370,6 +373,8 @@ class HtmlRenderer:
             autoescape=select_autoescape(["html", "tpl.j2"]),
             undefined=StrictUndefined,
         )
+        self.env.trim_blocks = True
+        self.env.lstrip_blocks = True
         self.prefix = prefix
         suf = ".html" if trailing_html else ""
         self.env.globals["len"] = len
@@ -580,14 +585,18 @@ async def img(package, version, subpath=None) -> Optional[bytes]:
     file = ingest_dir / package / version / "assets" / subpath
     if file.exists():
         return file.read_bytes()
+    assert False, "Oh no"
     return None
 
 
-def static(name):
+def static(name) -> Callable[[], bytes]:
     here = Path(os.path.dirname(__file__))
+    static = here / "static"
 
-    def f():
-        return (here / name).read_bytes()
+    async def f():
+        return await send_from_directory(static, name)
+
+    f.__name__ = name
 
     return f
 
@@ -622,14 +631,6 @@ def serve(*, sidebar: bool):
     async def gr():
         return await html_renderer.gallery("*")
 
-    async def index():
-        import papyri
-
-        return await html_renderer.index()
-
-        v = str(papyri.__version__)
-        return redirect(f"{prefix}papyri/{v}/api/papyri")
-
     async def ex(module, version, subpath):
         return await examples(
             module=module,
@@ -641,15 +642,19 @@ def serve(*, sidebar: bool):
 
     app.route("/logo.png")(plogo)
     app.route("/favicon.ico")(static("favicon.ico"))
+    app.route("/papyri.css")(static("papyri.css"))
+    app.route("/graph_canvas.js")(static("graph_canvas.js"))
+    app.route("/graph_svg.js")(static("graph_svg.js"))
     # sub here is likely incorrect
-    app.route(f"{prefix}/<package>/<version>/img/<path:subpath>")(img)
+    app.route(f"{prefix}<package>/<version>/img/<path:subpath>")(img)
     app.route(f"{prefix}<module>/<version>/examples/<path:subpath>")(ex)
     app.route(f"{prefix}<module>/<version>/gallery")(full_gallery)
     app.route(f"{prefix}<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
     app.route(f"{prefix}<package>/<version>/api/<ref>")(full)
-    app.route("/gallery/")(gr)
-    app.route("/gallery/<module>")(g)
-    app.route("/")(index)
+    app.route(f"{prefix}<package>/static/<path:subpath>")(full)
+    app.route(f"{prefix}/gallery/")(gr)
+    app.route(f"{prefix}/gallery/<module>")(g)
+    app.route("/")(html_renderer.index)
     port = int(os.environ.get("PORT", 1234))
     print("Seen config port ", port)
     prod = os.environ.get("PROD", None)
@@ -919,6 +924,8 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
         autoescape=select_autoescape(["html", "tpl.j2"]),
         undefined=StrictUndefined,
     )
+    env.trim_blocks = True
+    env.lstrip_blocks = True
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
     env.globals["url"] = lambda x: url(x, prefix, "")
@@ -948,6 +955,12 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     await _write_example_files(gstore, config, prefix=prefix)
     await html_renderer._write_index(html_dir_)
     await copy_assets(config, gstore)
+    here = Path(os.path.dirname(__file__))
+    _static = here / "static"
+    for f in _static.glob("*"):
+        bytes_ = f.read_bytes()
+        assert config.output_dir is not None
+        (config.output_dir.parent / f.name).write_bytes(bytes_)
 
     await _write_api_file(
         gfiles,
@@ -972,6 +985,8 @@ async def _write_example_files(gstore, config, prefix):
         autoescape=select_autoescape(["html", "tpl.j2"]),
         undefined=StrictUndefined,
     )
+    env.trim_blocks = True
+    env.lstrip_blocks = True
     env.globals["len"] = len
     env.globals["url"] = lambda x: url(x, prefix, "")
     env.globals["unreachable"] = unreachable
