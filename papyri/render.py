@@ -9,15 +9,14 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Set, Any, Dict, List
+from typing import Optional, Set, Any, Dict, List, Callable
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pygments.formatters import HtmlFormatter
-from quart import redirect, send_from_directory
+from quart import send_from_directory
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
-from there import print
 import minify_html
 
 from . import config as default_config
@@ -41,6 +40,7 @@ def minify(s):
     return minify_html.minify(
         s, minify_js=True, remove_processing_instructions=True, keep_closing_tags=True
     )
+
 
 def url(info, prefix, suffix):
     assert isinstance(info, RefInfo), info
@@ -589,7 +589,7 @@ async def img(package, version, subpath=None) -> Optional[bytes]:
     return None
 
 
-def static(name) -> bytes:
+def static(name) -> Callable[[], bytes]:
     here = Path(os.path.dirname(__file__))
     static = here / "static"
 
@@ -959,6 +959,7 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     _static = here / "static"
     for f in _static.glob("*"):
         bytes_ = f.read_bytes()
+        assert config.output_dir is not None
         (config.output_dir.parent / f.name).write_bytes(bytes_)
 
     await _write_api_file(
