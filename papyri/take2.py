@@ -155,11 +155,6 @@ class Base:
     def _instance(cls):
         return cls()
 
-    @classmethod
-    def _deserialise(cls, **kwargs):
-        # print("will deserialise", cls)
-        return cls(**kwargs)
-
 
 TAG_MAP: Dict[Any, int] = {}
 REV_TAG_MAP: Dict[int, Any] = {}
@@ -303,10 +298,6 @@ class RefInfo(Node):
     version: Optional[str]
     kind: str
     path: str
-
-    @classmethod
-    def _deserialise(cls, *args, **kwargs):
-        return cls(**kwargs)
 
     def __iter__(self):
         return iter([self.module, self.version, self.kind, self.path])
@@ -807,7 +798,7 @@ class Code(Node):
     out: str
     ce_status: str
 
-    def __init__(self, entries, out, ce_status):
+    def __init__(self, entries, out: str, ce_status):
         self.entries = entries
         self.out = out
         self.ce_status = ce_status
@@ -816,15 +807,6 @@ class Code(Node):
         for e in self.entries:  # noqa: B007
             pass
             # assert len(e) == 3
-
-    @classmethod
-    def _deserialise(cls, *args, **kwargs):
-        inst = super()._deserialise(*args, **kwargs)
-        for e in inst.entries:
-            assert isinstance(e, tuple)
-            for t in e:
-                assert type(t) in (str, type(None)), inst.entries
-        return inst
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
@@ -1119,11 +1101,6 @@ class DefListItem(Node):
         self.dt = dt
         assert isinstance(dd, (list, type(None))), dd
         self.dd = dd
-
-    @classmethod
-    def _deserialise(cls, **kwargs):
-        inst = cls(**kwargs)
-        return inst
 
 
 @register(4027)
