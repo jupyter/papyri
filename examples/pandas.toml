@@ -1,4 +1,5 @@
 [pandas]
+logo = 'logo_pandas.png'
 exec_failure = "fallback"
 submodules = []
 exclude = [

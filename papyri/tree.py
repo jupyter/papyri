@@ -449,6 +449,18 @@ class DirectiveVisiter(TreeReplacer):
             self.qa, self.known_refs, loc, text, rev_aliases=self.rev_aliases
         )
 
+    @classmethod
+    def _import_solver(cls, maybe_qa: str):
+        parts = maybe_qa.split(".")
+        are_id = [x.isidentifier() for x in parts]
+
+        if not all(are_id):
+            return None
+        else:
+            target_qa = full_qual(_obj_from_path(parts))
+            if target_qa is not None:
+                return target_qa
+
     def replace_Directive(self, directive: Directive):
         #        if self.qa == "IPython.core.builtin_trap":
         #            print("QA:", self.qa)
@@ -551,23 +563,17 @@ class DirectiveVisiter(TreeReplacer):
 
             are_id = [x.isidentifier() for x in parts]
 
-            if all(are_id):
-                try:
-                    target_qa = full_qual(_obj_from_path(parts))
-                    if target_qa is not None:
-                        ri = RefInfo(
-                            module=target_qa.split(".")[0],
-                            version="*",
-                            kind="api",
-                            path=target_qa,
-                        )
-                        print("Solve ri", ri, directive.value, self.qa)
-                        return [Link(text, ri, "module", True)]
-                except Exception:
-                    raise
-            else:
-                pass
-                # print("Not all identifier", directive, "in", self.qa)
+            target_qa = self._import_solver(tqa)
+            if target_qa is not None:
+                ri = RefInfo(
+                    module=target_qa.split(".")[0],
+                    version="*",
+                    kind="api",
+                    path=target_qa,
+                )
+                # print("Solve ri", ri, directive.value, self.qa)
+                return [Link(text, ri, "module", True)]
+            # print("Not all identifier", directive, "in", self.qa)
         else:
             print(
                 "could not match",

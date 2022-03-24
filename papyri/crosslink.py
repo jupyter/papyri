@@ -503,6 +503,7 @@ class Ingester:
                 resolved, exists = r.path, r.kind
                 if exists == "module":
                     sa.name.exists = True
+                    # assert sa.name.ref == resolved, (sa.name.ref, resolved, qa)
                     sa.name.ref = resolved
 
         for _, (qa, doc_blob) in self.progress(

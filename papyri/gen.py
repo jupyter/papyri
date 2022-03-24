@@ -1867,6 +1867,14 @@ class Gen:
                     if exists == "module":
                         sa.name.exists = True
                         sa.name.ref = resolved
+                    else:
+                        imp = DirectiveVisiter._import_solver(sa.name.name)
+                        if imp:
+                            sa.name.ref = imp
+                        else:
+                            pass
+                            # we still need to find a way to resolve
+                            print(resolved, exists, qa)
 
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
                 assert isinstance(doc_blob.references, (list, str, type(None))), (
