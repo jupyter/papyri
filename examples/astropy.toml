@@ -1,6 +1,6 @@
 [astropy]
-exclude = ["astropy.utils.misc.OrderedDescriptorContainer",
 logo = "astropy_project_logo.svg"
+exclude = ["astropy.utils.misc.OrderedDescriptorContainer",
 # VisitTargetNotImplementedError
 "astropy.utils.data.download_file",
                       #"ExecError-<class 'ValueError'>": [

@@ -582,11 +582,8 @@ class HtmlRenderer:
 
 
 async def img(package, version, subpath=None) -> Optional[bytes]:
-    file = ingest_dir / package / version / "assets" / subpath
-    if file.exists():
-        return file.read_bytes()
-    assert False, "Oh no"
-    return None
+    folder = ingest_dir / package / version / "assets"
+    return await send_from_directory(folder, subpath)
 
 
 def static(name) -> Callable[[], bytes]:
