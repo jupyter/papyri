@@ -559,9 +559,6 @@ class DirectiveVisiter(TreeReplacer):
                 tqa = tqa[1:]
             if tqa.endswith("()"):
                 tqa = tqa[:-2]
-            parts = tqa.split(".")
-
-            are_id = [x.isidentifier() for x in parts]
 
             target_qa = self._import_solver(tqa)
             if target_qa is not None:
