@@ -35,6 +35,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-cov flit scipy numpy matplotlib 'velin>=0.0.5' pytest-trio tree_sitter coverage pipdeptree
         flit install --symlink
+        pip install jinja2<3.1
         git clone https://github.com/stsewd/tree-sitter-rst
         papyri build-parser
     - name: dependency tree
