@@ -1691,10 +1691,9 @@ class Gen:
         """
         self.root = root
         if self.config.logo:
-            self.put_raw(
-                "logo.png", (relative_dir / Path(self.config.logo)).read_bytes()
-            )
-
+            logo_path = relative_dir / self.config.logo
+            self.put_raw(logo_path.name, logo_path.read_bytes())
+        meta.update({"logo": logo_path.name})
         module = __import__(root)
         self.version = module.__version__
         self._meta = meta
@@ -1908,7 +1907,6 @@ class Gen:
 
             self.metadata = {
                 "version": self.version,
-                "logo": "logo.png",
                 "aliases": aliases,
                 "module": self.root,
             }
