@@ -728,7 +728,7 @@ def render_one(
             doc=doc,
             logo=meta["logo"] if meta is not None else None,
             qa=qa,
-            version=doc.version,
+            version=meta["version"],
             module=qa.split(".")[0],
             backrefs=backrefs,
             ext=ext,

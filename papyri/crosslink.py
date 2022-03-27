@@ -76,7 +76,6 @@ class IngestedBlobs(Node):
         "aliases",
         "example_section_data",
         "see_also",
-        "version",
         "signature",
         "references",
         "logo",
@@ -92,7 +91,6 @@ class IngestedBlobs(Node):
     aliases: List[str]
     example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
-    version: str
     signature: Signature
     references: Optional[List[str]]
     qa: str
@@ -111,7 +109,7 @@ class IngestedBlobs(Node):
         self.item_type = kwargs.pop("item_type", None)
         self.aliases = kwargs.pop("aliases", [])
         self.see_also = kwargs.pop("see_also", None)
-        self.version = kwargs.pop("version", None)
+        assert "version" not in kwargs
         self.signature = kwargs.pop("signature", None)
         self.references = kwargs.pop("references", None)
         assert "logo" not in kwargs
@@ -131,6 +129,14 @@ class IngestedBlobs(Node):
 
     def _freeze(self):
         self.__isfrozen = True
+
+    @property
+    def version(self):
+        assert False
+
+    @version.setter
+    def version(self, new):
+        assert False
 
     @property
     def content(self):
@@ -165,7 +171,7 @@ class IngestedBlobs(Node):
         self._content = new
 
     def process(
-        self, known_refs, aliases: Optional[Dict[str, str]], verbose=True
+        self, known_refs, aliases: Optional[Dict[str, str]], verbose=True, *, version
     ) -> None:
         """
         Process a doc blob, to find all local and nonlocal references.
@@ -212,8 +218,7 @@ class IngestedBlobs(Node):
 
         local_refs = frozenset(flat(_local_refs))
 
-        assert self.version not in ("", "??"), self.version
-        visitor = DVR(self.qa, known_refs, local_refs, aliases, version=self.version)
+        visitor = DVR(self.qa, known_refs, local_refs, aliases, version=version)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if section not in self.content:
                 continue
@@ -274,8 +279,6 @@ def load_one_uningested(
 
     blob.refs = data.pop("refs", [])
     assert bytes2_ is None
-    blob.version = data.pop("version", version)
-    assert blob.version == version
 
     blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.name))
     blob.example_section_data = blob.example_section_data
@@ -324,9 +327,8 @@ def load_one_uningested(
         acc1.append(visitor.visit(sec))
     blob.arbitrary = acc1
 
-    assert blob.version not in ("", "??"), blob.version
 
-    blob.process(known_refs=known_refs, aliases=aliases, verbose=False)
+    blob.process(known_refs=known_refs, aliases=aliases, verbose=False, version=version)
     # if targets:
     #    print("LL", len(targets))
 
@@ -385,7 +387,6 @@ class Ingester:
 
             module, version = path.name.split("_")
             key = Key(module, version, "docs", ref)
-            doc.version = version
             doc.validate()
             js = doc.to_json()
             assert "backrefs" not in js
@@ -491,7 +492,9 @@ class Ingester:
         for _, (qa, doc_blob) in self.progress(
             nvisited_items.items(), description=f"{path.name} Cross referencing"
         ):
-            doc_blob.process(known_ref_info, verbose=False, aliases=aliases)
+            doc_blob.process(
+                known_ref_info, verbose=False, aliases=aliases, version=version
+            )
             # todo: warning mutation.
             for sa in doc_blob.see_also:
                 r = resolve_(
@@ -523,7 +526,6 @@ class Ingester:
         ):
             # for qa, doc_blob in nvisited_items.items():
             # we might update other modules with backrefs
-            doc_blob.version = version
             assert hasattr(doc_blob, "arbitrary")
 
             # TODO: FIX
@@ -581,7 +583,7 @@ class Ingester:
             except Exception as e:
                 raise type(e)(key)
             assert doc_blob.content is not None, data
-            doc_blob.process(known_refs, aliases=aliases)
+            doc_blob.process(known_refs, aliases=aliases, version=key.version)
 
             # TODO: Move this into process ?
             res: Dict[Any, List[Any]] = {}

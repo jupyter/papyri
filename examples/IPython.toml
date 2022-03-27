@@ -29,3 +29,9 @@ exclude = [
                         "IPython.core.magics.pylab.PylabMagics.pylab",
                         "IPython.terminal.embed.EmbeddedMagics.kill_embedded"
 ]
+[meta]
+github_slug = 'IPython/IPython'
+tag = '8.2.0'
+pypi = 'ipython'
+homepage = 'https://ipython.org/'
+docspage = 'https://ipython.readthedocs.org/'
