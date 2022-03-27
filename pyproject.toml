@@ -15,6 +15,7 @@ dependencies = [
     "toml",
     "urwid",
     "httpx",
+    "jinja2<3.1",
     "ipython",
     "numpydoc",
     "cachetools",

@@ -367,10 +367,12 @@ class Ingester:
         self.progress = dummy_progress if dp else progress
 
     def _ingest_narrative(self, path, gstore: GraphStore) -> None:
-
+        meta = json.loads((path / "papyri.json").read_text())
+        version = meta["version"]
         for _console, document in self.progress(
             (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
         ):
+
             doc = load_one_uningested(
                 document.read_text(),
                 None,
@@ -382,8 +384,7 @@ class Ingester:
             ref = document.name
 
             module, version = path.name.split("_")
-            key = Key(module, "1.22.1", "docs", ref)
-            doc.logo = ""
+            key = Key(module, version, "docs", ref)
             doc.version = version
             doc.validate()
             js = doc.to_json()
@@ -503,6 +504,7 @@ class Ingester:
                 resolved, exists = r.path, r.kind
                 if exists == "module":
                     sa.name.exists = True
+                    # assert sa.name.ref == resolved, (sa.name.ref, resolved, qa)
                     sa.name.ref = resolved
 
         for _, (qa, doc_blob) in self.progress(

@@ -14,7 +14,7 @@ from typing import Optional, Set, Any, Dict, List, Callable
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pygments.formatters import HtmlFormatter
-from quart import send_from_directory
+from quart import send_from_directory, Response
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
 import minify_html
@@ -581,12 +581,9 @@ class HtmlRenderer:
             return error.render(backrefs=list(set()), tree={}, ref=ref, module=root)
 
 
-async def img(package, version, subpath=None) -> Optional[bytes]:
-    file = ingest_dir / package / version / "assets" / subpath
-    if file.exists():
-        return file.read_bytes()
-    assert False, "Oh no"
-    return None
+async def img(package, version, subpath=None) -> Response:
+    folder = ingest_dir / package / version / "assets"
+    return await send_from_directory(folder, subpath)
 
 
 def static(name) -> Callable[[], bytes]:

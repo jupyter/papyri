@@ -34,6 +34,7 @@ from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple, F
 import jedi
 import toml
 from IPython.core.oinspect import find_file
+from IPython.utils.path import compress_user
 from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -90,7 +91,7 @@ class ErrorCollector:
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if isinstance(exc_type, KeyboardInterrupt):
+        if exc_type is KeyboardInterrupt:
             return
         if exc_type:
             self.errored = True
@@ -1141,6 +1142,15 @@ class Gen:
             self.Progress = DummyP
         else:
             self.Progress = Progress
+
+        self.progress = lambda: self.Progress(
+            TextColumn("[progress.description]{task.description}", justify="right"),
+            BarColumn(bar_width=None),
+            "[progress.percentage]{task.percentage:>3.1f}%",
+            "[progress.completed]{task.completed} / {task.total}",
+            TimeElapsedColumn(),
+        )
+
         FORMAT = "%(message)s"
         logging.basicConfig(
             level="INFO", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
@@ -1152,7 +1162,7 @@ class Gen:
 
         self.data = {}
         self.bdata = {}
-        self.metadata = {}
+        self._meta = {}
         self.examples = {}
         self.docs = {}
 
@@ -1192,31 +1202,41 @@ class Gen:
             return
         path = Path(self.config.docs_path).expanduser()
         self.log.info("Scraping Documentation")
-        for p in path.glob("**/*.rst"):
-            assert p.is_file()
-            parts = p.relative_to(path).parts
-            assert parts[-1].endswith("rst")
-            try:
-                data = ts.parse(p.read_bytes())
-            except Exception as e:
-                raise type(e)(f"{p=}")
-            blob = DocBlob()
-            blob.arbitrary = data
-            blob.content = {}
+        files = list(path.glob("**/*.rst"))
+        with self.progress() as p2:
+            tc = p2.add_task("Parsing narative", total=len(files))
 
-            blob.ordered_sections = []
-            blob.item_file = None
-            blob.item_line = None
-            blob.item_type = None
-            blob.aliases = []
-            blob.example_section_data = Section()
-            blob.see_also = []
-            blob.signature = Signature(None)
-            blob.references = None
-            blob.refs = []
+            for p in files:
+                p2.update(tc, description=compress_user(str(p)).ljust(7))
+                p2.advance(tc)
 
-            self.docs[parts] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
-            # data = p.read_bytes()
+                assert p.is_file()
+                parts = p.relative_to(path).parts
+                assert parts[-1].endswith("rst")
+                try:
+                    data = ts.parse(p.read_bytes())
+                except Exception as e:
+                    raise type(e)(f"{p=}")
+                blob = DocBlob()
+                dv = DirectiveVisiter(
+                    ":".join(parts), set(), local_refs=set(), aliases={}
+                )
+                blob.arbitrary = [dv.visit(s) for s in data]
+                blob.content = {}
+
+                blob.ordered_sections = []
+                blob.item_file = None
+                blob.item_line = None
+                blob.item_type = None
+                blob.aliases = []
+                blob.example_section_data = Section()
+                blob.see_also = []
+                blob.signature = Signature(None)
+                blob.references = None
+                blob.refs = []
+
+                self.docs[parts] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
+                # data = p.read_bytes()
 
     def write_narrative(self, where: Path) -> None:
         (where / "docs").mkdir(exist_ok=True)
@@ -1252,7 +1272,7 @@ class Gen:
         self.write_examples(where)
         self.write_assets(where)
         with (where / "papyri.json").open("w") as f:
-            f.write(json.dumps(self.metadata, indent=2, sort_keys=True))
+            f.write(json.dumps(self._meta, indent=2, sort_keys=True))
 
     def write_assets(self, where: Path) -> None:
         assets = where / "assets"
@@ -1533,16 +1553,8 @@ class Gen:
         #            len(examples) > 0
         #        ), "we havent' found any examples, it is likely that the path is incorrect."
 
-        p = lambda: self.Progress(
-            TextColumn("[progress.description]{task.description}", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "[progress.completed]{task.completed} / {task.total}",
-            TimeElapsedColumn(),
-        )
-        with p() as p2:
+        with self.progress() as p2:
             failed = []
-            from IPython.utils.path import compress_user
 
             taskp = p2.add_task(description="Collecting examples", total=len(examples))
             for example in examples:
@@ -1691,13 +1703,13 @@ class Gen:
         """
         self.root = root
         if self.config.logo:
-            self.put_raw(
-                "logo.png", (relative_dir / Path(self.config.logo)).read_bytes()
-            )
-
+            logo_path = relative_dir / self.config.logo
+            self.put_raw(logo_path.name, logo_path.read_bytes())
         module = __import__(root)
         self.version = module.__version__
-        self._meta = meta
+        self._meta.update(
+            {"logo": logo_path.name, "module": root, "version": self.version}
+        )
 
     def collect_api_docs(
         self,
@@ -1716,14 +1728,6 @@ class Gen:
         prepare_doc_for_one_object
 
         """
-
-        p = lambda: self.Progress(
-            TextColumn("[progress.description]{task.description}", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "[progress.completed]{task.completed} / {task.total}",
-            TimeElapsedColumn(),
-        )
 
         collector: DFSCollector = self._get_collector()
         collected: Dict[str, Any] = collector.items()
@@ -1754,7 +1758,7 @@ class Gen:
         )
 
         error_collector = ErrorCollector(self.config, self.log)
-        with p() as p2:
+        with self.progress() as p2:
 
             # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
@@ -1867,6 +1871,13 @@ class Gen:
                     if exists == "module":
                         sa.name.exists = True
                         sa.name.ref = resolved
+                    else:
+                        imp = DirectiveVisiter._import_solver(sa.name.name)
+                        if imp:
+                            sa.name.ref = imp
+                        else:
+                            pass
+                            # we still need to find a way to resolve
 
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
                 assert isinstance(doc_blob.references, (list, str, type(None))), (
@@ -1898,13 +1909,11 @@ class Gen:
                     json.dumps(failure_collection, indent=2, sort_keys=True),
                 )
 
-            self.metadata = {
-                "version": self.version,
-                "logo": "logo.png",
-                "aliases": aliases,
-                "module": self.root,
-            }
-            self.metadata.update(self._meta)
+            self._meta.update(
+                {
+                    "aliases": aliases,
+                }
+            )
 
 
 def is_private(path):
