@@ -57,10 +57,10 @@ class Node:
     sitter official nodes.
     """
 
-    def tree(self):
+    def tree(self, bytes):
         return (
-            repr(self)
-            + indent("\n" + "\n".join([x.tree() for x in self.children]), "   ")
+            self._repr(bytes)
+            + indent("\n" + "\n".join([x.tree(bytes) for x in self.children]), "   ")
         ).rstrip()
 
     @property
@@ -94,8 +94,8 @@ class Node:
                 )
         return new_nodes
 
-    def __repr__(self):
-        return repr(self.node)
+    def _repr(self, bytes):
+        return repr(self.node) + bytes[self.start_byte : self.end_byte].decode()
 
     def with_whitespace(self):
         return Node(self.node, _with_whitespace=True)
@@ -276,6 +276,8 @@ class TSVisitor:
             role_value = None
         else:
             assert False
+        if role_value:
+            assert ":" not in role_value
 
         text_value = self.bytes[text.start_byte : text.end_byte].decode()
         assert text_value.startswith("`")
@@ -283,7 +285,7 @@ class TSVisitor:
 
         t = Directive(
             text_value[1:-1],
-            domain=None,
+            domain=domain,
             role=role_value,
         )
         return [t]

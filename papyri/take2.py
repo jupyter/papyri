@@ -311,6 +311,7 @@ class Verbatim(Node):
     value: List[str]
 
     def __init__(self, value):
+        assert isinstance(value, list)
         self.value = value
 
     def __eq__(self, other):
@@ -336,7 +337,7 @@ class Verbatim(Node):
 @register(4043)
 class ExternalLink(Node):
     """
-    ExternalLinks are link to external resources.
+    ExternalLink are link to external resources.
     Most of the time they will be URL to other web resources,
     """
 
@@ -407,6 +408,8 @@ class Directive(Node):
         return hash((tuple(self.value), self.domain, self.role))
 
     def __init__(self, value, domain, role):
+        # if value == "NpyIter_MultiNew":
+        #    breakpoint()
         assert isinstance(value, str)
         assert "`" not in value, value
         self.value = value

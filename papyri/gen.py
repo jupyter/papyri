@@ -1162,7 +1162,7 @@ class Gen:
 
         self.data = {}
         self.bdata = {}
-        self.metadata = {}
+        self._meta = {}
         self.examples = {}
         self.docs = {}
 
@@ -1218,7 +1218,10 @@ class Gen:
                 except Exception as e:
                     raise type(e)(f"{p=}")
                 blob = DocBlob()
-                blob.arbitrary = data
+                dv = DirectiveVisiter(
+                    ":".join(parts), set(), local_refs=set(), aliases={}
+                )
+                blob.arbitrary = [dv.visit(s) for s in data]
                 blob.content = {}
 
                 blob.ordered_sections = []
@@ -1269,7 +1272,7 @@ class Gen:
         self.write_examples(where)
         self.write_assets(where)
         with (where / "papyri.json").open("w") as f:
-            f.write(json.dumps(self.metadata, indent=2, sort_keys=True))
+            f.write(json.dumps(self._meta, indent=2, sort_keys=True))
 
     def write_assets(self, where: Path) -> None:
         assets = where / "assets"
@@ -1550,7 +1553,7 @@ class Gen:
         #            len(examples) > 0
         #        ), "we havent' found any examples, it is likely that the path is incorrect."
 
-        with self.p() as p2:
+        with self.progress() as p2:
             failed = []
 
             taskp = p2.add_task(description="Collecting examples", total=len(examples))
@@ -1702,10 +1705,11 @@ class Gen:
         if self.config.logo:
             logo_path = relative_dir / self.config.logo
             self.put_raw(logo_path.name, logo_path.read_bytes())
-        meta.update({"logo": logo_path.name})
         module = __import__(root)
         self.version = module.__version__
-        self._meta = meta
+        self._meta.update(
+            {"logo": logo_path.name, "module": root, "version": self.version}
+        )
 
     def collect_api_docs(
         self,
@@ -1724,7 +1728,6 @@ class Gen:
         prepare_doc_for_one_object
 
         """
-
 
         collector: DFSCollector = self._get_collector()
         collected: Dict[str, Any] = collector.items()
@@ -1755,7 +1758,7 @@ class Gen:
         )
 
         error_collector = ErrorCollector(self.config, self.log)
-        with self.p() as p2:
+        with self.progress() as p2:
 
             # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
@@ -1906,12 +1909,11 @@ class Gen:
                     json.dumps(failure_collection, indent=2, sort_keys=True),
                 )
 
-            self.metadata = {
-                "version": self.version,
-                "aliases": aliases,
-                "module": self.root,
-            }
-            self.metadata.update(self._meta)
+            self._meta.update(
+                {
+                    "aliases": aliases,
+                }
+            )
 
 
 def is_private(path):

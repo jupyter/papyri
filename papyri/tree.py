@@ -6,7 +6,7 @@ usually trees, and update nodes.
 
 from collections import Counter, defaultdict
 from functools import lru_cache
-from typing import Any, Dict, FrozenSet, List, Set, Tuple
+from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
 
 from .take2 import (
     Admonition,
@@ -319,6 +319,69 @@ class TreeReplacer:
             raise type(e)(f"{node=}")
 
 
+Handler = Callable[[str], List[Node]]
+
+DIRECTIVE_MAP: Dict[str, Dict[str, List[Handler]]] = {}
+
+
+def directive_handler(domain, role):
+    def _inner(func):
+        DIRECTIVE_MAP.setdefault(domain, {}).setdefault(role, []).append(func)
+        return func
+
+    return _inner
+
+
+def _x_any_unimplemented_to_verbatim(domain, role, value):
+    # print("To implement", domain, role)
+    return [Verbatim([value])]
+
+
+for role in ("type", "expr", "member", "macro", "enumerator", "func", "data"):
+    directive_handler("c", role)(
+        lambda value: _x_any_unimplemented_to_verbatim("c", role, value)
+    )
+for role in (
+    "any",
+    "attr",
+    "class",
+    "command",
+    "const",
+    "data",
+    "doc",
+    "exc",
+    "file",
+    "func",
+    "kbd",
+    "meth",
+    "mod",
+    "obj",
+    "program",
+    "ref",
+    "sub",
+    "sup",
+    "term",
+    "samp",  # networkx
+    "rc",  # matplotlib
+):
+    directive_handler("py", role)(
+        lambda value: _x_any_unimplemented_to_verbatim("py", role, value)
+    )
+
+
+@directive_handler("py", "math")
+def py_math_handler(value):
+    m = Math([value])
+    return [m]
+
+
+@directive_handler("py", "pep")
+def py_pep_hander(value):
+    number = int(value)
+    target = f"https://peps.python.org/pep-{number:04d}/"
+    return [ExternalLink(f"Pep {number}", target)]
+
+
 class DirectiveVisiter(TreeReplacer):
     """
     A tree replacer to update directives.
@@ -462,47 +525,26 @@ class DirectiveVisiter(TreeReplacer):
                 return target_qa
 
     def replace_Directive(self, directive: Directive):
-        #        if self.qa == "IPython.core.builtin_trap":
-        #            print("QA:", self.qa)
-        #            breakpoint()
-        if (directive.domain, directive.role) == ("py", "func"):
-            pass
-        elif (directive.domain, directive.role) == (None, None) and directive.value in (
+        domain, role = directive.domain, directive.role
+        if domain is None:
+            domain = "py"
+        _int: Dict[str, List[Handler]] = DIRECTIVE_MAP.get(domain, {})
+        if role is None:
+            role = "py"
+        handlers: List[Handler] = _int.get(role, [])
+        for h in handlers:
+            res = h(directive.value)
+            if res is not None:
+                return res
+
+        if (directive.domain, directive.role) == (None, None) and directive.value in (
             # TODO: link to stdlib
             "None",
             "True",
             "False",
         ):
             return [Verbatim([directive.value])]
-        elif (directive.domain is not None) or (
-            directive.role not in (None, "mod", "class", "func", "meth", "any")
-        ):
-            # TODO :many of these directive need to be implemented
-            if directive.role == "math":
-                m = Math([directive.value])
-                return [m]
-            if directive.role not in (
-                "attr",
-                "meth",
-                "doc",
-                "ref",
-                "func",
-                "mod",
-                "class",
-                "term",
-                "exc",
-                "obj",
-                "data",
-                "sub",
-                "program",
-                "file",
-                "command",
-                "sup",
-                "samp",  # networkx
-                "rc",  # matplotlib
-            ):
-                print("TODO role:", directive.role)
-            return [directive]
+
         loc: FrozenSet[str]
         if directive.role not in ["any", None]:
             loc = frozenset()
@@ -579,6 +621,7 @@ class DirectiveVisiter(TreeReplacer):
                 "in ",
                 self.qa,
             )
+        # print("Unchanged:", directive.domain, directive.role, directive.value, self.qa)
         return [directive]
 
 
