@@ -728,7 +728,7 @@ def render_one(
             doc=doc,
             logo=meta["logo"] if meta is not None else None,
             qa=qa,
-            version=doc.version,
+            version=meta["version"],
             module=qa.split(".")[0],
             backrefs=backrefs,
             ext=ext,
@@ -783,15 +783,15 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
     ref = key.path
 
     env, template = _ascii_env()
-    bytes_: bytes = store.get(key)
 
-    doc_blob = encoder.decode(bytes_)
+    doc_blob = encoder.decode(store.get(key))
+    meta = encoder.decode(store.get_meta(key))
 
     # exercise the reprs
     assert str(doc_blob)
 
     return render_one(
-        meta=None,
+        meta=meta,
         template=template,
         doc=doc_blob,
         qa=ref,

@@ -1272,6 +1272,7 @@ class Gen:
         self.write_examples(where)
         self.write_assets(where)
         with (where / "papyri.json").open("w") as f:
+            assert "version" in self._meta
             f.write(json.dumps(self._meta, indent=2, sort_keys=True))
 
     def write_assets(self, where: Path) -> None:
@@ -1710,6 +1711,7 @@ class Gen:
         self._meta.update(
             {"logo": logo_path.name, "module": root, "version": self.version}
         )
+        self._meta.update(meta)
 
     def collect_api_docs(
         self,
