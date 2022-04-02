@@ -32,7 +32,7 @@ github_slug = 'numpy/numpy'
 tag = 'v1.22.3'
 pypi = 'numpy'
 homepage = 'https://numpy.org/'
-docspage = 'https://numpy.org/doc/1.22//'
+docspage = 'https://numpy.org/doc/1.22/'
 
 
 [numpy.expected_errors]
