@@ -20,6 +20,7 @@ from typing import List
 from there import print
 
 from papyri.take2 import (
+    Transition,
     BlockDirective,
     BlockQuote,
     BlockVerbatim,
@@ -30,6 +31,7 @@ from papyri.take2 import (
     Directive,
     Emph,
     EnumeratedList,
+    ListItem,
     FieldList,
     FieldListItem,
     Options,
@@ -225,7 +227,7 @@ class TSVisitor:
     def visit_transition(self, node, prev_end=None):
         # assert False, self.bytes[node.start_byte - 10 : node.end_byte + 10].decode()
         data = self.bytes[node.start_byte : node.end_byte].decode()
-        return [Paragraph([Words(data)], [])]
+        return [Transition()]
 
     def visit_reference(self, node, prev_end=None):
         """
@@ -339,7 +341,7 @@ class TSVisitor:
             # assert len(body.children) == 1
             # parg = body.children[0]
             # assert parg.type == "paragraph", parg.type
-            acc.extend(self.visit(body))
+            acc.append(ListItem(self.visit(body)))
         return [BulletList(acc)]
 
         # t = Verbatim([self.bytes[node.start_byte+2: node.end_byte-2].decode()])
@@ -446,7 +448,7 @@ class TSVisitor:
         for list_item in node.children:
             assert list_item.type == "list_item"
             _bullet, body = list_item.children
-            acc.extend(self.visit(body))
+            acc.append(ListItem(self.visit(body)))
         return [EnumeratedList(acc)]
 
     def visit_target(self, node, prev_end=None):

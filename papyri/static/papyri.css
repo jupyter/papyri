@@ -10,6 +10,15 @@ body {
 	margin-left: 0;
 }
 
+.not-implemented {
+    border-color: orange;
+
+}
+
+p {
+   text-align: justify;
+}
+
 li > p {
    margin-top: 0;
    margin-bottom: 0;
@@ -218,7 +227,7 @@ summary>h2 {
 	overflow-x: hidden;
 	/* Disable horizontal scroll */
 	padding-top: 3rem;
-	box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+	/*box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;*/
 	{
 		% if not sidebar %
 	}
@@ -243,7 +252,7 @@ summary>h2 {
 	width: 160px;
 	padding-left: 20px;
 	padding-right: 20px;
-	border-bottom: solid thin #DDD;
+	/*border-bottom: solid thin #DDD;*/
 	padding-bottom: .5rem;
 	max-width: 100%;
 }
@@ -256,17 +265,6 @@ summary>h2 {
 	border-bottom: solid thin #DDD;
 }
 
-.container {
-	padding-left: 210px;
-	{
-		% if not sidebar %
-	}
-	padding-left: 10px;
-	{
-		% endif %
-	}
-	padding-top: 30px;
-}
 
  ::selection {
 	/* Set background color for selected text */

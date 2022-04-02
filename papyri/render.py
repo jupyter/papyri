@@ -50,6 +50,8 @@ def url(info, prefix, suffix):
     if info.module is None:
         assert info.version is None
         return info.path + suffix
+    if info.kind == "module":
+        return f"{prefix}{info.module}/{info.version}/api/{info.path}"
     if info.kind == "examples":
         return f"{prefix}{info.module}/{info.version}/examples/{info.path}"
     else:
@@ -57,7 +59,7 @@ def url(info, prefix, suffix):
 
 
 def unreachable(*obj):
-    return str(obj)
+    return str(obj[1])
     assert False, f"Unreachable: {obj=}"
 
 
@@ -267,7 +269,6 @@ def compute_graph(
         current iten
 
     """
-    # nodes_names = [n for n in nodes_names if n.startswith('numpy')]
     weights = {}
     assert isinstance(backrefs, set)
     for b in backrefs:
@@ -419,13 +420,21 @@ class HtmlRenderer:
                     config.output_dir / module / version / "gallery" / "index.html"
                 ).write_text(data)
 
-    async def gallery(self, module, version, ext=""):
+    async def gallery(self, package, version, ext=""):
+
+        if package == version == "*":
+            package = version = None
 
         figmap = defaultdict(lambda: [])
         assert isinstance(self.store, GraphStore)
-        meta = encoder.decode(self.store.get_meta(Key(module, version, None, None)))
+        if package is not None:
+            meta = encoder.decode(
+                self.store.get_meta(Key(package, version, None, None))
+            )
+        else:
+            meta = {"logo": None}
         logo = meta["logo"]
-        res = self.store.glob((module, version, "assets", None))
+        res = self.store.glob((package, version, "assets", None))
         backrefs = set()
         for key in res:
             brs = {tuple(x) for x in self.store.get_backref(key)}
@@ -442,44 +451,44 @@ class HtmlRenderer:
             for k in [
                 u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
             ]:
-                module, v, kind, _path = key
-                # module, filename, link
-                impath = f"{self.prefix}/{module}/{v}/img/{k}"
-                link = f"{self.prefix}/{module}/{v}/api/{_path}"
+                package, v, kind, _path = key
+                # package, filename, link
+                impath = f"{self.prefix}/{package}/{v}/img/{k}"
+                link = f"{self.prefix}/{package}/{v}/api/{_path}"
                 # figmap.append((impath, link, name)
-                figmap[module].append((impath, link, _path))
+                figmap[package].append((impath, link, _path))
 
-        glist = self.store.glob((module, version, "examples", None))
+        glist = self.store.glob((package, version, "examples", None))
         for target_key in glist:
             section = encoder.decode(self.store.get(target_key))
 
             for k in [
                 u.value for u in section.children if u.__class__.__name__ == "Fig"
             ]:
-                module, v, _, _path = target_key
+                package, v, _, _path = target_key
 
-                # module, filename, link
-                impath = f"{self.prefix}{module}/{v}/img/{k}"
-                link = f"{self.prefix}{module}/{v}/examples/{_path}"
+                # package, filename, link
+                impath = f"{self.prefix}{package}/{v}/img/{k}"
+                link = f"{self.prefix}{package}/{v}/examples/{_path}"
                 name = _path
-                figmap[module].append((impath, link, name))
+                figmap[package].append((impath, link, name))
 
         class D:
             pass
 
         doc = D()
         pap_keys = self.store.glob((None, None, "meta", "papyri.json"))
-        parts = {module: []}
+        parts = {package: []}
         for pk in pap_keys:
             mod, ver, kind, identifier = pk
-            parts[module].append((RefInfo(mod, ver, "api", mod), mod))
+            parts[package].append((RefInfo(mod, ver, "api", mod), mod))
 
         return self.env.get_template("gallery.tpl.j2").render(
             logo=logo,
             meta=meta,
             figmap=figmap,
             pygment_css="",
-            module=module,
+            module=package,
             parts=parts,
             ext=ext,
             version=version,
@@ -513,12 +522,13 @@ class HtmlRenderer:
 
         # ...
         return render_one(
+            current_type="docs",
             meta=meta,
             template=template,
             doc=doc_blob,
-            qa="numpy",
+            qa=package,  # incorrect
             ext="",
-            parts={"numpy": []},
+            parts={package: [], ref: []},
             parts_links={},
             backrefs=[],
             pygment_css=CSS_DATA,
@@ -573,6 +583,7 @@ class HtmlRenderer:
                 acc += "."
             backrefs = [RefInfo(*k) for k in backward]
             return render_one(
+                current_type="api",
                 template=template,
                 doc=doc_blob,
                 qa=ref,
@@ -634,7 +645,7 @@ def serve(*, sidebar: bool):
         return await html_renderer.gallery(module)
 
     async def gr():
-        return await html_renderer.gallery("*")
+        return await html_renderer.gallery("*", "*")
 
     async def ex(package, version, subpath):
         return await examples(
@@ -645,7 +656,7 @@ def serve(*, sidebar: bool):
             gstore=gstore,
         )
 
-    app.route("/logo.png")(plogo)
+    app.route("/logo.png")(static("papyri-logo.png"))
     app.route("/favicon.ico")(static("favicon.ico"))
     app.route("/papyri.css")(static("papyri.css"))
     app.route("/graph_canvas.js")(static("graph_canvas.js"))
@@ -676,6 +687,7 @@ def render_one(
     qa,
     ext,
     *,
+    current_type,
     backrefs,
     pygment_css=None,
     parts=(),
@@ -735,6 +747,7 @@ def render_one(
 
     try:
         return template.render(
+            current_type=current_type,
             doc=doc,
             logo=meta.get("logo", None),
             qa=qa,
@@ -801,6 +814,7 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
     assert str(doc_blob)
 
     return render_one(
+        current_type="API",
         meta=meta,
         template=template,
         doc=doc_blob,
@@ -1084,6 +1098,7 @@ async def _write_api_file(
             json_str = json.dumps(data)
             meta = encoder.decode(gstore.get_meta(key))
             data = render_one(
+                current_type="API",
                 template=template,
                 doc=doc_blob,
                 qa=qa,

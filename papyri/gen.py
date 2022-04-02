@@ -1234,7 +1234,7 @@ class Gen:
                 blob.signature = Signature(None)
                 blob.references = None
                 blob.refs = []
-
+                blob.validate()
                 self.docs[parts] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
                 # data = p.read_bytes()
 
