@@ -44,7 +44,7 @@ def minify(s):
 
 def url(info, prefix, suffix):
     assert isinstance(info, RefInfo), info
-    assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
+    assert info.kind in ("module", "api", "examples", "assets", "?", "docs"), info.kind
     # assume same package/version for now.
     assert info.module is not None
     if info.module is None:
@@ -53,7 +53,7 @@ def url(info, prefix, suffix):
     if info.kind == "examples":
         return f"{prefix}{info.module}/{info.version}/examples/{info.path}"
     else:
-        return f"{prefix}{info.module}/{info.version}/api/{info.path}{suffix}"
+        return f"{prefix}{info.module}/{info.version}/{info.kind}/{info.path}{suffix}"
 
 
 def unreachable(*obj):
@@ -487,6 +487,15 @@ class HtmlRenderer:
             doc=doc,
         )
 
+    async def _list_narative(self, package: str, version: str):
+        s = ""
+        keys = self.store.glob((package, version, "docs", None))
+        for k in sorted(keys, key=lambda r: r[3]):
+            r = RefInfo(*k)
+            u = url(r, "/p/", "")
+            s = s + f"<a href='{u}'>{k[3]}</a><br/>"
+        return s
+
     async def _serve_narrative(self, package: str, version: str, ref: str):
         """
         Serve the narrative part of the documentation for given package
@@ -495,10 +504,12 @@ class HtmlRenderer:
         key = Key(package, version, "docs", ref)
         bytes = self.store.get(key)
         doc_blob = encoder.decode(bytes)
-        meta = self.store.get_meta(key)
+        meta = encoder.decode(self.store.get_meta(key))
         # return "OK"
 
         template = self.env.get_template("html.tpl.j2")
+
+        assert isinstance(doc_blob, IngestedBlobs), type(doc_blob)
 
         # ...
         return render_one(
@@ -619,18 +630,15 @@ def serve(*, sidebar: bool):
     async def full(package, version, ref):
         return await html_renderer._route(ref, version)
 
-    async def full_gallery(module, version):
-        return await html_renderer.gallery(module, version)
-
     async def g(module):
         return await html_renderer.gallery(module)
 
     async def gr():
         return await html_renderer.gallery("*")
 
-    async def ex(module, version, subpath):
+    async def ex(package, version, subpath):
         return await examples(
-            module=module,
+            module=package,
             version=version,
             subpath=subpath,
             sidebar=sidebar,
@@ -644,8 +652,9 @@ def serve(*, sidebar: bool):
     app.route("/graph_svg.js")(static("graph_svg.js"))
     # sub here is likely incorrect
     app.route(f"{prefix}<package>/<version>/img/<path:subpath>")(img)
-    app.route(f"{prefix}<module>/<version>/examples/<path:subpath>")(ex)
-    app.route(f"{prefix}<module>/<version>/gallery")(full_gallery)
+    app.route(f"{prefix}<package>/<version>/examples/<path:subpath>")(ex)
+    app.route(f"{prefix}<package>/<version>/gallery")(html_renderer.gallery)
+    app.route(f"{prefix}<package>/<version>/docs/")(html_renderer._list_narative)
     app.route(f"{prefix}<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
     app.route(f"{prefix}<package>/<version>/api/<ref>")(full)
     app.route(f"{prefix}<package>/static/<path:subpath>")(full)
@@ -706,6 +715,7 @@ def render_one(
         <Multiline Description Here>
 
     """
+    assert isinstance(meta, dict)
     # TODO : move this to ingest likely.
     # Here if we have too many references we group them on where they come from.
     assert not hasattr(doc, "logo")
@@ -726,7 +736,7 @@ def render_one(
     try:
         return template.render(
             doc=doc,
-            logo=meta["logo"] if meta is not None else None,
+            logo=meta.get("logo", None),
             qa=qa,
             version=meta["version"],
             module=qa.split(".")[0],

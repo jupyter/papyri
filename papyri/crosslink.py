@@ -373,12 +373,9 @@ class Ingester:
             module, version = path.name.split("_")
             key = Key(module, version, "docs", ref)
             doc.validate()
-            js = doc.to_json()
-            assert "backrefs" not in js
             gstore.put(
                 key,
-                cbor2.dumps(js),
-                # json.dumps(js, indent=2).encode(),
+                encoder.encode(doc),
                 [],
             )
 
