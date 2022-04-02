@@ -22,8 +22,6 @@
 """
 Urwid tour.  Shows many of the standard widget types and features.
 """
-import json
-import pathlib
 import sys
 from typing import List
 
@@ -37,8 +35,7 @@ from urwid.command_map import CURSOR_DOWN, CURSOR_LEFT, CURSOR_RIGHT, CURSOR_UP
 from urwid.text_layout import calc_coords
 from urwid.widget import LEFT, SPACE
 
-from papyri.crosslink import load_one
-from papyri.take2 import RefInfo
+from papyri.take2 import RefInfo, encoder
 
 
 class Link:
@@ -232,17 +229,7 @@ def dedup(l):
 
 
 def load(file_path, walk, qa, gen_content, frame):
-    p = file_path
-    br = pathlib.Path(str(p) + ".br")
-    if br.exists():
-        br_data = br.read_text()
-
-        br_bytes = json.dumps(
-            [RefInfo(*x).to_json() for x in json.loads(br_data)]
-        ).encode()
-    else:
-        br_bytes = None
-    blob = load_one(file_path.read_text(), br_bytes)
+    blob = encoder.decode(file_path.read_bytes())
     assert hasattr(blob, "arbitrary")
     for i in gen_content(blob, frame):
         walk.append(i)

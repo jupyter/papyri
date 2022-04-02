@@ -327,7 +327,6 @@ def load_one_uningested(
         acc1.append(visitor.visit(sec))
     blob.arbitrary = acc1
 
-
     blob.process(known_refs=known_refs, aliases=aliases, verbose=False, version=version)
     # if targets:
     #    print("LL", len(targets))
@@ -345,20 +344,6 @@ def load_one_uningested(
     # blob.refs = list(targets)
     # if blob.refs:
     #    print("BLOB REFS:", blob.refs)
-    return blob
-
-
-def load_one(
-    bytes_: bytes, bytes2_: bytes, known_refs: FrozenSet[RefInfo] = None, strict=False
-) -> IngestedBlobs:
-    assert isinstance(bytes_, bytes), bytes_
-    blob = encoder.decode(bytes_)
-    assert isinstance(blob, IngestedBlobs)
-    # TODO move that one up.
-    if known_refs is None:
-        known_refs = frozenset()
-    if not strict:
-        blob.process(known_refs=known_refs, aliases=None)
     return blob
 
 
