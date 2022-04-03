@@ -365,7 +365,7 @@ async def _route_data(gstore: GraphStore, ref, version, known_refs):
 
 
 class HtmlRenderer:
-    def __init__(self, store, *, sidebar, prefix, trailing_html):
+    def __init__(self, store: GraphStore, *, sidebar, prefix, trailing_html):
         assert prefix.startswith("/")
         assert prefix.endswith("/")
         self.progress = progress
@@ -546,9 +546,7 @@ class HtmlRenderer:
         assert version is not None
         assert ref != ""
 
-        env = self.env
-
-        template = env.get_template("html.tpl.j2")
+        template = self.env.get_template("html.tpl.j2")
         root = ref.split(".")[0]
         meta = encoder.decode(self.store.get_meta(Key(root, version, None, None)))
 
@@ -600,8 +598,61 @@ class HtmlRenderer:
         else:
             # The reference we are trying to render does not exists
             # TODO
-            error = env.get_template("404.tpl.j2")
+            error = self.env.get_template("404.tpl.j2")
             return error.render(backrefs=list(set()), tree={}, ref=ref, module=root)
+
+    async def _write_api_file(
+        self,
+        tree,
+        known_refs,
+        ref_map,
+        config,
+        graph,
+    ):
+
+        template = self.env.get_template("html.tpl.j2")
+        gfiles = list(self.store.glob((None, None, "module", None)))
+        random.shuffle(gfiles)
+        for _, key in progress(gfiles, description="Rendering API..."):
+            module, version = key.module, key.version
+            if config.ascii:
+                await _ascii_render(key, store=self.store)
+            if config.html:
+                doc_blob, qa, siblings, parts_links, backward, forward = await loc(
+                    key,
+                    store=self.store,
+                    tree=tree,
+                    known_refs=known_refs,
+                    ref_map=ref_map,
+                )
+                backward_r = [RefInfo(*x) for x in backward]
+                if graph:
+                    data = compute_graph(self.store, set(backward), set(forward), key)
+                else:
+                    data = {}
+                json_str = json.dumps(data)
+                meta = encoder.decode(self.store.get_meta(key))
+                data = render_one(
+                    current_type="API",
+                    template=template,
+                    doc=doc_blob,
+                    qa=qa,
+                    ext=".html",
+                    parts=siblings,
+                    parts_links=parts_links,
+                    backrefs=backward_r,
+                    pygment_css=CSS_DATA,
+                    graph=json_str,
+                    sidebar=config.html_sidebar,
+                    meta=meta,
+                )
+                if config.output_dir:
+                    (config.output_dir / module / version / "api").mkdir(
+                        parents=True, exist_ok=True
+                    )
+                    (
+                        config.output_dir / module / version / "api" / f"{qa}.html"
+                    ).write_text(minify(data))
 
 
 async def img(package, version, subpath=None) -> Response:
@@ -938,20 +989,6 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     prefix = "/p/"
 
     gstore = GraphStore(ingest_dir, {})
-    gfiles = list(gstore.glob((None, None, "module", None)))
-
-    css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
-    env = Environment(
-        loader=FileSystemLoader(os.path.dirname(__file__)),
-        autoescape=select_autoescape(["html", "tpl.j2"]),
-        undefined=StrictUndefined,
-    )
-    env.trim_blocks = True
-    env.lstrip_blocks = True
-    env.globals["len"] = len
-    env.globals["unreachable"] = unreachable
-    env.globals["url"] = lambda x: url(x, prefix, "")
-    template = env.get_template("html.tpl.j2")
 
     known_refs, ref_map = find_all_refs(gstore)
     # end
@@ -966,7 +1003,6 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
         log.info("no output dir, we'll try not to touch the filesystem")
 
     # shuffle files to detect bugs, just in case.
-    random.shuffle(gfiles)
     # Gallery
 
     html_renderer = HtmlRenderer(
@@ -984,14 +1020,10 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
         assert config.output_dir is not None
         (config.output_dir.parent / f.name).write_bytes(bytes_)
 
-    await _write_api_file(
-        gfiles,
-        gstore,
+    await html_renderer._write_api_file(
         tree,
         known_refs,
         ref_map,
-        template,
-        css_data,
         config,
         graph,
     )
@@ -1034,7 +1066,6 @@ async def _write_example_files(gstore, config, prefix):
 
 async def render_single_examples(env, module, gstore, version, ext, sidebar, data):
     assert sidebar is not None
-    css_data = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
     mod_vers = gstore.glob((None, None))
     meta = encoder.decode(gstore.get_meta(Key(module, version, None, None)))
@@ -1055,7 +1086,7 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
     return env.get_template("examples.tpl.j2").render(
         meta=meta,
         logo=logo,
-        pygment_css=css_data,
+        pygment_css=CSS_DATA,
         module=module,
         parts=parts,
         ext=ext,
@@ -1065,60 +1096,6 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
         ex=ex,
         sidebar=sidebar,
     )
-
-
-async def _write_api_file(
-    gfiles,
-    gstore,
-    tree,
-    known_refs,
-    ref_map,
-    template,
-    css_data,
-    config,
-    graph,
-):
-
-    for _, key in progress(gfiles, description="Rendering API..."):
-        module, version = key.module, key.version
-        if config.ascii:
-            await _ascii_render(key, store=gstore)
-        if config.html:
-            doc_blob, qa, siblings, parts_links, backward, forward = await loc(
-                key,
-                store=gstore,
-                tree=tree,
-                known_refs=known_refs,
-                ref_map=ref_map,
-            )
-            backward_r = [RefInfo(*x) for x in backward]
-            if graph:
-                data = compute_graph(gstore, set(backward), set(forward), key)
-            else:
-                data = {}
-            json_str = json.dumps(data)
-            meta = encoder.decode(gstore.get_meta(key))
-            data = render_one(
-                current_type="API",
-                template=template,
-                doc=doc_blob,
-                qa=qa,
-                ext=".html",
-                parts=siblings,
-                parts_links=parts_links,
-                backrefs=backward_r,
-                pygment_css=css_data,
-                graph=json_str,
-                sidebar=config.html_sidebar,
-                meta=meta,
-            )
-            if config.output_dir:
-                (config.output_dir / module / version / "api").mkdir(
-                    parents=True, exist_ok=True
-                )
-                (
-                    config.output_dir / module / version / "api" / f"{qa}.html"
-                ).write_text(minify(data))
 
 
 async def copy_assets(config, gstore):
