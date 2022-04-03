@@ -243,6 +243,9 @@ class TreeVisitor:
             raise ValueError(f"{node.__class__} has no children, no values {node}")
 
 
+from there import print
+
+
 class TreeReplacer:
     """
     Tree visitor with methods to replace nodes.
@@ -283,11 +286,11 @@ class TreeReplacer:
                 "Words",
                 "Comment",
                 "BlockQuote",
-                "BulletList",
                 "Directive",
                 "SeeAlsoItems",
                 "Code2",
                 "BlockMath",
+                "Transition",
                 "Unimplemented",
                 "Options",
                 "SubstitutionRef",
@@ -348,10 +351,13 @@ for role in (
     "command",
     "const",
     "data",
+    "keyword",
     "doc",
     "exc",
     "file",
     "func",
+    "method",
+    "enabled",
     "kbd",
     "meth",
     "mod",
@@ -556,7 +562,7 @@ class DirectiveVisiter(TreeReplacer):
         assert "`" not in text
         # text = text.strip("`")
         to_resolve = text
-        if (" <" in text or "\n<" in text) and text.endswith(">"):
+        if ("<" in text) and text.endswith(">"):
             try:
                 text, to_resolve = text.split("<")
                 text = text.rstrip()

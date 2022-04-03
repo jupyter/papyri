@@ -134,10 +134,6 @@ def serialize(instance, annotation):
                 except Exception as e:
                     exception_already_desribed = True
                     raise type(e)(f"Error serializing field {k!r} of {instance!r}")
-            assert data, (
-                f"Error serializing {instance=}, of type {type(instance)}, "
-                "no data found. Did you type annotate?"
-            )
             return data
 
         else:

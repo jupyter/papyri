@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css">
@@ -29,17 +30,38 @@
     </script>
     <link rel="stylesheet" href="/papyri.css">
 <style>
-    header > brand, header>:first-child {
-        border-right: 1px solid #ccc;
-        border-left: 1px solid #ccc;
-        padding: 16px;
-        padding-top: 0.5rem;
-        padding-bottom: 0.5rem;
+
+    header > brand {
+        /*border-right: 1px solid #ccc;
+          border-left: 1px solid #ccc;*/
+        margin-left: 15px;
+        padding: 0px;
         display: inline-block; 
-        width: 167px;
+        width: 67px;
         {% if not sidebar %}
             display: none;
         {% endif %}
+    }
+
+    brand > a {
+        text-decoration: None;
+
+    }
+    brand >a> img {
+            display: inline-block;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    bottom: -10px;
+
+   }
+    .container {
+       max-width: 800px;
+       padding-left: 210px;
+       {% if not sidebar %}
+        padding-left: 10px;
+       {% endif %}
+       padding-top: 30px;
     }
     {{pygment_css}}
 </style>

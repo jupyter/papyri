@@ -563,6 +563,14 @@ class Strong(Node):
 
 
 class _XList(Node):
+    children: List[ListItem]
+
+    def __init__(self, children):
+        self.children = children
+
+
+@register(4006)
+class ListItem(Node):
     value: List[
         Union[
             Paragraph,
@@ -640,6 +648,7 @@ class NumpydocSignature(Node):
 class Section(Node):
     children: List[
         Union[
+            Transition,
             Code,
             Code2,
             Unimplemented,
@@ -847,6 +856,11 @@ def compress_word(stream):
     return acc
 
 
+@register(4019)
+class Transition(Node):
+    pass
+
+
 @register(4025)
 class Paragraph(Node):
 
@@ -873,6 +887,9 @@ class Paragraph(Node):
     ]
 
     def __init__(self, inline, inner, width=80):
+
+        super().__init__()
+
         for i in inline:
             assert isinstance(
                 i,

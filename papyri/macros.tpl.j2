@@ -4,7 +4,7 @@
     {%- elif type_ == 'Emph' -%}
        <em>{{render_inner('Words', obj.value)|safe}}</em>
     {%- elif type_ == 'Strong' -%}
-       <b>{{render_inner('Words', obj.content)|safe}}</b>
+       <strong>{{render_inner('Words', obj.content)}}</strong>
     {%- elif type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
@@ -34,8 +34,8 @@
     {% elif type_ == 'Verbatim' %}
         <code class='verbatim'>{{obj.text}}</code>
     {% else %}
-        <code>Some B |{{type_}}|</code>
-        {{unreachable(obj, type_)}}
+        <code>|{{type_}}| not implemeted yet</code>
+        <pre class='not-implemented'>{{-unreachable(obj, type_)-}}</pre>
     {%- endif -%}
 {%- endmacro %}
 
@@ -84,7 +84,7 @@
     <div class='head'>.. {{dve.directive_name}}:: {{dve.args0}}
     </div>
     {% if dve.inner %}
-        {{block_paragraph(dve.inner)}}
+    <pre class='not-implemented'>{{-block_paragraph(dve.inner)-}}</pre>
     {% endif %}
 </div>
 {% endmacro %}
@@ -146,16 +146,20 @@
            {% endfor %}
        {% elif type == 'BulletList' %}
            <ul>
-               {%- for item in obj.value %}
+               {%- for item in obj.children %}
                <li>{{render_II(item)}}</li>
                {% endfor %}
             </ul>
        {% elif type == 'EnumeratedList' %}
            <ol>
-               {%- for item in obj.value %}
+               {%- for item in obj.children %}
                <li>{{render_II(item)}}</li>
                {% endfor %}
             </ol>
+       {% elif type == 'ListItem' %}
+               {%- for item in obj.value %}
+               {{render_II(item)}}
+               {% endfor %}
        {% elif type == 'FieldList' %}
            <dl> 
              {%- for item in obj.children %}
@@ -182,14 +186,19 @@
 
        {% elif type == 'BlockMath' %}
         <span class="tex2jax_process">$${{obj.value}}$$</span>
+       {% elif type == 'Transition' %}
+         <hr/>
+
        {% elif type == 'BlockQuote' %}
             <pre>
                {%- for line in obj.value %}{{line}}{{'\n'}}{% endfor -%}
             </pre>
 
        {% else %}
-           <code>Some A {{type}} Not implemented yet</code>
-           {{unreachable(type, obj)}}
+           <code class='not-implemented'>Type {{type}} (A) Not implemented yet</code>
+           <pre class='not-implemented'>
+           {{-unreachable(type, obj)-}}
+           </pre>
        {%- endif -%}
     {%- endif %}
 {%- endmacro %}

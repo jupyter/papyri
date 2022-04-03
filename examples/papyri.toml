@@ -2,5 +2,11 @@
 submodules = ['examples']
 examples_folder = '~/dev/papyri/docs/examples/'
 logo = "../papyri-logo.png"
+docs_path = "~/dev/papyri/docs"
 exec = true
 exec_failure = 'fallback'
+
+[meta]
+github_slug = 'jupyter/papyri'
+tag = '{{version}}'
+pypi = 'papyri'

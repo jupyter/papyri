@@ -44,20 +44,22 @@ def minify(s):
 
 def url(info, prefix, suffix):
     assert isinstance(info, RefInfo), info
-    assert info.kind in ("module", "api", "examples", "assets", "?"), info.kind
+    assert info.kind in ("module", "api", "examples", "assets", "?", "docs"), info.kind
     # assume same package/version for now.
     assert info.module is not None
     if info.module is None:
         assert info.version is None
         return info.path + suffix
+    if info.kind == "module":
+        return f"{prefix}{info.module}/{info.version}/api/{info.path}"
     if info.kind == "examples":
         return f"{prefix}{info.module}/{info.version}/examples/{info.path}"
     else:
-        return f"{prefix}{info.module}/{info.version}/api/{info.path}{suffix}"
+        return f"{prefix}{info.module}/{info.version}/{info.kind}/{info.path}{suffix}"
 
 
 def unreachable(*obj):
-    return str(obj)
+    return str(obj[1])
     assert False, f"Unreachable: {obj=}"
 
 
@@ -121,6 +123,7 @@ async def examples(module, version, subpath, ext="", sidebar=None, gstore=None):
     doc = Doc()
 
     return env.get_template("examples.tpl.j2").render(
+        meta=meta,
         logo=meta["logo"],
         pygment_css=CSS_DATA,
         module=module,
@@ -267,7 +270,6 @@ def compute_graph(
         current iten
 
     """
-    # nodes_names = [n for n in nodes_names if n.startswith('numpy')]
     weights = {}
     assert isinstance(backrefs, set)
     for b in backrefs:
@@ -419,13 +421,21 @@ class HtmlRenderer:
                     config.output_dir / module / version / "gallery" / "index.html"
                 ).write_text(data)
 
-    async def gallery(self, module, version, ext=""):
+    async def gallery(self, package, version, ext=""):
+
+        if package == version == "*":
+            package = version = None
 
         figmap = defaultdict(lambda: [])
         assert isinstance(self.store, GraphStore)
-        meta = encoder.decode(self.store.get_meta(Key(module, version, None, None)))
+        if package is not None:
+            meta = encoder.decode(
+                self.store.get_meta(Key(package, version, None, None))
+            )
+        else:
+            meta = {"logo": None}
         logo = meta["logo"]
-        res = self.store.glob((module, version, "assets", None))
+        res = self.store.glob((package, version, "assets", None))
         backrefs = set()
         for key in res:
             brs = {tuple(x) for x in self.store.get_backref(key)}
@@ -442,50 +452,59 @@ class HtmlRenderer:
             for k in [
                 u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
             ]:
-                module, v, kind, _path = key
-                # module, filename, link
-                impath = f"{self.prefix}/{module}/{v}/img/{k}"
-                link = f"{self.prefix}/{module}/{v}/api/{_path}"
+                package, v, kind, _path = key
+                # package, filename, link
+                impath = f"{self.prefix}/{package}/{v}/img/{k}"
+                link = f"{self.prefix}/{package}/{v}/api/{_path}"
                 # figmap.append((impath, link, name)
-                figmap[module].append((impath, link, _path))
+                figmap[package].append((impath, link, _path))
 
-        glist = self.store.glob((module, version, "examples", None))
+        glist = self.store.glob((package, version, "examples", None))
         for target_key in glist:
             section = encoder.decode(self.store.get(target_key))
 
             for k in [
                 u.value for u in section.children if u.__class__.__name__ == "Fig"
             ]:
-                module, v, _, _path = target_key
+                package, v, _, _path = target_key
 
-                # module, filename, link
-                impath = f"{self.prefix}{module}/{v}/img/{k}"
-                link = f"{self.prefix}{module}/{v}/examples/{_path}"
+                # package, filename, link
+                impath = f"{self.prefix}{package}/{v}/img/{k}"
+                link = f"{self.prefix}{package}/{v}/examples/{_path}"
                 name = _path
-                figmap[module].append((impath, link, name))
+                figmap[package].append((impath, link, name))
 
         class D:
             pass
 
         doc = D()
         pap_keys = self.store.glob((None, None, "meta", "papyri.json"))
-        parts = {module: []}
+        parts = {package: []}
         for pk in pap_keys:
             mod, ver, kind, identifier = pk
-            parts[module].append((RefInfo(mod, ver, "api", mod), mod))
+            parts[package].append((RefInfo(mod, ver, "api", mod), mod))
 
         return self.env.get_template("gallery.tpl.j2").render(
             logo=logo,
             meta=meta,
             figmap=figmap,
             pygment_css="",
-            module=module,
+            module=package,
             parts=parts,
             ext=ext,
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
         )
+
+    async def _list_narative(self, package: str, version: str):
+        s = ""
+        keys = self.store.glob((package, version, "docs", None))
+        for k in sorted(keys, key=lambda r: r[3]):
+            r = RefInfo(*k)
+            u = url(r, "/p/", "")
+            s = s + f"<a href='{u}'>{k[3]}</a><br/>"
+        return s
 
     async def _serve_narrative(self, package: str, version: str, ref: str):
         """
@@ -495,19 +514,22 @@ class HtmlRenderer:
         key = Key(package, version, "docs", ref)
         bytes = self.store.get(key)
         doc_blob = encoder.decode(bytes)
-        meta = self.store.get_meta(key)
+        meta = encoder.decode(self.store.get_meta(key))
         # return "OK"
 
         template = self.env.get_template("html.tpl.j2")
 
+        assert isinstance(doc_blob, IngestedBlobs), type(doc_blob)
+
         # ...
         return render_one(
+            current_type="docs",
             meta=meta,
             template=template,
             doc=doc_blob,
-            qa="numpy",
+            qa=package,  # incorrect
             ext="",
-            parts={"numpy": []},
+            parts={package: [], ref: []},
             parts_links={},
             backrefs=[],
             pygment_css=CSS_DATA,
@@ -562,6 +584,7 @@ class HtmlRenderer:
                 acc += "."
             backrefs = [RefInfo(*k) for k in backward]
             return render_one(
+                current_type="api",
                 template=template,
                 doc=doc_blob,
                 qa=ref,
@@ -619,33 +642,31 @@ def serve(*, sidebar: bool):
     async def full(package, version, ref):
         return await html_renderer._route(ref, version)
 
-    async def full_gallery(module, version):
-        return await html_renderer.gallery(module, version)
-
     async def g(module):
         return await html_renderer.gallery(module)
 
     async def gr():
-        return await html_renderer.gallery("*")
+        return await html_renderer.gallery("*", "*")
 
-    async def ex(module, version, subpath):
+    async def ex(package, version, subpath):
         return await examples(
-            module=module,
+            module=package,
             version=version,
             subpath=subpath,
             sidebar=sidebar,
             gstore=gstore,
         )
 
-    app.route("/logo.png")(plogo)
+    app.route("/logo.png")(static("papyri-logo.png"))
     app.route("/favicon.ico")(static("favicon.ico"))
     app.route("/papyri.css")(static("papyri.css"))
     app.route("/graph_canvas.js")(static("graph_canvas.js"))
     app.route("/graph_svg.js")(static("graph_svg.js"))
     # sub here is likely incorrect
     app.route(f"{prefix}<package>/<version>/img/<path:subpath>")(img)
-    app.route(f"{prefix}<module>/<version>/examples/<path:subpath>")(ex)
-    app.route(f"{prefix}<module>/<version>/gallery")(full_gallery)
+    app.route(f"{prefix}<package>/<version>/examples/<path:subpath>")(ex)
+    app.route(f"{prefix}<package>/<version>/gallery")(html_renderer.gallery)
+    app.route(f"{prefix}<package>/<version>/docs/")(html_renderer._list_narative)
     app.route(f"{prefix}<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
     app.route(f"{prefix}<package>/<version>/api/<ref>")(full)
     app.route(f"{prefix}<package>/static/<path:subpath>")(full)
@@ -667,6 +688,7 @@ def render_one(
     qa,
     ext,
     *,
+    current_type,
     backrefs,
     pygment_css=None,
     parts=(),
@@ -706,6 +728,7 @@ def render_one(
         <Multiline Description Here>
 
     """
+    assert isinstance(meta, dict)
     # TODO : move this to ingest likely.
     # Here if we have too many references we group them on where they come from.
     assert not hasattr(doc, "logo")
@@ -725,8 +748,9 @@ def render_one(
 
     try:
         return template.render(
+            current_type=current_type,
             doc=doc,
-            logo=meta["logo"] if meta is not None else None,
+            logo=meta.get("logo", None),
             qa=qa,
             version=meta["version"],
             module=qa.split(".")[0],
@@ -791,6 +815,7 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
     assert str(doc_blob)
 
     return render_one(
+        current_type="API",
         meta=meta,
         template=template,
         doc=doc_blob,
@@ -1074,6 +1099,7 @@ async def _write_api_file(
             json_str = json.dumps(data)
             meta = encoder.decode(gstore.get_meta(key))
             data = render_one(
+                current_type="API",
                 template=template,
                 doc=doc_blob,
                 qa=qa,
