@@ -17,8 +17,6 @@ parser.set_language(RST)
 from textwrap import indent
 from typing import List
 
-from there import print
-
 from papyri.take2 import (
     Transition,
     BlockDirective,
@@ -177,9 +175,10 @@ class TSVisitor:
 
     """
 
-    def __init__(self, bytes, root):
+    def __init__(self, bytes, root, qa):
         self.bytes = bytes
         self.root = root
+        self.qa = qa
         self.depth = 0
 
     def as_text(self, node):
@@ -190,6 +189,32 @@ class TSVisitor:
         items = self.visit(new_node)
         res = [x for x in items if not isinstance(x, Whitespace)]
         return res
+
+    def _compressor(self, nodes):
+        """
+        This is currently a workaround of a tree-sitter limitations.
+        List cannot have blank lines between them, so we end up with
+        multiple XxxxList, instead of one XxxxList with many items.
+        """
+
+        acc = []
+        current = None
+        for n in nodes:
+            if isinstance(n, EnumeratedList):
+                if current is None:
+                    current = n
+                else:
+                    current.children.extend(n.children)
+
+            else:
+                if current:
+                    acc.append(current)
+                    current = None
+                acc.append(n)
+        if current:
+            acc.append(current)
+
+        return acc
 
     def visit(self, node):
         self.depth += 1
@@ -206,12 +231,14 @@ class TSVisitor:
                 continue
             if not hasattr(self, "visit_" + kind):
                 raise ValueError(
-                    f"visit_{kind} not found while visiting {node}::\n{self.bytes[c.start_byte: c.end_byte].decode()!r}"
+                    f"visit_{kind} not found while visiting {node}::\n{self.as_text(c)!r}"
                 )
-            meth = getattr(self, "visit_" + kind, self.generic_visit)
-            acc.extend(meth(c, prev_end=prev_end))
+            meth = getattr(self, "visit_" + kind)
+            new_children = meth(c, prev_end=prev_end)
+            acc.extend(new_children)
             prev_end = c.end_point
         self.depth -= 1
+        acc = self._compressor(acc)
         return acc
 
     def visit_citation(self, node, prev_end=None):
@@ -225,8 +252,6 @@ class TSVisitor:
         return []
 
     def visit_transition(self, node, prev_end=None):
-        # assert False, self.bytes[node.start_byte - 10 : node.end_byte + 10].decode()
-        data = self.bytes[node.start_byte : node.end_byte].decode()
         return [Transition()]
 
     def visit_reference(self, node, prev_end=None):
@@ -238,7 +263,7 @@ class TSVisitor:
         there might be one or two trailing underscore, which we should pay attention to.
 
         """
-        full_text = self.bytes[node.start_byte : node.end_byte].decode()
+        full_text = self.as_text(node)
         if "`" not in full_text:
             # TODO reference do not need to be in backticks,
             # though it conflict with some things like numpy
@@ -246,11 +271,7 @@ class TSVisitor:
             # we should likely have a way to handle that.
             _text = full_text
         else:
-            _text, trailing = (
-                self.bytes[node.start_byte + 1 : node.end_byte]
-                .decode()
-                .rsplit("`", maxsplit=1)
-            )
+            _text, trailing = self.as_text(node)[1:].rsplit("`", maxsplit=1)
             assert trailing in ("_", "__")
         return [Directive(_text, None, None)]
 
@@ -259,8 +280,7 @@ class TSVisitor:
             role, text = node.children
             assert role.type == "role"
             assert text.type == "interpreted_text"
-
-            role_value = self.bytes[role.start_byte : role.end_byte].decode()
+            role_value = self.as_text(role)
             assert role_value.startswith(":")
             assert role_value.endswith(":")
             role_value = role_value[1:-1]
@@ -280,8 +300,7 @@ class TSVisitor:
             assert False
         if role_value:
             assert ":" not in role_value
-
-        text_value = self.bytes[text.start_byte : text.end_byte].decode()
+        text_value = self.as_text(text)
         assert text_value.startswith("`")
         assert text_value.endswith("`")
 
@@ -391,16 +410,7 @@ class TSVisitor:
             acc.pop()
         assert len(acc2) < 2
         p = Paragraph(compress_word(acc), [])
-        # p.to_json()
         return [p, *acc2]
-
-    def generic_visit(self, node):
-        print("G" + " " * (self.depth * 4 - 1), node)
-        assert False, node
-        return []
-        res = self.visit(node)
-        # res.to_json()
-        return res
 
     def visit_line_block(self, node, prev_end=None):
         # TODO
@@ -621,14 +631,14 @@ def nest_sections(items) -> List[Section]:
     return acc
 
 
-def parse(text: bytes) -> List[Section]:
+def parse(text: bytes, qa=None) -> List[Section]:
     """
     Parse text using Tree sitter RST, and return a list of serialised section I guess ?
     """
 
     tree = parser.parse(text)
     root = Node(tree.root_node)
-    return nest_sections(TSVisitor(text, root).visit_document(root))
+    return nest_sections(TSVisitor(text, root, qa).visit_document(root))
 
 
 class TreeSitterParseError(Exception):

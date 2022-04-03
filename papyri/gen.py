@@ -1214,7 +1214,7 @@ class Gen:
                 parts = p.relative_to(path).parts
                 assert parts[-1].endswith("rst")
                 try:
-                    data = ts.parse(p.read_bytes())
+                    data = ts.parse(p.read_bytes(), p)
                 except Exception as e:
                     raise type(e)(f"{p=}")
                 blob = DocBlob()

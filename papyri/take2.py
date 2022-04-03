@@ -563,18 +563,10 @@ class Strong(Node):
 
 
 class _XList(Node):
-    value: List[ListItem]
+    children: List[ListItem]
 
-    @property
-    def children(self):
-        return self.value
-
-    @children.setter
-    def children(self, children):
-        self.value = children
-
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, children):
+        self.children = children
 
 
 @register(4006)
