@@ -61,26 +61,19 @@ function update(links, nodes) {
     .data(links)
     .enter()
     .append("line")
-    .attr("class", "link")
-    .attr("marker-end", "url(#arrowhead)");
+    /* transform that into css:
+     line.link {
+        marker-end: url(#arrowhead);
+     }
+     */
+    .attrs({
+      class: "link",
+      stroke: "gray",
+      "marker-end": "url(#arrowhead)",
+    });
 
   //link.append("title")
   //    .text(function (d) {return d.type;});
-
-  edgepaths = svg
-    .selectAll(".edgepath")
-    .data(links)
-    .enter()
-    .append("path")
-    .attrs({
-      class: "edgepath",
-      "fill-opacity": 0,
-      "stroke-opacity": 0,
-      id: function (d, i) {
-        return "edgepath" + i;
-      },
-    })
-    .style("pointer-events", "none");
 
   edgelabels = svg
     .selectAll(".edgelabel")
@@ -90,9 +83,6 @@ function update(links, nodes) {
     .style("pointer-events", "none")
     .attrs({
       class: "edgelabel",
-      id: function (d, i) {
-        return "edgelabel" + i;
-      },
       "font-size": 10,
       fill: "#aaa",
     });
@@ -173,19 +163,6 @@ function ticked() {
 
   node.attr("transform", function (d) {
     return "translate(" + d.x + ", " + d.y + ")";
-  });
-
-  edgepaths.attr("d", function (d) {
-    return (
-      "M " +
-      d.source.x +
-      " " +
-      d.source.y +
-      " L " +
-      d.target.x +
-      " " +
-      d.target.y
-    );
   });
 
   edgelabels.attr("transform", function (d) {

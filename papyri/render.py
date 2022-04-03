@@ -123,6 +123,7 @@ async def examples(module, version, subpath, ext="", sidebar=None, gstore=None):
     doc = Doc()
 
     return env.get_template("examples.tpl.j2").render(
+        meta=meta,
         logo=meta["logo"],
         pygment_css=CSS_DATA,
         module=module,
