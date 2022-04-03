@@ -190,6 +190,21 @@ class TSVisitor:
         res = [x for x in items if not isinstance(x, Whitespace)]
         return res
 
+    def _compressorII(self, nodes):
+        acc = []
+        for n in nodes:
+            if (
+                acc
+                and isinstance(n, (EnumeratedList, BulletList))
+                and isinstance(acc[-1], type(n))
+            ):
+                acc[-1].children.extend(n.children)
+                continue
+
+            acc.append(n)
+
+        return acc
+
     def _compressor(self, nodes):
         """
         This is currently a workaround of a tree-sitter limitations.

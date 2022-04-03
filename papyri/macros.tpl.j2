@@ -4,7 +4,7 @@
     {%- elif type_ == 'Emph' -%}
        <em>{{render_inner('Words', obj.value)|safe}}</em>
     {%- elif type_ == 'Strong' -%}
-       <b>{{render_inner('Words', obj.content)|safe}}</b>
+       <strong>{{render_inner('Words', obj.content)}}</strong>
     {%- elif type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
@@ -146,14 +146,14 @@
            {% endfor %}
        {% elif type == 'BulletList' %}
            <ul>
-               {%- for item in obj.value %}
-               <li bullet>{{render_II(item)}}</li>
+               {%- for item in obj.children %}
+               <li>{{render_II(item)}}</li>
                {% endfor %}
             </ul>
        {% elif type == 'EnumeratedList' %}
            <ol>
-               {%- for item in obj.value %}
-               <li enumerate>{{render_II(item)}}</li>
+               {%- for item in obj.children %}
+               <li>{{render_II(item)}}</li>
                {% endfor %}
             </ol>
        {% elif type == 'ListItem' %}
