@@ -650,9 +650,74 @@ class HtmlRenderer:
                     (config.output_dir / module / version / "api").mkdir(
                         parents=True, exist_ok=True
                     )
-                    (
-                        config.output_dir / module / version / "api" / f"{qa}.html"
-                    ).write_text(minify(data))
+                    tfile = config.output_dir / module / version / "api" / f"{qa}.html"
+                    if config.minify:
+                        tfile.write_text(minify(data))
+                    else:
+                        tfile.write_text(data)
+
+    async def copy_static(self, output_dir):
+        here = Path(os.path.dirname(__file__))
+        _static = here / "static"
+        for f in _static.glob("*"):
+            bytes_ = f.read_bytes()
+            assert output_dir is not None
+            (output_dir.parent / f.name).write_bytes(bytes_)
+        (output_dir.parent / "pygments.css").write_text(pygment_css())
+
+    async def copy_assets(self, config):
+        """
+        Copy assets from to their final destination.
+
+        Assets are all the binary files that we don't want to change.
+        """
+        if config.output_dir is None:
+            return
+
+        assets_2 = self.store.glob((None, None, "assets", None))
+        for _, asset in dummy_progress(assets_2, description="Copying assets"):
+            b = config.output_dir / asset.module / asset.version / "img"
+            b.mkdir(parents=True, exist_ok=True)
+            data = self.store.get(asset)
+            (b / asset.path).write_bytes(data)
+
+    async def _write_example_files(self, config):
+        if not config.html:
+            return
+
+        examples = list(self.store.glob((None, None, "examples", None)))
+        for _, example in progress(examples, description="Rendering Examples..."):
+            module, version, _, path = example
+            data = await render_single_examples(
+                self.env,
+                module,
+                self.store,
+                version,
+                ".html",
+                config.html_sidebar,
+                self.store.get(example),
+            )
+            if config.output_dir:
+                (config.output_dir / module / version / "examples").mkdir(
+                    parents=True, exist_ok=True
+                )
+                (
+                    config.output_dir / module / version / "examples" / f"{path}.html"
+                ).write_text(data)
+
+    async def _write_narrative_files(self, config):
+        narrative = list(self.store.glob((None, None, "docs", None)))
+        for (_, (module, version, _, path)) in progress(
+            narrative, description="Rendering Narrative..."
+        ):
+            data = await self._serve_narrative(module, version, path)
+            if config.output_dir:
+                (config.output_dir / module / version / "docs").mkdir(
+                    parents=True, exist_ok=True
+                )
+                (
+                    config.output_dir / module / version / "docs" / f"{path}.html"
+                ).write_text(data)
 
 
 async def img(package, version, subpath=None) -> Response:
@@ -672,12 +737,8 @@ def static(name) -> Callable[[], bytes]:
     return f
 
 
-def plogo() -> bytes:
-
-    path = os.path.abspath(__file__)
-    dir_path = Path(os.path.dirname(path))
-    with open((dir_path / "papyri-logo.png"), "rb") as f:
-        return f.read()
+def pygment_css() -> str:
+    return CSS_DATA
 
 
 def serve(*, sidebar: bool):
@@ -711,6 +772,7 @@ def serve(*, sidebar: bool):
     app.route("/logo.png")(static("papyri-logo.png"))
     app.route("/favicon.ico")(static("favicon.ico"))
     app.route("/papyri.css")(static("papyri.css"))
+    app.route("/pygment.css")(pygment_css)
     app.route("/graph_canvas.js")(static("graph_canvas.js"))
     app.route("/graph_svg.js")(static("graph_svg.js"))
     # sub here is likely incorrect
@@ -957,9 +1019,10 @@ class StaticRenderingConfig:
     html_sidebar: bool
     ascii: bool
     output_dir: Optional[Path]
+    minify: bool
 
 
-async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
+async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool, minify: bool):
     """
     This does static rendering of all the given files.
 
@@ -985,7 +1048,7 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
         assert html_dir_ is not None
         output_dir = html_dir_ / "p"
         output_dir.mkdir(exist_ok=True)
-    config = StaticRenderingConfig(html, sidebar, ascii, output_dir)
+    config = StaticRenderingConfig(html, sidebar, ascii, output_dir, minify)
     prefix = "/p/"
 
     gstore = GraphStore(ingest_dir, {})
@@ -1010,15 +1073,11 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
     )
     await html_renderer._write_gallery(config)
 
-    await _write_example_files(gstore, config, prefix=prefix)
+    await html_renderer._write_example_files(config)
     await html_renderer._write_index(html_dir_)
-    await copy_assets(config, gstore)
-    here = Path(os.path.dirname(__file__))
-    _static = here / "static"
-    for f in _static.glob("*"):
-        bytes_ = f.read_bytes()
-        assert config.output_dir is not None
-        (config.output_dir.parent / f.name).write_bytes(bytes_)
+    await html_renderer.copy_assets(config)
+    await html_renderer.copy_static(config.output_dir)
+    await html_renderer._write_narrative_files(config)
 
     await html_renderer._write_api_file(
         tree,
@@ -1027,41 +1086,6 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool):
         config,
         graph,
     )
-
-
-async def _write_example_files(gstore, config, prefix):
-    if not config.html:
-        return
-
-    examples = list(gstore.glob((None, None, "examples", None)))
-    env = Environment(
-        loader=FileSystemLoader(os.path.dirname(__file__)),
-        autoescape=select_autoescape(["html", "tpl.j2"]),
-        undefined=StrictUndefined,
-    )
-    env.trim_blocks = True
-    env.lstrip_blocks = True
-    env.globals["len"] = len
-    env.globals["url"] = lambda x: url(x, prefix, "")
-    env.globals["unreachable"] = unreachable
-    for _, example in progress(examples, description="Rendering Examples..."):
-        module, version, _, path = example
-        data = await render_single_examples(
-            env,
-            module,
-            gstore,
-            version,
-            ".html",
-            config.html_sidebar,
-            gstore.get(example),
-        )
-        if config.output_dir:
-            (config.output_dir / module / version / "examples").mkdir(
-                parents=True, exist_ok=True
-            )
-            (
-                config.output_dir / module / version / "examples" / f"{path}.html"
-            ).write_text(data)
 
 
 async def render_single_examples(env, module, gstore, version, ext, sidebar, data):
@@ -1096,20 +1120,3 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
         ex=ex,
         sidebar=sidebar,
     )
-
-
-async def copy_assets(config, gstore):
-    """
-    Copy assets from to their final destination.
-
-    Assets are all the binary files that we don't want to change.
-    """
-    if config.output_dir is None:
-        return
-
-    assets_2 = gstore.glob((None, None, "assets", None))
-    for _, asset in dummy_progress(assets_2, description="Copying assets"):
-        b = config.output_dir / asset.module / asset.version / "img"
-        b.mkdir(parents=True, exist_ok=True)
-        data = gstore.get(asset)
-        (b / asset.path).write_bytes(data)

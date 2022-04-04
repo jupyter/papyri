@@ -394,16 +394,20 @@ class DirectiveVisiter(TreeReplacer):
 
     """
 
-    def __init__(self, qa: str, known_refs: FrozenSet[RefInfo], local_refs, aliases):
+    def __init__(
+        self, qa: str, known_refs: FrozenSet[RefInfo], local_refs, aliases, version
+    ):
         """
         qa: str
             current object fully qualified name
         known_refs: set of RefInfo
             list of all currently know objects
-        locals_refs:
+        locals_refs :
             pass
-        aliases:
+        aliases :
             pass
+        version : str
+            current version when linking
 
         """
         super().__init__()
@@ -420,6 +424,7 @@ class DirectiveVisiter(TreeReplacer):
         # short -> long
         self.rev_aliases = {v: k for k, v in aliases.items()}
         self._targets: Set[Any] = set()
+        self.version = version
 
     def replace_BlockDirective(self, block_directive: BlockDirective):
         block_directive.children = [self.visit(c) for c in block_directive.children]
@@ -610,6 +615,8 @@ class DirectiveVisiter(TreeReplacer):
 
             target_qa = self._import_solver(tqa)
             if target_qa is not None:
+                if target_qa.split(".")[0] == self.qa.split("."):
+                    assert False, "local reference should have explicit versions"
                 ri = RefInfo(
                     module=target_qa.split(".")[0],
                     version="*",
@@ -658,8 +665,7 @@ def _obj_from_path(parts):
 
 
 class DVR(DirectiveVisiter):
-    def __init__(self, *args, version, **kwargs):
-        self.version = version
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def replace_Code2(self, code):
@@ -721,6 +727,8 @@ class DVR(DirectiveVisiter):
     def replace_Fig(self, fig):
 
         # todo: add version number here
-        self._targets.add(RefInfo(self.qa.split(".")[0], "*", "assets", fig.value))
+        self._targets.add(
+            RefInfo(self.qa.split(".")[0], self.version, "assets", fig.value)
+        )
 
         return [fig]
