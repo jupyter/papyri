@@ -453,13 +453,14 @@ def render(
     dry_run: bool = False,
     sidebar: bool = True,
     graph: bool = True,
+    minify: bool = False,
 ):
     _intro()
     import trio
 
     from .render import main as m2
 
-    trio.run(m2, ascii, html, dry_run, sidebar, graph)
+    trio.run(m2, ascii, html, dry_run, sidebar, graph, minify)
 
 
 @app.command()

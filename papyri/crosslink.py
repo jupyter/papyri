@@ -317,7 +317,9 @@ def load_one_uningested(
 
     local_refs: FrozenSet[str] = frozenset(flat(_local_refs))
 
-    visitor = DirectiveVisiter(qa, frozenset(), local_refs, aliases=aliases)
+    visitor = DirectiveVisiter(
+        qa, frozenset(), local_refs, aliases=aliases, version=version
+    )
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
         if section in blob.content:
             blob.content[section] = visitor.visit(blob.content[section])

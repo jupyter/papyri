@@ -14,7 +14,7 @@ execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', '
 'numpy.distutils',
 ]
 
-submodules = ['distutils','typing']
+submodules = ['distutils','typing','dual']
 
 docs_path = '~/dev/numpy/doc/source'
 

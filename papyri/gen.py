@@ -1219,7 +1219,11 @@ class Gen:
                     raise type(e)(f"{p=}")
                 blob = DocBlob()
                 dv = DirectiveVisiter(
-                    ":".join(parts), set(), local_refs=set(), aliases={}
+                    ":".join(parts),
+                    set(),
+                    local_refs=set(),
+                    aliases={},
+                    version=self._meta["version"],
                 )
                 blob.arbitrary = [dv.visit(s) for s in data]
                 blob.content = {}
@@ -1851,7 +1855,9 @@ class Gen:
                     return [y for x in l for y in x]
 
                 lr: FrozenSet[str] = frozenset(flat(_local_refs))
-                dv = DirectiveVisiter(qa, known_refs, local_refs=lr, aliases={})
+                dv = DirectiveVisiter(
+                    qa, known_refs, local_refs=lr, aliases={}, version=self.version
+                )
                 doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
                 doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
 
