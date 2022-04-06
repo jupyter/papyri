@@ -81,11 +81,13 @@
 
 {% macro block_directive(dve) -%}
 <div class='block_directive'>
-    <div class='head'>.. {{dve.directive_name}}:: {{dve.args0}}
-    </div>
-    {% if dve.inner %}
-    <pre class='not-implemented'>{{-block_paragraph(dve.inner)-}}</pre>
-    {% endif %}
+    <pre class='not-implemented'>
+    .. {{dve.name}}:: {{dve.argument}}
+    {% for opt in dve.options %}
+    {{ opt }}
+    {% endfor %}
+    {{dve.content}}
+    </pre>
 </div>
 {% endmacro %}
 

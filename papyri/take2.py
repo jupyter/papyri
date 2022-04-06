@@ -96,6 +96,7 @@ def not_type_check(item, annotation):
         # technically incorrect
         if not isinstance(item, (list, tuple)):
             return f"got  {type(item)}, Yexpecting list"
+        # todo, this does not support Tuple[x,x] < len of tuple, and treat is as a list.
         assert len(annotation.__args__) == 1
         inner_type = annotation.__args__[0]
 
@@ -331,7 +332,7 @@ class Verbatim(Node):
         return sum(len(x) for x in self.value) + 4
 
     def __repr__(self):
-        return "``" + "".join(self.value) + "``"
+        return "<Verbatim ``" + "".join(self.value) + "``>"
 
 
 @register(4043)
@@ -970,7 +971,17 @@ class Admonition(Node):
 
     kind: str
     title: Optional[str]
-    children: List[Paragraph]
+    children: List[
+        Union[
+            Paragraph,
+            BulletList,
+            BlockVerbatim,
+            BlockQuote,
+            DefList,
+            # I dont' like nested block directive.
+            BlockDirective,
+        ]
+    ]
 
     def __init__(self, kind=None, title=None, children=None):
         self.kind = kind
@@ -981,30 +992,24 @@ class Admonition(Node):
 @register(4031)
 class BlockDirective(Node):
 
-    directive_name: str
-    args0: List[str]
-    # TODO : this is likely wrong...
-    inner: Optional[Paragraph]
+    name: str
+    argument: str
+    options: List[Tuple[str]]
+    content: str
 
-    @property
-    def children(self):
-        if self.inner is not None:
-            return [self.inner]
-        else:
-            return []
+    def __init__(self, name, argument, options, content):
+        assert isinstance(name, str)
+        assert isinstance(argument, str)
+        assert isinstance(options, list)
+        for k, v in options:
+            assert isinstance(k, str)
+            assert isinstance(v, str)
+        assert isinstance(content, str)
 
-    @children.setter
-    def children(self, value):
-        assert len(value) in [0, 1]
-        if len(value) == 0:
-            assert not self.inner
-        else:
-            self.inner = value[0]
-
-    def __init__(self, directive_name, args0, inner):
-        self.directive_name = directive_name
-        self.args0 = args0
-        self.inner = inner
+        self.name = name
+        self.argument = argument
+        self.options = options
+        self.content = content
 
 
 @register(4032)
@@ -1013,7 +1018,6 @@ class BlockVerbatim(Node):
     value: str
 
     def __init__(self, value):
-
         assert isinstance(value, str)
         self.value = value
 
