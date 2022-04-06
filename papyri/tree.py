@@ -322,6 +322,13 @@ class TreeReplacer:
             raise type(e)(f"{node=}")
 
 
+# misc thoughts:
+# we will have multiplet type of directive handlers
+# from the simpler to more complex.
+# handler that want to parse/handle everything by themsleves,
+# other that don't care about domain/role.
+
+
 Handler = Callable[[str], List[Node]]
 
 DIRECTIVE_MAP: Dict[str, Dict[str, List[Handler]]] = {}
@@ -539,22 +546,14 @@ class DirectiveVisiter(TreeReplacer):
         domain, role = directive.domain, directive.role
         if domain is None:
             domain = "py"
-        _int: Dict[str, List[Handler]] = DIRECTIVE_MAP.get(domain, {})
         if role is None:
             role = "py"
-        handlers: List[Handler] = _int.get(role, [])
+        domain_handler: Dict[str, List[Handler]] = DIRECTIVE_MAP.get(domain, {})
+        handlers: List[Handler] = domain_handler.get(role, [])
         for h in handlers:
             res = h(directive.value)
             if res is not None:
                 return res
-
-        if (directive.domain, directive.role) == (None, None) and directive.value in (
-            # TODO: link to stdlib
-            "None",
-            "True",
-            "False",
-        ):
-            return [Verbatim([directive.value])]
 
         loc: FrozenSet[str]
         if directive.role not in ["any", None]:
@@ -562,20 +561,33 @@ class DirectiveVisiter(TreeReplacer):
         else:
             loc = self.local_refs
         text = directive.value
-        # TODO: wrong, there should not be any ` left that is likely a
-        # verbatim vs directive parsing issue.
         assert "`" not in text
-        # text = text.strip("`")
         to_resolve = text
-        if ("<" in text) and text.endswith(">"):
+        if (
+            ("<" in text)
+            and text.endswith(">")
+            and " <" not in text
+            and "\n<" not in text
+        ):
+            assert False, ("error space-< in", self.qa, self.directive)
+        if (" <" in text) and text.endswith(">"):
             try:
-                text, to_resolve = text.split("<")
+                text, to_resolve = text.split(" <")
                 text = text.rstrip()
             except ValueError:
                 assert False, directive.value
             assert to_resolve.endswith(">"), (text, to_resolve)
             to_resolve = to_resolve.rstrip(">")
-        if to_resolve.startswith("https://") or to_resolve.startswith("http://"):
+        elif ("\n <" in text) and text.endswith(">"):
+            try:
+                text, to_resolve = text.split(" <")
+                text = text.rstrip()
+            except ValueError:
+                assert False, directive.value
+            assert to_resolve.endswith(">"), (text, to_resolve)
+            to_resolve = to_resolve.rstrip(">")
+
+        if to_resolve.startswith("https://", "http://", "mailto://"):
             return [ExternalLink(text, to_resolve)]
 
         r = self._resolve(loc, to_resolve)
