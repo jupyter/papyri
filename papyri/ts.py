@@ -427,7 +427,7 @@ class TSVisitor:
         if acc[-1] == Word(" "):
             acc.pop()
         assert len(acc2) < 2
-        p = Paragraph(compress_word(acc), [])
+        p = Paragraph(compress_word(acc))
         return [p, *acc2]
 
     def visit_line_block(self, node, prev_end=None):

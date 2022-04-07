@@ -25,6 +25,8 @@ from .crosslink import IngestedBlobs, RefInfo, find_all_refs
 from .graphstore import GraphStore, Key
 from .take2 import RefInfo, encoder, Section
 from .utils import progress, dummy_progress
+from .tree import TreeVisitor
+from . import take2
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -400,6 +402,57 @@ class HtmlRenderer:
     async def _write_index(self, html_dir):
         if html_dir:
             (html_dir / "index.html").write_text(await self.index())
+
+    async def virtual(self, module, node):
+        if module == "*":
+            module = None
+        items = list(self.store.glob((module, None, None, None)))
+
+        visitor = TreeVisitor([getattr(take2, node)])
+        acc = []
+        for it in items:
+            if it.kind in ("assets", "examples", "meta"):
+                continue
+            data = self.store.get(it)
+            try:
+                obj = encoder.decode(data)
+            except Exception:
+                print("Decode exception", it)
+                continue
+            if not isinstance(obj, IngestedBlobs):
+                print("SKIP", it)
+                continue
+            lacc = []
+            for a in obj.arbitrary + list(obj.content.values()):
+                res = visitor.generic_visit(a)
+                for v in res.values():
+                    lacc.extend(v)
+            if lacc:
+                acc.append(Section(lacc, title=it[3]))
+            # a2 = visitor.generic_visit(obj.content)
+            # print(a1, a2)
+
+        doc = IngestedBlobs()
+        doc.content = {}
+
+        class S:
+            pass
+
+        doc.signature = S()
+        doc.signature.value = None
+        doc.arbitrary = acc
+        return self.env.get_template("html.tpl.j2").render(
+            graph=None,
+            backrefs=[[], []],
+            module="*",
+            doc=doc,
+            parts={"*": []},
+            version="*",
+            ext="",
+            current_type="",
+            logo=None,
+            meta={},
+        )
 
     async def _write_gallery(self, config):
         """ """
@@ -785,6 +838,7 @@ def serve(*, sidebar: bool):
     app.route(f"{prefix}<package>/static/<path:subpath>")(full)
     app.route(f"{prefix}/gallery/")(gr)
     app.route(f"{prefix}/gallery/<module>")(g)
+    app.route(f"{prefix}/virtual/<module>/<node>")(html_renderer.virtual)
     app.route("/")(html_renderer.index)
     port = int(os.environ.get("PORT", 1234))
     print("Seen config port ", port)

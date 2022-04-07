@@ -223,6 +223,8 @@ class TreeVisitor:
         self.find = find
 
     def generic_visit(self, node):
+        from .take2 import Options, Transition
+
         name = node.__class__.__name__
         if method := getattr(self, "visit_" + name, None):
             return method(node)
@@ -242,6 +244,8 @@ class TreeVisitor:
         elif hasattr(node, "value"):
             if type(node) not in self.skipped:
                 self.skipped.add(type(node))
+            return {}
+        elif isinstance(node, (RefInfo, Options, Transition)):
             return {}
         else:
             raise ValueError(f"{node.__class__} has no children, no values {node}")
@@ -456,6 +460,9 @@ class DirectiveVisiter(TreeReplacer):
                 self.qa,
             )
             content = argument + content
+        elif argument and not content:
+            # TODO: do we want to allow that ?
+            content = argument
         return [BlockMath(content)]
 
     def _admonition_handler_x(self, name, argument, options, content):
@@ -560,7 +567,7 @@ class DirectiveVisiter(TreeReplacer):
             and " <" not in text
             and "\n<" not in text
         ):
-            assert False, ("error space-< in", self.qa, directive)
+            pass  # assert False, ("error space-< in", self.qa, directive)
         if (" <" in text) and text.endswith(">"):
             try:
                 text, to_resolve = text.split(" <")

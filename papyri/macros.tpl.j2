@@ -44,9 +44,6 @@
         {%- for obj in prg.inline -%}
             {{- render_inner(obj.__class__.__name__, obj) -}}
         {%- endfor -%}
-        {%- for obj in prg.inner -%}
-            {{- render_II(obj) -}}
-        {%- endfor -%}
     </p>
 {% endmacro %}
 
@@ -80,15 +77,13 @@
 {%- endmacro %}
 
 {% macro block_directive(dve) -%}
-<div class='block_directive'>
     <pre class='not-implemented'>
-    .. {{dve.name}}:: {{dve.argument}}
+.. {{dve.name}}:: {{dve.argument}}
     {% for opt in dve.options %}
     {{ opt }}
     {% endfor %}
-    {{dve.content}}
+    {{dve.content|indent -}}
     </pre>
-</div>
 {% endmacro %}
 
 {% macro block_admonition(adm) -%}

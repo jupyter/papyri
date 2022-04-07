@@ -229,6 +229,7 @@ class Leaf(Node):
     value: str
 
     def __init__(self, value):
+        # assert value, breakpoint()
         self.value = value
 
 
@@ -865,7 +866,7 @@ class Transition(Node):
 @register(4025)
 class Paragraph(Node):
 
-    __slots__ = ["inner", "inline", "width"]
+    __slots__ = ["inline"]
 
     inline: List[
         Union[
@@ -883,11 +884,7 @@ class Paragraph(Node):
         ]
     ]
 
-    inner: List[
-        Union[Paragraph, BlockVerbatim, BulletList, EnumeratedList, Unimplemented]
-    ]
-
-    def __init__(self, inline, inner, width=80):
+    def __init__(self, inline):
 
         super().__init__()
 
@@ -908,16 +905,13 @@ class Paragraph(Node):
                 ),
             ), i
         self.inline = inline
-        self.inner = inner
-        self.width = width
 
     @property
     def children(self):
-        return [*self.inline, *self.inner]
+        return self.inline
 
     @children.setter
     def children(self, new):
-        inner = []
         inline = []
         for n in new:
             if isinstance(
@@ -940,11 +934,10 @@ class Paragraph(Node):
                 break
         for n in new:
             if isinstance(n, (Paragraph, BlockVerbatim, BulletList, EnumeratedList)):
-                inner.append(n)
+                assert False
 
-        assert len(inner) + len(inline) == len(new), (inner, inline, new)
+        assert len(inline) == len(new), (inline, new)
 
-        self.inner = inner
         self.inline = inline
 
     @classmethod
@@ -952,7 +945,7 @@ class Paragraph(Node):
         return cls([], [])
 
     def __hash__(self):
-        return hash((tuple(self.children), self.width))
+        return hash((tuple(self.children)))
 
     def __eq__(self, other):
         return (type(self) == type(other)) and (self.children == other.children)
@@ -978,8 +971,10 @@ class Admonition(Node):
             BlockVerbatim,
             BlockQuote,
             DefList,
-            # I dont' like nested block directive.
+            # I dont' like nested block directive/Admonitions.
             BlockDirective,
+            Admonition,
+            Unimplemented,  # skimage.util._regular_grid.regular_grid
         ]
     ]
 
@@ -1010,6 +1005,10 @@ class BlockDirective(Node):
         self.argument = argument
         self.options = options
         self.content = content
+
+    @property
+    def value(self):
+        return [self.name, self.argument, self.options, self.content]
 
 
 @register(4032)
