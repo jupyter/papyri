@@ -866,9 +866,9 @@ class Transition(Node):
 @register(4025)
 class Paragraph(Node):
 
-    __slots__ = ["inline"]
+    __slots__ = ["children"]
 
-    inline: List[
+    children: List[
         Union[
             Words,
             Strong,
@@ -884,11 +884,11 @@ class Paragraph(Node):
         ]
     ]
 
-    def __init__(self, inline):
+    def __init__(self, children):
 
         super().__init__()
 
-        for i in inline:
+        for i in children:
             assert isinstance(
                 i,
                 (
@@ -904,41 +904,7 @@ class Paragraph(Node):
                     SubstitutionRef,
                 ),
             ), i
-        self.inline = inline
-
-    @property
-    def children(self):
-        return self.inline
-
-    @children.setter
-    def children(self, new):
-        inline = []
-        for n in new:
-            if isinstance(
-                n,
-                (
-                    Words,
-                    Directive,
-                    Verbatim,
-                    Link,
-                    ExternalLink,
-                    Math,
-                    Strong,
-                    Emph,
-                    SubstitutionRef,
-                    Unimplemented,
-                ),
-            ):
-                inline.append(n)
-            else:
-                break
-        for n in new:
-            if isinstance(n, (Paragraph, BlockVerbatim, BulletList, EnumeratedList)):
-                assert False
-
-        assert len(inline) == len(new), (inline, new)
-
-        self.inline = inline
+        self.children = children
 
     @classmethod
     def _instance(cls):
