@@ -200,10 +200,6 @@ class Node(Base):
 
         return True
 
-    @classmethod
-    def _instance(cls):
-        return cls()
-
     def is_whitespace(self):
         if not isinstance(self.value, str):
             return False
@@ -425,10 +421,6 @@ class Directive(Node):
             assert isinstance(role, str), role
             assert ":" not in role
 
-    @classmethod
-    def _instance(cls):
-        return cls("", "", "")
-
     def __eq__(self, other):
         return (
             (type(self) == type(other))
@@ -499,10 +491,6 @@ class Words(Node):
 
     def __init__(self, value):
         self.value = value
-
-    @classmethod
-    def _instance(cls):
-        return cls("")
 
     def __eq__(self, other):
         return type(self) == type(other) and self.value.strip() == other.value.strip()
@@ -866,8 +854,6 @@ class Transition(Node):
 @register(4025)
 class Paragraph(Node):
 
-    __slots__ = ["children"]
-
     children: List[
         Union[
             Words,
@@ -905,10 +891,6 @@ class Paragraph(Node):
                 ),
             ), i
         self.children = children
-
-    @classmethod
-    def _instance(cls):
-        return cls([], [])
 
     def __hash__(self):
         return hash((tuple(self.children)))
@@ -988,10 +970,6 @@ class BlockVerbatim(Node):
 
     def __eq__(self, other):
         return (type(self) == type(other)) and (self.value == other.value)
-
-    @classmethod
-    def _instance(cls):
-        return cls("")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} '{len(self.value)}'>"

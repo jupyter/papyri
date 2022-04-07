@@ -638,7 +638,7 @@ class TSVisitor:
                 # TODO missing type
                 acc.append(
                     DefListItem(
-                        dt=Paragraph(compress_word(self.visit(term)), []),
+                        dt=Paragraph(compress_word(self.visit(term))),
                         dd=self.visit_paragraph(term),
                     )
                 )
