@@ -561,7 +561,7 @@ class _XList(Node):
 
 @register(4006)
 class ListItem(Node):
-    value: List[
+    children: List[
         Union[
             Paragraph,
             EnumeratedList,
@@ -577,16 +577,8 @@ class ListItem(Node):
         ]
     ]
 
-    @property
-    def children(self):
-        return self.value
-
-    @children.setter
-    def children(self, children):
-        self.value = children
-
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, children):
+        self.children = children
 
 
 @register(4039)
