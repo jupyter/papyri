@@ -338,7 +338,7 @@ class HtmlRenderer:
             meta = encoder.decode(self.store.get_meta(k))
             data.append((k.module, k.version, meta["logo"]))
 
-        return self.env.get_template("index.tpl.j2").render(pygment_css="", data=data)
+        return self.env.get_template("index.tpl.j2").render(data=data)
 
     async def _write_index(self, html_dir):
         if html_dir:
@@ -482,7 +482,6 @@ class HtmlRenderer:
             logo=logo,
             meta=meta,
             figmap=figmap,
-            pygment_css="",
             module=package,
             parts=parts,
             ext=ext,
@@ -526,7 +525,6 @@ class HtmlRenderer:
             parts={package: [], ref: []},
             parts_links={},
             backrefs=[],
-            pygment_css=CSS_DATA,
             graph="{}",
         )
 
@@ -591,7 +589,6 @@ class HtmlRenderer:
                 parts=siblings,
                 parts_links=parts_links,
                 backrefs=backrefs,
-                pygment_css=CSS_DATA,
                 graph=json_str,
                 meta=meta,
             )
@@ -641,7 +638,6 @@ class HtmlRenderer:
                     parts=siblings,
                     parts_links=parts_links,
                     backrefs=backward_r,
-                    pygment_css=CSS_DATA,
                     graph=json_str,
                     meta=meta,
                 )
@@ -687,10 +683,8 @@ class HtmlRenderer:
         examples = list(self.store.glob((None, None, "examples", None)))
         for _, example in progress(examples, description="Rendering Examples..."):
             module, version, _, path = example
-            data = await render_single_examples(
-                self.env,
+            data = await self.render_single_examples(
                 module,
-                self.store,
                 version,
                 ext=".html",
                 data=self.store.get(example),
@@ -740,10 +734,39 @@ class HtmlRenderer:
         return self.env.get_template("examples.tpl.j2").render(
             meta=meta,
             logo=meta["logo"],
-            pygment_css=CSS_DATA,
             module=package,
             parts=parts,
             ext="",
+            version=version,
+            parts_links=defaultdict(lambda: ""),
+            doc=doc,
+            ex=ex,
+        )
+
+    async def render_single_examples(self, module, version, *, ext, data):
+
+        mod_vers = self.store.glob((None, None))
+        meta = encoder.decode(self.store.get_meta(Key(module, version, None, None)))
+        logo = meta["logo"]
+        parts = {module: []}
+        for mod, ver in mod_vers:
+            assert isinstance(mod, str)
+            assert isinstance(ver, str)
+            parts[module].append((RefInfo(mod, ver, "api", mod), mod))
+
+        ex = encoder.decode(data)
+
+        class Doc:
+            pass
+
+        doc = Doc()
+
+        return self.env.get_template("examples.tpl.j2").render(
+            meta=meta,
+            logo=logo,
+            module=module,
+            parts=parts,
+            ext=ext,
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -828,7 +851,6 @@ def render_one(
     *,
     current_type,
     backrefs,
-    pygment_css=None,
     parts=(),
     parts_links=(),
     graph="{}",
@@ -853,8 +875,6 @@ def render_one(
     parts : Dict[str, list[(str, str)]
         used for navigation and for parts of the breakcrumbs to have navigation to siblings.
         This is not directly related to current object.
-    pygment_css : <Insert Type here>
-        <Multiline Description Here>
     parts_links : <Insert Type here>
         <Multiline Description Here>
     graph : <Insert Type here>
@@ -893,7 +913,6 @@ def render_one(
             ext=ext,
             parts=parts,
             parts_links=parts_links,
-            pygment_css=pygment_css,
             graph=graph,
             meta=meta,
         )
@@ -957,7 +976,6 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
         qa=ref,
         ext="",
         backrefs=[],
-        pygment_css=None,
         graph="{}",
     )
 
@@ -1109,33 +1127,3 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool, minify: b
     )
 
 
-async def render_single_examples(env, module, gstore, version, *, ext, data):
-
-    mod_vers = gstore.glob((None, None))
-    meta = encoder.decode(gstore.get_meta(Key(module, version, None, None)))
-    logo = meta["logo"]
-    parts = {module: []}
-    for mod, ver in mod_vers:
-        assert isinstance(mod, str)
-        assert isinstance(ver, str)
-        parts[module].append((RefInfo(mod, ver, "api", mod), mod))
-
-    ex = encoder.decode(data)
-
-    class Doc:
-        pass
-
-    doc = Doc()
-
-    return env.get_template("examples.tpl.j2").render(
-        meta=meta,
-        logo=logo,
-        pygment_css=CSS_DATA,
-        module=module,
-        parts=parts,
-        ext=ext,
-        version=version,
-        parts_links=defaultdict(lambda: ""),
-        doc=doc,
-        ex=ex,
-    )
