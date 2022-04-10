@@ -726,11 +726,8 @@ class HtmlRenderer:
                     config.output_dir / module / version / "docs" / f"{path}.html"
                 ).write_text(data)
 
-    async def examples_handler(
-        self, package, version, subpath, sidebar=None, gstore=None
-    ):
+    async def examples_handler(self, package, version, subpath, sidebar=None):
         assert sidebar is not None
-        assert gstore is not None
         env = Environment(
             loader=FileSystemLoader(os.path.dirname(__file__)),
             autoescape=select_autoescape(["html", "tpl.j2"]),
@@ -742,15 +739,15 @@ class HtmlRenderer:
         env.globals["url"] = lambda x: url(x, "/p/", "")
         env.globals["unreachable"] = unreachable
 
-        meta = encoder.decode(gstore.get_meta(Key(package, version, None, None)))
+        meta = encoder.decode(self.store.get_meta(Key(package, version, None, None)))
 
-        pap_keys = gstore.glob((None, None, "meta", "papyri.json"))
+        pap_keys = self.store.glob((None, None, "meta", "papyri.json"))
         parts = {package: []}
         for pk in pap_keys:
             mod, ver, _, _ = pk
             parts[package].append((RefInfo(mod, ver, "api", mod), mod))
 
-        bytes_ = gstore.get(Key(package, version, "examples", subpath))
+        bytes_ = self.store.get(Key(package, version, "examples", subpath))
 
         ex = encoder.decode(bytes_)
         assert isinstance(ex, Section)
@@ -764,7 +761,7 @@ class HtmlRenderer:
             meta=meta,
             logo=meta["logo"],
             pygment_css=CSS_DATA,
-            module=module,
+            module=package,
             parts=parts,
             ext="",
             version=version,
@@ -817,11 +814,10 @@ def serve(*, sidebar: bool):
 
     async def ex(package, version, subpath):
         return await html_renderer.examples_handler(
-            module=package,
+            package=package,
             version=version,
             subpath=subpath,
             sidebar=sidebar,
-            gstore=gstore,
         )
 
     app.route("/logo.png")(static("papyri-logo.png"))
