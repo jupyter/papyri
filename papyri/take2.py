@@ -96,6 +96,7 @@ def not_type_check(item, annotation):
         # technically incorrect
         if not isinstance(item, (list, tuple)):
             return f"got  {type(item)}, Yexpecting list"
+        # todo, this does not support Tuple[x,x] < len of tuple, and treat is as a list.
         assert len(annotation.__args__) == 1
         inner_type = annotation.__args__[0]
 
@@ -199,10 +200,6 @@ class Node(Base):
 
         return True
 
-    @classmethod
-    def _instance(cls):
-        return cls()
-
     def is_whitespace(self):
         if not isinstance(self.value, str):
             return False
@@ -228,6 +225,7 @@ class Leaf(Node):
     value: str
 
     def __init__(self, value):
+        # assert value, breakpoint()
         self.value = value
 
 
@@ -331,7 +329,7 @@ class Verbatim(Node):
         return sum(len(x) for x in self.value) + 4
 
     def __repr__(self):
-        return "``" + "".join(self.value) + "``"
+        return "<Verbatim ``" + "".join(self.value) + "``>"
 
 
 @register(4043)
@@ -423,10 +421,6 @@ class Directive(Node):
             assert isinstance(role, str), role
             assert ":" not in role
 
-    @classmethod
-    def _instance(cls):
-        return cls("", "", "")
-
     def __eq__(self, other):
         return (
             (type(self) == type(other))
@@ -498,10 +492,6 @@ class Words(Node):
     def __init__(self, value):
         self.value = value
 
-    @classmethod
-    def _instance(cls):
-        return cls("")
-
     def __eq__(self, other):
         return type(self) == type(other) and self.value.strip() == other.value.strip()
 
@@ -571,7 +561,7 @@ class _XList(Node):
 
 @register(4006)
 class ListItem(Node):
-    value: List[
+    children: List[
         Union[
             Paragraph,
             EnumeratedList,
@@ -587,16 +577,8 @@ class ListItem(Node):
         ]
     ]
 
-    @property
-    def children(self):
-        return self.value
-
-    @children.setter
-    def children(self, children):
-        self.value = children
-
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, children):
+        self.children = children
 
 
 @register(4039)
@@ -864,9 +846,7 @@ class Transition(Node):
 @register(4025)
 class Paragraph(Node):
 
-    __slots__ = ["inner", "inline", "width"]
-
-    inline: List[
+    children: List[
         Union[
             Words,
             Strong,
@@ -882,15 +862,11 @@ class Paragraph(Node):
         ]
     ]
 
-    inner: List[
-        Union[Paragraph, BlockVerbatim, BulletList, EnumeratedList, Unimplemented]
-    ]
-
-    def __init__(self, inline, inner, width=80):
+    def __init__(self, children):
 
         super().__init__()
 
-        for i in inline:
+        for i in children:
             assert isinstance(
                 i,
                 (
@@ -906,52 +882,10 @@ class Paragraph(Node):
                     SubstitutionRef,
                 ),
             ), i
-        self.inline = inline
-        self.inner = inner
-        self.width = width
-
-    @property
-    def children(self):
-        return [*self.inline, *self.inner]
-
-    @children.setter
-    def children(self, new):
-        inner = []
-        inline = []
-        for n in new:
-            if isinstance(
-                n,
-                (
-                    Words,
-                    Directive,
-                    Verbatim,
-                    Link,
-                    ExternalLink,
-                    Math,
-                    Strong,
-                    Emph,
-                    SubstitutionRef,
-                    Unimplemented,
-                ),
-            ):
-                inline.append(n)
-            else:
-                break
-        for n in new:
-            if isinstance(n, (Paragraph, BlockVerbatim, BulletList, EnumeratedList)):
-                inner.append(n)
-
-        assert len(inner) + len(inline) == len(new), (inner, inline, new)
-
-        self.inner = inner
-        self.inline = inline
-
-    @classmethod
-    def _instance(cls):
-        return cls([], [])
+        self.children = children
 
     def __hash__(self):
-        return hash((tuple(self.children), self.width))
+        return hash((tuple(self.children)))
 
     def __eq__(self, other):
         return (type(self) == type(other)) and (self.children == other.children)
@@ -970,7 +904,19 @@ class Admonition(Node):
 
     kind: str
     title: Optional[str]
-    children: List[Paragraph]
+    children: List[
+        Union[
+            Paragraph,
+            BulletList,
+            BlockVerbatim,
+            BlockQuote,
+            DefList,
+            # I dont' like nested block directive/Admonitions.
+            BlockDirective,
+            Admonition,
+            Unimplemented,  # skimage.util._regular_grid.regular_grid
+        ]
+    ]
 
     def __init__(self, kind=None, title=None, children=None):
         self.kind = kind
@@ -981,30 +927,28 @@ class Admonition(Node):
 @register(4031)
 class BlockDirective(Node):
 
-    directive_name: str
-    args0: List[str]
-    # TODO : this is likely wrong...
-    inner: Optional[Paragraph]
+    name: str
+    argument: str
+    options: List[Tuple[str]]
+    content: str
+
+    def __init__(self, name, argument, options, content):
+        assert isinstance(name, str)
+        assert isinstance(argument, str)
+        assert isinstance(options, list)
+        for k, v in options:
+            assert isinstance(k, str)
+            assert isinstance(v, str)
+        assert isinstance(content, str)
+
+        self.name = name
+        self.argument = argument
+        self.options = options
+        self.content = content
 
     @property
-    def children(self):
-        if self.inner is not None:
-            return [self.inner]
-        else:
-            return []
-
-    @children.setter
-    def children(self, value):
-        assert len(value) in [0, 1]
-        if len(value) == 0:
-            assert not self.inner
-        else:
-            self.inner = value[0]
-
-    def __init__(self, directive_name, args0, inner):
-        self.directive_name = directive_name
-        self.args0 = args0
-        self.inner = inner
+    def value(self):
+        return [self.name, self.argument, self.options, self.content]
 
 
 @register(4032)
@@ -1013,16 +957,11 @@ class BlockVerbatim(Node):
     value: str
 
     def __init__(self, value):
-
         assert isinstance(value, str)
         self.value = value
 
     def __eq__(self, other):
         return (type(self) == type(other)) and (self.value == other.value)
-
-    @classmethod
-    def _instance(cls):
-        return cls("")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} '{len(self.value)}'>"

@@ -14,9 +14,9 @@
     {%- elif type_ == 'Link' -%}
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
-            <code><a link href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
+            <code><a href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
         {%- elif obj.kind in ('api', 'exists', 'module', 'assets') -%}
-            <code><a link href="{{url(obj.reference)}}{{ext}}" class='exists'>{{obj.value}}</a></code>
+            <code><a href="{{url(obj.reference)}}{{ext}}" class='exists'>{{obj.value}}</a></code>
         {% else %}
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
         {%- endif -%}
@@ -33,6 +33,8 @@
         <span class="tex2jax_process">${{obj.text}}$</span>
     {% elif type_ == 'Verbatim' %}
         <code class='verbatim'>{{obj.text}}</code>
+    {% elif type_ in ['SubstitutionRef','Unimplemented'] %}
+        <pre class='not-implemented'>{{obj}}</pre>
     {% else %}
         <code>|{{type_}}| not implemeted yet</code>
         <pre class='not-implemented'>{{-unreachable(obj, type_)-}}</pre>
@@ -41,11 +43,8 @@
 
 {% macro block_paragraph(prg) -%}
     <p>
-        {%- for obj in prg.inline -%}
+        {%- for obj in prg.children -%}
             {{- render_inner(obj.__class__.__name__, obj) -}}
-        {%- endfor -%}
-        {%- for obj in prg.inner -%}
-            {{- render_II(obj) -}}
         {%- endfor -%}
     </p>
 {% endmacro %}
@@ -53,9 +52,6 @@
 
 {% macro render_paragraph(prgs) -%}
     {% for prg in prgs %}
-        {% if not prg.__class__.__name__ ==  'Paragraph' %}
-            {{ unreachable('Not a Paragraph', prg) }}
-        {% endif %}
         {{block_paragraph(prg)}}
     {%- endfor %}
 {%- endmacro %}
@@ -80,13 +76,13 @@
 {%- endmacro %}
 
 {% macro block_directive(dve) -%}
-<div class='block_directive'>
-    <div class='head'>.. {{dve.directive_name}}:: {{dve.args0}}
-    </div>
-    {% if dve.inner %}
-    <pre class='not-implemented'>{{-block_paragraph(dve.inner)-}}</pre>
-    {% endif %}
-</div>
+    <pre class='not-implemented'>
+.. {{dve.name}}:: {{dve.argument}}
+    {% for opt in dve.options %}
+    {{ opt }}
+    {% endfor %}
+    {{dve.content|indent -}}
+    </pre>
 {% endmacro %}
 
 {% macro block_admonition(adm) -%}
@@ -107,16 +103,10 @@
        {%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim','Words') -%}
            {# {{unreachable(obj)}} #}
            {{obj.value}}  {# TODO : likely smth wrong with field list #}
-       {%- elif type == 'Directive' -%}
-           {{unreachable()}}
-       {%- elif type == 'Math' -%}
-           {{unreachable()}}
        {%- elif type == 'BlockDirective' -%}
            {{block_directive(obj)}}
        {% elif type == 'Admonition' %}
             {{block_admonition(obj)}}
-       {% elif type == 'Verbatim' %}
-           {{unreachable()}}
        {% elif type == 'Paragraph' %}
         {{block_paragraph(obj)}}
        {%- elif type == 'BlockVerbatim' -%}
@@ -157,7 +147,7 @@
                {% endfor %}
             </ol>
        {% elif type == 'ListItem' %}
-               {%- for item in obj.value %}
+               {%- for item in obj.children %}
                {{render_II(item)}}
                {% endfor %}
        {% elif type == 'FieldList' %}
@@ -177,12 +167,11 @@
            </dl>
 
         {% elif type == 'FieldListItem' %}
-           # TODO : finish FieldListItem rendering
            <ol>
                {%- for item in obj.children %}
                <li>{{render_II(item)}}</li>
                {% endfor %}
-            </ol>
+           </ol>
 
        {% elif type == 'BlockMath' %}
         <span class="tex2jax_process">$${{obj.value}}$$</span>
@@ -193,7 +182,10 @@
             <pre>
                {%- for line in obj.value %}{{line}}{{'\n'}}{% endfor -%}
             </pre>
-
+        {% elif type in ['Options','Unimplemented','Comment','SubstitutionRef'] %}
+           <pre class='not-implemented'>
+            {{obj}}
+           </pre>
        {% else %}
            <code class='not-implemented'>Type {{type}} (A) Not implemented yet</code>
            <pre class='not-implemented'>

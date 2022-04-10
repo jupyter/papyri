@@ -420,7 +420,7 @@ class Renderer:
             return urwid.Text("EMPTY")
         rr = None
         try:
-            rr = [TextWithLink([self.render(o) for o in paragraph.inline])]
+            rr = [TextWithLink([self.render(o) for o in paragraph.children])]
             for inl in paragraph.inner:
                 rr.append(self.render(inl))
             return urwid.Pile(rr)

@@ -14,7 +14,7 @@ RST = Language(pth, "rst")
 parser = Parser()
 parser.set_language(RST)
 
-from textwrap import indent
+from textwrap import indent, dedent
 from typing import List
 
 from papyri.take2 import (
@@ -96,6 +96,9 @@ class Node:
 
     def _repr(self, bytes):
         return repr(self.node) + bytes[self.start_byte : self.end_byte].decode()
+
+    def __repr__(self):
+        return f"<ts.Node {self.node.type}>"
 
     def with_whitespace(self):
         return Node(self.node, _with_whitespace=True)
@@ -424,7 +427,7 @@ class TSVisitor:
         if acc[-1] == Word(" "):
             acc.pop()
         assert len(acc2) < 2
-        p = Paragraph(compress_word(acc), [])
+        p = Paragraph(compress_word(acc))
         return [p, *acc2]
 
     def visit_line_block(self, node, prev_end=None):
@@ -499,54 +502,69 @@ class TSVisitor:
         # inner: Optional[Paragraph]
 
         if len(node.children) == 4:
-            _, _role, cc, body = node.children
+            _1, _role, _2, body = node.children
+            assert body.type == "body"
+            assert _role.type == "type"
             body_children = body.children
         elif len(node.children) == 3:
-            _, _role, cc = node.children
+            _1, _role, _2 = node.children
             body_children = []
         else:
             raise ValueError
+            assert _1.type == ".."
+            assert _2.type == "::"
 
-        if _role.end_point != cc.start_point:
+        if _role.end_point != _2.start_point:
             block_data = self.bytes[node.start_byte : node.end_byte].decode()
             raise errors.SpaceAfterBlockDirectiveError(
                 f"space present in {block_data!r}"
             )
 
         role = self.bytes[_role.start_byte : _role.end_byte].decode()
+        import itertools
 
-        if len(body_children) == 2:
-            arguments, content = body_children
-            args0 = (
-                self.bytes[
-                    arguments.children[0].start_byte : arguments.children[-1].end_byte
-                ]
-                .decode()
-                .splitlines()
-            )
-        else:
-            if len(body_children) == 0:
-                pass
-            elif len(body_children) > 1:
-                content = [c for c in body_children if c.type == "content"]
-                content = content[0]
-                import warnings
+        groups = itertools.groupby(body_children, lambda x: x.type)
+        groups = [(k, list(v)) for k, v in groups]
 
-                warnings.warn("TBD directive arguments")
-            else:
-                [content] = body_children
-            args0 = []
-        if len(body_children) == 0:
-            stream_with_spaces = []
+        if groups and groups[0][0] == "arguments":
+            arg = list(groups.pop(0)[1])
+            assert len(arg) == 1
+            argument = self.as_text(arg[0])
         else:
-            stream_with_spaces = [
-                x for y in [(x, Word(" ")) for x in self.visit(content)] for x in y
-            ]
-        directive = BlockDirective(
-            directive_name=role,
-            args0=args0,
-            inner=Paragraph(compress_word(stream_with_spaces), []),
-        )
+            argument = ""
+        if groups and groups[0][0] == "options":
+            # to parse
+            p0 = groups.pop(0)
+            options = []
+            assert len(p0[1]) == 1, breakpoint()
+            opt_node = p0[1][0]
+            for field in opt_node.children:
+                assert field.type == "field", breakpoint()
+                if len(field.children) == 4:
+                    c1, name, c2, body = field.children
+                    options.append((self.as_text(name), self.as_text(body)))
+                elif len(field.children) == 3:
+                    c1, name, c2 = field.children
+                    options.append((self.as_text(name), ""))
+                else:
+                    assert False
+
+        else:
+            options = []
+        if groups and groups[0][0] == "content":
+            # to parse
+            content_node = list(groups.pop(0)[1])
+            assert len(content_node) == 1
+            content = self.as_text(content_node[0])
+            padding = (content_node[0].start_point[1] - _1.start_point[1]) * " "
+            content = dedent(padding + content)
+
+        else:
+            content = ""
+        assert not groups, breakpoint()
+        # todo , we may want to see about the indentation of the content.
+
+        directive = BlockDirective(role, argument, options, content)
         return [directive]
 
     def visit_footnote_reference(self, node, prev_end=None):
@@ -620,7 +638,7 @@ class TSVisitor:
                 # TODO missing type
                 acc.append(
                     DefListItem(
-                        dt=Paragraph(compress_word(self.visit(term)), []),
+                        dt=Paragraph(compress_word(self.visit(term))),
                         dd=self.visit_paragraph(term),
                     )
                 )

@@ -23,8 +23,12 @@ from .take2 import (
     Verbatim,
     FullQual,
     Cannonical,
+    BlockVerbatim,
 )
 from .utils import full_qual
+from textwrap import indent
+from .ts import parse
+from .take2 import Section
 
 
 _cache: Dict[int, Tuple[Dict[str, RefInfo], FrozenSet[str]]] = {}
@@ -219,6 +223,8 @@ class TreeVisitor:
         self.find = find
 
     def generic_visit(self, node):
+        from .take2 import Options, Transition
+
         name = node.__class__.__name__
         if method := getattr(self, "visit_" + name, None):
             return method(node)
@@ -238,6 +244,8 @@ class TreeVisitor:
         elif hasattr(node, "value"):
             if type(node) not in self.skipped:
                 self.skipped.add(type(node))
+            return {}
+        elif isinstance(node, (RefInfo, Options, Transition)):
             return {}
         else:
             raise ValueError(f"{node.__class__} has no children, no values {node}")
@@ -310,6 +318,7 @@ class TreeReplacer:
                     #        [x.__class__.__name__ for x in replacement],
                     #    )
                     assert isinstance(replacement, list)
+
                     new_children.extend(replacement)
                 if node.children != new_children:  # type: ignore
                     self._cr += 1
@@ -320,6 +329,13 @@ class TreeReplacer:
             return new_nodes
         except Exception as e:
             raise type(e)(f"{node=}")
+
+
+# misc thoughts:
+# we will have multiplet type of directive handlers
+# from the simpler to more complex.
+# handler that want to parse/handle everything by themsleves,
+# other that don't care about domain/role.
 
 
 Handler = Callable[[str], List[Node]]
@@ -426,91 +442,80 @@ class DirectiveVisiter(TreeReplacer):
         self._targets: Set[Any] = set()
         self.version = version
 
+    def _block_verbatim_helper(self, name, argument, options, content):
+        data = f".. {name}:: {argument}\n"
+        for k, v in options:
+            data = data + f"    :{k}:{v}\n"
+        data = data + indent(content, "    ")
+        return [BlockVerbatim(data)]
+
+    def _autosummary_handler(self, argument, options, content):
+        # assert False
+        return self._block_verbatim_helper("autosummary", argument, options, content)
+
+    def _math_handler(self, argument, options, content):
+        if argument and content:
+            print(
+                "For consistency please use the math directive all the equation in the content of the directive.",
+                self.qa,
+            )
+            content = argument + content
+        elif argument and not content:
+            # TODO: do we want to allow that ?
+            content = argument
+        return [BlockMath(content)]
+
+    def _admonition_handler_x(self, name, argument, options, content):
+        assert not options
+        if content:
+
+            inner = parse(content.encode())
+            assert len(inner) == 1
+
+            assert isinstance(inner[0], Section)
+
+            return [
+                Admonition(
+                    name,
+                    argument,
+                    inner[0].children,
+                )
+            ]
+        else:
+            return [
+                Admonition(
+                    name,
+                    argument,
+                    [],
+                )
+            ]
+
+    def _versionadded_handler(self, argument, options, content):
+        return self._admonition_handler_x("versionadded", argument, options, content)
+
+    def _note_handler(self, argument, options, content):
+        return self._admonition_handler_x("note", argument, options, content)
+
+    def _versionchanged_handler(self, argument, options, content):
+        return self._admonition_handler_x("versionchanged", argument, options, content)
+
+    def _deprecated_handler(self, argument, options, content):
+        return self._admonition_handler_x("deprecated", argument, options, content)
+
+    def _warning_handler(self, argument, options, content):
+        return self._admonition_handler_x("warning", argument, options, content)
+
     def replace_BlockDirective(self, block_directive: BlockDirective):
-        block_directive.children = [self.visit(c) for c in block_directive.children]
+        meth = getattr(self, "_" + block_directive.name + "_handler", None)
+        if meth:
+            # TODO: we may want to recurse here on returned items.
+            return meth(
+                block_directive.argument,
+                block_directive.options,
+                block_directive.content,
+            )
+        print("TODO:", block_directive.name)
 
-        if block_directive.directive_name in [
-            "versionchanged",
-            "versionadded",
-            "deprecated",
-        ]:
-            # TODO:
-            if len(block_directive.args0) == 1:
-                title, children = block_directive.args0[0], block_directive.children
-            else:
-                title, children = "TODO", block_directive.children
-
-            return [
-                Admonition(
-                    block_directive.directive_name,
-                    title,
-                    children,
-                )
-            ]
-
-        elif block_directive.directive_name in ["math"]:
-            # assert len(block_directive.args0) == 1
-            if not block_directive.children:
-                assert len(block_directive.args0) == 1, (
-                    block_directive.args0,
-                    block_directive.children,
-                )
-            if ch := block_directive.children:
-                assert len(ch) == 1
-                assert not ch[0].inner
-                res = BlockMath(
-                    " ".join(block_directive.args0 + [w.value for w in ch[0].inline])
-                )
-
-            else:
-                res = BlockMath(block_directive.args0[0])
-
-            return [res]
-        elif block_directive.directive_name in ["warning", "note"]:
-            args0 = block_directive.args0
-            args0 = [a.strip() for a in args0 if a.strip()]
-            if args0:
-                # assert len(args0) == 1
-                # TODO: dont' allow admonition on first line.
-                # print(
-                #    "ADM!!",
-                #    self.qa,
-                #    "does title block adm",
-                #    repr(args0),
-                #    repr(block_directive.children),
-                # )
-                title = args0[0]
-            else:
-                title = ""
-
-            assert block_directive.children is not None, block_directive
-            return [
-                Admonition(
-                    block_directive.directive_name, title, block_directive.children
-                )
-            ]
-        if block_directive.directive_name in [
-            "code",
-            "autosummary",
-            "note",
-            "warning",
-            "attribute",
-            "hint",
-            "plot",
-            "seealso",
-            "moduleauthor",
-            "data",
-            "WARNING",
-            "currentmodule",
-            "important",
-            "code-block",
-            "image",
-            "rubric",
-            "inheritance-diagram",
-            "table",
-        ]:
-            # print("TODO:", block_directive.directive_name)
-            return [block_directive]
         return [block_directive]
 
     def _resolve(self, loc, text):
@@ -539,22 +544,14 @@ class DirectiveVisiter(TreeReplacer):
         domain, role = directive.domain, directive.role
         if domain is None:
             domain = "py"
-        _int: Dict[str, List[Handler]] = DIRECTIVE_MAP.get(domain, {})
         if role is None:
             role = "py"
-        handlers: List[Handler] = _int.get(role, [])
+        domain_handler: Dict[str, List[Handler]] = DIRECTIVE_MAP.get(domain, {})
+        handlers: List[Handler] = domain_handler.get(role, [])
         for h in handlers:
             res = h(directive.value)
             if res is not None:
                 return res
-
-        if (directive.domain, directive.role) == (None, None) and directive.value in (
-            # TODO: link to stdlib
-            "None",
-            "True",
-            "False",
-        ):
-            return [Verbatim([directive.value])]
 
         loc: FrozenSet[str]
         if directive.role not in ["any", None]:
@@ -562,20 +559,33 @@ class DirectiveVisiter(TreeReplacer):
         else:
             loc = self.local_refs
         text = directive.value
-        # TODO: wrong, there should not be any ` left that is likely a
-        # verbatim vs directive parsing issue.
         assert "`" not in text
-        # text = text.strip("`")
         to_resolve = text
-        if ("<" in text) and text.endswith(">"):
+        if (
+            ("<" in text)
+            and text.endswith(">")
+            and " <" not in text
+            and "\n<" not in text
+        ):
+            pass  # assert False, ("error space-< in", self.qa, directive)
+        if (" <" in text) and text.endswith(">"):
             try:
-                text, to_resolve = text.split("<")
+                text, to_resolve = text.split(" <")
                 text = text.rstrip()
             except ValueError:
                 assert False, directive.value
             assert to_resolve.endswith(">"), (text, to_resolve)
             to_resolve = to_resolve.rstrip(">")
-        if to_resolve.startswith("https://") or to_resolve.startswith("http://"):
+        elif ("\n <" in text) and text.endswith(">"):
+            try:
+                text, to_resolve = text.split(" <")
+                text = text.rstrip()
+            except ValueError:
+                assert False, directive.value
+            assert to_resolve.endswith(">"), (text, to_resolve)
+            to_resolve = to_resolve.rstrip(">")
+
+        if to_resolve.startswith(("https://", "http://", "mailto://")):
             return [ExternalLink(text, to_resolve)]
 
         r = self._resolve(loc, to_resolve)

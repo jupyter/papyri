@@ -389,21 +389,6 @@ nav a {
 	user-select: none;
 }
 
-.block_directive {
-	border-left: thin solid var(--nc-lk-1);
-	padding-bottom: 8px;
-	padding-left: 12px;
-}
-
-.block_directive.head {
-	border: thin solid var(--nc-lk-1);
-}
-
-.block_directive>p {
-	margin-left: 2em;
-	margin-top: 1em;
-}
-
 .head {
 	font-family: monospace;
 	color: var(--nc-lk-1);

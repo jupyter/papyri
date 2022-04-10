@@ -56,9 +56,12 @@
 {% endmacro %}
 
 {% macro block_directive(dve) -%}
-{{blue("..")}}{{blue(dve.directive_name)}}{{blue("::")}} {{dve.args0}}
-    {% if dve.inner %}
-    |{{block_paragraph(dve.inner)}}
+{{blue("..")}}{{blue(dve.name)}}{{blue("::")}} {{dve.argument}}
+    {% if dve.options %}
+      {{dve.options}}
+    {% endif %}
+    {% if dve.content %}
+      {{dve.content}}
     {% endif %}
 {% endmacro %}
 
