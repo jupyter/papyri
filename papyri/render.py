@@ -92,52 +92,6 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-async def examples(module, version, subpath, ext="", sidebar=None, gstore=None):
-    assert sidebar is not None
-    assert gstore is not None
-    env = Environment(
-        loader=FileSystemLoader(os.path.dirname(__file__)),
-        autoescape=select_autoescape(["html", "tpl.j2"]),
-        undefined=StrictUndefined,
-    )
-    env.trim_blocks = True
-    env.lstrip_blocks = True
-    env.globals["len"] = len
-    env.globals["url"] = lambda x: url(x, "/p/", "")
-    env.globals["unreachable"] = unreachable
-
-    meta = encoder.decode(gstore.get_meta(Key(module, version, None, None)))
-
-    pap_keys = gstore.glob((None, None, "meta", "papyri.json"))
-    parts = {module: []}
-    for pk in pap_keys:
-        mod, ver, _, _ = pk
-        parts[module].append((RefInfo(mod, ver, "api", mod), mod))
-
-    bytes_ = gstore.get(Key(module, version, "examples", subpath))
-
-    ex = encoder.decode(bytes_)
-    assert isinstance(ex, Section)
-
-    class Doc:
-        pass
-
-    doc = Doc()
-
-    return env.get_template("examples.tpl.j2").render(
-        meta=meta,
-        logo=meta["logo"],
-        pygment_css=CSS_DATA,
-        module=module,
-        parts=parts,
-        ext=ext,
-        version=version,
-        parts_links=defaultdict(lambda: ""),
-        doc=doc,
-        ex=ex,
-        sidebar=sidebar,
-    )
-
 
 # here we compute the siblings at each level; as well as one level down
 # this is far from efficient and a hack, but it helps with navigation.
@@ -772,6 +726,54 @@ class HtmlRenderer:
                     config.output_dir / module / version / "docs" / f"{path}.html"
                 ).write_text(data)
 
+    async def examples_handler(
+        self, package, version, subpath, sidebar=None, gstore=None
+    ):
+        assert sidebar is not None
+        assert gstore is not None
+        env = Environment(
+            loader=FileSystemLoader(os.path.dirname(__file__)),
+            autoescape=select_autoescape(["html", "tpl.j2"]),
+            undefined=StrictUndefined,
+        )
+        env.trim_blocks = True
+        env.lstrip_blocks = True
+        env.globals["len"] = len
+        env.globals["url"] = lambda x: url(x, "/p/", "")
+        env.globals["unreachable"] = unreachable
+
+        meta = encoder.decode(gstore.get_meta(Key(package, version, None, None)))
+
+        pap_keys = gstore.glob((None, None, "meta", "papyri.json"))
+        parts = {package: []}
+        for pk in pap_keys:
+            mod, ver, _, _ = pk
+            parts[package].append((RefInfo(mod, ver, "api", mod), mod))
+
+        bytes_ = gstore.get(Key(package, version, "examples", subpath))
+
+        ex = encoder.decode(bytes_)
+        assert isinstance(ex, Section)
+
+        class Doc:
+            pass
+
+        doc = Doc()
+
+        return env.get_template("examples.tpl.j2").render(
+            meta=meta,
+            logo=meta["logo"],
+            pygment_css=CSS_DATA,
+            module=module,
+            parts=parts,
+            ext="",
+            version=version,
+            parts_links=defaultdict(lambda: ""),
+            doc=doc,
+            ex=ex,
+            sidebar=sidebar,
+        )
+
 
 async def img(package, version, subpath=None) -> Response:
     folder = ingest_dir / package / version / "assets"
@@ -814,7 +816,7 @@ def serve(*, sidebar: bool):
         return await html_renderer.gallery("*", "*")
 
     async def ex(package, version, subpath):
-        return await examples(
+        return await html_renderer.examples_handler(
             module=package,
             version=version,
             subpath=subpath,
