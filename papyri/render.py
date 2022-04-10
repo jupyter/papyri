@@ -92,7 +92,6 @@ def until_ruler(doc):
     return "\n".join(new)
 
 
-
 # here we compute the siblings at each level; as well as one level down
 # this is far from efficient and a hack, but it helps with navigation.
 # I'm pretty sure we load the full library while we could
@@ -309,17 +308,6 @@ def compute_graph(
     return data
 
 
-async def _route_data(gstore: GraphStore, ref, version, known_refs):
-    assert isinstance(gstore, GraphStore)
-    print("!!", ref)
-    root = ref.split("/")[0].split(".")[0]
-    key = Key(root, version, "module", ref)
-    gbytes, backward, forward = gstore.get_all(key)
-    x_, y_ = find_all_refs(gstore)
-    doc_blob = encoder.decode(gbytes)
-    return x_, y_, doc_blob, backward, forward
-
-
 class HtmlRenderer:
     def __init__(self, store: GraphStore, *, sidebar, prefix, trailing_html):
         assert prefix.startswith("/")
@@ -341,7 +329,6 @@ class HtmlRenderer:
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = suf
 
-        self.sidebar = sidebar
 
     async def index(self):
         keys = self.store.glob((None, None, "meta", "papyri.json"))
@@ -541,8 +528,15 @@ class HtmlRenderer:
             backrefs=[],
             pygment_css=CSS_DATA,
             graph="{}",
-            sidebar=self.sidebar,
         )
+
+    async def _route_data(self, ref, version, known_refs):
+        root = ref.split("/")[0].split(".")[0]
+        key = Key(root, version, "module", ref)
+        gbytes, backward, forward = self.store.get_all(key)
+        x_, y_ = find_all_refs(self.store)
+        doc_blob = encoder.decode(gbytes)
+        return x_, y_, doc_blob, backward, forward
 
     async def _route(
         self,
@@ -560,8 +554,8 @@ class HtmlRenderer:
         known_refs, ref_map = find_all_refs(self.store)
 
         # technically incorrect we don't load backrefs
-        x_, y_, doc_blob, backward, forward = await _route_data(
-            self.store, ref, version, known_refs
+        x_, y_, doc_blob, backward, forward = await self._route_data(
+            ref, version, known_refs
         )
         assert x_ == known_refs
         assert y_ == ref_map
@@ -599,7 +593,6 @@ class HtmlRenderer:
                 backrefs=backrefs,
                 pygment_css=CSS_DATA,
                 graph=json_str,
-                sidebar=self.sidebar,
                 meta=meta,
             )
         else:
@@ -650,7 +643,6 @@ class HtmlRenderer:
                     backrefs=backward_r,
                     pygment_css=CSS_DATA,
                     graph=json_str,
-                    sidebar=config.html_sidebar,
                     meta=meta,
                 )
                 if config.output_dir:
@@ -700,9 +692,8 @@ class HtmlRenderer:
                 module,
                 self.store,
                 version,
-                ".html",
-                config.html_sidebar,
-                self.store.get(example),
+                ext=".html",
+                data=self.store.get(example),
             )
             if config.output_dir:
                 (config.output_dir / module / version / "examples").mkdir(
@@ -726,18 +717,7 @@ class HtmlRenderer:
                     config.output_dir / module / version / "docs" / f"{path}.html"
                 ).write_text(data)
 
-    async def examples_handler(self, package, version, subpath, sidebar=None):
-        assert sidebar is not None
-        env = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__)),
-            autoescape=select_autoescape(["html", "tpl.j2"]),
-            undefined=StrictUndefined,
-        )
-        env.trim_blocks = True
-        env.lstrip_blocks = True
-        env.globals["len"] = len
-        env.globals["url"] = lambda x: url(x, "/p/", "")
-        env.globals["unreachable"] = unreachable
+    async def examples_handler(self, package, version, subpath):
 
         meta = encoder.decode(self.store.get_meta(Key(package, version, None, None)))
 
@@ -757,7 +737,7 @@ class HtmlRenderer:
 
         doc = Doc()
 
-        return env.get_template("examples.tpl.j2").render(
+        return self.env.get_template("examples.tpl.j2").render(
             meta=meta,
             logo=meta["logo"],
             pygment_css=CSS_DATA,
@@ -768,7 +748,6 @@ class HtmlRenderer:
             parts_links=defaultdict(lambda: ""),
             doc=doc,
             ex=ex,
-            sidebar=sidebar,
         )
 
 
@@ -812,14 +791,6 @@ def serve(*, sidebar: bool):
     async def gr():
         return await html_renderer.gallery("*", "*")
 
-    async def ex(package, version, subpath):
-        return await html_renderer.examples_handler(
-            package=package,
-            version=version,
-            subpath=subpath,
-            sidebar=sidebar,
-        )
-
     app.route("/logo.png")(static("papyri-logo.png"))
     app.route("/favicon.ico")(static("favicon.ico"))
     app.route("/papyri.css")(static("papyri.css"))
@@ -828,7 +799,9 @@ def serve(*, sidebar: bool):
     app.route("/graph_svg.js")(static("graph_svg.js"))
     # sub here is likely incorrect
     app.route(f"{prefix}<package>/<version>/img/<path:subpath>")(img)
-    app.route(f"{prefix}<package>/<version>/examples/<path:subpath>")(ex)
+    app.route(f"{prefix}<package>/<version>/examples/<path:subpath>")(
+        html_renderer.examples_handler
+    )
     app.route(f"{prefix}<package>/<version>/gallery")(html_renderer.gallery)
     app.route(f"{prefix}<package>/<version>/docs/")(html_renderer._list_narative)
     app.route(f"{prefix}<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
@@ -859,7 +832,6 @@ def render_one(
     parts=(),
     parts_links=(),
     graph="{}",
-    sidebar,
     meta,
 ):
     """
@@ -886,8 +858,6 @@ def render_one(
     parts_links : <Insert Type here>
         <Multiline Description Here>
     graph : <Insert Type here>
-        <Multiline Description Here>
-    sidebar : <Insert Type here>
         <Multiline Description Here>
     logo : <Insert Type here>
         <Multiline Description Here>
@@ -925,7 +895,6 @@ def render_one(
             parts_links=parts_links,
             pygment_css=pygment_css,
             graph=graph,
-            sidebar=sidebar,
             meta=meta,
         )
     except Exception as e:
@@ -942,6 +911,7 @@ def _ascii_env():
     )
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
+    env.globals["sidebar"] = False
     try:
 
         c = converter()
@@ -989,7 +959,6 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
         backrefs=[],
         pygment_css=None,
         graph="{}",
-        sidebar=False,  # no effects
     )
 
 
@@ -1140,8 +1109,7 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool, minify: b
     )
 
 
-async def render_single_examples(env, module, gstore, version, ext, sidebar, data):
-    assert sidebar is not None
+async def render_single_examples(env, module, gstore, version, *, ext, data):
 
     mod_vers = gstore.glob((None, None))
     meta = encoder.decode(gstore.get_meta(Key(module, version, None, None)))
@@ -1170,5 +1138,4 @@ async def render_single_examples(env, module, gstore, version, ext, sidebar, dat
         parts_links=defaultdict(lambda: ""),
         doc=doc,
         ex=ex,
-        sidebar=sidebar,
     )
