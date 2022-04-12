@@ -268,7 +268,11 @@ class Text(Leaf):
 
 @register(4024)
 class Fig(Leaf):
-    pass
+    value: RefInfo
+
+    def __init__(self, value):
+        assert isinstance(value, RefInfo)
+        self.value = value
 
 
 @register(4000)
@@ -301,6 +305,7 @@ class RefInfo(Node):
     path: str
 
     def __iter__(self):
+        assert isinstance(self.path, str)
         return iter([self.module, self.version, self.kind, self.path])
 
 

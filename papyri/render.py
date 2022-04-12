@@ -448,7 +448,7 @@ class HtmlRenderer:
             ]:
                 package, v, kind, _path = key
                 # package, filename, link
-                impath = f"{self.prefix}/{package}/{v}/img/{k}"
+                impath = f"{self.prefix}{k.module}/{k.version}/img/{k.path}"
                 link = f"{self.prefix}/{package}/{v}/api/{_path}"
                 # figmap.append((impath, link, name)
                 figmap[package].append((impath, link, _path))
@@ -463,7 +463,7 @@ class HtmlRenderer:
                 package, v, _, _path = target_key
 
                 # package, filename, link
-                impath = f"{self.prefix}{package}/{v}/img/{k}"
+                impath = f"{self.prefix}{k.module}/{k.version}/img/{k.path}"
                 link = f"{self.prefix}{package}/{v}/examples/{_path}"
                 name = _path
                 figmap[package].append((impath, link, name))
@@ -792,7 +792,7 @@ def static(name) -> Callable[[], bytes]:
 
 
 def pygment_css() -> str:
-    return CSS_DATA
+    return Response(CSS_DATA, mimetype="text/css")
 
 
 def serve(*, sidebar: bool):
@@ -817,7 +817,7 @@ def serve(*, sidebar: bool):
     app.route("/logo.png")(static("papyri-logo.png"))
     app.route("/favicon.ico")(static("favicon.ico"))
     app.route("/papyri.css")(static("papyri.css"))
-    app.route("/pygment.css")(pygment_css)
+    app.route("/pygments.css")(pygment_css)
     app.route("/graph_canvas.js")(static("graph_canvas.js"))
     app.route("/graph_svg.js")(static("graph_svg.js"))
     # sub here is likely incorrect

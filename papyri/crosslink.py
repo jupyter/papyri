@@ -394,11 +394,14 @@ class Ingester:
             )
             s_code = visitor.visit(s)
             refs = list(map(lambda s: Key(*s), visitor._targets))
-            gstore.put(
-                Key(root, version, "examples", fe.name),
-                encoder.encode(s_code),
-                refs,
-            )
+            try:
+                gstore.put(
+                    Key(root, version, "examples", fe.name),
+                    encoder.encode(s_code),
+                    refs,
+                )
+            except Exception:
+                breakpoint()
 
     def _ingest_assets(self, path, root, version, aliases, gstore):
         for _, f2 in self.progress(
@@ -580,10 +583,7 @@ class Ingester:
                 for k, v in visitor.generic_visit(sec).items():
                     res.setdefault(k, []).extend(v)
 
-            assets_II = {
-                Key(key.module, key.version, "assets", f.value)
-                for f in res.get(Fig, [])
-            }
+            assets_II = {Key(*f.value) for f in res.get(Fig, [])}
             sr = set(
                 [Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]
             ).union(assets_II)
