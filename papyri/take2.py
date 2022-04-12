@@ -943,6 +943,7 @@ class BlockDirective(Node):
 
         self.name = name
         self.argument = argument
+        options = [tuple(x) for x in options]
         self.options = options
         self.content = content
 
