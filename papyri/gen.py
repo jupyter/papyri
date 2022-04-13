@@ -590,14 +590,15 @@ def load_configuration(
 
     Each configuration file should have two sections: ['global', 'meta'] where
     the name of the module should be defined under the 'global' section.
+    Additionally, a section for expected errors can be defined.
     """
     conffile = Path(path).expanduser()
     if conffile.exists():
         conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
         ks = set(conf.keys()) - {"meta"}
-        assert len(ks) == 1, conf.keys()
-        info = conf['global']
-        root = info.pop('module')
+        assert len(ks) >= 1, conf.keys()
+        info = conf["global"]
+        root = info.pop("module")
         return root, info, conf.get("meta", {})
     else:
         sys.exit(f"{conffile!r} does not exists.")
