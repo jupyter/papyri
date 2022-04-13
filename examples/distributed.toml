@@ -1,4 +1,5 @@
-[distributed]
+[global]
+module = 'distributed'
 logo = "../dask-logo.png"
 exclude = [
     # VisitTarget not implemented

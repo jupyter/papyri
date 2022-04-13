@@ -1,4 +1,5 @@
-[dask]
+[global]
+module = 'dask'
 logo = "../dask-logo.png"
 submodules = ["array"]
 exclude = [ "dask.utils.Dispatch",

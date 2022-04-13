@@ -1,4 +1,5 @@
-[matplotlib]
+[global]
+module = 'matplotlib'
 logo = "../matplotlib_logo.png"
 wait_for_plt_show = false
 exec_failure = "fallback"
@@ -12,7 +13,7 @@ examples_exclude = [
 "load_converter.py",
 "date_index_formatter2.py",
 # all sphinx gallery skip...
-"sgskip.py", 
+"sgskip.py",
 # other
 "pathpatch3d.py",
 "units/artist_tests.py",
@@ -83,7 +84,7 @@ exec = true
 [matplotlib.expected_errors]
 VisitSubstitutionDefinitionNotImplementedError = [
     "matplotlib.markers",
-    ]                                                                        
+    ]
 IncorrectInternalDocsLen = [
     "matplotlib.rc",
     "matplotlib.pyplot.rc",
@@ -99,7 +100,7 @@ IncorrectInternalDocsLen = [
     "matplotlib.patches.ConnectionStyle._Base",
     "matplotlib.tri.triinterpolate._safe_inv22_vectorized",
     ]
-ValueError = [ 
+ValueError = [
     "matplotlib.image.thumbnail",
     "matplotlib.artist.Artist.set_sketch_params",
     "matplotlib.artist.Artist.set_agg_filter",

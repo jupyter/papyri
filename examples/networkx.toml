@@ -1,4 +1,5 @@
-[networkx]
+[global]
+module = 'networkx'
 execute_exclude_patterns = []
 
 submodules = []

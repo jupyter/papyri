@@ -1,4 +1,5 @@
-[papyri]
+[global]
+module = 'papyri'
 submodules = ['examples']
 examples_folder = '~/dev/papyri/docs/examples/'
 logo = "../papyri-logo.png"

@@ -1,4 +1,5 @@
-[numpy]
+[global]
+module = 'numpy'
 execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', 'numpy.seterr', 'numpy.bincount',
 'numpy.core._multiarray_umath.bincount', 'numpy.core._multiarray_umath.datetime_as_string',
 'numpy.core._multiarray_umath.normalize_axis_index', 'numpy.core._multiarray_umath.shares_memory',
@@ -55,7 +56,7 @@ IncorrectInternalDocsLen = [
     "numpy.lib._datasource.DataSource._splitzipext",
     "numpy.core._internal._view_is_safe",
     "numpy.distutils.misc_util.Configuration.__init__",]
-AssertionError = [ 
+AssertionError = [
     "numpy.polynomial.polynomial.polyvalfromroots",
     "numpy.random.bit_generator.ISeedSequence.generate_state",
 ]
