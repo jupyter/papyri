@@ -494,7 +494,10 @@ class Ingester:
                 resolved, exists = r.path, r.kind
                 if exists == "module":
                     sa.name.exists = True
-                    # assert sa.name.ref == resolved, (sa.name.ref, resolved, qa)
+                    if not sa.name.ref == resolved:
+                        print(
+                            "Warning mutation on ingest ", (sa.name.ref, resolved, qa)
+                        )
                     sa.name.ref = resolved
 
         for _, (qa, doc_blob) in self.progress(
@@ -607,8 +610,16 @@ class Ingester:
             # end todo
 
             data = encoder.encode(doc_blob)
-            if set(sr) != set(forward):
-                gstore.put(key, data, [Key(*x) for x in sr])
+            ssr = set(sr)
+            for s in forward:
+                assert isinstance(s, Key)
+            forward_refs = set(forward)
+            if ssr != forward_refs:
+                # for n in ssr - sfw:
+                #    print("     +", n)
+                # for o in sfw - ssr:
+                #    print("     -", o)
+                gstore.put(key, data, forward_refs)
 
         for _, key in progress(
             gstore.glob((None, None, "examples", None)),

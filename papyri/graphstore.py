@@ -61,6 +61,12 @@ class Key:
     def __gt__(self, other):
         return self._t() > other._t()
 
+    def __eq__(self, other):
+        return self._t() == other._t()
+
+    def __hash__(self):
+        return hash(self._t())
+
     def __repr__(self):
         return f"<Key {self._t()}>"
 

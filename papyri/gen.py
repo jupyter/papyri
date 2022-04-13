@@ -30,6 +30,7 @@ from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple, FrozenSet
+from hashlib import sha256
 
 import jedi
 import toml
@@ -1070,13 +1071,24 @@ class Gen:
         import numpy as np
 
         acc = ""
-        figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
+
+        def _figure_names():
+            """
+            File system can be case insensitive, we are not.
+            """
+            for i in count(0):
+                pat = f"fig-{qa}-{i}"
+                sha = sha256(pat.encode()).hexdigest()[:8]
+                yield f"{pat}-{sha}.png"
+
+        figure_names = _figure_names()
+
         ns = {"np": np, "plt": plt, obj.__name__: obj}
         ns.update(_get_implied_imports(obj))
         for k, v in config.implied_imports.items():
             ns[k] = obj_from_qualname(v)
         executor = BlockExecutor(ns)
-        figs = []
+        all_figs = []
         # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         fig_managers = executor.fig_man()
         assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
@@ -1087,83 +1099,82 @@ class Gen:
         chunks = (it for block in blocks for it in block)
         with executor:
             for item in chunks:
-                if isinstance(item, InOut):
-                    script, out, ce_status = _execute_inout(item)
-                    figname = None
-                    raise_in_fig = None
-                    did_except = False
-                    if config.exec and ce_status == ExecutionStatus.compiled.value:
-                        if not wait_for_show:
-                            # we should aways have 0 figures
-                            # unless stated otherwise
-                            assert len(fig_managers) == 0
+                figs = []
+                if not isinstance(item, InOut):
+                    assert isinstance(item.out, list)
+                    example_section_data.append(Text("\n".join(item.out)))
+                    continue
+                script, out, ce_status = _execute_inout(item)
+                raise_in_fig = None
+                did_except = False
+                if config.exec and ce_status == ExecutionStatus.compiled.value:
+                    if not wait_for_show:
+                        # we should aways have 0 figures
+                        # unless stated otherwise
+                        assert len(fig_managers) == 0
+                    try:
+                        res = object()
                         try:
-                            res = object()
-                            try:
-                                res, fig_managers, sout, serr = executor.exec(script)
-                                ce_status = "execed"
-                            except Exception:
-                                if "Traceback" not in "\n".join(out):
-                                    log.exception("error in execution: %s", qa)
-                                ce_status = "exception_in_exec"
-                                if config.exec_failure != "fallback":
-                                    raise
-                            if fig_managers and (
-                                ("plt.show" in script) or not wait_for_show
-                            ):
-                                raise_in_fig = True
+                            res, fig_managers, sout, serr = executor.exec(script)
+                            ce_status = "execed"
+                        except Exception:
+                            if "Traceback" not in "\n".join(out):
+                                log.exception("error in execution: %s", qa)
+                            ce_status = "exception_in_exec"
+                            if config.exec_failure != "fallback":
+                                raise
+                        if fig_managers and (
+                            ("plt.show" in script) or not wait_for_show
+                        ):
+                            raise_in_fig = True
+                            for fig, figname in zip(executor.get_figs(), figure_names):
+                                if "_czt" in figname:
+                                    print(qa, figname)
+                                figs.append((figname, fig))
+                            plt.close("all")
+                            raise_in_fig = False
+
+                    except Exception:
+                        did_except = True
+                        print(f"exception executing... {qa}")
+                        fig_managers = executor.fig_man()
+                        if raise_in_fig or config.exec_failure != "fallback":
+                            raise
+                    finally:
+                        if not wait_for_show:
+                            if fig_managers:
                                 for fig, figname in zip(
                                     executor.get_figs(), figure_names
                                 ):
                                     figs.append((figname, fig))
+                                    print(
+                                        f"Still fig manager(s) open for {qa}: {figname}"
+                                    )
                                 plt.close("all")
-                                raise_in_fig = False
-
-                        except Exception:
-                            did_except = True
-                            print(f"exception executing... {qa}")
                             fig_managers = executor.fig_man()
-                            if raise_in_fig or config.exec_failure != "fallback":
-                                raise
-                        finally:
-                            if not wait_for_show:
-                                if fig_managers:
-                                    for fig, figname in zip(
-                                        executor.get_figs(), figure_names
-                                    ):
-                                        figs.append((figname, fig))
-                                        print(
-                                            f"Still fig manager(s) open for {qa}: {figname}"
-                                        )
-                                    plt.close("all")
-                                fig_managers = executor.fig_man()
-                                assert len(fig_managers) == 0, fig_managers + [
-                                    did_except,
-                                ]
-                        # we've executed, we now want to compare output
-                        # in the docstring with the one we produced.
-                        if (out == repr(res)) or (res is None and out == []):
-                            pass
-                        else:
-                            pass
-                            # captured output differ TBD
-                    entries = parse_script(
-                        script, ns=ns, prev=acc, config=config, where=qa
-                    )
-                    if entries is None:
-                        entries = [("jedi failed", "jedi failed")]
+                            assert len(fig_managers) == 0, fig_managers + [
+                                did_except,
+                            ]
+                    # we've executed, we now want to compare output
+                    # in the docstring with the one we produced.
+                    if (out == repr(res)) or (res is None and out == []):
+                        pass
+                    else:
+                        pass
+                        # captured output differ TBD
+                entries = parse_script(script, ns=ns, prev=acc, config=config, where=qa)
+                if entries is None:
+                    entries = [("jedi failed", "jedi failed")]
 
-                    acc += "\n" + script
+                acc += "\n" + script
+                example_section_data.append(
+                    Code(entries, "\n".join(item.out), ce_status)
+                )
+                for figname, fig in figs:
                     example_section_data.append(
-                        Code(entries, "\n".join(item.out), ce_status)
+                        Fig(RefInfo(self.root, self.version, "assets", figname))
                     )
-                    if figname:
-                        example_section_data.append(
-                            Fig(RefInfo(self.root, self.version, "assets", figname))
-                        )
-                else:
-                    assert isinstance(item.out, list)
-                    example_section_data.append(Text("\n".join(item.out)))
+                all_figs.extend(figs)
 
         # TODO fix this if plt.close not called and still a ligering figure.
         fig_managers = executor.fig_man()
@@ -1171,7 +1182,7 @@ class Gen:
             print(f"Unclosed figures in {qa}!!")
             plt.close("all")
 
-        return processed_example_data(example_section_data), figs
+        return processed_example_data(example_section_data), all_figs
 
     def clean(self, where: Path):
         """
