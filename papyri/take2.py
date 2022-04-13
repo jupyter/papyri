@@ -267,7 +267,7 @@ class Text(Leaf):
 
 
 @register(4024)
-class Fig(Leaf):
+class Fig(Node):
     value: RefInfo
 
     def __init__(self, value):

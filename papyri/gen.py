@@ -312,8 +312,6 @@ def _get_implied_imports(obj):
     return {}
 
 
-
-
 def get_classes(code):
     """
     Extract Pygments token classes names for given code block
@@ -1170,7 +1168,7 @@ class Gen:
                 example_section_data.append(
                     Code(entries, "\n".join(item.out), ce_status)
                 )
-                for figname, fig in figs:
+                for figname, _ in figs:
                     example_section_data.append(
                         Fig(RefInfo(self.root, self.version, "assets", figname))
                     )

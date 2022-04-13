@@ -329,7 +329,6 @@ class HtmlRenderer:
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = suf
 
-
     async def index(self):
         keys = self.store.glob((None, None, "meta", "papyri.json"))
         data = []
@@ -791,7 +790,7 @@ def static(name) -> Callable[[], bytes]:
     return f
 
 
-def pygment_css() -> str:
+def pygment_css() -> Response:
     return Response(CSS_DATA, mimetype="text/css")
 
 
@@ -1125,5 +1124,3 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool, minify: b
         config,
         graph,
     )
-
-
