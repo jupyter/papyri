@@ -657,7 +657,7 @@ class HtmlRenderer:
             bytes_ = f.read_bytes()
             assert output_dir is not None
             (output_dir.parent / f.name).write_bytes(bytes_)
-        (output_dir.parent / "pygments.css").write_text(pygment_css())
+        (output_dir.parent / "pygments.css").write_bytes(await pygment_css().get_data())
 
     async def copy_assets(self, config):
         """
