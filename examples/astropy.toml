@@ -1,4 +1,5 @@
-[astropy]
+[global]
+module = 'astropy'
 logo = "astropy_project_logo.svg"
 exclude = ["astropy.utils.misc.OrderedDescriptorContainer",
 # VisitTargetNotImplementedError

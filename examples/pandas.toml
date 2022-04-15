@@ -1,4 +1,5 @@
-[pandas]
+[global]
+module = 'pandas'
 logo = 'logo_pandas.png'
 exec_failure = "fallback"
 submodules = []
@@ -90,7 +91,7 @@ exclude = [
     "pandas.core.common.pipe"
 ]
 [pandas.expected_errors]
-ValueError =[ "pandas.io.pickle.to_pickle", "pandas.core.generic.NDFrame.to_pickle",]           
+ValueError =[ "pandas.io.pickle.to_pickle", "pandas.core.generic.NDFrame.to_pickle",]
 IncorrectInternalDocsLen = [
     "pandas.core.indexes.period.PeriodIndex.asof_locs",
     "pandas.core.indexes.range.RangeIndex._extended_gcd", "pandas._testing._io.optional_args",

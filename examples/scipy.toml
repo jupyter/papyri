@@ -1,4 +1,5 @@
-[scipy]
+[global]
+module = 'scipy'
 logo = "../scipy_logo.png"
 exec = true
 submodules = [ "signal",]
@@ -47,7 +48,7 @@ IncorrectInternalDocsLen = [
     "scipy.interpolate._fitpack_py.spalde", "scipy.interpolate._fitpack_impl.spalde",
     "scipy.optimize._lsq.common.regularized_lsq_operator",
     "scipy.optimize._trustregion_constr.tr_interior_point.tr_interior_point",
-    "scipy.sparse._bsr.bsr_matrix.check_format",    
+    "scipy.sparse._bsr.bsr_matrix.check_format",
     "scipy.optimize._trustregion_constr.tr_interior_point.BarrierSubproblem.gradient_and_jacobian",
     ]
 VisitCitationReferenceNotImplementedError = [

@@ -1,4 +1,5 @@
-[skimage]
+[global]
+module = 'skimage'
 logo = "../skimage-logo.png"
 exec_failure = "fallback"
 submodules = [ "morphology", "color", "data", "draw", "exposure", "io", "graph", "segmentation", "transform", "util", "viewer",]
