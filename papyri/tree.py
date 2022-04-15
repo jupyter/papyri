@@ -737,8 +737,6 @@ class DVR(DirectiveVisiter):
     def replace_Fig(self, fig):
 
         # todo: add version number here
-        self._targets.add(
-            RefInfo(self.qa.split(".")[0], self.version, "assets", fig.value)
-        )
+        self._targets.add(fig.value)
 
         return [fig]

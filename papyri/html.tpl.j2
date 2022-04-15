@@ -90,7 +90,7 @@
             {% if type=='Text' %}
                 {{render_paragraph(data)}}
             {% elif type == 'Fig' %}
-                <div><img src="/p/{{module}}/{{version}}/img/{{data.value}}"/></div>
+                <div><img src="/p/{{data.value.module}}/{{data.value.version}}/img/{{data.value.path}}"/></div>
             {% elif type == 'Code2' %}
                 {% if data.ce_status == 'syntax_error' -%}
                     <span class='warning'>This example does not not appear to be valid Python Syntax</span>

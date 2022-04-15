@@ -2,7 +2,7 @@
 module = 'scipy'
 logo = "../scipy_logo.png"
 exec = true
-submodules = [ "signal",]
+submodules = [ "signal","misc"]
 exclude = [ "scipy.sparse.csgraph._traversal.breadth_first_tree",
     "scipy.sparse.csgraph._traversal.depth_first_tree",
 

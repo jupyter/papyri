@@ -195,22 +195,6 @@
     {%- endif %}
 {%- endmacro %}
 
-{%- macro example_old(entries) -%}
-<span class='nsl'>{{'>>> ' -}}</span>{{ '' -}}
-    {%- for text, t_, cc in entries %}
-        {%- if text == '\n' -%}
-            <br><span class='nsl'>...&nbsp;</span>
-        {%- else -%}
-            {%- if t_ -%}
-            <a class="foo {{cc}}" title={{t_}}, href="{{t_}}{{ext}}">{{text}}</a>
-            {%- else -%}
-            <span class="{{cc}}">{{text}}</span>
-            {%- endif -%}
-        {%- endif -%}
-    {%- endfor-%}
-    {{-'\n'}}
-{%- endmacro %}
-
 
 
 {%- macro example(entries) -%}

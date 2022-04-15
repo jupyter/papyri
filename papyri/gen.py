@@ -30,6 +30,7 @@ from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple, FrozenSet
+from hashlib import sha256
 
 import jedi
 import toml
@@ -309,176 +310,6 @@ def _get_implied_imports(obj):
             return {cname: getattr(mod, cname)}
 
     return {}
-
-
-def get_example_data(
-    example_section, *, obj, qa: str, config, log
-) -> Tuple[Section, List[Any]]:
-    """Extract example section data from a NumpyDocString
-
-    One of the section in numpydoc is "examples" that usually consist of number
-    if paragraph, interleaved with examples starting with >>> and ...,
-
-    This attempt to parse this into structured data, with text, input and output
-    as well as to infer the types of each token in the input examples.
-
-    This is currently relatively limited as the inference does not work across
-    code blocks.
-
-    Parameters
-    ----------
-    example_section
-        The example section of a numpydoc parsed docstring
-    obj
-        The current object. It is common for the current object/function to not
-        have to be imported imported in docstrings. This should become a high
-        level option at some point. Note that for method classes, the class should
-        be made available but currently is not.
-    qa
-        The fully qualified name of current object
-    config : Config
-        Current configuration
-    log
-        Logger instance
-
-    Examples
-    --------
-    Those are self examples, generating papyri documentation with papyri should
-    be able to handle the following
-
-    A simple input, should be execute and output should be shown if --exec option is set
-
-    >>> 1+1
-
-    >>> 2+2
-    4
-
-    Output with Syntax error should be marked as so.
-
-    >>> [this is syntax error]
-
-    if matplotlib and numpy available, we shoudl show graph
-
-    >>> import matplotlib.pyplot as plt
-    ... import numpy as np
-    ... x = np.arange(0, 10, 0.1)
-    ... plt.plot(x, np.sin(x))
-    ... plt.show()
-
-    Note that in the above we use `plt.show`,
-    but we can configure papyri to automatically detect
-    when figures are created.
-
-    Notes
-    -----
-    We do not yet properly handle explicit exceptions in examples, and those are
-    seen as Papyri failures.
-
-    The capturing of matplotlib figures is also limited.
-    """
-    assert qa is not None
-    blocks = list(map(splitcode, splitblank(example_section)))
-    example_section_data = Section()
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    acc = ""
-    figure_names = (f"fig-{qa}-{i}.png" for i in count(0))
-    ns = {"np": np, "plt": plt, obj.__name__: obj}
-    ns.update(_get_implied_imports(obj))
-    for k, v in config.implied_imports.items():
-        ns[k] = obj_from_qualname(v)
-    executor = BlockExecutor(ns)
-    figs = []
-    # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-    fig_managers = executor.fig_man()
-    assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
-    wait_for_show = config.wait_for_plt_show
-    if qa in config.exclude_jedi:
-        config = config.replace(infer=False)
-        log.debug(f"Turning off type inference for func {qa!r}")
-    chunks = (it for block in blocks for it in block)
-    with executor:
-        for item in chunks:
-            if isinstance(item, InOut):
-                script, out, ce_status = _execute_inout(item)
-                figname = None
-                raise_in_fig = None
-                did_except = False
-                if config.exec and ce_status == ExecutionStatus.compiled.value:
-                    if not wait_for_show:
-                        # we should aways have 0 figures
-                        # unless stated otherwise
-                        assert len(fig_managers) == 0
-                    try:
-                        res = object()
-                        try:
-                            res, fig_managers, sout, serr = executor.exec(script)
-                            ce_status = "execed"
-                        except Exception:
-                            if "Traceback" not in "\n".join(out):
-                                log.exception("error in execution: %s", qa)
-                            ce_status = "exception_in_exec"
-                            if config.exec_failure != "fallback":
-                                raise
-                        if fig_managers and (
-                            ("plt.show" in script) or not wait_for_show
-                        ):
-                            raise_in_fig = True
-                            for fig, figname in zip(executor.get_figs(), figure_names):
-                                figs.append((figname, fig))
-                            plt.close("all")
-                            raise_in_fig = False
-
-                    except Exception:
-                        did_except = True
-                        print(f"exception executing... {qa}")
-                        fig_managers = executor.fig_man()
-                        if raise_in_fig or config.exec_failure != "fallback":
-                            raise
-                    finally:
-                        if not wait_for_show:
-                            if fig_managers:
-                                for fig, figname in zip(
-                                    executor.get_figs(), figure_names
-                                ):
-                                    figs.append((figname, fig))
-                                    print(
-                                        f"Still fig manager(s) open for {qa}: {figname}"
-                                    )
-                                plt.close("all")
-                            fig_managers = executor.fig_man()
-                            assert len(fig_managers) == 0, fig_managers + [
-                                did_except,
-                            ]
-                    # we've executed, we now want to compare output
-                    # in the docstring with the one we produced.
-                    if (out == repr(res)) or (res is None and out == []):
-                        pass
-                    else:
-                        pass
-                        # captured output differ TBD
-                entries = parse_script(script, ns=ns, prev=acc, config=config, where=qa)
-                if entries is None:
-                    entries = [("jedi failed", "jedi failed")]
-
-                acc += "\n" + script
-                example_section_data.append(
-                    Code(entries, "\n".join(item.out), ce_status)
-                )
-                if figname:
-                    example_section_data.append(Fig(figname))
-            else:
-                assert isinstance(item.out, list)
-                example_section_data.append(Text("\n".join(item.out)))
-
-    # TODO fix this if plt.close not called and still a ligering figure.
-    fig_managers = executor.fig_man()
-    if len(fig_managers) != 0:
-        print(f"Unclosed figures in {qa}!!")
-        plt.close("all")
-
-    return processed_example_data(example_section_data), figs
 
 
 def get_classes(code):
@@ -1171,6 +1002,191 @@ class Gen:
         self.examples = {}
         self.docs = {}
 
+    def get_example_data(
+        self, example_section, *, obj, qa: str, config, log
+    ) -> Tuple[Section, List[Any]]:
+        """Extract example section data from a NumpyDocString
+
+        One of the section in numpydoc is "examples" that usually consist of number
+        if paragraph, interleaved with examples starting with >>> and ...,
+
+        This attempt to parse this into structured data, with text, input and output
+        as well as to infer the types of each token in the input examples.
+
+        This is currently relatively limited as the inference does not work across
+        code blocks.
+
+        Parameters
+        ----------
+        example_section
+            The example section of a numpydoc parsed docstring
+        obj
+            The current object. It is common for the current object/function to not
+            have to be imported imported in docstrings. This should become a high
+            level option at some point. Note that for method classes, the class should
+            be made available but currently is not.
+        qa
+            The fully qualified name of current object
+        config : Config
+            Current configuration
+        log
+            Logger instance
+
+        Examples
+        --------
+        Those are self examples, generating papyri documentation with papyri should
+        be able to handle the following
+
+        A simple input, should be execute and output should be shown if --exec option is set
+
+        >>> 1+1
+
+        >>> 2+2
+        4
+
+        Output with Syntax error should be marked as so.
+
+        >>> [this is syntax error]
+
+        if matplotlib and numpy available, we shoudl show graph
+
+        >>> import matplotlib.pyplot as plt
+        ... import numpy as np
+        ... x = np.arange(0, 10, 0.1)
+        ... plt.plot(x, np.sin(x))
+        ... plt.show()
+
+        Note that in the above we use `plt.show`,
+        but we can configure papyri to automatically detect
+        when figures are created.
+
+        Notes
+        -----
+        We do not yet properly handle explicit exceptions in examples, and those are
+        seen as Papyri failures.
+
+        The capturing of matplotlib figures is also limited.
+        """
+        assert qa is not None
+        blocks = list(map(splitcode, splitblank(example_section)))
+        example_section_data = Section()
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        acc = ""
+
+        def _figure_names():
+            """
+            File system can be case insensitive, we are not.
+            """
+            for i in count(0):
+                pat = f"fig-{qa}-{i}"
+                sha = sha256(pat.encode()).hexdigest()[:8]
+                yield f"{pat}-{sha}.png"
+
+        figure_names = _figure_names()
+
+        ns = {"np": np, "plt": plt, obj.__name__: obj}
+        ns.update(_get_implied_imports(obj))
+        for k, v in config.implied_imports.items():
+            ns[k] = obj_from_qualname(v)
+        executor = BlockExecutor(ns)
+        all_figs = []
+        # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+        fig_managers = executor.fig_man()
+        assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
+        wait_for_show = config.wait_for_plt_show
+        if qa in config.exclude_jedi:
+            config = config.replace(infer=False)
+            log.debug(f"Turning off type inference for func {qa!r}")
+        chunks = (it for block in blocks for it in block)
+        with executor:
+            for item in chunks:
+                figs = []
+                if not isinstance(item, InOut):
+                    assert isinstance(item.out, list)
+                    example_section_data.append(Text("\n".join(item.out)))
+                    continue
+                script, out, ce_status = _execute_inout(item)
+                raise_in_fig = None
+                did_except = False
+                if config.exec and ce_status == ExecutionStatus.compiled.value:
+                    if not wait_for_show:
+                        # we should aways have 0 figures
+                        # unless stated otherwise
+                        assert len(fig_managers) == 0
+                    try:
+                        res = object()
+                        try:
+                            res, fig_managers, sout, serr = executor.exec(script)
+                            ce_status = "execed"
+                        except Exception:
+                            if "Traceback" not in "\n".join(out):
+                                log.exception("error in execution: %s", qa)
+                            ce_status = "exception_in_exec"
+                            if config.exec_failure != "fallback":
+                                raise
+                        if fig_managers and (
+                            ("plt.show" in script) or not wait_for_show
+                        ):
+                            raise_in_fig = True
+                            for fig, figname in zip(executor.get_figs(), figure_names):
+                                if "_czt" in figname:
+                                    print(qa, figname)
+                                figs.append((figname, fig))
+                            plt.close("all")
+                            raise_in_fig = False
+
+                    except Exception:
+                        did_except = True
+                        print(f"exception executing... {qa}")
+                        fig_managers = executor.fig_man()
+                        if raise_in_fig or config.exec_failure != "fallback":
+                            raise
+                    finally:
+                        if not wait_for_show:
+                            if fig_managers:
+                                for fig, figname in zip(
+                                    executor.get_figs(), figure_names
+                                ):
+                                    figs.append((figname, fig))
+                                    print(
+                                        f"Still fig manager(s) open for {qa}: {figname}"
+                                    )
+                                plt.close("all")
+                            fig_managers = executor.fig_man()
+                            assert len(fig_managers) == 0, fig_managers + [
+                                did_except,
+                            ]
+                    # we've executed, we now want to compare output
+                    # in the docstring with the one we produced.
+                    if (out == repr(res)) or (res is None and out == []):
+                        pass
+                    else:
+                        pass
+                        # captured output differ TBD
+                entries = parse_script(script, ns=ns, prev=acc, config=config, where=qa)
+                if entries is None:
+                    entries = [("jedi failed", "jedi failed")]
+
+                acc += "\n" + script
+                example_section_data.append(
+                    Code(entries, "\n".join(item.out), ce_status)
+                )
+                for figname, _ in figs:
+                    example_section_data.append(
+                        Fig(RefInfo(self.root, self.version, "assets", figname))
+                    )
+                all_figs.extend(figs)
+
+        # TODO fix this if plt.close not called and still a ligering figure.
+        fig_managers = executor.fig_man()
+        if len(fig_managers) != 0:
+            print(f"Unclosed figures in {qa}!!")
+            plt.close("all")
+
+        return processed_example_data(example_section_data), all_figs
+
     def clean(self, where: Path):
         """
         Erase a doc bundle folder.
@@ -1430,7 +1446,7 @@ class Gen:
             # warnings this is true only for non-modules
             # things.
             try:
-                example_section_data, figs = get_example_data(
+                example_section_data, figs = self.get_example_data(
                     api_object.special("Examples").value,
                     obj=target_item,
                     qa=qa,
@@ -1596,7 +1612,11 @@ class Gen:
                     config=config,
                 )
                 s = Section(
-                    [Code(entries, "", ce_status)] + [Fig(name) for name, _ in figs]
+                    [Code(entries, "", ce_status)]
+                    + [
+                        Fig(RefInfo(self.root, self.version, "assets", name))
+                        for name, _ in figs
+                    ]
                 )
                 s = processed_example_data(s)
 

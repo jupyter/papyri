@@ -394,11 +394,14 @@ class Ingester:
             )
             s_code = visitor.visit(s)
             refs = list(map(lambda s: Key(*s), visitor._targets))
-            gstore.put(
-                Key(root, version, "examples", fe.name),
-                encoder.encode(s_code),
-                refs,
-            )
+            try:
+                gstore.put(
+                    Key(root, version, "examples", fe.name),
+                    encoder.encode(s_code),
+                    refs,
+                )
+            except Exception:
+                breakpoint()
 
     def _ingest_assets(self, path, root, version, aliases, gstore):
         for _, f2 in self.progress(
@@ -491,7 +494,10 @@ class Ingester:
                 resolved, exists = r.path, r.kind
                 if exists == "module":
                     sa.name.exists = True
-                    # assert sa.name.ref == resolved, (sa.name.ref, resolved, qa)
+                    if not sa.name.ref == resolved:
+                        print(
+                            "Warning mutation on ingest ", (sa.name.ref, resolved, qa)
+                        )
                     sa.name.ref = resolved
 
         for _, (qa, doc_blob) in self.progress(
@@ -580,10 +586,7 @@ class Ingester:
                 for k, v in visitor.generic_visit(sec).items():
                     res.setdefault(k, []).extend(v)
 
-            assets_II = {
-                Key(key.module, key.version, "assets", f.value)
-                for f in res.get(Fig, [])
-            }
+            assets_II = {Key(*f.value) for f in res.get(Fig, [])}
             sr = set(
                 [Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]
             ).union(assets_II)
@@ -607,8 +610,16 @@ class Ingester:
             # end todo
 
             data = encoder.encode(doc_blob)
-            if set(sr) != set(forward):
-                gstore.put(key, data, [Key(*x) for x in sr])
+            ssr = set(sr)
+            for s in forward:
+                assert isinstance(s, Key)
+            forward_refs = set(forward)
+            if ssr != forward_refs:
+                # for n in ssr - sfw:
+                #    print("     +", n)
+                # for o in sfw - ssr:
+                #    print("     -", o)
+                gstore.put(key, data, forward_refs)
 
         for _, key in progress(
             gstore.glob((None, None, "examples", None)),
