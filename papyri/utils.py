@@ -52,7 +52,10 @@ class TimeElapsedColumn(ProgressColumn):
                     + elapsed_delta
                     + timedelta(seconds=int(task.time_remaining))
                 ) / 100
-            finish_delta = str(self.avg).split(".")[0]
+            # finish_delta = str(self.avg).split(".")[0]
+            finish_delta = str(
+                elapsed_delta + timedelta(seconds=int(task.time_remaining))
+            )
         else:
             finish_delta = "--:--:--"
         return Text(

@@ -271,6 +271,7 @@ def install(
     names: List[str],
     check: bool = False,
     dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
+    relink: bool = True,
 ):
     """
     WIP, download and install a remote docbundle
@@ -364,7 +365,8 @@ def install(
                 )
         else:
             print(f"Could not find docs for {name}=={version}")
-    cr.relink(dummy_progress=dummy_progress)
+    if relink:
+        cr.relink(dummy_progress=dummy_progress)
 
 
 @app.command()
