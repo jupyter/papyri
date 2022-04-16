@@ -410,6 +410,8 @@ class DirectiveVisiter(TreeReplacer):
 
     """
 
+    _missing_directives: List[str]
+
     def __init__(
         self, qa: str, known_refs: FrozenSet[RefInfo], local_refs, aliases, version
     ):
@@ -441,6 +443,7 @@ class DirectiveVisiter(TreeReplacer):
         self.rev_aliases = {v: k for k, v in aliases.items()}
         self._targets: Set[Any] = set()
         self.version = version
+        self._missing_directives = []
 
     def _block_verbatim_helper(self, name, argument, options, content):
         data = f".. {name}:: {argument}\n"
@@ -514,7 +517,10 @@ class DirectiveVisiter(TreeReplacer):
                 block_directive.options,
                 block_directive.content,
             )
-        print("TODO:", block_directive.name)
+
+        if block_directive.name not in self._missing_directives:
+            self._missing_directives.append(block_directive.name)
+            print("TODO:", self._missing_directives)
 
         return [block_directive]
 
