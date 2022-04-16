@@ -404,13 +404,14 @@ def py_pep_hander(value):
     return [ExternalLink(f"Pep {number}", target)]
 
 
+_MISSING_DIRECTIVES: List[str] = []
+
+
 class DirectiveVisiter(TreeReplacer):
     """
     A tree replacer to update directives.
 
     """
-
-    _missing_directives: List[str]
 
     def __init__(
         self, qa: str, known_refs: FrozenSet[RefInfo], local_refs, aliases, version
@@ -443,7 +444,6 @@ class DirectiveVisiter(TreeReplacer):
         self.rev_aliases = {v: k for k, v in aliases.items()}
         self._targets: Set[Any] = set()
         self.version = version
-        self._missing_directives = []
 
     def _block_verbatim_helper(self, name, argument, options, content):
         data = f".. {name}:: {argument}\n"
@@ -518,9 +518,9 @@ class DirectiveVisiter(TreeReplacer):
                 block_directive.content,
             )
 
-        if block_directive.name not in self._missing_directives:
-            self._missing_directives.append(block_directive.name)
-            print("TODO:", self._missing_directives)
+        if block_directive.name not in _MISSING_DIRECTIVES:
+            _MISSING_DIRECTIVES.append(block_directive.name)
+            print("TODO:", _MISSING_DIRECTIVES)
 
         return [block_directive]
 
