@@ -523,7 +523,7 @@ class DirectiveVisiter(TreeReplacer):
 
         if block_directive.name not in _MISSING_DIRECTIVES:
             _MISSING_DIRECTIVES.append(block_directive.name)
-            print("TODO:", _MISSING_DIRECTIVES)
+            print("TODO:", block_directive.name)
 
         return [block_directive]
 
