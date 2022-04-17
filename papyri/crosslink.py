@@ -330,22 +330,7 @@ def load_one_uningested(
     blob.arbitrary = acc1
 
     blob.process(known_refs=known_refs, aliases=aliases, verbose=False, version=version)
-    # if targets:
-    #    print("LL", len(targets))
 
-    # if blob.refs:
-    #    new_refs: List[RefInfo] = []
-    #    kind = "exists"
-    #    for value in blob.refs:
-    #        assert isinstance(value, str)
-    #        r = resolve_(qa, known_refs, frozenset(), value)
-    #        if None not in r:
-    #            new_refs.append(r)
-
-    #    blob.refs = new_refs
-    # blob.refs = list(targets)
-    # if blob.refs:
-    #    print("BLOB REFS:", blob.refs)
     return blob
 
 
@@ -375,6 +360,7 @@ class Ingester:
             module, version = path.name.split("_")
             key = Key(module, version, "docs", ref)
             doc.validate()
+            assert not doc.refs, doc.refs
             gstore.put(
                 key,
                 encoder.encode(doc),
@@ -496,7 +482,7 @@ class Ingester:
                     sa.name.exists = True
                     if not sa.name.ref == resolved:
                         print(
-                            "Warning mutation on ingest ", (sa.name.ref, resolved, qa)
+                            f"Warning mutation on ingest from {sa.name.ref} to {resolved} in {qa}"
                         )
                     sa.name.ref = resolved
 
@@ -527,12 +513,14 @@ class Ingester:
                 assert rq.version != "??"
                 assert None not in rq
                 forward_refs.append(Key(*rq))
+            doc_blob.refs = []
 
             try:
                 key = Key(mod_root, version, "module", qa)
                 assert mod_root is not None
                 assert version is not None
                 assert None not in key
+                assert not doc_blob.refs, doc_blob.refs
                 gstore.put(
                     key,
                     encoder.encode(doc_blob),
@@ -573,7 +561,6 @@ class Ingester:
             except Exception as e:
                 raise type(e)(key)
             assert doc_blob.content is not None, data
-            doc_blob.process(known_refs, aliases=aliases, version=key.version)
 
             # TODO: Move this into process ?
             res: Dict[Any, List[Any]] = {}
@@ -587,7 +574,7 @@ class Ingester:
                     res.setdefault(k, []).extend(v)
 
             assets_II = {Key(*f.value) for f in res.get(Fig, [])}
-            sr = set(
+            ssr = set(
                 [Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]
             ).union(assets_II)
 
@@ -610,15 +597,10 @@ class Ingester:
             # end todo
 
             data = encoder.encode(doc_blob)
-            ssr = set(sr)
             for s in forward:
                 assert isinstance(s, Key)
             forward_refs = set(forward)
             if ssr != forward_refs:
-                # for n in ssr - sfw:
-                #    print("     +", n)
-                # for o in sfw - ssr:
-                #    print("     -", o)
                 gstore.put(key, data, forward_refs)
 
         for _, key in progress(
