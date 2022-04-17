@@ -465,9 +465,6 @@ class Ingester:
         for _, (qa, doc_blob) in self.progress(
             nvisited_items.items(), description=f"{path.name} Cross referencing"
         ):
-            doc_blob.process(
-                known_ref_info, verbose=False, aliases=aliases, version=version
-            )
             # todo: warning mutation.
             for sa in doc_blob.see_also:
                 r = resolve_(
