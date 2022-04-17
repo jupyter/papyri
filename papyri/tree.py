@@ -499,6 +499,11 @@ class DirectiveVisiter(TreeReplacer):
     def _note_handler(self, argument, options, content):
         return self._admonition_handler_x("note", argument, options, content)
 
+    def _code_handler(self, argument, options, content):
+        assert not argument, argument
+        assert not options
+        return [BlockVerbatim(content)]
+
     def _versionchanged_handler(self, argument, options, content):
         return self._admonition_handler_x("versionchanged", argument, options, content)
 
