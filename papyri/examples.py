@@ -130,9 +130,9 @@ def example_3():
     This will be ``verbatim``, and this is `interpreted-text`.
     Interpreted text can have domain and role :domain:role:`interpreted text`.
 
-    .. directive::
+        .. directive::
 
-        This will be a directive
+            This will be a directive
 
     .. math::
 
@@ -140,10 +140,10 @@ def example_3():
 
     .. note::
 
-        This directive will be turned into an admonition.
+        This directive will be turned into a note admonition.
 
     .. warning::
 
-        This directive will be turned into an admonition.
+        This directive will be turned into a warning admonition.
 
     """
