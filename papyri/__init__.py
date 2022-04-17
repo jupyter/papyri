@@ -176,6 +176,7 @@ from typing import List, Optional
 
 import toml
 import typer
+import json
 
 from . import examples
 
@@ -266,6 +267,9 @@ def ingest(
         cr.relink(dummy_progress=dummy_progress)
 
 
+ROOT = "https://pydocs.github.io/pkg"
+
+
 @app.command()
 def install(
     names: List[str],
@@ -302,9 +306,7 @@ def install(
 
         client = httpx.AsyncClient()
 
-        async with client.stream(
-            "GET", f"https://pydocs.github.io/pkg/{name}-{version}.zip"
-        ) as response:
+        async with client.stream("GET", f"{ROOT}/{name}-{version}.zip") as response:
             total = int(response.headers["Content-Length"])
 
             download_task = progress.add_task(f"Download {name} {version}", total=total)
@@ -324,6 +326,39 @@ def install(
 
         """
         results = {}
+        client = httpx.AsyncClient()
+        index = (await client.get(f"{ROOT}/index.json")).json()
+        assert len(set(names)) == len(names)
+
+        requested = {}
+        for name in names:
+            if "==" in name:
+                name, version = name.split("==")
+            else:
+                try:
+                    mod = __import__(name)
+                    version = mod.__version__
+                    print(
+                        f"Autodetecting version for {name}:{version}, use {name}==<version> if incorrect."
+                    )
+                except Exception:
+                    print(
+                        f"Could not detect version for {name} use {name}==<version> if incorrect."
+                    )
+                    continue
+            requested[name] = version
+
+        to_download = {}
+        for k, v in requested.items():
+            if k not in index["packages"]:
+                print(f"No documentation found for {k!r}")
+                continue
+            if v not in index["packages"][k]:
+                print(
+                    f"Could not find {k}=={v}, available versions are {index['packages'][k]}"
+                )
+            to_download[k] = v
+
         with rich.progress.Progress(
             "{task.description}",
             "[progress.percentage]{task.percentage:>3.0f}%",
@@ -332,22 +367,7 @@ def install(
             rich.progress.TransferSpeedColumn(),
         ) as progress:
             async with trio.open_nursery() as nursery:
-                for name in names:
-                    if "==" in name:
-                        name, version = name.split("==")
-                    else:
-                        try:
-                            mod = __import__(name)
-                            version = mod.__version__
-                            print(
-                                f"Autodetecting version for {name}:{version}, use {name}==<version> if incorrect."
-                            )
-                        except Exception:
-                            print(
-                                f"Could not detect version for {name} use {name}==<version> if incorrect."
-                            )
-                            continue
-                    # with console.status(f"Downloading documentation for {name}") as status:
+                for name, version in to_download.items():
                     nursery.start_soon(get, name, version, results, progress)
         return results
 
@@ -365,7 +385,7 @@ def install(
                 )
         else:
             print(f"Could not find docs for {name}=={version}")
-    if relink:
+    if datas and relink:
         cr.relink(dummy_progress=dummy_progress)
 
 
