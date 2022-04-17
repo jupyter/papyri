@@ -131,14 +131,6 @@ class IngestedBlobs(Node):
         self.__isfrozen = True
 
     @property
-    def version(self):
-        assert False
-
-    @version.setter
-    def version(self, new):
-        assert False
-
-    @property
     def content(self):
         """
         List of sections in the doc blob docstrings
@@ -148,27 +140,7 @@ class IngestedBlobs(Node):
 
     @content.setter
     def content(self, new):
-        assert not new.keys() - {
-            "Signature",
-            "Summary",
-            "Extended Summary",
-            "Parameters",
-            "Returns",
-            "Yields",
-            "Receives",
-            "Raises",
-            "Warns",
-            "Other Parameters",
-            "Attributes",
-            "Methods",
-            "See Also",
-            "Notes",
-            "Warnings",
-            "References",
-            "Examples",
-            "index",
-        }
-        self._content = new
+        assert False
 
     def process(
         self, known_refs, aliases: Optional[Dict[str, str]], verbose=True, *, version
@@ -199,11 +171,11 @@ class IngestedBlobs(Node):
             #'See Also'
             #'Examples'
         ]
-        if self.refs is None:
-            self.refs = []
+        assert self.refs is not None
+        assert aliases is not None
+
         for r in self.refs:
             assert None not in r
-        if aliases is None:
             aliases = {}
         for s in sections_:
 
@@ -249,12 +221,6 @@ class IngestedBlobs(Node):
         except Exception as e:
             raise type(e)(self.refs)
 
-    def from_json(cls, data):
-        assert False
-
-
-# iii = 0
-
 
 def load_one_uningested(
     bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs, aliases, *, version
@@ -282,11 +248,7 @@ def load_one_uningested(
 
     blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.name))
     blob.example_section_data = blob.example_section_data
-    # blob.refs = list(sorted(set(blob.refs)))
     blob.refs = []
-
-    for r in blob.refs:
-        assert None not in r
 
     sections_ = [
         "Parameters",

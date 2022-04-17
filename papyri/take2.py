@@ -200,11 +200,6 @@ class Node(Base):
 
         return True
 
-    def is_whitespace(self):
-        if not isinstance(self.value, str):
-            return False
-        return not bool(self.value.strip())
-
     def __repr__(self):
         tt = get_type_hints(type(self))
         acc = ""
@@ -330,9 +325,6 @@ class Verbatim(Node):
     def text(self):
         return "".join(self.value)
 
-    def __len__(self):
-        return sum(len(x) for x in self.value) + 4
-
     def __repr__(self):
         return "<Verbatim ``" + "".join(self.value) + "``>"
 
@@ -392,9 +384,6 @@ class Link(Node):
     @property
     def children(self):
         return [self.value, self.reference, self.kind, self.exists]
-
-    def __len__(self):
-        return len(self.value)
 
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
@@ -552,10 +541,6 @@ class Strong(Node):
 
     def __hash__(self):
         return hash(repr(self))
-
-    def is_whitespace(self):
-        return False
-
 
 class _XList(Node):
     children: List[ListItem]
