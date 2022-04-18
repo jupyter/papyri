@@ -393,7 +393,7 @@ for role in (
 
 @directive_handler("py", "math")
 def py_math_handler(value):
-    m = Math([value])
+    m = Math(value)
     return [m]
 
 

@@ -232,6 +232,10 @@ class IntermediateNode(Node):
     pass
 
 
+@register(4005)
+class Math(Leaf):
+    pass
+
 @register(4004)
 class BlockMath(Leaf):
     pass
@@ -381,10 +385,6 @@ class Link(Node):
         self.kind = kind
         self.exists = exists
 
-    @property
-    def children(self):
-        return [self.value, self.reference, self.kind, self.exists]
-
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
 
@@ -439,25 +439,6 @@ class Directive(Node):
         return f"<Directive {self.prefix}`{self.value}`>"
 
 
-@register(4005)
-class Math(Node):
-    value: List[str]  # list of tokens not list of lines.
-
-    def __init__(self, value):
-        assert isinstance(value, list)
-        self.value = value
-
-    @property
-    def text(self):
-        return "".join(self.value)
-
-    def __hash__(self):
-        return hash(tuple(self.value))
-
-    def _validate(self):
-        pass
-        # assert len(self.value) == 1, self.value
-        # pass
 
 
 class Word(IntermediateNode):
@@ -472,9 +453,6 @@ class Word(IntermediateNode):
 
     def __init__(self, value):
         self.value = value
-
-    def __repr__(self):
-        return self.value
 
 
 @register(4007)
@@ -535,9 +513,6 @@ class Strong(Node):
     @children.setter
     def children(self, children):
         [self.content] = children
-
-    def __repr__(self):
-        return "**" + repr(self.content) + "**"
 
     def __hash__(self):
         return hash(repr(self))
@@ -974,7 +949,7 @@ class BlockVerbatim(Node):
 class DefList(Node):
     children: List[DefListItem]
 
-    def __init__(self, children=None):
+    def __init__(self, children):
         self.children = children
 
 
@@ -991,7 +966,7 @@ class Options(Node):
 class FieldList(Node):
     children: List[FieldListItem]
 
-    def __init__(self, children=None):
+    def __init__(self, children):
         self.children = children
 
 
