@@ -542,6 +542,7 @@ class Strong(Node):
     def __hash__(self):
         return hash(repr(self))
 
+
 class _XList(Node):
     children: List[ListItem]
 

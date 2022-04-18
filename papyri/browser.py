@@ -455,7 +455,7 @@ class Renderer:
 
     def render_BulletList(self, blist):
         p = [blank]
-        for i, c in enumerate(blist.children, start=1):
+        for c in blist.children:
             res = [self.render(x) for x in c.children]
             p.extend([urwid.Columns([(3, urwid.Text("-")), urwid.Pile(res)])])
         return urwid.Pile(p)
