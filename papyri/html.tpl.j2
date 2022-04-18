@@ -53,7 +53,8 @@
 
     {%- elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] and len(doc.content[section]) > 0  -%}
        <dl>
-           {% for p in doc.content[section] -%}
+           {% for ps in doc.content[section] -%}
+               {% for p in ps.children -%}
                {% if p[0] -%}
                    <dt><a id="{{p[0]}}">{{p[0]}}</a> : {{p[1]}}</dt>
                {% else -%}
@@ -65,6 +66,7 @@
                         {{render_II(item)}}
                     {% endfor -%}
                </dd>
+              {% endfor -%}
            {% endfor -%}
        </dl>
 

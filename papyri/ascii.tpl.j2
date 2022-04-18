@@ -89,6 +89,10 @@
    |   |    {{-block(obj)-}}
    |   |{% elif type == 'Example' %}
    |   |   |   |{{block(obj)}}
+   |   |{% elif type == 'Parameters' %}
+   |   |   {% for item in obj.children %}
+   |   |       {{ render_II(item) }}
+   |   |   {% endfor %}
    |   |{% elif type == 'Section' %}
    |   |   {% for item in obj %}
    |   |       {{ render_II(item) }}
@@ -176,18 +180,20 @@
    |   |{{"        "}}
    |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes',  'Warns', 'Other Parameters']  %}
    |   |{% if doc.content[section] %}
-   |   |{% for p in doc.content[section] %}
-   |   |   |{% if p.__class__.__name__ != 'Param' %}
-   |   |   |    {{unreachable()}}
-   |   |   |{% endif %}
-   |   |   |{% if p[0] %}
-   |   |   |    {{bold(green(p[0]))}} : {{cyan(p[1])}}
-   |   |   |{% else %}
-   |   |   |    {{green(p[1])}}
-   |   |   |{% endif %}
-   |   |   |   {% for item in p[2] %}
-   |   |   |       {{render_II(item)| wordwrap | indent(width=8)}}
-   |   |   |   {% endfor -%}
+   |   |{% for ps in doc.content[section] %}
+   |   |   |{% for p in ps.children %}
+   |   |   |   |{% if p.__class__.__name__ != 'Param' %}
+   |   |   |   |    {{unreachable()}}
+   |   |   |   |{% endif %}
+   |   |   |   |{% if p[0] %}
+   |   |   |   |    {{bold(green(p[0]))}} : {{cyan(p[1])}}
+   |   |   |   |{% else %}
+   |   |   |   |    {{green(p[1])}}
+   |   |   |   |{% endif %}
+   |   |   |   |   {% for item in p[2] %}
+   |   |   |   |       {{render_II(item)| wordwrap | indent(width=8)}}
+   |   |   |   |   {% endfor -%}
+   |   |   |{%- endfor -%}
    |   |{%- endfor -%}
    |   |{%- endif -%}
    |{% else %}

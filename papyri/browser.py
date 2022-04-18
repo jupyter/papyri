@@ -35,7 +35,7 @@ from urwid.command_map import CURSOR_DOWN, CURSOR_LEFT, CURSOR_RIGHT, CURSOR_UP
 from urwid.text_layout import calc_coords
 from urwid.widget import LEFT, SPACE
 
-from papyri.take2 import RefInfo, encoder
+from papyri.crosslink import RefInfo, encoder
 
 
 class Link:
@@ -306,6 +306,9 @@ class Renderer:
         b = urwid.Padding(urwid.Pile(acc), left=4)
         return urwid.Pile([a, b])
 
+    def render_ExternalLink(self, link):
+        return link.value
+
     def render_Link(self, link):
         if link.reference.kind == "local":
             return ("local", link.value)
@@ -421,8 +424,6 @@ class Renderer:
         rr = None
         try:
             rr = [TextWithLink([self.render(o) for o in paragraph.children])]
-            for inl in paragraph.inner:
-                rr.append(self.render(inl))
             return urwid.Pile(rr)
         except Exception:
             raise ValueError(cc, rr)
@@ -450,6 +451,13 @@ class Renderer:
             res = self.render(c)
             assert isinstance(res, list)
             p.extend(res)
+        return urwid.Pile(p)
+
+    def render_BulletList(self, blist):
+        p = [blank]
+        for i, c in enumerate(blist.children, start=1):
+            res = [self.render(x) for x in c.children]
+            p.extend([urwid.Columns([(3, urwid.Text("-")), urwid.Pile(res)])])
         return urwid.Pile(p)
 
     def render_EnumeratedList(self, elist):
@@ -564,6 +572,9 @@ class Renderer:
             ),
             left=2,
         )
+
+    def render_Parameters(self, parameters):
+        return urwid.Pile([self.render_Param(c) for c in parameters.children])
 
     def render_Param(self, param):
         return urwid.Pile(

@@ -635,7 +635,7 @@ class Section(Node):
             Unimplemented,
             BlockMath,
             BlockVerbatim,
-            Param,
+            Parameters,
             BulletList,
             EnumeratedList,
             BlockQuote,
@@ -684,6 +684,14 @@ class Section(Node):
 
     def __len__(self):
         return len(self.children)
+
+
+@register(4026)
+class Parameters(Node):
+    children: List[Param]
+
+    def __init__(self, children):
+        self.children = children
 
 
 @register(4016)
@@ -1166,6 +1174,11 @@ class Encoder:
 
     def decode(self, bytes):
         return cbor2.loads(bytes, tag_hook=self._tag_hook)
+
+    def _available_tags(self):
+        k = self._rev_map.keys()
+        mi, ma = min(k), max(k)
+        return set(range(mi, ma + 2)) - set(k)
 
 
 encoder = Encoder(REV_TAG_MAP)
