@@ -46,7 +46,15 @@ def minify(s):
 
 def url(info, prefix, suffix):
     assert isinstance(info, RefInfo), info
-    assert info.kind in ("module", "api", "examples", "assets", "?", "docs"), info.kind
+    assert info.kind in (
+        "module",
+        "api",
+        "examples",
+        "assets",
+        "?",
+        "docs",
+        "to-resolve",
+    ), info.kind
     # assume same package/version for now.
     assert info.module is not None
     if info.module is None:

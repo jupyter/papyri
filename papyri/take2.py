@@ -390,6 +390,9 @@ class Link(Node):
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
 
+    def __hash__(self):
+        return hash((self.value, self.reference, self.kind, self.exists))
+
 
 @register(4003)
 class Directive(Node):
@@ -1105,31 +1108,9 @@ class DefListItem(Node):
         self.dd = dd
 
 
-@register(4027)
-class Ref(Node):
-    name: str
-    ref: Optional[str]
-    exists: Optional[bool]
-
-    def __init__(self, name=None, ref=None, exists=None):
-        self.name = name
-        self.ref = ref
-        self.exists = exists
-
-    def __hash__(self):
-        return hash((self.name, self.ref, self.exists))
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.name} {self.ref} {self.exists}>"
-
-    @property
-    def children(self):
-        return [self.name, self.ref, self.exists]
-
-
 @register(4028)
 class SeeAlsoItem(Node):
-    name: Ref
+    name: Link
     descriptions: List[Paragraph]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]

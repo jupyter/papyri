@@ -53,12 +53,12 @@ from .take2 import (
     GenToken,
     Fig,
     Node,
+    Link,
     NumpydocExample,
     NumpydocSeeAlso,
     NumpydocSignature,
     Param,
     Parameters,
-    Ref,
     RefInfo,
     Section,
     SeeAlsoItem,
@@ -958,8 +958,11 @@ def _normalize_see_also(see_also: List[Any], qa):
                 else:
                     type_ = type_or_description
                     desc = []
-
-                sai = SeeAlsoItem(Ref(name, None, None), desc, type_)
+                refinfo = RefInfo(
+                    "current-module", "current-version", "to-resolve", name
+                )
+                link = Link(name, refinfo, "module", True)
+                sai = SeeAlsoItem(link, desc, type_)
                 new_see_also.append(sai)
                 del desc
                 del type_
@@ -1489,7 +1492,7 @@ class Gen:
                     refs_I.append(ref)
         if api_object.special("See Also"):
             for sa in api_object.special("See Also").value:
-                refs_Ib.append(sa.name.name)
+                refs_Ib.append(sa.name.value)
 
         if api_object.kind != "module":
             # TODO: most module docstring are not properly parsed by numpydoc.
@@ -1925,20 +1928,21 @@ class Gen:
                         qa,
                         known_refs,
                         frozenset(),
-                        sa.name.name,
+                        sa.name.value,
                         rev_aliases=rev_aliases,
                     )
-                    resolved, exists = r.path, r.kind
-                    if exists == "module":
-                        sa.name.exists = True
-                        sa.name.ref = resolved
+                    assert isinstance(r, RefInfo)
+                    if r.kind == "module":
+                        sa.name.reference = r
                     else:
-                        imp = DVR._import_solver(sa.name.name)
+                        imp = DVR._import_solver(sa.name.value)
                         if imp:
-                            sa.name.ref = imp
-                        else:
-                            pass
-                            # we still need to find a way to resolve
+                            self.log.debug(
+                                "TODO: see also resolve for %s in %s, %s",
+                                sa.name.value,
+                                qa,
+                                imp,
+                            )
 
                 # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
                 assert isinstance(doc_blob.references, (list, str, type(None))), (
