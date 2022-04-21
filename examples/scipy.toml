@@ -36,11 +36,11 @@ tag = 'v1.8.0'
 pypi = 'scipy'
 homepage = 'https://scipy.org/'
 docspage = 'https://docs.scipy.org/doc/scipy/'
-[scipy.implied_imports]
+[global.implied_imports]
 ua = 'scipy._lib.uarray'
 array = 'numpy:array'
 arange = 'numpy:arange'
-[scipy.expected_errors]
+[global.expected_errors]
 IncorrectInternalDocsLen = [
     "scipy.signal._spline.symiirorder1", "scipy.signal._spline.symiirorder2",
     "scipy.signal._filter_design._ellipdeg", "scipy.special._logsumexp.log_softmax", "scipy.linalg._decomp.cdf2rdf",

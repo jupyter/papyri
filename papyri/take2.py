@@ -63,6 +63,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union, NewType
 
 import cbor2
+from there import print
 
 from papyri.miniserde import deserialize, get_type_hints, serialize
 from papyri.utils import dedent_but_first
@@ -232,6 +233,11 @@ class IntermediateNode(Node):
     pass
 
 
+@register(4005)
+class Math(Leaf):
+    pass
+
+
 @register(4004)
 class BlockMath(Leaf):
     pass
@@ -381,10 +387,6 @@ class Link(Node):
         self.kind = kind
         self.exists = exists
 
-    @property
-    def children(self):
-        return [self.value, self.reference, self.kind, self.exists]
-
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
 
@@ -439,27 +441,6 @@ class Directive(Node):
         return f"<Directive {self.prefix}`{self.value}`>"
 
 
-@register(4005)
-class Math(Node):
-    value: List[str]  # list of tokens not list of lines.
-
-    def __init__(self, value):
-        assert isinstance(value, list)
-        self.value = value
-
-    @property
-    def text(self):
-        return "".join(self.value)
-
-    def __hash__(self):
-        return hash(tuple(self.value))
-
-    def _validate(self):
-        pass
-        # assert len(self.value) == 1, self.value
-        # pass
-
-
 class Word(IntermediateNode):
     """
     This is a temporary node, while we visit the tree-sitter tree,
@@ -472,9 +453,6 @@ class Word(IntermediateNode):
 
     def __init__(self, value):
         self.value = value
-
-    def __repr__(self):
-        return self.value
 
 
 @register(4007)
@@ -535,9 +513,6 @@ class Strong(Node):
     @children.setter
     def children(self, children):
         [self.content] = children
-
-    def __repr__(self):
-        return "**" + repr(self.content) + "**"
 
     def __hash__(self):
         return hash(repr(self))
@@ -622,8 +597,9 @@ class Section(Node):
     children: List[
         Union[
             Transition,
-            Code,
+            # Code,
             Code2,
+            Code3,
             Unimplemented,
             Comment,
             Target,
@@ -656,9 +632,6 @@ class Section(Node):
         if children is None:
             children = []
         self.children = children
-        tt = get_type_hints(type(self))["children"].__args__[0].__args__
-        for c in children:
-            assert isinstance(c, tt), f"{c} not in {tt}"
         if title == "See also":
             title = "See Also"
         if title == "Arguments":
@@ -692,6 +665,7 @@ class Parameters(Node):
     children: List[Param]
 
     def __init__(self, children):
+        assert len(children) > 0
         self.children = children
 
 
@@ -741,6 +715,18 @@ class Param(Node):
 
 @register(4017)
 class Token(Node):
+    """
+    A single token in a code block.
+
+    Paramters
+    ---------
+    type : str, optional
+        this currently is a classname use by pygments for highlighting.
+    link : str | Link(value, reference, kind, exists)
+        this is either a string (the value to display), or a link that point to a given page.
+
+    """
+
     type: Optional[str]
     link: Union[Link, str]
 
@@ -769,6 +755,45 @@ class Unimplemented(Node):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
 
 
+@register(4029)
+class Code3(Node):
+    """
+    Trying to think about the code entries,
+    after trying to render a few of them, I think we need to change the structure a bit.
+    Mostly I think we need to
+
+     - store each line independently,
+     - possibly each line should/may get a "prompt" indicator (which should be non-selectable in the end),
+       or should the prompt be at the code level ? with first prompt continuation prompt ?
+       Mostly this is because code might be python, or bash, or anything else.
+     - the fact that we have multiple lines, means that we can highlight some of the lines which is common  but hard in
+       code blocks.
+     - it also looks like the rendering is often hard if we have to treat new lines separately.
+     - "prompt" can also serve in the margin to show the lien numbers in a file.
+    """
+
+    status: str
+    children: List[CodeLine]
+    out: str
+
+    def __init__(self, status, children, out):
+        self.status = status
+        self.children = children
+        self.out = out
+
+
+@register(4044)
+class CodeLine(Node):
+    prompt: str
+    entries: List[Token]
+    highlighted: bool
+
+    def __init__(self, prompt, entries, highlighted):
+        self.prompt = prompt
+        self.entries = entries
+        self.highlighted = highlighted
+
+
 @register(4020)
 class Code2(Node):
     entries: List[Token]
@@ -788,13 +813,28 @@ class Code2(Node):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
 
-@register(4021)
+class GenToken(Node):
+
+    value: str
+    qa: Optional[str]
+    pygmentclass: str
+    noserialise = True
+
+    def __init__(self, value, qa, pygmentclass):
+        self.value = value
+        self.qa = qa
+        self.pygmentclass = pygmentclass
+
+
+# @register(4021)
 class Code(Node):
-    entries: List[Tuple[Optional[str]]]
+    entries: List[GenToken]
     out: str
     ce_status: str
 
     def __init__(self, entries, out: str, ce_status):
+        for x in entries:
+            assert isinstance(x, GenToken)
         self.entries = entries
         self.out = out
         self.ce_status = ce_status
@@ -974,7 +1014,7 @@ class BlockVerbatim(Node):
 class DefList(Node):
     children: List[DefListItem]
 
-    def __init__(self, children=None):
+    def __init__(self, children):
         self.children = children
 
 
@@ -991,7 +1031,7 @@ class Options(Node):
 class FieldList(Node):
     children: List[FieldListItem]
 
-    def __init__(self, children=None):
+    def __init__(self, children):
         self.children = children
 
 

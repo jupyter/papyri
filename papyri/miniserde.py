@@ -78,7 +78,6 @@ def get_type_hints(type_):
 
 
 def serialize(instance, annotation):
-    # print("will serialise", type(instance), "as", annotation)
     exception_already_desribed = False
     try:
         if (annotation in base_types) and (isinstance(instance, annotation)):

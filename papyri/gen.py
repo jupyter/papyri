@@ -50,6 +50,7 @@ from .take2 import (
     FullQual,
     Cannonical,
     Code,
+    GenToken,
     Fig,
     Node,
     NumpydocExample,
@@ -65,7 +66,7 @@ from .take2 import (
     Text,
     parse_rst_section,
 )
-from .tree import DirectiveVisiter
+from .tree import DVR
 from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress, full_qual
 from .vref import NumpyDocString
 
@@ -208,8 +209,8 @@ def parse_script(
     Returns
     -------
     List of tuples with:
-    index: int
-        index in the tokenstream
+    text:
+        text of the token
     reference : str
         fully qualified name of the type of current token
 
@@ -265,6 +266,8 @@ def parse_script(
         acc.append((text, ref))
     _jedi_set_cache(full_text, acc)
     warnings.simplefilter("default", UserWarning)
+    for a in acc:
+        assert len(a) == 2
     return acc
 
 
@@ -324,6 +327,13 @@ def get_classes(code):
     return classes
 
 
+def _add_classes(entries):
+    assert set(len(x) for x in entries) == {2}, breakpoint()
+    text = "".join([x for x, y in entries])
+    classes = get_classes(text)
+    return [ii + (cc,) for ii, cc in zip(entries, classes)]
+
+
 def processed_example_data(example_section_data) -> Section:
     """this should be no-op on already ingested"""
     new_example_section_data = Section()
@@ -335,13 +345,6 @@ def processed_example_data(example_section_data) -> Section:
             for b in blocks:
                 new_example_section_data.append(b)
 
-        elif type_ == "Code":
-            in_ = in_out.entries
-            # assert len(in_[0]) == 3, len(in_[0])
-            if len(in_[0]) == 2:
-                text = "".join([x for x, y in in_])
-                classes = get_classes(text)
-                in_out.entries = [ii + (cc,) for ii, cc in zip(in_, classes)]
         if type_ != "Text":
             new_example_section_data.append(in_out)
     return new_example_section_data
@@ -647,7 +650,7 @@ class DFSCollector:
         for k in dir(mod):
             # TODO: scipy 1.8 workaround, remove.
             if not hasattr(mod, k):
-                print(f"scipy 1.8 workround : ({mod.__name__!r},{k!r}),")
+                print(f"scipy 1.8 workaround : ({mod.__name__!r},{k!r}),")
                 continue
             self._open_list.append((getattr(mod, k), stack + [k]))
 
@@ -1135,8 +1138,6 @@ class Gen:
                         ):
                             raise_in_fig = True
                             for fig, figname in zip(executor.get_figs(), figure_names):
-                                if "_czt" in figname:
-                                    print(qa, figname)
                                 figs.append((figname, fig))
                             plt.close("all")
                             raise_in_fig = False
@@ -1172,10 +1173,12 @@ class Gen:
                 entries = parse_script(script, ns=ns, prev=acc, config=config, where=qa)
                 if entries is None:
                     entries = [("jedi failed", "jedi failed")]
+                entries = _add_classes(entries)
+                tok_entries = [GenToken(*x) for x in entries]  # type: ignore
 
                 acc += "\n" + script
                 example_section_data.append(
-                    Code(entries, "\n".join(item.out), ce_status)
+                    Code(tok_entries, "\n".join(item.out), ce_status)
                 )
                 for figname, _ in figs:
                     example_section_data.append(
@@ -1243,7 +1246,7 @@ class Gen:
                 except Exception as e:
                     raise type(e)(f"{p=}")
                 blob = DocBlob()
-                dv = DirectiveVisiter(
+                dv = DVR(
                     ":".join(parts),
                     set(),
                     local_refs=set(),
@@ -1469,11 +1472,11 @@ class Gen:
 
         refs_2 = list(
             {
-                u[1]
+                u.qa
                 for span in example_section_data
                 if span.__class__.__name__ == "Code"
                 for u in span.entries
-                if u[1]
+                if u.qa
             }
         )
         refs_I = []
@@ -1561,7 +1564,10 @@ class Gen:
                     for l in items:
                         assert not isinstance(l, Section)
                 new_content.append(Param(param, type_, desc=items).validate())
-            blob.content[s] = Section([Parameters(new_content)])
+            if new_content:
+                blob.content[s] = Section([Parameters(new_content)])
+            else:
+                blob.content[s] = Section([])
 
         blob.see_also = _normalize_see_also(blob.content.get("See Also", None), qa)
         del blob.content["See Also"]
@@ -1616,18 +1622,35 @@ class Gen:
                     prev="",
                     config=config,
                 )
+                if entries is None:
+                    print("Issue in ", self.qa)
+                    entries = [("fail", "fail")]
+
+                entries = _add_classes(entries)
+                assert set(len(x) for x in entries) == {3}, breakpoint()
+
+                tok_entries = [GenToken(*x) for x in entries]
+
                 s = Section(
-                    [Code(entries, "", ce_status)]
+                    [Code(tok_entries, "", ce_status)]
                     + [
                         Fig(RefInfo(self.root, self.version, "assets", name))
                         for name, _ in figs
                     ]
                 )
                 s = processed_example_data(s)
+                dv = DVR(
+                    example.name,
+                    frozenset(),
+                    local_refs=frozenset(),
+                    aliases={},
+                    version=self.version,
+                )
+                s2 = dv.visit(s)
 
                 acc.append(
                     (
-                        {example.name: s},
+                        {example.name: s2},
                         figs,
                     )
                 )
@@ -1885,7 +1908,7 @@ class Gen:
                     return [y for x in l for y in x]
 
                 lr: FrozenSet[str] = frozenset(flat(_local_refs))
-                dv = DirectiveVisiter(
+                dv = DVR(
                     qa, known_refs, local_refs=lr, aliases={}, version=self.version
                 )
                 doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
@@ -1910,7 +1933,7 @@ class Gen:
                         sa.name.exists = True
                         sa.name.ref = resolved
                     else:
-                        imp = DirectiveVisiter._import_solver(sa.name.name)
+                        imp = DVR._import_solver(sa.name.name)
                         if imp:
                             sa.name.ref = imp
                         else:
