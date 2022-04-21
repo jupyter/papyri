@@ -4,6 +4,8 @@ usually trees, and update nodes.
 
 """
 
+import logging
+
 from collections import Counter, defaultdict
 from functools import lru_cache
 from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
@@ -29,6 +31,8 @@ from .utils import full_qual
 from textwrap import indent
 from .ts import parse
 from .take2 import Section
+
+log = logging.getLogger("papyri")
 
 
 _cache: Dict[int, Tuple[Dict[str, RefInfo], FrozenSet[str]]] = {}
@@ -577,7 +581,7 @@ class DirectiveVisiter(TreeReplacer):
 
         if block_directive.name not in _MISSING_DIRECTIVES:
             _MISSING_DIRECTIVES.append(block_directive.name)
-            print("TODO:", block_directive.name)
+            log.info("TODO:", block_directive.name)
 
         return [block_directive]
 
@@ -753,7 +757,7 @@ class PostDVR(DirectiveVisiter):
     def replace_Directive(self, d):
         if (d.domain, d.role) not in _MISSING_INLINE_DIRECTIVES:
             _MISSING_INLINE_DIRECTIVES.append((d.domain, d.role))
-            print("TODO:", d.domain, d.role, d.value)
+            log.info("TODO: %r %r %r", d.domain, d.role, d.value)
         return [d]
 
     def replace_RefInfo(self, refinfo):
@@ -763,6 +767,6 @@ class PostDVR(DirectiveVisiter):
     def replace_BlockDirective(self, block_directive: BlockDirective):
         if block_directive.name not in _MISSING_DIRECTIVES:
             _MISSING_DIRECTIVES.append(block_directive.name)
-            print("TODO:", block_directive.name)
+            log.info("TODO: %r", block_directive.name)
 
         return [block_directive]

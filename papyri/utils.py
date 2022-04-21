@@ -84,7 +84,7 @@ def dummy_progress(
                 deltat = time.monotonic() - now
                 print(
                     description,
-                    f"Done {c} items in {deltat:.2f} seconds ({int(c/deltat)} item/s)",
+                    f"Done {c: 4d} items in {deltat:.2f} seconds ({int(c/deltat) : 4d} item/s)",
                 )
             return
         except BaseException:
@@ -121,7 +121,7 @@ def progress(iterable, *, description="Progress", transient=True):
                 deltat = time.monotonic() - now
                 print(
                     description,
-                    f"Done {c} items in {deltat:.2f} seconds ({int(c/deltat)} item/s)",
+                    f"Done {c: 4d} items in {deltat:.2f} seconds ({int(c/deltat): 5d} item/s)",
                 )
             return
         except BaseException:

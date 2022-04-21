@@ -68,7 +68,6 @@ class IngestedBlobs(Node):
 
     __slots__ = (
         "_content",
-        "refs",
         "ordered_sections",
         "item_file",
         "item_line",
@@ -102,7 +101,6 @@ class IngestedBlobs(Node):
         super().__init__()
         self._content = kwargs.pop("_content", None)
         self.example_section_data = kwargs.pop("example_section_data", None)
-        self.refs = kwargs.pop("refs", None)
         self.ordered_sections = kwargs.pop("ordered_sections", None)
         self.item_file = kwargs.pop("item_file", None)
         self.item_line = kwargs.pop("item_line", None)
@@ -142,6 +140,25 @@ class IngestedBlobs(Node):
     def content(self, new):
         assert False
 
+    def all_forward_refs(self) -> List[Key]:
+
+        visitor = TreeVisitor({RefInfo, Fig})
+        res: Dict[Any, List[Any]] = {}
+        for sec in (
+            list(self.content.values())
+            + [self.example_section_data]
+            + self.arbitrary
+            + self.see_also
+        ):
+            for k, v in visitor.generic_visit(sec).items():
+                res.setdefault(k, []).extend(v)
+
+        assets_II = {Key(*f.value) for f in res.get(Fig, [])}
+        ssr = set([Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]).union(
+            assets_II
+        )
+        return list(sorted(ssr))
+
     def process(
         self, known_refs, aliases: Optional[Dict[str, str]], verbose=True, *, version
     ) -> None:
@@ -171,12 +188,9 @@ class IngestedBlobs(Node):
             #'See Also'
             #'Examples'
         ]
-        assert self.refs is not None
         assert aliases is not None
 
-        for r in self.refs:
-            assert None not in r
-            aliases = {}
+        aliases = {}
         for s in sections_:
 
             _local_refs = _local_refs + [
@@ -211,19 +225,12 @@ class IngestedBlobs(Node):
             for dsc in d.descriptions:
                 new_desc.append(visitor.visit(dsc))
             d.descriptions = new_desc
-        try:
-            for r in visitor._targets:
-                assert None not in r, r
-            self.refs = list(set(visitor._targets).union(set(self.refs)))
-
-            for r in self.refs:
-                assert None not in r
-        except Exception as e:
-            raise type(e)(self.refs)
+        for r in visitor._targets:
+            assert None not in r, r
 
 
 def load_one_uningested(
-    bytes_: bytes, bytes2_: Optional[bytes], qa, known_refs, aliases, *, version
+    bytes_: bytes, qa, known_refs, aliases, *, version
 ) -> IngestedBlobs:
     """
     Load the json from a DocBlob and make it an ingested blob.
@@ -235,59 +242,11 @@ def load_one_uningested(
 
     blob = IngestedBlobs()
     blob.qa = qa
-    # TODO: here or maybe somewhere else:
-    # see also 3rd item description is improperly deserialised as now it can be a paragraph.
-    # Make see Also an auto deserialised object in take2.
-    blob.see_also = old_data.see_also
 
     for k in old_data.slots():
         setattr(blob, k, getattr(old_data, k))
 
-    blob.refs = data.pop("refs", [])
-    assert bytes2_ is None
-
-    blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.value))
-    blob.example_section_data = blob.example_section_data
-    blob.refs = []
-
-    sections_ = [
-        "Parameters",
-        "Returns",
-        "Raises",
-        "Yields",
-        "Attributes",
-        "Other Parameters",
-        "Warns",
-        ##"Warnings",
-        "Methods",
-        # "Summary",
-        "Receives",
-    ]
-
-    _local_refs: List[List[str]] = []
-
-    for s in sections_:
-
-        _local_refs = _local_refs + [
-            [u.strip() for u in x[0].split(",")]
-            for x in blob.content.get(s, [])
-            if isinstance(x, Param)
-        ]
-
-    def flat(l) -> List[str]:
-        return [y for x in l for y in x]
-
-    local_refs: FrozenSet[str] = frozenset(flat(_local_refs))
-
-    visitor = PostDVR(qa, frozenset(), local_refs, aliases=aliases, version=version)
-    for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-        if section in blob.content:
-            blob.content[section] = visitor.visit(blob.content[section])
-
-    acc1 = []
-    for sec in blob.arbitrary:
-        acc1.append(visitor.visit(sec))
-    blob.arbitrary = acc1
+    blob.see_also = list(sorted(set(old_data.see_also), key=lambda x: x.name.value))
 
     blob.process(known_refs=known_refs, aliases=aliases, verbose=False, version=version)
 
@@ -304,12 +263,12 @@ class Ingester:
         meta = json.loads((path / "papyri.json").read_text())
         version = meta["version"]
         for _console, document in self.progress(
-            (path / "docs").glob("*"), description=f"{path.name} Reading narrative docs"
+            (path / "docs").glob("*"),
+            description=f"{path.name} Reading narrative docs ",
         ):
 
             doc = load_one_uningested(
                 document.read_text(),
-                None,
                 qa=document.name,
                 known_refs=frozenset(),
                 aliases={},
@@ -320,7 +279,6 @@ class Ingester:
             module, version = path.name.split("_")
             key = Key(module, version, "docs", ref)
             doc.validate()
-            assert not doc.refs, doc.refs
             gstore.put(
                 key,
                 encoder.encode(doc),
@@ -332,7 +290,8 @@ class Ingester:
     ):
 
         for _, fe in self.progress(
-            (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
+            (path / "examples/").glob("*"),
+            description=f"{path.name} Reading Examples ...   ",
         ):
             s = Section.from_json(json.loads(fe.read_bytes()))
             visitor = PostDVR(
@@ -383,7 +342,7 @@ class Ingester:
         root = data["module"]
         # long : short
         aliases: Dict[str, str] = data.get("aliases", {})
-        rev_aliases = {Cannonical(v): FullQual(k) for k, v in aliases.items()}
+        # rev_aliases = {Cannonical(v): FullQual(k) for k, v in aliases.items()}
         meta = {k: v for k, v in data.items() if k != "aliases"}
 
         gstore.put_meta(root, version, encoder.encode(meta))
@@ -394,7 +353,7 @@ class Ingester:
 
         for _, f1 in self.progress(
             (path / "module").glob("*"),
-            description=f"{path.name} Reading doc bundle files ...",
+            description=f"{path.name} Reading api files ...  ",
         ):
             assert f1.name.endswith(".json")
             qa = f1.name[:-5]
@@ -409,7 +368,6 @@ class Ingester:
                 # TODO: version issue
                 nvisited_items[qa] = load_one_uningested(
                     f1.read_text(),
-                    None,
                     qa=qa,
                     known_refs=known_refs,
                     aliases=aliases,
@@ -419,33 +377,12 @@ class Ingester:
             except Exception as e:
                 raise RuntimeError(f"error Reading to {f1}") from e
 
-        known_refs_II = frozenset(nvisited_items.keys())
+        # known_refs_II = frozenset(nvisited_items.keys())
 
         # TODO :in progress, crosslink needs version information.
-        known_ref_info = frozenset(
-            RefInfo(root, version, "module", qa) for qa in known_refs_II
-        ).union(known_refs)
-
-        for _, (qa, doc_blob) in self.progress(
-            nvisited_items.items(), description=f"{path.name} Cross referencing"
-        ):
-            # todo: warning mutation.
-            for sa in doc_blob.see_also:
-                r = resolve_(
-                    qa,
-                    known_ref_info,
-                    frozenset(),
-                    sa.name.value,
-                    rev_aliases=rev_aliases,
-                )
-                resolved, exists = r.path, r.kind
-                if exists == "module":
-                    sa.name.exists = True
-                    if sa.name.reference != r:
-                        log.warning(
-                            f"Warning mutation on ingest from \n{sa.name.reference} to \n{r} in {qa}"
-                        )
-                    sa.name.ref = resolved
+        # known_ref_info = frozenset(
+        #    RefInfo(root, version, "module", qa) for qa in known_refs_II
+        # ).union(known_refs)
 
         for _, (qa, doc_blob) in self.progress(
             nvisited_items.items(), description=f"{path.name} Validating..."
@@ -469,19 +406,13 @@ class Ingester:
             # when walking the tree of figure we can't properly crosslink
             # as we don't know the version number.
             # fix it at serialisation time.
-            forward_refs = []
-            for rq in doc_blob.refs:
-                assert rq.version != "??"
-                assert None not in rq
-                forward_refs.append(Key(*rq))
-            doc_blob.refs = []
+            forward_refs = doc_blob.all_forward_refs()
 
             try:
                 key = Key(mod_root, version, "module", qa)
                 assert mod_root is not None
                 assert version is not None
                 assert None not in key
-                assert not doc_blob.refs, doc_blob.refs
                 gstore.put(
                     key,
                     encoder.encode(doc_blob),
@@ -506,7 +437,6 @@ class Ingester:
         )
         builtins.print("Press Ctrl-C to abort...")
 
-        visitor = TreeVisitor({RefInfo, Fig})
         for _, key in self.progress(
             gstore.glob((None, None, "module", None)), description="Relinking..."
         ):
@@ -517,27 +447,9 @@ class Ingester:
             try:
                 doc_blob = encoder.decode(data)
                 assert isinstance(doc_blob, IngestedBlobs)
-                # if res:
-                # print("Refinfos...", len(res))
             except Exception as e:
                 raise type(e)(key)
             assert doc_blob.content is not None, data
-
-            # TODO: Move this into process ?
-            res: Dict[Any, List[Any]] = {}
-            for sec in (
-                list(doc_blob.content.values())
-                + [doc_blob.example_section_data]
-                + doc_blob.arbitrary
-                + doc_blob.see_also
-            ):
-                for k, v in visitor.generic_visit(sec).items():
-                    res.setdefault(k, []).extend(v)
-
-            assets_II = {Key(*f.value) for f in res.get(Fig, [])}
-            ssr = set(
-                [Key(*r) for r in res.get(RefInfo, []) if r.kind != "local"]
-            ).union(assets_II)
 
             for sa in doc_blob.see_also:
                 if sa.name.exists:
@@ -560,7 +472,8 @@ class Ingester:
             for s in forward:
                 assert isinstance(s, Key)
             forward_refs = set(forward)
-            if ssr != forward_refs:
+            ss2 = doc_blob.all_forward_refs()
+            if ss2 != forward_refs:
                 gstore.put(key, data, forward_refs)
 
         for _, key in progress(

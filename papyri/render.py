@@ -575,7 +575,6 @@ class HtmlRenderer:
             assert root is not None
             # assert version is not None
 
-            assert doc_blob.refs is None
             data = compute_graph(
                 self.store, backward, forward, Key(root, version, "module", ref)
             )

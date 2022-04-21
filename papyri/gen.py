@@ -713,11 +713,9 @@ class DocBlob(Node):
         "Warnings",
         "References",
         "Examples",
-        "index",
     ]  # List of sections in order
 
     _content: Dict[str, Optional[Section]]
-    refs: List[str]
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
@@ -732,7 +730,6 @@ class DocBlob(Node):
     __slots__ = (
         "_content",
         "example_section_data",
-        "refs",
         "ordered_sections",
         "signature",
         "item_file",
@@ -752,7 +749,6 @@ class DocBlob(Node):
         return [
             "_content",
             "example_section_data",
-            "refs",
             "ordered_sections",
             "item_file",
             "item_line",
@@ -766,7 +762,6 @@ class DocBlob(Node):
     def __init__(self):
         self._content = None
         self.example_section_data = None
-        self.refs = None
         self.ordered_sections = None
         self.item_file = None
         self.item_line = None
@@ -1268,7 +1263,6 @@ class Gen:
                 blob.see_also = []
                 blob.signature = Signature(None)
                 blob.references = None
-                blob.refs = []
                 blob.validate()
                 self.docs[parts] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
                 # data = p.read_bytes()
@@ -1473,15 +1467,6 @@ class Gen:
             example_section_data = Section()
             figs = []
 
-        refs_2 = list(
-            {
-                u.qa
-                for span in example_section_data
-                if span.__class__.__name__ == "Code"
-                for u in span.entries
-                if u.qa
-            }
-        )
         refs_I = []
         refs_Ib = []
         if ndoc["See Also"]:
@@ -1500,7 +1485,6 @@ class Gen:
             assert refs_I == refs_Ib, (refs_I, refs_Ib)
 
         blob.example_section_data = example_section_data
-        blob.refs = [normalise_ref(r) for r in sorted(set(refs_I + refs_2))]
 
         blob.ordered_sections = ndoc.ordered_sections
         blob.item_type = item_type
