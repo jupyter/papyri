@@ -28,7 +28,7 @@ from .take2 import (
     FullQual,
     Cannonical,
 )
-from .tree import DVR, DirectiveVisiter, resolve_, TreeVisitor
+from .tree import PostDVR, DirectiveVisiter, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
 
 
@@ -190,7 +190,7 @@ class IngestedBlobs(Node):
 
         local_refs = frozenset(flat(_local_refs))
 
-        visitor = DVR(self.qa, known_refs, local_refs, aliases, version=version)
+        visitor = PostDVR(self.qa, known_refs, local_refs, aliases, version=version)
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if section not in self.content:
                 continue
@@ -337,8 +337,12 @@ class Ingester:
             (path / "examples/").glob("*"), description=f"{path.name} Reading Examples"
         ):
             s = Section.from_json(json.loads(fe.read_bytes()))
-            visitor = DVR(
-                "TBD, supposed to be QA", known_refs, set(), aliases, version=version
+            visitor = PostDVR(
+                f"TBD (examples, {path}), supposed to be QA",
+                known_refs,
+                set(),
+                aliases,
+                version=version,
             )
             s_code = visitor.visit(s)
             refs = list(map(lambda s: Key(*s), visitor._targets))
@@ -568,7 +572,13 @@ class Ingester:
         ):
             s = encoder.decode(gstore.get(key))
             assert isinstance(s, Section), (s, key)
-            dvr = DVR("TBD, supposed to be QA", known_refs, set(), aliases, version="?")
+            dvr = PostDVR(
+                f"TBD, supposed to be QA relink {key}",
+                known_refs,
+                set(),
+                aliases,
+                version="?",
+            )
             s_code = dvr.visit(s)
             refs = [Key(*x) for x in dvr._targets]
             gstore.put(

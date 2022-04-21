@@ -405,6 +405,7 @@ def py_pep_hander(value):
 
 
 _MISSING_DIRECTIVES: List[str] = []
+_MISSING_INLINE_DIRECTIVES: List[str] = []
 
 
 class DirectiveVisiter(TreeReplacer):
@@ -444,6 +445,70 @@ class DirectiveVisiter(TreeReplacer):
         self.rev_aliases = {v: k for k, v in aliases.items()}
         self._targets: Set[Any] = set()
         self.version = version
+
+    def replace_Code(self, code):
+        """
+        Here we'll crawl example data and convert code entries so that each token contain a link to the object they
+        refered to.
+        """
+        # TODO: here we'll have a problem as we will love the content of entry[1]. This should really be resolved at gen
+        # time.
+        # print("CODE 1 in", self.qa)
+        new_entries = []
+        for gt in code.entries:
+            text, infer, type_ = gt.value, gt.qa, gt.pygmentclass
+            assert isinstance(text, str)
+            # TODO
+            if infer and infer.strip():
+                assert isinstance(infer, str)
+                r = self._resolve(frozenset(), infer)
+                if r.kind == "module":
+                    self._targets.add(r)
+                    new_entries.append(
+                        Token(
+                            Link(
+                                text,
+                                r,
+                                "module",
+                                True,
+                            ),
+                            type_,
+                        )
+                    )
+                    continue
+                elif r.module is None:
+                    mod = infer.split(".", maxsplit=1)[0]
+                    new_entries.append(
+                        Token(
+                            Link(
+                                text,
+                                RefInfo(mod, "*", "module", infer),
+                                "module",
+                                True,
+                            ),
+                            type_,
+                        )
+                    )
+                else:
+                    assert False
+                    new_entries.append(
+                        Token(
+                            Link(
+                                text,
+                                RefInfo(None, None, "not-implemented", infer),
+                                "module",
+                                True,
+                            ),
+                            type_,
+                        )
+                    )
+                    continue
+
+            new_entries.append(
+                Token(text, type_),
+            )
+
+        return [Code2(new_entries, code.out, code.ce_status)]
 
     def _block_verbatim_helper(self, name, argument, options, content):
         data = f".. {name}:: {argument}\n"
@@ -684,64 +749,37 @@ def _obj_from_path(parts):
 
 
 class DVR(DirectiveVisiter):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def replace_Code2(self, code):
+        # print("CODE 2 in", self.qa)
         new_entries = []
         for token in code.entries:
             # TODO
-            if isinstance(token.link, str):
-                r = self._resolve(frozenset(), token.link)
-                if r.kind == "module":
-                    self._targets.add(r)
-                    new_entries.append(
-                        Token(
-                            Link(
-                                token.link,
-                                r,
-                                "module",
-                                True,
-                            ),
-                            token.type,
+            if isinstance(token.link, Link):
+                ref = token.link.reference
+                if ref.kind == "not-implemented":
+                    print("Not impl")
+                    r = self._resolve(frozenset(), ref.path)
+                    if r.module != None:
+                        print(ref.path, r)
+                    if r.kind == "module":
+                        self._targets.add(r)
+                        new_entries.append(
+                            Token(
+                                Link(
+                                    token.link,
+                                    r,
+                                    "module",
+                                    True,
+                                ),
+                                token.type,
+                            )
                         )
-                    )
-                    continue
+                        continue
             new_entries.append(token)
 
         return [Code2(new_entries, code.out, code.ce_status)]
 
-    def replace_Code(self, code):
-        """
-        Here we'll crawl example data and convert code entries so that each token contain a link to the object they
-        refered to.
-        """
-        # TODO: here we'll have a problem as we will love the content of entry[1]. This should really be resolved at gen
-        # time.
-        new_entries = []
-        for entry in code.entries:
-            # TODO
-            if entry[1] and entry[1].strip():
-                r = self._resolve(frozenset(), entry[1])
-                if r.kind == "module":
-                    self._targets.add(r)
-                    new_entries.append(
-                        Token(
-                            Link(
-                                str(entry[0]),
-                                r,
-                                "module",
-                                True,
-                            ),
-                            entry[2],
-                        )
-                    )
-                    continue
-            new_entries.append(
-                Token(str(entry[0]), entry[2]),
-            )
-
-        return [Code2(new_entries, code.out, code.ce_status)]
 
     def replace_Fig(self, fig):
 
@@ -749,3 +787,14 @@ class DVR(DirectiveVisiter):
         self._targets.add(fig.value)
 
         return [fig]
+
+
+class PostDVR(DVR):
+    def replace_Code(self, code):
+        assert False
+
+    def replace_Directive(self, d):
+        if (d.domain, d.role) not in _MISSING_INLINE_DIRECTIVES:
+            _MISSING_INLINE_DIRECTIVES.append((d.domain, d.role))
+            print("TODO:", d.domain, d.role, d.value)
+        return [d]

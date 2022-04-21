@@ -35,7 +35,7 @@ tag = 'networkx-2.7.1'
 pypi = 'networkx'
 homepage = 'https://networkx.org/'
 docspage = 'https://networkx.org/documentation/stable/'
-[networkx.implied_imports]
+[global.implied_imports]
 nx = 'networkx'
 it = 'itertools'
 
