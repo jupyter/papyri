@@ -237,6 +237,7 @@ class IntermediateNode(Node):
 class Math(Leaf):
     pass
 
+
 @register(4004)
 class BlockMath(Leaf):
     pass
@@ -440,8 +441,6 @@ class Directive(Node):
         return f"<Directive {self.prefix}`{self.value}`>"
 
 
-
-
 class Word(IntermediateNode):
     """
     This is a temporary node, while we visit the tree-sitter tree,
@@ -633,9 +632,6 @@ class Section(Node):
         if children is None:
             children = []
         self.children = children
-        tt = get_type_hints(type(self))["children"].__args__[0].__args__
-        # for c in children:
-        #    assert isinstance(c, tt), f"{c} not in {tt}"
         if title == "See also":
             title = "See Also"
         if title == "Arguments":
@@ -730,6 +726,7 @@ class Token(Node):
         this is either a string (the value to display), or a link that point to a given page.
 
     """
+
     type: Optional[str]
     link: Union[Link, str]
 

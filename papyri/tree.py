@@ -491,18 +491,6 @@ class DirectiveVisiter(TreeReplacer):
                     )
                 else:
                     assert False
-                    new_entries.append(
-                        Token(
-                            Link(
-                                text,
-                                RefInfo(None, None, "not-implemented", infer),
-                                "module",
-                                True,
-                            ),
-                            type_,
-                        )
-                    )
-                    continue
 
             new_entries.append(
                 Token(text, type_),
@@ -749,38 +737,6 @@ def _obj_from_path(parts):
 
 
 class DVR(DirectiveVisiter):
-
-    def replace_Code2(self, code):
-        # print("CODE 2 in", self.qa)
-        new_entries = []
-        for token in code.entries:
-            # TODO
-            if isinstance(token.link, Link):
-                ref = token.link.reference
-                if ref.kind == "not-implemented":
-                    print("Not impl")
-                    r = self._resolve(frozenset(), ref.path)
-                    if r.module != None:
-                        print(ref.path, r)
-                    if r.kind == "module":
-                        self._targets.add(r)
-                        new_entries.append(
-                            Token(
-                                Link(
-                                    token.link,
-                                    r,
-                                    "module",
-                                    True,
-                                ),
-                                token.type,
-                            )
-                        )
-                        continue
-            new_entries.append(token)
-
-        return [Code2(new_entries, code.out, code.ce_status)]
-
-
     def replace_Fig(self, fig):
 
         # todo: add version number here

@@ -1174,7 +1174,7 @@ class Gen:
                 if entries is None:
                     entries = [("jedi failed", "jedi failed")]
                 entries = _add_classes(entries)
-                tok_entries = [GenToken(*x) for x in entries]
+                tok_entries = [GenToken(*x) for x in entries]  # type: ignore
 
                 acc += "\n" + script
                 example_section_data.append(
