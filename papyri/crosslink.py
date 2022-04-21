@@ -28,7 +28,7 @@ from .take2 import (
     FullQual,
     Cannonical,
 )
-from .tree import PostDVR, DirectiveVisiter, resolve_, TreeVisitor
+from .tree import PostDVR, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
 
 
@@ -246,7 +246,7 @@ def load_one_uningested(
     blob.refs = data.pop("refs", [])
     assert bytes2_ is None
 
-    blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.name))
+    blob.see_also = list(sorted(set(blob.see_also), key=lambda x: x.name.value))
     blob.example_section_data = blob.example_section_data
     blob.refs = []
 
@@ -279,9 +279,7 @@ def load_one_uningested(
 
     local_refs: FrozenSet[str] = frozenset(flat(_local_refs))
 
-    visitor = DirectiveVisiter(
-        qa, frozenset(), local_refs, aliases=aliases, version=version
-    )
+    visitor = PostDVR(qa, frozenset(), local_refs, aliases=aliases, version=version)
     for section in ["Extended Summary", "Summary", "Notes"] + sections_:
         if section in blob.content:
             blob.content[section] = visitor.visit(blob.content[section])
@@ -437,15 +435,15 @@ class Ingester:
                     qa,
                     known_ref_info,
                     frozenset(),
-                    sa.name.name,
+                    sa.name.value,
                     rev_aliases=rev_aliases,
                 )
                 resolved, exists = r.path, r.kind
                 if exists == "module":
                     sa.name.exists = True
-                    if not sa.name.ref == resolved:
-                        print(
-                            f"Warning mutation on ingest from {sa.name.ref} to {resolved} in {qa}"
+                    if sa.name.reference != r:
+                        log.warning(
+                            f"Warning mutation on ingest from \n{sa.name.reference} to \n{r} in {qa}"
                         )
                     sa.name.ref = resolved
 
@@ -548,14 +546,13 @@ class Ingester:
                     key.path,
                     known_refs,
                     frozenset(),
-                    sa.name.name,
+                    sa.name.value,
                     rev_aliases=rev_aliases,
                 )
-                resolved, exists = r.path, r.kind
-                if exists == "module":
+                if r.kind == "module":
                     print("unresolved ok...", r, key)
                     sa.name.exists = True
-                    sa.name.ref = resolved
+                    sa.name.reference = r
 
             # end todo
 

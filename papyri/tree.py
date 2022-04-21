@@ -491,6 +491,7 @@ class DirectiveVisiter(TreeReplacer):
                     )
                 else:
                     assert False
+                continue
 
             new_entries.append(
                 Token(text, type_),
@@ -745,7 +746,7 @@ class DVR(DirectiveVisiter):
         return [fig]
 
 
-class PostDVR(DVR):
+class PostDVR(DirectiveVisiter):
     def replace_Code(self, code):
         assert False
 
@@ -754,3 +755,14 @@ class PostDVR(DVR):
             _MISSING_INLINE_DIRECTIVES.append((d.domain, d.role))
             print("TODO:", d.domain, d.role, d.value)
         return [d]
+
+    def replace_RefInfo(self, refinfo):
+        print(refinfo)
+        return [refinfo]
+
+    def replace_BlockDirective(self, block_directive: BlockDirective):
+        if block_directive.name not in _MISSING_DIRECTIVES:
+            _MISSING_DIRECTIVES.append(block_directive.name)
+            print("TODO:", block_directive.name)
+
+        return [block_directive]

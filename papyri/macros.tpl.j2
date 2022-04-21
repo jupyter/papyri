@@ -2,15 +2,15 @@
     {%- if type_ == 'Words' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Emph' -%}
-       <em>{{render_inner('Words', obj.value)|safe}}</em>
+        <em>{{render_inner('Words', obj.value)|safe}}</em>
     {%- elif type_ == 'Strong' -%}
-       <strong>{{render_inner('Words', obj.content)}}</strong>
+        <strong>{{render_inner('Words', obj.content)}}</strong>
     {%- elif type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
         <code>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
     {%- elif type_ == 'ExternalLink' -%}
-    <a link href="{{obj.target}}" class='external'>{{obj.value}}</a>
+        <a link href="{{obj.target}}" class='external'>{{obj.value}}</a>
     {%- elif type_ == 'Link' -%}
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
@@ -30,7 +30,7 @@
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
         {%- endif -%}
     {% elif type_ == 'Math' %}
-        <span class="tex2jax_process">${{obj.text}}$</span>
+        <span class="tex2jax_process">${{obj.value}}$</span>
     {% elif type_ == 'Verbatim' %}
         <code class='verbatim'>{{obj.text}}</code>
     {% elif type_ in ['SubstitutionRef','Unimplemented'] %}
@@ -96,13 +96,25 @@
 
 
 {% macro render_II(obj) -%}
+
     {%- if obj.__class__.__name__ == 'Paragraph' -%}
         {{-block_paragraph(obj)-}}
     {%- else -%}
-       {%- set type = obj.__class__.__name__ -%}
-       {%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim','Words') -%}
+      
+    {%- set type = obj.__class__.__name__ -%}
+       {%- if type in ('Word', 'Directive', 'Math', 'Verbatim','Words') -%}
            {# {{unreachable(obj)}} #}
            {{obj.value}}  {# TODO : likely smth wrong with field list #}
+       {%- elif type == 'Link' -%}
+
+           {# Links have : value, reference, kind exists#}
+           {%- if obj.reference.kind=='local' -%}
+               <code><a href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
+           {%- elif obj.kind in ('api', 'exists', 'module', 'assets') -%}
+               <code><a href="{{url(obj.reference)}}{{ext}}" class='exists'>{{obj.value}}</a></code>
+           {% else %}
+               {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
+           {%- endif -%}
        {%- elif type == 'BlockDirective' -%}
            {{block_directive(obj)}}
        {% elif type == 'Admonition' %}

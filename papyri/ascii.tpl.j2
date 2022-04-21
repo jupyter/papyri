@@ -41,7 +41,7 @@
    |   |{% else %}
    |   |{% endif %}
    |{% elif type == 'Math' %}
-   |    ${{obj.text}}$
+   |    ${{obj.value}}$
    |{% elif type == 'Verbatim' %}
    |    {{-yellow(obj.text)-}}
    |{% else %}
@@ -205,7 +205,7 @@
 {% if doc.see_also %}
    |{{bold("See Also")}}
    |{% for sa in doc.see_also %}
-   |     {{bold(ref(sa.name))}}
+   |     {{bold(render_inner(sa.name.__class__.__name__, sa.name))}}
    |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
    |{% endfor %}
 {% endif %}
