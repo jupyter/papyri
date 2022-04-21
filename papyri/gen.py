@@ -56,6 +56,7 @@ from .take2 import (
     NumpydocSeeAlso,
     NumpydocSignature,
     Param,
+    Parameters,
     Ref,
     RefInfo,
     Section,
@@ -815,7 +816,10 @@ def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str):
             for l in items:
                 assert not isinstance(l, Section)
         acc.append(Param(param, type_, desc=items).validate())
-    return Section(acc, title)
+    if acc:
+        return Section([Parameters(acc)], title).validate()
+    else:
+        return Section([], title)
 
 
 _numpydoc_sections_with_param = {
@@ -1544,7 +1548,8 @@ class Gen:
 
         for s in set(sections_).intersection(blob.content.keys()):
             assert isinstance(blob.content[s], list), f"{s}, {blob.content[s]} {qa} "
-            new_content = Section()
+            new_content = []
+
             for param, type_, desc in blob.content[s]:
                 assert isinstance(desc, list)
                 items = []
@@ -1556,7 +1561,7 @@ class Gen:
                     for l in items:
                         assert not isinstance(l, Section)
                 new_content.append(Param(param, type_, desc=items).validate())
-            blob.content[s] = new_content
+            blob.content[s] = Section([Parameters(new_content)])
 
         blob.see_also = _normalize_see_also(blob.content.get("See Also", None), qa)
         del blob.content["See Also"]
@@ -1869,12 +1874,12 @@ class Gen:
                     "Receives",
                 ]
                 for s in sections_:
-
-                    _local_refs = _local_refs + [
-                        [u.strip() for u in x[0].split(",")]
-                        for x in doc_blob.content.get(s, [])
-                        if isinstance(x, Param)
-                    ]
+                    for child in doc_blob.content.get(s, []):
+                        if isinstance(child, Parameters):
+                            for param in child.children:
+                                new_ref = [u.strip() for u in param[0].split(",") if u]
+                                if new_ref:
+                                    _local_refs = _local_refs + new_ref
 
                 def flat(l) -> List[str]:
                     return [y for x in l for y in x]
