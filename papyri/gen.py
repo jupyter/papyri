@@ -66,6 +66,7 @@ from .take2 import (
     Text,
     parse_rst_section,
 )
+from .toc import make_tree
 from .tree import DVR
 from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress, full_qual
 from .vref import NumpyDocString
@@ -1006,6 +1007,7 @@ class Gen:
         self._meta = {}
         self.examples = {}
         self.docs = {}
+        self._doctree = {}
 
     def get_example_data(
         self, example_section, *, obj, qa: str, config, log
@@ -1229,12 +1231,14 @@ class Gen:
         path = Path(self.config.docs_path).expanduser()
         self.log.info("Scraping Documentation")
         files = list(path.glob("**/*.rst"))
+        trees = {}
+        title_map = {}
         with self.progress() as p2:
-            tc = p2.add_task("Parsing narative", total=len(files))
+            task = p2.add_task("Parsing narative", total=len(files))
 
             for p in files:
-                p2.update(tc, description=compress_user(str(p)).ljust(7))
-                p2.advance(tc)
+                p2.update(task, description=compress_user(str(p)).ljust(7))
+                p2.advance(task)
 
                 assert p.is_file()
                 parts = p.relative_to(path).parts
@@ -1244,14 +1248,20 @@ class Gen:
                 except Exception as e:
                     raise type(e)(f"{p=}")
                 blob = DocBlob()
-                dv = DVR(
-                    ":".join(parts),
-                    set(),
-                    local_refs=set(),
-                    aliases={},
-                    version=self._meta["version"],
-                )
-                blob.arbitrary = [dv.visit(s) for s in data]
+                key = ":".join(parts)[:-4]
+                try:
+                    dv = DVR(
+                        key,
+                        set(),
+                        local_refs=set(),
+                        aliases={},
+                        version=self._meta["version"],
+                    )
+                    blob.arbitrary = [dv.visit(s) for s in data]
+                except Exception as e:
+                    raise type(e)(f"Error in {p!r}") from e
+                # if dv._tocs:
+                trees[key] = dv._tocs
                 blob.content = {}
 
                 blob.ordered_sections = []
@@ -1264,15 +1274,23 @@ class Gen:
                 blob.signature = Signature(None)
                 blob.references = None
                 blob.validate()
-                self.docs[parts] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
-                # data = p.read_bytes()
+                titles = [s.title for s in blob.arbitrary if s.title]
+                if not titles:
+                    title = f"<No Title {key}>"
+                else:
+                    title = titles[0]
+                title_map[key] = title
+                if "generated" not in key and title_map[key] is None:
+                    print(key, title)
+                self.docs[key] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
+
+        self._doctree = {"tree": make_tree(trees), "titles": title_map}
 
     def write_narrative(self, where: Path) -> None:
+        (where / "toc.json").write_text(json.dumps(self._doctree, indent=2))
         (where / "docs").mkdir(exist_ok=True)
-        for k, v in self.docs.items():
+        for file, v in self.docs.items():
             subf = where / "docs"
-            file = k[-1].rsplit(".", maxsplit=1)[0]
-            file = ":".join(k[:-1]) + ":" + file
             subf.mkdir(exist_ok=True, parents=True)
             with (subf / file).open("w") as f:
                 f.write(v)

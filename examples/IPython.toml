@@ -2,6 +2,7 @@
 module = 'IPython'
 logo = "../ipython-logo.png"
 exec_failure = "fallback"
+docs_path = "~/dev/IPython/docs/source"
 exec = true
 exclude = [
     'IPython.core.magics.execution.ExecutionMagics.run',

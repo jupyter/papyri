@@ -6,7 +6,7 @@
                 <div class="dropdown">
                 <a href={{module}}>{{module}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
-                            {% for link,name in parts[module] -%}
+                            {% for link,name in parts.get(module, []) -%}
                                 <a href="{{url(link)}}{{ext}}">{{link.path}}</a>
                             {% endfor %}
                      </div>

@@ -393,3 +393,20 @@ nav a {
 	font-family: monospace;
 	color: var(--nc-lk-1);
 }
+
+details.toctree {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+code.verbatim {border-color:#005a81}
+code     {padding: 2px 4px;}
+
+
+blockquote {
+    padding: none;
+    background: none;
+    border-left: none;
+}

@@ -218,11 +218,15 @@ class TSVisitor:
         acc = []
         current = None
         for n in nodes:
-            if isinstance(n, EnumeratedList):
+            if isinstance(n, (EnumeratedList, BulletList, FieldList, DefList)):
                 if current is None:
                     current = n
-                else:
+                elif type(current) == type(n):
                     current.children.extend(n.children)
+                else:
+                    acc.append(current)
+                    current = None
+                    acc.append(n)
 
             else:
                 if current:
@@ -322,8 +326,14 @@ class TSVisitor:
         assert text_value.startswith("`")
         assert text_value.endswith("`")
 
+        inner_value = text_value[1:-1]
+
+        if "`" in inner_value:
+            print("issue with inner `", inner_value)
+            inner_value = inner_value.replace("`", "'")
+
         t = Directive(
-            text_value[1:-1],
+            inner_value,
             domain=domain,
             role=role_value,
         )
@@ -404,15 +414,7 @@ class TSVisitor:
         return [Section([], title)]
 
     def visit_block_quote(self, node, prev_end=None):
-        # print(indent(self.bytes[node.start_byte: node.end_byte].decode(), '> '))
-        data = self.bytes[node.start_byte : node.end_byte].decode().splitlines()
-        ded = node.start_point[1]
-        acc = [data[0]]
-        for x in data[1:]:
-            acc.append(x[ded:])
-        b = BlockQuote(acc)
-        # print(' '*self.depth*4, b)
-        return [b]
+        return [BlockQuote(self.visit(node))]
 
     def visit_paragraph(self, node, prev_end=None):
         sub = self.visit(node.with_whitespace())

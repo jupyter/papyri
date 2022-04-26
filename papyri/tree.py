@@ -297,7 +297,6 @@ class TreeReplacer:
                 "Fig",
                 "Words",
                 "Comment",
-                "BlockQuote",
                 "Directive",
                 "SeeAlsoItems",
                 "Code2",
@@ -387,12 +386,26 @@ for role in (
     "sub",
     "sup",
     "term",
-    "samp",  # networkx
+    "samp",  # networkx, ipython
     "rc",  # matplotlib
 ):
     directive_handler("py", role)(
         lambda value: _x_any_unimplemented_to_verbatim("py", role, value)
     )
+
+
+@directive_handler("py", "ghpull")
+def py_ghpull_handler(value):
+    return [
+        ExternalLink(f"#{value}", f"https://github.com/ipython/ipython/pull/{value}")
+    ]
+
+
+@directive_handler("py", "ghissue")
+def py_ghissue_handler(value):
+    return [
+        ExternalLink(f"#{value}", f"https://github.com/ipython/ipython/issue/{value}")
+    ]
 
 
 @directive_handler("py", "math")
@@ -449,6 +462,7 @@ class DirectiveVisiter(TreeReplacer):
         self.rev_aliases = {v: k for k, v in aliases.items()}
         self._targets: Set[Any] = set()
         self.version = version
+        self._tocs: Any = []
 
     def replace_Code(self, code):
         """
@@ -569,6 +583,28 @@ class DirectiveVisiter(TreeReplacer):
     def _warning_handler(self, argument, options, content):
         return self._admonition_handler_x("warning", argument, options, content)
 
+    def _toctree_handler(self, argument, options, content):
+        assert not argument
+        toc = []
+
+        for line in content.splitlines():
+            line = line.strip()
+            if line == "self":
+                # TODO
+                continue
+            if "<" in line and line.endswith(">"):
+                title, link = line[:-1].split("<")
+                title = title.strip()
+                assert "<" not in link
+                toc.append([title, link])
+            else:
+                assert "<" not in line, breakpoint()
+                toc.append([None, line])
+
+        self._tocs.append(toc)
+
+        return [BlockDirective("toctree", argument, options, content)]
+
     def replace_BlockDirective(self, block_directive: BlockDirective):
         meth = getattr(self, "_" + block_directive.name + "_handler", None)
         if meth:
@@ -581,7 +617,7 @@ class DirectiveVisiter(TreeReplacer):
 
         if block_directive.name not in _MISSING_DIRECTIVES:
             _MISSING_DIRECTIVES.append(block_directive.name)
-            log.info("TODO:", block_directive.name)
+            log.debug("TODO: %s", block_directive.name)
 
         return [block_directive]
 
@@ -728,6 +764,8 @@ def _import_max(parts):
             __import__(p)
         except ImportError:
             return
+        except Exception as e:
+            raise type(e)(parts)
 
 
 def _obj_from_path(parts):

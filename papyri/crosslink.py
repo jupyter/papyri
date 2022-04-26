@@ -27,6 +27,7 @@ from .take2 import (
     register,
     FullQual,
     Cannonical,
+    TocTree,
 )
 from .tree import PostDVR, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
@@ -99,7 +100,7 @@ class IngestedBlobs(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self._content = kwargs.pop("_content", None)
+        self._content = kwargs.pop("_content", {})
         self.example_section_data = kwargs.pop("example_section_data", None)
         self.ordered_sections = kwargs.pop("ordered_sections", None)
         self.item_file = kwargs.pop("item_file", None)
@@ -284,6 +285,32 @@ class Ingester:
                 encoder.encode(doc),
                 [],
             )
+        tocfile = path / "toc.json"
+        if tocfile.exists():
+            toc = json.loads((path / "toc.json").read_text())
+            if not toc.keys():
+                print("No narrative.")
+                return
+            titles = toc["titles"]
+            tree = toc["tree"]
+
+            def make_toc(tree, titles, module, version):
+                tk = []
+                for k, v in tree.items():
+                    children = make_toc(v, titles, module, version)
+                    tk.append(
+                        TocTree(
+                            children, titles[k], RefInfo(module, version, "docs", k)
+                        )
+                    )
+                return tk
+
+            data = encoder.encode(make_toc(tree, titles, module, version))
+            gstore.put(
+                Key(module, version, "meta", "toc.cbor"),
+                data,
+                [],
+            )
 
     def _ingest_examples(
         self, path: Path, gstore: GraphStore, known_refs, aliases, version, root
@@ -320,7 +347,7 @@ class Ingester:
             gstore.put(Key(root, version, "assets", f2.name), f2.read_bytes(), [])
 
         gstore.put(
-            Key(root, version, "meta", "papyri.json"),
+            Key(root, version, "meta", "aliases.cbor"),
             cbor2.dumps(aliases),
             # json.dumps(aliases, indent=2).encode(),
             [],
@@ -427,7 +454,7 @@ class Ingester:
         gstore = self.gstore
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}
-        for key in gstore.glob((None, None, "meta", "papyri.json")):
+        for key in gstore.glob((None, None, "meta", "aliases.cbor")):
             aliases.update(cbor2.loads(gstore.get(key)))
 
         rev_aliases = {Cannonical(v): FullQual(k) for k, v in aliases.items()}

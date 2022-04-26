@@ -155,7 +155,7 @@ errors. Feel free to report differences in parsing, here we document the one we
 do on purpose.
 
 
-Directive must not have spaces before double colon.
+Directive must not have spaces before double colon::
 
     .. directive :: will be seen as a comment.
             and thus this will not appear in final output.
