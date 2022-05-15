@@ -53,7 +53,7 @@ jobs:
         ls -al
     - name: Gen numpy
       run: |
-        coverage run -a -m papyri gen examples/numpy.toml  --no-exec --no-infer
+        coverage run -a -m papyri gen examples/numpy.toml  --no-exec --no-infer --no-narrative
         sleep 1 # time for coverage to write its stuff
     - name: Gen Scipy
       run: |
