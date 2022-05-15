@@ -432,6 +432,7 @@ def gen(
     """
     _intro()
     from papyri.gen import gen_main
+    from IPython.utils.tempdir import TemporaryWorkingDirectory
 
     if len(files) > 1:
         print(
@@ -439,22 +440,27 @@ def gen(
             Warning, it is not recommended to run papyri on multiple libraries at once,
             as many libraries might have side effects. """
         )
+    from os.path import join
+    import os
+
+    here = os.getcwd()
 
     for file in files:
-        gen_main(
-            infer=infer,
-            exec_=exec,
-            target_file=file,
-            debug=debug,
-            dummy_progress=dummy_progress,
-            dry_run=dry_run,
-            api=api,
-            examples=examples,
-            fail=fail,
-            narrative=narrative,
-            fail_early=fail_early,
-            fail_unseen_error=fail_unseen_error,
-        )
+        with TemporaryWorkingDirectory():
+            gen_main(
+                infer=infer,
+                exec_=exec,
+                target_file=join(here, file),
+                debug=debug,
+                dummy_progress=dummy_progress,
+                dry_run=dry_run,
+                api=api,
+                examples=examples,
+                fail=fail,
+                narrative=narrative,
+                fail_early=fail_early,
+                fail_unseen_error=fail_unseen_error,
+            )
 
 
 @app.command()

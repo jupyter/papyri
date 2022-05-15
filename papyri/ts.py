@@ -1,6 +1,37 @@
+import logging
 from pathlib import Path
+from textwrap import dedent, indent
+from typing import List
 
 from tree_sitter import Language, Parser
+
+from papyri.take2 import (
+    BlockDirective,
+    BlockQuote,
+    BlockVerbatim,
+    BulletList,
+    Comment,
+    DefList,
+    DefListItem,
+    Directive,
+    Emph,
+    EnumeratedList,
+    FieldList,
+    FieldListItem,
+    ListItem,
+    Options,
+    Paragraph,
+    Section,
+    Strong,
+    SubstitutionDef,
+    SubstitutionRef,
+    Transition,
+    Unimplemented,
+    Verbatim,
+    Word,
+    Words,
+    compress_word,
+)
 
 from . import errors
 from .errors import (
@@ -13,36 +44,7 @@ pth = str(Path(__file__).parent / "rst.so")
 RST = Language(pth, "rst")
 parser = Parser()
 parser.set_language(RST)
-
-from textwrap import indent, dedent
-from typing import List
-
-from papyri.take2 import (
-    Transition,
-    BlockDirective,
-    BlockQuote,
-    BlockVerbatim,
-    BulletList,
-    Comment,
-    DefList,
-    DefListItem,
-    Directive,
-    Emph,
-    EnumeratedList,
-    ListItem,
-    FieldList,
-    FieldListItem,
-    Options,
-    Paragraph,
-    Section,
-    Strong,
-    SubstitutionRef,
-    Unimplemented,
-    Verbatim,
-    Word,
-    Words,
-    compress_word,
-)
+log = logging.getLogger("papyri")
 
 
 class Node:
@@ -329,7 +331,7 @@ class TSVisitor:
         inner_value = text_value[1:-1]
 
         if "`" in inner_value:
-            print("issue with inner `", inner_value)
+            log.info("issue with inner ` : %r", inner_value)
             inner_value = inner_value.replace("`", "'")
 
         t = Directive(
@@ -503,8 +505,17 @@ class TSVisitor:
         ## TODO : this is likely wrong...
         # inner: Optional[Paragraph]
 
+        is_substitution_definition = False
+
         if len(node.children) == 4:
-            _1, _role, _2, body = node.children
+            kinds = [n.type for n in node.children]
+            if tuple(kinds) == ("type", "::", " ", "body"):
+                is_substitution_definition = True
+                _role, _1, _2, body = node.children
+            elif tuple(kinds) == ("..", "type", "::", "body"):
+                _1, _role, _2, body = node.children
+            else:
+                assert False
             assert body.type == "body"
             assert _role.type == "type"
             body_children = body.children
@@ -516,7 +527,7 @@ class TSVisitor:
             assert _1.type == ".."
             assert _2.type == "::"
 
-        if _role.end_point != _2.start_point:
+        if _role.end_point != _2.start_point and not is_substitution_definition:
             block_data = self.bytes[node.start_byte : node.end_byte].decode()
             raise errors.SpaceAfterBlockDirectiveError(
                 f"space present in {block_data!r}"
@@ -538,10 +549,10 @@ class TSVisitor:
             # to parse
             p0 = groups.pop(0)
             options = []
-            assert len(p0[1]) == 1, breakpoint()
+            assert len(p0[1]) == 1
             opt_node = p0[1][0]
             for field in opt_node.children:
-                assert field.type == "field", breakpoint()
+                assert field.type == "field"
                 if len(field.children) == 4:
                     c1, name, c2, body = field.children
                     options.append((self.as_text(name), self.as_text(body)))
@@ -563,7 +574,7 @@ class TSVisitor:
 
         else:
             content = ""
-        assert not groups, breakpoint()
+        assert not groups
         # todo , we may want to see about the indentation of the content.
 
         directive = BlockDirective(role, argument, options, content)
@@ -581,11 +592,17 @@ class TSVisitor:
         ]
 
     def visit_substitution_definition(self, node, prev_end=None):
-        # TODO
-        raise VisitSubstitutionDefinitionNotImplementedError(
-            self.bytes[node.start_byte : node.end_byte].decode()
-        )
-        return []
+        assert len(node.children) == 3
+        _dotdot, sub, directive = node.children
+        assert self.bytes[_dotdot.start_byte : _dotdot.end_byte].decode() == ".."
+        assert sub.type == "substitution"
+        assert directive.type == "directive"
+        return [
+            SubstitutionDef(
+                self.bytes[sub.start_byte : sub.end_byte].decode(),
+                self.visit_directive(directive)[0],
+            )
+        ]
 
     def visit_comment(self, node, prev_end=None):
         # TODO

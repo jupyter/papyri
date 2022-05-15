@@ -243,6 +243,16 @@ class BlockMath(Leaf):
     pass
 
 
+@register(4027)
+class SubstitutionDef(Node):
+    name: str
+    directive: BlockDirective
+
+    def __init__(self, name, blockdirective):
+        self.name = name
+        self.directive = blockdirective
+
+
 @register(4041)
 class SubstitutionRef(Leaf):
     pass
@@ -623,6 +633,7 @@ class Section(Node):
             FieldList,
             Target,
             SubstitutionRef,
+            SubstitutionDef,
         ]
     ]
     # might need to be more complicated like verbatim.

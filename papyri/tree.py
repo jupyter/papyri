@@ -286,25 +286,26 @@ class TreeReplacer:
                 self._replacements.update([name])
                 new_nodes = method(node)
             elif name in [
-                "Word",
-                "Verbatim",
-                "Example",
+                "BlockMath",
                 "BlockVerbatim",
-                "Math",
-                "Link",
-                "ExternalLink",
                 "Code",
-                "Fig",
-                "Words",
+                "Code2",
                 "Comment",
                 "Directive",
+                "Example",
+                "ExternalLink",
+                "Fig",
+                "Link",
+                "Math",
+                "Options",
                 "SeeAlsoItems",
-                "Code2",
-                "BlockMath",
+                "SubstitutionRef",
                 "Transition",
                 "Unimplemented",
-                "Options",
-                "SubstitutionRef",
+                "Verbatim",
+                # "Word",
+                "Words",
+                "SubstitutionDef",
             ]:
                 return [node]
             else:
@@ -530,8 +531,8 @@ class DirectiveVisiter(TreeReplacer):
 
     def _math_handler(self, argument, options, content):
         if argument and content:
-            print(
-                "For consistency please use the math directive all the equation in the content of the directive.",
+            log.info(
+                "For consistency please use the math directive with all the equation in the content of the directive in %r",
                 self.qa,
             )
             content = argument + content
@@ -740,13 +741,14 @@ class DirectiveVisiter(TreeReplacer):
                 return [Link(text, ri, "module", True)]
             # print("Not all identifier", directive, "in", self.qa)
         else:
-            print(
-                "could not match",
-                directive,
-                (directive.role, directive.domain),
-                "in ",
-                self.qa,
-            )
+            pass
+            # print(
+            #    "could not match",
+            #    directive,
+            #    (directive.role, directive.domain),
+            #    "in ",
+            #    self.qa,
+            # )
         # print("Unchanged:", directive.domain, directive.role, directive.value, self.qa)
         return [directive]
 
