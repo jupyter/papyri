@@ -36,7 +36,7 @@ from papyri.take2 import (
 from . import errors
 from .errors import (
     VisitCitationReferenceNotImplementedError,
-    VisitSubstitutionDefinitionNotImplementedError,
+    # VisitSubstitutionDefinitionNotImplementedError,
 )
 
 pth = str(Path(__file__).parent / "rst.so")
