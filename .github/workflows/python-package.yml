@@ -61,7 +61,7 @@ jobs:
         sleep 1 # time for coverage to write its stuff
     - name: Self gen
       run: |
-        coverage run -a -m papyri gen examples/papyri.toml  --exec
+        coverage run -a -m papyri gen examples/papyri.toml  --exec --no-narrative
         sleep 1 # time for coverage to write its stuff
     - name: Ingest
       run: |
