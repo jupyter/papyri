@@ -1,24 +1,11 @@
+import logging
 from pathlib import Path
+from textwrap import dedent, indent
+from typing import List
 
 from tree_sitter import Language, Parser
 
-from . import errors
-from .errors import (
-    VisitCitationReferenceNotImplementedError,
-    VisitSubstitutionDefinitionNotImplementedError,
-)
-
-pth = str(Path(__file__).parent / "rst.so")
-
-RST = Language(pth, "rst")
-parser = Parser()
-parser.set_language(RST)
-
-from textwrap import indent, dedent
-from typing import List
-
 from papyri.take2 import (
-    Transition,
     BlockDirective,
     BlockQuote,
     BlockVerbatim,
@@ -29,20 +16,35 @@ from papyri.take2 import (
     Directive,
     Emph,
     EnumeratedList,
-    ListItem,
     FieldList,
     FieldListItem,
+    ListItem,
     Options,
     Paragraph,
     Section,
     Strong,
+    SubstitutionDef,
     SubstitutionRef,
+    Transition,
     Unimplemented,
     Verbatim,
     Word,
     Words,
     compress_word,
 )
+
+from . import errors
+from .errors import (
+    VisitCitationReferenceNotImplementedError,
+    # VisitSubstitutionDefinitionNotImplementedError,
+)
+
+pth = str(Path(__file__).parent / "rst.so")
+
+RST = Language(pth, "rst")
+parser = Parser()
+parser.set_language(RST)
+log = logging.getLogger("papyri")
 
 
 class Node:
@@ -218,11 +220,15 @@ class TSVisitor:
         acc = []
         current = None
         for n in nodes:
-            if isinstance(n, EnumeratedList):
+            if isinstance(n, (EnumeratedList, BulletList, FieldList, DefList)):
                 if current is None:
                     current = n
-                else:
+                elif type(current) == type(n):
                     current.children.extend(n.children)
+                else:
+                    acc.append(current)
+                    current = None
+                    acc.append(n)
 
             else:
                 if current:
@@ -322,8 +328,14 @@ class TSVisitor:
         assert text_value.startswith("`")
         assert text_value.endswith("`")
 
+        inner_value = text_value[1:-1]
+
+        if "`" in inner_value:
+            log.info("issue with inner ` : %r", inner_value)
+            inner_value = inner_value.replace("`", "'")
+
         t = Directive(
-            text_value[1:-1],
+            inner_value,
             domain=domain,
             role=role_value,
         )
@@ -404,15 +416,7 @@ class TSVisitor:
         return [Section([], title)]
 
     def visit_block_quote(self, node, prev_end=None):
-        # print(indent(self.bytes[node.start_byte: node.end_byte].decode(), '> '))
-        data = self.bytes[node.start_byte : node.end_byte].decode().splitlines()
-        ded = node.start_point[1]
-        acc = [data[0]]
-        for x in data[1:]:
-            acc.append(x[ded:])
-        b = BlockQuote(acc)
-        # print(' '*self.depth*4, b)
-        return [b]
+        return [BlockQuote(self.visit(node))]
 
     def visit_paragraph(self, node, prev_end=None):
         sub = self.visit(node.with_whitespace())
@@ -501,8 +505,17 @@ class TSVisitor:
         ## TODO : this is likely wrong...
         # inner: Optional[Paragraph]
 
+        is_substitution_definition = False
+
         if len(node.children) == 4:
-            _1, _role, _2, body = node.children
+            kinds = [n.type for n in node.children]
+            if tuple(kinds) == ("type", "::", " ", "body"):
+                is_substitution_definition = True
+                _role, _1, _2, body = node.children
+            elif tuple(kinds) == ("..", "type", "::", "body"):
+                _1, _role, _2, body = node.children
+            else:
+                assert False
             assert body.type == "body"
             assert _role.type == "type"
             body_children = body.children
@@ -514,7 +527,7 @@ class TSVisitor:
             assert _1.type == ".."
             assert _2.type == "::"
 
-        if _role.end_point != _2.start_point:
+        if _role.end_point != _2.start_point and not is_substitution_definition:
             block_data = self.bytes[node.start_byte : node.end_byte].decode()
             raise errors.SpaceAfterBlockDirectiveError(
                 f"space present in {block_data!r}"
@@ -536,10 +549,10 @@ class TSVisitor:
             # to parse
             p0 = groups.pop(0)
             options = []
-            assert len(p0[1]) == 1, breakpoint()
+            assert len(p0[1]) == 1
             opt_node = p0[1][0]
             for field in opt_node.children:
-                assert field.type == "field", breakpoint()
+                assert field.type == "field"
                 if len(field.children) == 4:
                     c1, name, c2, body = field.children
                     options.append((self.as_text(name), self.as_text(body)))
@@ -561,7 +574,7 @@ class TSVisitor:
 
         else:
             content = ""
-        assert not groups, breakpoint()
+        assert not groups
         # todo , we may want to see about the indentation of the content.
 
         directive = BlockDirective(role, argument, options, content)
@@ -579,11 +592,17 @@ class TSVisitor:
         ]
 
     def visit_substitution_definition(self, node, prev_end=None):
-        # TODO
-        raise VisitSubstitutionDefinitionNotImplementedError(
-            self.bytes[node.start_byte : node.end_byte].decode()
-        )
-        return []
+        assert len(node.children) == 3
+        _dotdot, sub, directive = node.children
+        assert self.bytes[_dotdot.start_byte : _dotdot.end_byte].decode() == ".."
+        assert sub.type == "substitution"
+        assert directive.type == "directive"
+        return [
+            SubstitutionDef(
+                self.bytes[sub.start_byte : sub.end_byte].decode(),
+                self.visit_directive(directive)[0],
+            )
+        ]
 
     def visit_comment(self, node, prev_end=None):
         # TODO

@@ -243,6 +243,16 @@ class BlockMath(Leaf):
     pass
 
 
+@register(4027)
+class SubstitutionDef(Node):
+    name: str
+    directive: BlockDirective
+
+    def __init__(self, name, blockdirective):
+        self.name = name
+        self.directive = blockdirective
+
+
 @register(4041)
 class SubstitutionRef(Leaf):
     pass
@@ -623,6 +633,7 @@ class Section(Node):
             FieldList,
             Target,
             SubstitutionRef,
+            SubstitutionDef,
         ]
     ]
     # might need to be more complicated like verbatim.
@@ -853,10 +864,25 @@ class Code(Node):
 
 @register(4023)
 class BlockQuote(Node):
-    value: List[str]
+    children: List[
+        Union[
+            Paragraph,
+            BlockVerbatim,
+            BulletList,
+            DefList,
+            EnumeratedList,
+            BlockDirective,
+            BlockQuote,
+            FieldList,
+            Admonition,
+            Unimplemented,
+            Comment,
+            BlockMath,
+        ]
+    ]
 
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, children):
+        self.children = children
 
 
 def compress_word(stream):
@@ -966,6 +992,18 @@ class Admonition(Node):
         self.title = title
 
 
+@register(4021)
+class TocTree(Node):
+    children: List[TocTree]
+    title: str
+    ref: RefInfo
+
+    def __init__(self, children, title, ref):
+        self.children = children
+        self.title = title
+        self.ref = ref
+
+
 @register(4031)
 class BlockDirective(Node):
 
@@ -1044,15 +1082,10 @@ class FieldListItem(Node):
         Union[
             Paragraph,
             Words,
+            Verbatim,
         ]
     ]
-    body: List[
-        Union[
-            Words,
-            Paragraph,
-            # Word
-        ]
-    ]
+    body: List[Union[Words, Paragraph, Verbatim, Admonition]]
 
     def __init__(self, name=None, body=None):
         if body is None:

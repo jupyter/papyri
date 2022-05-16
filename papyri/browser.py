@@ -316,7 +316,7 @@ class Renderer:
 
     def render_BlockQuote(self, quote):
         return urwid.Padding(
-            urwid.Pile([urwid.Text(x) for x in quote.value]), left=4, right=4
+            urwid.Pile([self.render(c) for c in quote.children]), left=4, right=4
         )
 
     def render_Admonition(self, adm):
@@ -387,8 +387,8 @@ class Renderer:
                     [
                         Link(
                             "link" if sa.name.exists else "link-broken",
-                            sa.name.name,
-                            lambda: self.cb(sa.name.ref),
+                            sa.name.value,
+                            lambda: self.cb(sa.name.reference),
                         )
                     ]
                 ),

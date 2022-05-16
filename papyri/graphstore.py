@@ -348,7 +348,7 @@ class GraphStore:
     def _meta_path(self, module: str, version: str):
         assert isinstance(module, str)
         assert isinstance(version, str)
-        return self._root / module / version / "meta.json"
+        return self._root / module / version / "meta.cbor"
 
     def put_meta(self, module: str, version: str, data: bytes) -> None:
         assert isinstance(data, bytes)

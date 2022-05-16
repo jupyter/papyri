@@ -8,7 +8,7 @@
     {%- elif type_ == 'Word' -%}
         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
-        <code>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
+        <code class='not-implemented'>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
     {%- elif type_ == 'ExternalLink' -%}
         <a link href="{{obj.target}}" class='external'>{{obj.value}}</a>
     {%- elif type_ == 'Link' -%}
@@ -190,10 +190,24 @@
        {% elif type == 'Transition' %}
          <hr/>
 
+     {% elif type == 'TocTree' %}
+             {%if obj.children%}
+            <details class='toctree' open>
+            <summary><a class="toctree" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a></summary>
+             <ul>
+               {% for c in obj.children %}
+                   <li>{{render_II(c)}}</li>
+               {% endfor %}
+             </ul>
+            </details>
+        {% else %}
+                <a class="toctree" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a>
+        {%endif%}
+         
        {% elif type == 'BlockQuote' %}
-            <pre>
-               {%- for line in obj.value %}{{line}}{{'\n'}}{% endfor -%}
-            </pre>
+            <blockquote>
+               {%- for child in obj.children %}{{render_II(child)}}{% endfor -%}
+            </blockquote>
         {% elif type in ['Options','Unimplemented','Comment','SubstitutionRef'] %}
            <pre class='not-implemented'>
             {{obj}}

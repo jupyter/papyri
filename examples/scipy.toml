@@ -88,10 +88,7 @@ ExampleError1 = [ "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree
                   "scipy.optimize._root.root", "scipy.interpolate._fitpack2.LSQSphereBivariateSpline",
                     "scipy.interpolate._fitpack2.SmoothSphereBivariateSpline", "scipy.sparse.linalg._eigen._svds.svds",]
 AssertionError = [
-    "scipy.signal._peak_finding.find_peaks_cwt",
-    "scipy.signal._peak_finding._filter_ridge_lines", "scipy.integrate._quadrature.cumtrapz",
-    "scipy.integrate._quadpack_py.dblquad", "scipy.integrate._odepack_py.odeint", "scipy.integrate._quadrature.simps",
-    "scipy.integrate._quadrature.trapz", "scipy.optimize._linprog_ip._ip_hsd",
+    "scipy.optimize._linprog_ip._ip_hsd",
     "scipy.special._orthogonal._compute_tauk",
     ]
 NumpydocParseError = [

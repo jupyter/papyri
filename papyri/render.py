@@ -338,10 +338,9 @@ class HtmlRenderer:
         self.env.globals["dothtml"] = suf
 
     async def index(self):
-        keys = self.store.glob((None, None, "meta", "papyri.json"))
+        keys = self.store.glob((None, None, "meta", "aliases.cbor"))
         data = []
         for k in keys:
-            # print(encoder.decode(self.store.get(k)))
             meta = encoder.decode(self.store.get_meta(k))
             data.append((k.module, k.version, meta["logo"]))
 
@@ -381,7 +380,6 @@ class HtmlRenderer:
             # print(a1, a2)
 
         doc = IngestedBlobs()
-        doc.content = {}
 
         class S:
             pass
@@ -479,7 +477,7 @@ class HtmlRenderer:
             pass
 
         doc = D()
-        pap_keys = self.store.glob((None, None, "meta", "papyri.json"))
+        pap_keys = self.store.glob((None, None, "meta", "papyri.cbor"))
         parts = {package: []}
         for pk in pap_keys:
             mod, ver, kind, identifier = pk
@@ -497,14 +495,30 @@ class HtmlRenderer:
             doc=doc,
         )
 
-    async def _list_narative(self, package: str, version: str):
-        s = ""
-        keys = self.store.glob((package, version, "docs", None))
-        for k in sorted(keys, key=lambda r: r[3]):
-            r = RefInfo(*k)
-            u = url(r, "/p/", "")
-            s = s + f"<a href='{u}'>{k[3]}</a><br/>"
-        return s
+    async def _list_narative(self, package: str, version: str, ext=""):
+        keys = self.store.glob((package, version, "meta", "toc.cbor"))
+        assert len(keys) == 1
+        data = self.store.get(keys[0])
+        toctrees = encoder.decode(data)
+
+        meta = encoder.decode(self.store.get_meta(Key(package, version, None, None)))
+        logo = meta["logo"]
+
+        class D:
+            pass
+
+        doc = D()
+        return self.env.get_template("toctree.tpl.j2").render(
+            logo=logo,
+            meta=meta,
+            module=package,
+            parts={},
+            ext=ext,
+            version=version,
+            parts_links=defaultdict(lambda: ""),
+            doc=doc,
+            toctrees=toctrees,
+        )
 
     async def _serve_narrative(self, package: str, version: str, ref: str):
         """
@@ -575,7 +589,6 @@ class HtmlRenderer:
             assert root is not None
             # assert version is not None
 
-            assert doc_blob.refs is None
             data = compute_graph(
                 self.store, backward, forward, Key(root, version, "module", ref)
             )
@@ -722,7 +735,7 @@ class HtmlRenderer:
 
         meta = encoder.decode(self.store.get_meta(Key(package, version, None, None)))
 
-        pap_keys = self.store.glob((None, None, "meta", "papyri.json"))
+        pap_keys = self.store.glob((None, None, "meta", "aliases.cbor"))
         parts = {package: []}
         for pk in pap_keys:
             mod, ver, _, _ = pk
@@ -947,7 +960,6 @@ def _ascii_env():
             for x in s:
                 assert isinstance(x, str)
             res = [c.convert(_) for _ in s]
-            print(res)
             return res
 
         env.globals["math"] = math

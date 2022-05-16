@@ -128,7 +128,7 @@ def example_3():
     This show that we support *emph* and **strong**.
 
     This will be ``verbatim``, and this is `interpreted-text`.
-    Interpreted text can have domain and role :domain:role:`interpreted text`.
+    Interpreted text can have domain and role ``:domain:role:`interpreted text```.
 
         .. directive::
 

@@ -4,6 +4,8 @@ usually trees, and update nodes.
 
 """
 
+import logging
+
 from collections import Counter, defaultdict
 from functools import lru_cache
 from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
@@ -29,6 +31,8 @@ from .utils import full_qual
 from textwrap import indent
 from .ts import parse
 from .take2 import Section
+
+log = logging.getLogger("papyri")
 
 
 _cache: Dict[int, Tuple[Dict[str, RefInfo], FrozenSet[str]]] = {}
@@ -282,26 +286,26 @@ class TreeReplacer:
                 self._replacements.update([name])
                 new_nodes = method(node)
             elif name in [
-                "Word",
-                "Verbatim",
-                "Example",
-                "BlockVerbatim",
-                "Math",
-                "Link",
-                "ExternalLink",
-                "Code",
-                "Fig",
-                "Words",
-                "Comment",
-                "BlockQuote",
-                "Directive",
-                "SeeAlsoItems",
-                "Code2",
                 "BlockMath",
+                "BlockVerbatim",
+                "Code",
+                "Code2",
+                "Comment",
+                "Directive",
+                "Example",
+                "ExternalLink",
+                "Fig",
+                "Link",
+                "Math",
+                "Options",
+                "SeeAlsoItems",
+                "SubstitutionRef",
                 "Transition",
                 "Unimplemented",
-                "Options",
-                "SubstitutionRef",
+                "Verbatim",
+                # "Word",
+                "Words",
+                "SubstitutionDef",
             ]:
                 return [node]
             else:
@@ -383,12 +387,26 @@ for role in (
     "sub",
     "sup",
     "term",
-    "samp",  # networkx
+    "samp",  # networkx, ipython
     "rc",  # matplotlib
 ):
     directive_handler("py", role)(
         lambda value: _x_any_unimplemented_to_verbatim("py", role, value)
     )
+
+
+@directive_handler("py", "ghpull")
+def py_ghpull_handler(value):
+    return [
+        ExternalLink(f"#{value}", f"https://github.com/ipython/ipython/pull/{value}")
+    ]
+
+
+@directive_handler("py", "ghissue")
+def py_ghissue_handler(value):
+    return [
+        ExternalLink(f"#{value}", f"https://github.com/ipython/ipython/issue/{value}")
+    ]
 
 
 @directive_handler("py", "math")
@@ -445,6 +463,7 @@ class DirectiveVisiter(TreeReplacer):
         self.rev_aliases = {v: k for k, v in aliases.items()}
         self._targets: Set[Any] = set()
         self.version = version
+        self._tocs: Any = []
 
     def replace_Code(self, code):
         """
@@ -512,8 +531,9 @@ class DirectiveVisiter(TreeReplacer):
 
     def _math_handler(self, argument, options, content):
         if argument and content:
-            print(
-                "For consistency please use the math directive all the equation in the content of the directive.",
+            log.info(
+                "For consistency please use the math directive"
+                " with all the equation in the content of the directive in %r",
                 self.qa,
             )
             content = argument + content
@@ -565,6 +585,28 @@ class DirectiveVisiter(TreeReplacer):
     def _warning_handler(self, argument, options, content):
         return self._admonition_handler_x("warning", argument, options, content)
 
+    def _toctree_handler(self, argument, options, content):
+        assert not argument
+        toc = []
+
+        for line in content.splitlines():
+            line = line.strip()
+            if line == "self":
+                # TODO
+                continue
+            if "<" in line and line.endswith(">"):
+                title, link = line[:-1].split("<")
+                title = title.strip()
+                assert "<" not in link
+                toc.append([title, link])
+            else:
+                assert "<" not in line, breakpoint()
+                toc.append([None, line])
+
+        self._tocs.append(toc)
+
+        return [BlockDirective("toctree", argument, options, content)]
+
     def replace_BlockDirective(self, block_directive: BlockDirective):
         meth = getattr(self, "_" + block_directive.name + "_handler", None)
         if meth:
@@ -577,7 +619,7 @@ class DirectiveVisiter(TreeReplacer):
 
         if block_directive.name not in _MISSING_DIRECTIVES:
             _MISSING_DIRECTIVES.append(block_directive.name)
-            print("TODO:", block_directive.name)
+            log.debug("TODO: %s", block_directive.name)
 
         return [block_directive]
 
@@ -700,13 +742,14 @@ class DirectiveVisiter(TreeReplacer):
                 return [Link(text, ri, "module", True)]
             # print("Not all identifier", directive, "in", self.qa)
         else:
-            print(
-                "could not match",
-                directive,
-                (directive.role, directive.domain),
-                "in ",
-                self.qa,
-            )
+            pass
+            # print(
+            #    "could not match",
+            #    directive,
+            #    (directive.role, directive.domain),
+            #    "in ",
+            #    self.qa,
+            # )
         # print("Unchanged:", directive.domain, directive.role, directive.value, self.qa)
         return [directive]
 
@@ -724,6 +767,8 @@ def _import_max(parts):
             __import__(p)
         except ImportError:
             return
+        except Exception as e:
+            raise type(e)(parts)
 
 
 def _obj_from_path(parts):
@@ -753,7 +798,7 @@ class PostDVR(DirectiveVisiter):
     def replace_Directive(self, d):
         if (d.domain, d.role) not in _MISSING_INLINE_DIRECTIVES:
             _MISSING_INLINE_DIRECTIVES.append((d.domain, d.role))
-            print("TODO:", d.domain, d.role, d.value)
+            log.info("TODO: %r %r %r", d.domain, d.role, d.value)
         return [d]
 
     def replace_RefInfo(self, refinfo):
@@ -763,6 +808,6 @@ class PostDVR(DirectiveVisiter):
     def replace_BlockDirective(self, block_directive: BlockDirective):
         if block_directive.name not in _MISSING_DIRECTIVES:
             _MISSING_DIRECTIVES.append(block_directive.name)
-            print("TODO:", block_directive.name)
+            log.info("TODO: %r", block_directive.name)
 
         return [block_directive]
