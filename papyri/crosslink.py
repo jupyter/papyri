@@ -434,6 +434,7 @@ class Ingester:
             # as we don't know the version number.
             # fix it at serialisation time.
             forward_refs = doc_blob.all_forward_refs()
+            # print(len(forward_refs))
 
             try:
                 key = Key(mod_root, version, "module", qa)

@@ -50,7 +50,9 @@
             {% endfor -%}
         </nav>
     </header>
-<div class='container'>
+    <div class='container'>
+
+	{% if sidebar %}
     <div class="sidenav">
     {% if not logo %}
         <i class="fab fa-python"></i>
@@ -77,6 +79,7 @@
     {% block plus %}
     {% endblock %}
     </div><!--end sidenav-->
+    {% endif%}
 
     {% block api %}
     {% endblock api %}

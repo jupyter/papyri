@@ -502,11 +502,11 @@ def ascii(name: str):
 
 
 @app.command()
-def serve(sidebar: bool = True):
+def serve(sidebar: bool = True, port: int = 1234):
     _intro()
     from .render import serve as s2
 
-    s2(sidebar=sidebar)
+    s2(sidebar=sidebar, port=port)
 
 
 @app.command()
