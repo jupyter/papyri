@@ -21,6 +21,7 @@ from .take2 import (
     Math,
     Node,
     RefInfo,
+    SubstitutionDef,
     Token,
     Verbatim,
     FullQual,
@@ -245,11 +246,25 @@ class TreeVisitor:
                     for k, v in self.generic_visit(c).items():
                         acc.setdefault(k, []).extend(v)
             return acc
+        elif hasattr(node, "reference"):
+            acc = {}
+            for c in [node.reference]:
+                if c is None or isinstance(c, (str, bool)):
+                    continue
+                assert c is not None, f"{node=} has a None child"
+                assert isinstance(c, Node), repr(c)
+                if type(c) in self.find:
+                    acc.setdefault(type(c), []).append(c)
+                else:
+                    for k, v in self.generic_visit(c).items():
+                        acc.setdefault(k, []).extend(v)
+            return acc
+
         elif hasattr(node, "value"):
             if type(node) not in self.skipped:
                 self.skipped.add(type(node))
             return {}
-        elif isinstance(node, (RefInfo, Options, Transition)):
+        elif isinstance(node, (RefInfo, Options, Transition, SubstitutionDef)):
             return {}
         else:
             raise ValueError(f"{node.__class__} has no children, no values {node}")

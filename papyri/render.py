@@ -588,7 +588,6 @@ class HtmlRenderer:
             # we will now just render it.
             assert root is not None
             # assert version is not None
-
             data = compute_graph(
                 self.store, backward, forward, Key(root, version, "module", ref)
             )
@@ -815,7 +814,7 @@ def pygment_css() -> Response:
     return Response(CSS_DATA, mimetype="text/css")
 
 
-def serve(*, sidebar: bool):
+def serve(*, sidebar: bool, port=1234):
 
     app = QuartTrio(__name__)
 
@@ -854,7 +853,7 @@ def serve(*, sidebar: bool):
     app.route(f"{prefix}/gallery/<module>")(g)
     app.route(f"{prefix}/virtual/<module>/<node>")(html_renderer.virtual)
     app.route("/")(html_renderer.index)
-    port = int(os.environ.get("PORT", 1234))
+    port = int(os.environ.get("PORT", port))
     print("Seen config port ", port)
     prod = os.environ.get("PROD", None)
     if prod:

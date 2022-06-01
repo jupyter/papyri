@@ -248,9 +248,9 @@ class SubstitutionDef(Node):
     name: str
     directive: BlockDirective
 
-    def __init__(self, name, blockdirective):
+    def __init__(self, name, directive):
         self.name = name
-        self.directive = blockdirective
+        self.directive = directive
 
 
 @register(4041)
