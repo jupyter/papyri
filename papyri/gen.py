@@ -337,7 +337,7 @@ def _add_classes(entries):
 
 def processed_example_data(example_section_data) -> Section:
     """this should be no-op on already ingested"""
-    new_example_section_data = Section()
+    new_example_section_data = Section([], None)
     for in_out in example_section_data:
         type_ = in_out.__class__.__name__
         # color examples with pygments classes
@@ -1076,7 +1076,7 @@ class Gen:
         """
         assert qa is not None
         blocks = list(map(splitcode, splitblank(example_section)))
-        example_section_data = Section()
+        example_section_data = Section([], None)
         import matplotlib.pyplot as plt
         import numpy as np
 
@@ -1269,7 +1269,7 @@ class Gen:
                 blob.item_line = None
                 blob.item_type = None
                 blob.aliases = []
-                blob.example_section_data = Section()
+                blob.example_section_data = Section([], None)
                 blob.see_also = []
                 blob.signature = Signature(None)
                 blob.references = None
@@ -1476,13 +1476,13 @@ class Gen:
                     log=self.log,
                 )
             except Exception as e:
-                example_section_data = Section()
+                example_section_data = Section([], None)
                 self.log.error("Error getting example data in %s", repr(qa))
                 from .errors import ExampleError1
 
                 raise ExampleError1(f"Error getting example data in {qa!r}") from e
         else:
-            example_section_data = Section()
+            example_section_data = Section([], None)
             figs = []
 
         refs_I = []
@@ -1524,14 +1524,14 @@ class Gen:
                     pass
                 elif not data:
                     # is empty
-                    blob.content[section] = Section()
+                    blob.content[section] = Section([], None)
                 else:
                     tsc = ts.parse("\n".join(data).encode())
                     assert len(tsc) in (0, 1), (tsc, data)
                     if tsc:
                         tssc = tsc[0]
                     else:
-                        tssc = Section()
+                        tssc = Section([], None)
                     assert isinstance(tssc, Section)
                     blob.content[section] = tssc
             except Exception:
@@ -1539,7 +1539,7 @@ class Gen:
                 raise
         assert isinstance(blob.content["Summary"], Section)
         assert isinstance(
-            blob.content.get("Summary", Section()), Section
+            blob.content.get("Summary", Section([], None)), Section
         ), blob.content["Summary"]
 
         sections_ = [
@@ -1570,9 +1570,9 @@ class Gen:
                         assert not isinstance(l, Section)
                 new_content.append(Param(param, type_, desc=items).validate())
             if new_content:
-                blob.content[s] = Section([Parameters(new_content)])
+                blob.content[s] = Section([Parameters(new_content)], None)
             else:
-                blob.content[s] = Section([])
+                blob.content[s] = Section([], None)
 
         blob.see_also = _normalize_see_also(blob.content.get("See Also", None), qa)
         del blob.content["See Also"]
@@ -1641,7 +1641,8 @@ class Gen:
                     + [
                         Fig(RefInfo(self.root, self.version, "assets", name))
                         for name, _ in figs
-                    ]
+                    ],
+                    None,
                 )
                 s = processed_example_data(s)
                 dv = DVR(

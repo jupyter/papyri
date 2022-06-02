@@ -552,28 +552,19 @@ class Signature(Node):
 @register(4012)
 class NumpydocExample(Node):
     value: List[str]
-
-    def __init__(self, value):
-        self.title = "Examples"
-        self.value = value
+    title = "Examples"
 
 
 @register(4013)
 class NumpydocSeeAlso(Node):
     value: List[SeeAlsoItem]
-
-    def __init__(self, value):
-        self.title = "See Also"
-        self.value = value
+    title = "See Also"
 
 
 @register(4014)
 class NumpydocSignature(Node):
     value: str
-
-    def __init__(self, value):
-        self.value = value
-        self.title = "Signature"
+    title = "Signature"
 
 
 @register(4015)
@@ -613,7 +604,7 @@ class Section(Node):
     def __eq__(self, other):
         return super().__eq__(other)
 
-    def __init__(self, children=None, title=None):
+    def __init__(self, children, title):
         if children is None:
             children = []
         self.children = children
