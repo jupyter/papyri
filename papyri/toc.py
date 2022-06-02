@@ -1,3 +1,6 @@
+from typing import Dict
+
+
 def flatten(dct):
     return {k: [s for sub in toc for s in sub] for k, toc in dct.items()}
 
@@ -16,7 +19,8 @@ def dotdotcount(path):
     return n, acc
 
 
-def _tree(current_path, unnest, counter, depth=0):
+def _tree(current_path, unnest, counter, depth=0) -> Dict:
+    assert current_path in counter
     counter[current_path] += 1
     children = {}
     children_path = unnest.get(current_path, [])
@@ -40,6 +44,9 @@ def _tree(current_path, unnest, counter, depth=0):
         assert p != current_path
         # print(' '*depth*4,cp, '->', p)
         assert p not in children
+        if p not in counter:
+            print("SKIP Path", p)
+            continue
         children[p] = _tree(p, unnest, depth=depth + 1, counter=counter)
 
     return children

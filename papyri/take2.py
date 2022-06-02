@@ -179,10 +179,13 @@ def register(value):
 
 
 class Node(Base):
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         tt = get_type_hints(type(self))
         for attr, val in zip(tt, args):
             setattr(self, attr, val)
+        for k, v in kwargs.items():
+            assert k in tt
+            setattr(self, k, v)
 
     def cbor(self, encoder):
 
