@@ -223,9 +223,6 @@ class Node(Base):
 class Leaf(Node):
     value: str
 
-    def __init__(self, value):
-        # assert value, breakpoint()
-        self.value = value
 
 
 class IntermediateNode(Node):
@@ -250,10 +247,6 @@ class BlockMath(Leaf):
 class SubstitutionDef(Node):
     name: str
     directive: BlockDirective
-
-    def __init__(self, name, directive):
-        self.name = name
-        self.directive = directive
 
 
 @register(4041)
@@ -358,9 +351,6 @@ class ExternalLink(Node):
     value: str
     target: str
 
-    def __init__(self, value, target):
-        self.value = value
-        self.target = target
 
 
 @register(4002)
@@ -467,18 +457,11 @@ class Word(IntermediateNode):
 
     value: str
 
-    def __init__(self, value):
-        self.value = value
-
-
 @register(4007)
 class Words(Node):
     """A sequence of words that does not start not ends with spaces"""
 
     value: str
-
-    def __init__(self, value):
-        self.value = value
 
     def __eq__(self, other):
         return type(self) == type(other) and self.value.strip() == other.value.strip()
@@ -496,9 +479,6 @@ class Words(Node):
 @register(4008)
 class Emph(Node):
     value: Words
-
-    def __init__(self, value):
-        self.value = value
 
     def __hash__(self):
         return hash(repr(self))
@@ -519,9 +499,6 @@ class Emph(Node):
 class Strong(Node):
     content: Words
 
-    def __init__(self, content):
-        self.content = content
-
     @property
     def children(self):
         return [self.content]
@@ -536,9 +513,6 @@ class Strong(Node):
 
 class _XList(Node):
     children: List[ListItem]
-
-    def __init__(self, children):
-        self.children = children
 
 
 @register(4006)
@@ -559,9 +533,6 @@ class ListItem(Node):
         ]
     ]
 
-    def __init__(self, children):
-        self.children = children
-
 
 @register(4039)
 class EnumeratedList(_XList):
@@ -576,9 +547,6 @@ class BulletList(_XList):
 @register(4011)
 class Signature(Node):
     value: Optional[str]
-
-    def __init__(self, value):
-        self.value = value
 
 
 @register(4012)
@@ -708,11 +676,6 @@ class Param(Node):
         ]
     ]
 
-    def __init__(self, param, type_, desc):
-        self.param = param
-        self.type_ = type_
-        self.desc = desc
-
     @property
     def children(self):
         return self.desc
@@ -744,12 +707,8 @@ class Token(Node):
 
     """
 
-    type: Optional[str]
     link: Union[Link, str]
-
-    def __init__(self, link, type):
-        self.link = link
-        self.type = type
+    type: Optional[str]
 
     @property
     def children(self):
@@ -761,12 +720,9 @@ class Token(Node):
 
 @register(4018)
 class Unimplemented(Node):
-    value: str
     placeholder: str
+    value: str
 
-    def __init__(self, placeholder, value):
-        self.placeholder = placeholder
-        self.value = value
 
     def __repr__(self):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
@@ -793,22 +749,12 @@ class Code3(Node):
     children: List[CodeLine]
     out: str
 
-    def __init__(self, status, children, out):
-        self.status = status
-        self.children = children
-        self.out = out
-
 
 @register(4044)
 class CodeLine(Node):
     prompt: str
     entries: List[Token]
     highlighted: bool
-
-    def __init__(self, prompt, entries, highlighted):
-        self.prompt = prompt
-        self.entries = entries
-        self.highlighted = highlighted
 
 
 @register(4020)
@@ -817,10 +763,6 @@ class Code2(Node):
     out: str
     ce_status: str
 
-    def __init__(self, entries, out, ce_status):
-        self.entries = entries
-        self.out = out
-        self.ce_status = ce_status
 
     @property
     def children(self):
@@ -835,12 +777,6 @@ class GenToken(Node):
     value: str
     qa: Optional[str]
     pygmentclass: str
-    noserialise = True
-
-    def __init__(self, value, qa, pygmentclass):
-        self.value = value
-        self.qa = qa
-        self.pygmentclass = pygmentclass
 
 
 # @register(4021)
@@ -883,9 +819,6 @@ class BlockQuote(Node):
             BlockMath,
         ]
     ]
-
-    def __init__(self, children):
-        self.children = children
 
 
 def compress_word(stream):
@@ -989,10 +922,6 @@ class Admonition(Node):
         ]
     ]
 
-    def __init__(self, kind=None, title=None, children=None):
-        self.kind = kind
-        self.children = children
-        self.title = title
 
 
 @register(4021)
@@ -1000,11 +929,6 @@ class TocTree(Node):
     children: List[TocTree]
     title: str
     ref: RefInfo
-
-    def __init__(self, children, title, ref):
-        self.children = children
-        self.title = title
-        self.ref = ref
 
 
 @register(4031)
@@ -1058,25 +982,16 @@ class BlockVerbatim(Node):
 class DefList(Node):
     children: List[DefListItem]
 
-    def __init__(self, children):
-        self.children = children
-
 
 @register(4034)
 class Options(Node):
 
     values: List[str]
 
-    def __init__(self, values):
-        self.values = values
-
 
 @register(4035)
 class FieldList(Node):
     children: List[FieldListItem]
-
-    def __init__(self, children):
-        self.children = children
 
 
 @register(4036)
