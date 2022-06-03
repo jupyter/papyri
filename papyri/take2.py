@@ -890,9 +890,6 @@ class BlockVerbatim(Node):
     def __repr__(self):
         return f"<{self.__class__.__name__} '{len(self.value)}'>"
 
-    def to_json(self):
-        return serialize(self, type(self))
-
 
 @register(4033)
 class DefList(Node):

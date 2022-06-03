@@ -100,32 +100,7 @@ class IngestedBlobs(Node):
 
     @classmethod
     def new(cls):
-        return cls(
-            {}, None, None, None, None, [], None, None, None, None, None, None, None
-        )
-
-    # def __init__(self, *args, **kwargs):
-    # super().__init__()
-    # self.content = kwargs.pop("content", {})
-    # self.example_section_data = kwargs.pop("example_section_data", None)
-    # self.ordered_sections = kwargs.pop("ordered_sections", None)
-    # self.item_file = kwargs.pop("item_file", None)
-    # self.item_line = kwargs.pop("item_line", None)
-    # self.item_type = kwargs.pop("item_type", None)
-    # self.aliases = kwargs.pop("aliases", [])
-    # self.see_also = kwargs.pop("see_also", None)
-    # assert "version" not in kwargs
-    # self.signature = kwargs.pop("signature", None)
-    # self.references = kwargs.pop("references", None)
-    # assert "logo" not in kwargs
-    # self.qa = kwargs.pop("qa", None)
-    # self.arbitrary = kwargs.pop("arbitrary", None)
-    # if self.arbitrary:
-    #    for a in self.arbitrary:
-    #        assert isinstance(a, Section), a
-    # assert not kwargs, kwargs
-    # assert not args, args
-    # self._freeze()
+        return cls({}, None, None, None, None, [], None, None, None, None, None, None)
 
     def __setattr__(self, key, value):
         if self.__isfrozen and not hasattr(self, key):
