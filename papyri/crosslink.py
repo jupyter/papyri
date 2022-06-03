@@ -116,9 +116,9 @@ class IngestedBlobs(Node):
         res: Dict[Any, List[Any]] = {}
         for sec in (
             list(self.content.values())
-            + [self.example_section_data]
-            + self.arbitrary
-            + self.see_also
+            + [self.example_section_data]  # type: ignore
+            + self.arbitrary  # type: ignore
+            + self.see_also  # type: ignore
         ):
             for k, v in visitor.generic_visit(sec).items():
                 res.setdefault(k, []).extend(v)
@@ -200,14 +200,20 @@ class IngestedBlobs(Node):
 
 
 def load_one_uningested(
-    bytes_: bytes, qa, known_refs, aliases, *, version
+    bytes_: bytes,
+    qa: str,
+    known_refs,
+    aliases: Dict[str, str],
+    *,
+    version: Optional[str],
 ) -> IngestedBlobs:
     """
     Load the json from a DocBlob and make it an ingested blob.
     """
+    assert isinstance(bytes_, bytes)
     data = json.loads(bytes_)
 
-    old_data = DocBlob.from_json(data)
+    old_data = DocBlob.from_dict(data)
     assert hasattr(old_data, "arbitrary")
 
     blob = IngestedBlobs.new()
@@ -238,7 +244,7 @@ class Ingester:
         ):
 
             doc = load_one_uningested(
-                document.read_text(),
+                document.read_bytes(),
                 qa=document.name,
                 known_refs=frozenset(),
                 aliases={},
@@ -289,7 +295,7 @@ class Ingester:
             (path / "examples/").glob("*"),
             description=f"{path.name} Reading Examples ...   ",
         ):
-            s = Section.from_json(json.loads(fe.read_bytes()))
+            s = Section.from_dict(json.loads(fe.read_bytes()))
             visitor = PostDVR(
                 f"TBD (examples, {path}), supposed to be QA",
                 known_refs,
@@ -363,7 +369,7 @@ class Ingester:
             try:
                 # TODO: version issue
                 nvisited_items[qa] = load_one_uningested(
-                    f1.read_text(),
+                    f1.read_bytes(),
                     qa=qa,
                     known_refs=known_refs,
                     aliases=aliases,

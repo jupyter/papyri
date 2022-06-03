@@ -714,7 +714,7 @@ class DocBlob(Node):
         "Examples",
     ]  # List of sections in order
 
-    content: Dict[str, Optional[Section]]
+    content: Dict[str, Section]
     example_section_data: Section
     ordered_sections: List[str]
     item_file: Optional[str]
@@ -742,7 +742,6 @@ class DocBlob(Node):
             "aliases",
             "arbitrary",
         ]
-
 
     @classmethod
     def new(cls):
@@ -1249,7 +1248,7 @@ class Gen:
                 title_map[key] = title
                 if "generated" not in key and title_map[key] is None:
                     print(key, title)
-                self.docs[key] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
+                self.docs[key] = json.dumps(blob.to_dict(), indent=2, sort_keys=True)
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
 
@@ -1670,7 +1669,7 @@ class Gen:
             for edoc, figs in examples_data:
                 self.examples.update(
                     {
-                        k: json.dumps(v.to_json(), indent=2, sort_keys=True)
+                        k: json.dumps(v.to_dict(), indent=2, sort_keys=True)
                         for k, v in edoc.items()
                     }
                 )
@@ -1929,7 +1928,7 @@ class Gen:
                     doc_blob.validate()
                 except Exception as e:
                     raise type(e)(f"Error in {qa}")
-                self.put(qa, json.dumps(doc_blob.to_json(), indent=2, sort_keys=True))
+                self.put(qa, json.dumps(doc_blob.to_dict(), indent=2, sort_keys=True))
                 for name, data in figs:
                     self.put_raw(name, data)
             if error_collector._errors:

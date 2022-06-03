@@ -68,8 +68,6 @@ from there import print
 from papyri.miniserde import deserialize, get_type_hints, serialize
 from papyri.utils import dedent_but_first
 
-import msgspec
-
 FullQual = NewType("FullQual", str)
 Cannonical = NewType("Cannonical", str)
 
@@ -215,11 +213,11 @@ class Node(Base):
 
         return f"<{self.__class__.__name__}: \n{indent(acc)}>"
 
-    def to_json(self):
+    def to_dict(self):
         return serialize(self, type(self))
 
     @classmethod
-    def from_json(cls, data):
+    def from_dict(cls, data):
         return deserialize(cls, cls, data)
 
 
@@ -923,7 +921,7 @@ class FieldListItem(Node):
         for p in self.body:
             assert isinstance(p, Paragraph), p
         if self.name:
-            assert len(self.name) == 1, (name, [type(n) for n in name])
+            assert len(self.name) == 1, (self.name, [type(n) for n in self.name])
         return super().validate()
 
     @property
@@ -963,7 +961,6 @@ class DefListItem(Node):
     @children.setter
     def children(self, value):
         self.dt, *self.dd = value
-
 
 
 @register(4028)
