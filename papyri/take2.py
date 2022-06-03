@@ -153,6 +153,7 @@ def validate(obj):
         raise ValueError(f"Wrong type at field :: {res}")
 
 
+# tag=True
 class Base:
     def validate(self):
         validate(self)
@@ -278,10 +279,6 @@ class Text(Leaf):
 class Fig(Node):
     value: RefInfo
 
-    def __init__(self, value):
-        assert isinstance(value, RefInfo)
-        self.value = value
-
 
 @register(4000)
 @dataclass(frozen=True)
@@ -320,10 +317,6 @@ class RefInfo(Node):
 @register(4001)
 class Verbatim(Node):
     value: List[str]
-
-    def __init__(self, value):
-        assert isinstance(value, list)
-        self.value = value
 
     def __eq__(self, other):
         if not type(self) == type(other):
@@ -381,15 +374,6 @@ class Link(Node):
     kind: str
     exists: bool
 
-    def __init__(self, value, reference, kind, exists):
-        assert kind in ("exists", "missing", "local", "module", None), kind
-        self.value = value
-        self.reference = reference
-        if reference is not None:
-            assert isinstance(reference, RefInfo), f"{reference}, {value}"
-        self.kind = kind
-        self.exists = exists
-
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
 
@@ -406,22 +390,6 @@ class Directive(Node):
 
     def __hash__(self):
         return hash((tuple(self.value), self.domain, self.role))
-
-    def __init__(self, value, domain, role):
-        # if value == "NpyIter_MultiNew":
-        #    breakpoint()
-        assert isinstance(value, str)
-        assert "`" not in value, value
-        self.value = value
-        self.domain = domain
-        if domain is not None:
-            assert isinstance(domain, str), domain
-        if domain:
-            assert role
-        self.role = role
-        if role is not None:
-            assert isinstance(role, str), role
-            assert ":" not in role
 
     def __eq__(self, other):
         return (
@@ -604,16 +572,6 @@ class Section(Node):
 
     def __eq__(self, other):
         return super().__eq__(other)
-
-    def __init__(self, children, title):
-        if children is None:
-            children = []
-        self.children = children
-        if title == "See also":
-            title = "See Also"
-        if title == "Arguments":
-            title = "Parameters"
-        self.title = title
 
     def __getitem__(self, k):
         return self.children[k]
@@ -915,13 +873,6 @@ class BlockDirective(Node):
             assert isinstance(v, str)
         assert isinstance(self.content, str)
         return super().validate()
-
-    def __init__(self, name, argument, options, content):
-        self.name = name
-        self.argument = argument
-        options = [tuple(x) for x in options]
-        self.options = options
-        self.content = content
 
     @property
     def value(self):
