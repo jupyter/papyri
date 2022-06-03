@@ -151,6 +151,7 @@ def validate(obj):
         raise ValueError(f"Wrong type at field :: {res}")
 
 
+# tag=True
 class Base:
     def validate(self):
         validate(self)
@@ -179,10 +180,13 @@ def register(value):
 
 
 class Node(Base):
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         tt = get_type_hints(type(self))
         for attr, val in zip(tt, args):
             setattr(self, attr, val)
+        for k, v in kwargs.items():
+            assert k in tt
+            setattr(self, k, v)
 
     def cbor(self, encoder):
 
@@ -209,20 +213,16 @@ class Node(Base):
 
         return f"<{self.__class__.__name__}: \n{indent(acc)}>"
 
-    def to_json(self):
+    def to_dict(self):
         return serialize(self, type(self))
 
     @classmethod
-    def from_json(cls, data):
+    def from_dict(cls, data):
         return deserialize(cls, cls, data)
 
 
 class Leaf(Node):
     value: str
-
-    def __init__(self, value):
-        # assert value, breakpoint()
-        self.value = value
 
 
 class IntermediateNode(Node):
@@ -247,10 +247,6 @@ class BlockMath(Leaf):
 class SubstitutionDef(Node):
     name: str
     directive: BlockDirective
-
-    def __init__(self, name, directive):
-        self.name = name
-        self.directive = directive
 
 
 @register(4041)
@@ -280,10 +276,6 @@ class Text(Leaf):
 @register(4024)
 class Fig(Node):
     value: RefInfo
-
-    def __init__(self, value):
-        assert isinstance(value, RefInfo)
-        self.value = value
 
 
 @register(4000)
@@ -324,10 +316,6 @@ class RefInfo(Node):
 class Verbatim(Node):
     value: List[str]
 
-    def __init__(self, value):
-        assert isinstance(value, list)
-        self.value = value
-
     def __eq__(self, other):
         if not type(self) == type(other):
             return False
@@ -354,10 +342,6 @@ class ExternalLink(Node):
 
     value: str
     target: str
-
-    def __init__(self, value, target):
-        self.value = value
-        self.target = target
 
 
 @register(4002)
@@ -388,15 +372,6 @@ class Link(Node):
     kind: str
     exists: bool
 
-    def __init__(self, value=None, reference=None, kind=None, exists=None):
-        assert kind in ("exists", "missing", "local", "module", None), kind
-        self.value = value
-        self.reference = reference
-        if reference is not None:
-            assert isinstance(reference, RefInfo), f"{reference}, {value}"
-        self.kind = kind
-        self.exists = exists
-
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
 
@@ -413,22 +388,6 @@ class Directive(Node):
 
     def __hash__(self):
         return hash((tuple(self.value), self.domain, self.role))
-
-    def __init__(self, value, domain, role):
-        # if value == "NpyIter_MultiNew":
-        #    breakpoint()
-        assert isinstance(value, str)
-        assert "`" not in value, value
-        self.value = value
-        self.domain = domain
-        if domain is not None:
-            assert isinstance(domain, str), domain
-        if domain:
-            assert role
-        self.role = role
-        if role is not None:
-            assert isinstance(role, str), role
-            assert ":" not in role
 
     def __eq__(self, other):
         return (
@@ -464,18 +423,12 @@ class Word(IntermediateNode):
 
     value: str
 
-    def __init__(self, value):
-        self.value = value
-
 
 @register(4007)
 class Words(Node):
     """A sequence of words that does not start not ends with spaces"""
 
     value: str
-
-    def __init__(self, value):
-        self.value = value
 
     def __eq__(self, other):
         return type(self) == type(other) and self.value.strip() == other.value.strip()
@@ -493,9 +446,6 @@ class Words(Node):
 @register(4008)
 class Emph(Node):
     value: Words
-
-    def __init__(self, value):
-        self.value = value
 
     def __hash__(self):
         return hash(repr(self))
@@ -516,9 +466,6 @@ class Emph(Node):
 class Strong(Node):
     content: Words
 
-    def __init__(self, content):
-        self.content = content
-
     @property
     def children(self):
         return [self.content]
@@ -533,9 +480,6 @@ class Strong(Node):
 
 class _XList(Node):
     children: List[ListItem]
-
-    def __init__(self, children):
-        self.children = children
 
 
 @register(4006)
@@ -556,9 +500,6 @@ class ListItem(Node):
         ]
     ]
 
-    def __init__(self, children):
-        self.children = children
-
 
 @register(4039)
 class EnumeratedList(_XList):
@@ -574,35 +515,23 @@ class BulletList(_XList):
 class Signature(Node):
     value: Optional[str]
 
-    def __init__(self, value):
-        self.value = value
-
 
 @register(4012)
 class NumpydocExample(Node):
     value: List[str]
-
-    def __init__(self, value):
-        self.title = "Examples"
-        self.value = value
+    title = "Examples"
 
 
 @register(4013)
 class NumpydocSeeAlso(Node):
     value: List[SeeAlsoItem]
-
-    def __init__(self, value):
-        self.title = "See Also"
-        self.value = value
+    title = "See Also"
 
 
 @register(4014)
 class NumpydocSignature(Node):
     value: str
-
-    def __init__(self, value):
-        self.value = value
-        self.title = "Signature"
+    title = "Signature"
 
 
 @register(4015)
@@ -642,16 +571,6 @@ class Section(Node):
     def __eq__(self, other):
         return super().__eq__(other)
 
-    def __init__(self, children=None, title=None):
-        if children is None:
-            children = []
-        self.children = children
-        if title == "See also":
-            title = "See Also"
-        if title == "Arguments":
-            title = "Parameters"
-        self.title = title
-
     def __getitem__(self, k):
         return self.children[k]
 
@@ -678,9 +597,9 @@ class Section(Node):
 class Parameters(Node):
     children: List[Param]
 
-    def __init__(self, children):
-        assert len(children) > 0
-        self.children = children
+    def validate(self):
+        assert len(self.children) > 0
+        return super().validate()
 
 
 @register(4016)
@@ -704,11 +623,6 @@ class Param(Node):
             EnumeratedList,
         ]
     ]
-
-    def __init__(self, param, type_, desc):
-        self.param = param
-        self.type_ = type_
-        self.desc = desc
 
     @property
     def children(self):
@@ -741,12 +655,8 @@ class Token(Node):
 
     """
 
-    type: Optional[str]
     link: Union[Link, str]
-
-    def __init__(self, link, type):
-        self.link = link
-        self.type = type
+    type: Optional[str]
 
     @property
     def children(self):
@@ -758,12 +668,8 @@ class Token(Node):
 
 @register(4018)
 class Unimplemented(Node):
-    value: str
     placeholder: str
-
-    def __init__(self, placeholder, value):
-        self.placeholder = placeholder
-        self.value = value
+    value: str
 
     def __repr__(self):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
@@ -790,11 +696,6 @@ class Code3(Node):
     children: List[CodeLine]
     out: str
 
-    def __init__(self, status, children, out):
-        self.status = status
-        self.children = children
-        self.out = out
-
 
 @register(4044)
 class CodeLine(Node):
@@ -802,22 +703,12 @@ class CodeLine(Node):
     entries: List[Token]
     highlighted: bool
 
-    def __init__(self, prompt, entries, highlighted):
-        self.prompt = prompt
-        self.entries = entries
-        self.highlighted = highlighted
-
 
 @register(4020)
 class Code2(Node):
     entries: List[Token]
     out: str
     ce_status: str
-
-    def __init__(self, entries, out, ce_status):
-        self.entries = entries
-        self.out = out
-        self.ce_status = ce_status
 
     @property
     def children(self):
@@ -832,12 +723,6 @@ class GenToken(Node):
     value: str
     qa: Optional[str]
     pygmentclass: str
-    noserialise = True
-
-    def __init__(self, value, qa, pygmentclass):
-        self.value = value
-        self.qa = qa
-        self.pygmentclass = pygmentclass
 
 
 # @register(4021)
@@ -846,12 +731,11 @@ class Code(Node):
     out: str
     ce_status: str
 
-    def __init__(self, entries, out: str, ce_status):
-        for x in entries:
+    def validate(self):
+        for x in self.entries:
             assert isinstance(x, GenToken)
-        self.entries = entries
-        self.out = out
-        self.ce_status = ce_status
+
+        return super().validate()
 
     def _validate(self):
         for e in self.entries:  # noqa: B007
@@ -881,11 +765,8 @@ class BlockQuote(Node):
         ]
     ]
 
-    def __init__(self, children):
-        self.children = children
 
-
-def compress_word(stream):
+def compress_word(stream) -> List[Any]:
     acc = []
     wds = ""
     assert isinstance(stream, list)
@@ -930,28 +811,6 @@ class Paragraph(Node):
         ]
     ]
 
-    def __init__(self, children):
-
-        super().__init__()
-
-        for i in children:
-            assert isinstance(
-                i,
-                (
-                    Strong,
-                    Emph,
-                    Words,
-                    Unimplemented,
-                    Directive,
-                    Verbatim,
-                    Link,
-                    ExternalLink,
-                    Math,
-                    SubstitutionRef,
-                ),
-            ), i
-        self.children = children
-
     def __hash__(self):
         return hash((tuple(self.children)))
 
@@ -986,22 +845,12 @@ class Admonition(Node):
         ]
     ]
 
-    def __init__(self, kind=None, title=None, children=None):
-        self.kind = kind
-        self.children = children
-        self.title = title
-
 
 @register(4021)
 class TocTree(Node):
     children: List[TocTree]
     title: str
     ref: RefInfo
-
-    def __init__(self, children, title, ref):
-        self.children = children
-        self.title = title
-        self.ref = ref
 
 
 @register(4031)
@@ -1012,20 +861,16 @@ class BlockDirective(Node):
     options: List[Tuple[str]]
     content: str
 
-    def __init__(self, name, argument, options, content):
-        assert isinstance(name, str)
-        assert isinstance(argument, str)
-        assert isinstance(options, list)
-        for k, v in options:
+    def validate(self):
+
+        assert isinstance(self.name, str)
+        assert isinstance(self.argument, str)
+        assert isinstance(self.options, list)
+        for k, v in self.options:
             assert isinstance(k, str)
             assert isinstance(v, str)
-        assert isinstance(content, str)
-
-        self.name = name
-        self.argument = argument
-        options = [tuple(x) for x in options]
-        self.options = options
-        self.content = content
+        assert isinstance(self.content, str)
+        return super().validate()
 
     @property
     def value(self):
@@ -1037,26 +882,16 @@ class BlockVerbatim(Node):
 
     value: str
 
-    def __init__(self, value):
-        assert isinstance(value, str)
-        self.value = value
-
     def __eq__(self, other):
         return (type(self) == type(other)) and (self.value == other.value)
 
     def __repr__(self):
         return f"<{self.__class__.__name__} '{len(self.value)}'>"
 
-    def to_json(self):
-        return serialize(self, type(self))
-
 
 @register(4033)
 class DefList(Node):
     children: List[DefListItem]
-
-    def __init__(self, children):
-        self.children = children
 
 
 @register(4034)
@@ -1064,16 +899,10 @@ class Options(Node):
 
     values: List[str]
 
-    def __init__(self, values):
-        self.values = values
-
 
 @register(4035)
 class FieldList(Node):
     children: List[FieldListItem]
-
-    def __init__(self, children):
-        self.children = children
 
 
 @register(4036)
@@ -1087,15 +916,13 @@ class FieldListItem(Node):
     ]
     body: List[Union[Words, Paragraph, Verbatim, Admonition]]
 
-    def __init__(self, name=None, body=None):
-        if body is None:
-            body = []
-        for p in body:
+    def validate(self):
+
+        for p in self.body:
             assert isinstance(p, Paragraph), p
-        if name:
-            assert len(name) == 1, (name, [type(n) for n in name])
-        self.name = name
-        self.body = body
+        if self.name:
+            assert len(self.name) == 1, (self.name, [type(n) for n in self.name])
+        return super().validate()
 
     @property
     def children(self):
@@ -1135,11 +962,6 @@ class DefListItem(Node):
     def children(self, value):
         self.dt, *self.dd = value
 
-    def __init__(self, dt=None, dd=None):
-        self.dt = dt
-        assert isinstance(dd, (list, type(None))), dd
-        self.dd = dd
-
 
 @register(4028)
 class SeeAlsoItem(Node):
@@ -1147,14 +969,6 @@ class SeeAlsoItem(Node):
     descriptions: List[Paragraph]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]
-
-    def __init__(self, name=None, descriptions=None, type=None):
-        self.name = name
-        if descriptions is not None:
-            for d in descriptions:
-                assert isinstance(d, Paragraph), repr(d)
-        self.descriptions = descriptions
-        self.type = type
 
     @property
     def children(self):

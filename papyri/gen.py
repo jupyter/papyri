@@ -337,7 +337,7 @@ def _add_classes(entries):
 
 def processed_example_data(example_section_data) -> Section:
     """this should be no-op on already ingested"""
-    new_example_section_data = Section()
+    new_example_section_data = Section([], None)
     for in_out in example_section_data:
         type_ = in_out.__class__.__name__
         # color examples with pygments classes
@@ -687,11 +687,9 @@ class DocBlob(Node):
     def _deserialise(cls, **kwargs):
         # print("will deserialise", cls)
         try:
-            instance = cls._instance()
+            instance = cls(**kwargs)
         except Exception as e:
             raise type(e)(f"Error deserialising {cls}, {kwargs})") from e
-        assert "_content" in kwargs
-        assert kwargs["_content"] is not None
         for k, v in kwargs.items():
             setattr(instance, k, v)
         return instance
@@ -716,39 +714,24 @@ class DocBlob(Node):
         "Examples",
     ]  # List of sections in order
 
-    _content: Dict[str, Optional[Section]]
+    content: Dict[str, Section]
+    example_section_data: Section
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
     item_type: Optional[str]
     aliases: List[str]
-    example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
     signature: Signature
     references: Optional[List[str]]
     arbitrary: List[Section]
-
-    __slots__ = (
-        "_content",
-        "example_section_data",
-        "ordered_sections",
-        "signature",
-        "item_file",
-        "item_line",
-        "item_type",
-        "aliases",
-        "see_also",
-        "references",
-        "logo",
-        "arbitrary",
-    )
 
     def __repr__(self):
         return "<DocBlob ...>"
 
     def slots(self):
         return [
-            "_content",
+            "content",
             "example_section_data",
             "ordered_sections",
             "item_file",
@@ -760,48 +743,32 @@ class DocBlob(Node):
             "arbitrary",
         ]
 
-    def __init__(self):
-        self._content = None
-        self.example_section_data = None
-        self.ordered_sections = None
-        self.item_file = None
-        self.item_line = None
-        self.item_type = None
-        self.aliases = []
-        self.signature = Signature(None)
+    @classmethod
+    def new(cls):
+        return cls({}, None, None, None, None, None, [], [], Signature(None), None, [])
 
-    @property
-    def content(self):
-        """
-        List of sections in the doc blob docstrings
-
-        """
-        return self._content
-
-    @content.setter
-    def content(self, new):
-        assert not new.keys() - {
-            "Signature",
-            "Summary",
-            "Extended Summary",
-            "Parameters",
-            "Returns",
-            "Yields",
-            "Receives",
-            "Raises",
-            "Warns",
-            "Other Parameters",
-            "Attributes",
-            "Methods",
-            "See Also",
-            "Notes",
-            "Warnings",
-            "References",
-            "Examples",
-            "index",
-        }
-        self._content = new
-        assert self._content is not None
+    # def __init__(
+    #    self,
+    #    content,
+    #    example_section_data,
+    #    ordered_sections,
+    #    item_file,
+    #    item_line,
+    #    item_type,
+    #    aliases,
+    #    see_also,
+    #    signature,
+    #    references,
+    #    arbitrary,
+    # ):
+    #    self.content = content
+    #    self.example_section_data = example_section_data
+    #    self.ordered_sections = ordered_sections
+    #    self.item_file = item_file
+    #    self.item_line = item_line
+    #    self.item_type = item_type
+    #    self.aliases = aliases
+    #    self.signature = signature
 
 
 def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str):
@@ -1076,7 +1043,7 @@ class Gen:
         """
         assert qa is not None
         blocks = list(map(splitcode, splitblank(example_section)))
-        example_section_data = Section()
+        example_section_data = Section([], None)
         import matplotlib.pyplot as plt
         import numpy as np
 
@@ -1247,7 +1214,7 @@ class Gen:
                     data = ts.parse(p.read_bytes(), p)
                 except Exception as e:
                     raise type(e)(f"{p=}")
-                blob = DocBlob()
+                blob = DocBlob.new()
                 key = ":".join(parts)[:-4]
                 try:
                     dv = DVR(
@@ -1262,14 +1229,13 @@ class Gen:
                     raise type(e)(f"Error in {p!r}") from e
                 # if dv._tocs:
                 trees[key] = dv._tocs
-                blob.content = {}
 
                 blob.ordered_sections = []
                 blob.item_file = None
                 blob.item_line = None
                 blob.item_type = None
                 blob.aliases = []
-                blob.example_section_data = Section()
+                blob.example_section_data = Section([], None)
                 blob.see_also = []
                 blob.signature = Signature(None)
                 blob.references = None
@@ -1282,7 +1248,7 @@ class Gen:
                 title_map[key] = title
                 if "generated" not in key and title_map[key] is None:
                     print(key, title)
-                self.docs[key] = json.dumps(blob.to_json(), indent=2, sort_keys=True)
+                self.docs[key] = json.dumps(blob.to_dict(), indent=2, sort_keys=True)
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
 
@@ -1448,7 +1414,7 @@ class Gen:
         collect_api_docs
         """
         assert isinstance(aliases, list)
-        blob = DocBlob()
+        blob = DocBlob.new()
 
         blob = self._transform_1(blob, ndoc)
         blob = self._transform_2(blob, target_item, qa)
@@ -1476,13 +1442,13 @@ class Gen:
                     log=self.log,
                 )
             except Exception as e:
-                example_section_data = Section()
+                example_section_data = Section([], None)
                 self.log.error("Error getting example data in %s", repr(qa))
                 from .errors import ExampleError1
 
                 raise ExampleError1(f"Error getting example data in {qa!r}") from e
         else:
-            example_section_data = Section()
+            example_section_data = Section([], None)
             figs = []
 
         refs_I = []
@@ -1524,14 +1490,14 @@ class Gen:
                     pass
                 elif not data:
                     # is empty
-                    blob.content[section] = Section()
+                    blob.content[section] = Section([], None)
                 else:
                     tsc = ts.parse("\n".join(data).encode())
                     assert len(tsc) in (0, 1), (tsc, data)
                     if tsc:
                         tssc = tsc[0]
                     else:
-                        tssc = Section()
+                        tssc = Section([], None)
                     assert isinstance(tssc, Section)
                     blob.content[section] = tssc
             except Exception:
@@ -1539,7 +1505,7 @@ class Gen:
                 raise
         assert isinstance(blob.content["Summary"], Section)
         assert isinstance(
-            blob.content.get("Summary", Section()), Section
+            blob.content.get("Summary", Section([], None)), Section
         ), blob.content["Summary"]
 
         sections_ = [
@@ -1570,9 +1536,9 @@ class Gen:
                         assert not isinstance(l, Section)
                 new_content.append(Param(param, type_, desc=items).validate())
             if new_content:
-                blob.content[s] = Section([Parameters(new_content)])
+                blob.content[s] = Section([Parameters(new_content)], None)
             else:
-                blob.content[s] = Section([])
+                blob.content[s] = Section([], None)
 
         blob.see_also = _normalize_see_also(blob.content.get("See Also", None), qa)
         del blob.content["See Also"]
@@ -1641,7 +1607,8 @@ class Gen:
                     + [
                         Fig(RefInfo(self.root, self.version, "assets", name))
                         for name, _ in figs
-                    ]
+                    ],
+                    None,
                 )
                 s = processed_example_data(s)
                 dv = DVR(
@@ -1702,7 +1669,7 @@ class Gen:
             for edoc, figs in examples_data:
                 self.examples.update(
                     {
-                        k: json.dumps(v.to_json(), indent=2, sort_keys=True)
+                        k: json.dumps(v.to_dict(), indent=2, sort_keys=True)
                         for k, v in edoc.items()
                     }
                 )
@@ -1961,7 +1928,7 @@ class Gen:
                     doc_blob.validate()
                 except Exception as e:
                     raise type(e)(f"Error in {qa}")
-                self.put(qa, json.dumps(doc_blob.to_json(), indent=2, sort_keys=True))
+                self.put(qa, json.dumps(doc_blob.to_dict(), indent=2, sort_keys=True))
                 for name, data in figs:
                     self.put_raw(name, data)
             if error_collector._errors:

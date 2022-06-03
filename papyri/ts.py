@@ -674,7 +674,7 @@ def nest_sections(items) -> List[Section]:
         return []
     acc = []
     if not isinstance(items[0], Section):
-        acc.append(Section([]))
+        acc.append(Section([], None))
     for item in items:
         if isinstance(item, Section):
             acc.append(item)
