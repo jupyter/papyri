@@ -1545,7 +1545,7 @@ class Gen:
         del blob.content["See Also"]
         return blob, figs
 
-    def collect_examples(self, folder, config):
+    def collect_examples(self, folder: Path, config):
         acc = []
         examples = list(folder.glob("**/*.py"))
 
@@ -1588,27 +1588,36 @@ class Gen:
                                 self.log.exception("%s failed %s", example, type(e))
                             else:
                                 raise type(e)(f"Within {example}")
-                entries = parse_script(
+                entries_p = parse_script(
                     script,
                     ns={},
                     prev="",
                     config=config,
                 )
-                if entries is None:
-                    print("Issue in ", self.qa)
+
+                entries: List[Any]
+                if entries_p is None:
+                    print("Issue in ", example)
                     entries = [("fail", "fail")]
+                else:
+                    entries = entries_p
+
+                assert isinstance(entries, list)
 
                 entries = _add_classes(entries)
-                assert set(len(x) for x in entries) == {3}, breakpoint()
+                assert set(len(x) for x in entries) == {3}
 
                 tok_entries = [GenToken(*x) for x in entries]
-
+                l: List[Any] = []  # get typechecker to shut up.
                 s = Section(
-                    [Code(tok_entries, "", ce_status)]
+                    l
+                    + [Code(tok_entries, "", ce_status)]  # ignore: type
                     + [
-                        Fig(RefInfo(self.root, self.version, "assets", name))
+                        Fig(
+                            RefInfo(self.root, self.version, "assets", name)
+                        )  # ignore: type
                         for name, _ in figs
-                    ],
+                    ],  # ignore: type
                     None,
                 )
                 s = processed_example_data(s)
@@ -1673,7 +1682,7 @@ class Gen:
                     self.put_raw(name, data)
 
     def helper_1(
-        self, *, qa: str, target_item
+        self, *, qa: str, target_item: Any
     ) -> Tuple[Optional[str], List[Section], Optional[APIObjectInfo]]:
         """
         Parameters
@@ -1681,10 +1690,10 @@ class Gen:
         qa : str
             fully qualified name of the object we are extracting the
             documentation from .
-        target_item : <Insert Type here>
-            <Multiline Description Here>
+        target_item : Any
+            Can be any kind of object
         """
-        item_docstring = target_item.__doc__
+        item_docstring: str = target_item.__doc__
         builtin_function_or_method = type(sum)
 
         if isinstance(target_item, ModuleType):
