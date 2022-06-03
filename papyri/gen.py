@@ -945,6 +945,9 @@ class Gen:
 
     """
 
+    docs: Dict[str, bytes]
+    examples: Dict[str, bytes]
+
     def __init__(self, dummy_progress, config):
 
         if dummy_progress:
@@ -1248,7 +1251,7 @@ class Gen:
                 title_map[key] = title
                 if "generated" not in key and title_map[key] is None:
                     print(key, title)
-                self.docs[key] = json.dumps(blob.to_dict(), indent=2, sort_keys=True)
+                self.docs[key] = blob.to_json()
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
 
@@ -1258,13 +1261,13 @@ class Gen:
         for file, v in self.docs.items():
             subf = where / "docs"
             subf.mkdir(exist_ok=True, parents=True)
-            with (subf / file).open("w") as f:
+            with (subf / file).open("wb") as f:
                 f.write(v)
 
     def write_examples(self, where: Path) -> None:
         (where / "examples").mkdir(exist_ok=True)
         for k, v in self.examples.items():
-            with (where / "examples" / k).open("w") as f:
+            with (where / "examples" / k).open("wb") as f:
                 f.write(v)
 
     def write_api(self, where: Path):
@@ -1667,12 +1670,7 @@ class Gen:
                 config=self.config,
             )
             for edoc, figs in examples_data:
-                self.examples.update(
-                    {
-                        k: json.dumps(v.to_dict(), indent=2, sort_keys=True)
-                        for k, v in edoc.items()
-                    }
-                )
+                self.examples.update({k: v.to_json() for k, v in edoc.items()})
                 for name, data in figs:
                     self.put_raw(name, data)
 
@@ -1928,7 +1926,7 @@ class Gen:
                     doc_blob.validate()
                 except Exception as e:
                     raise type(e)(f"Error in {qa}")
-                self.put(qa, json.dumps(doc_blob.to_dict(), indent=2, sort_keys=True))
+                self.put(qa, doc_blob.to_json())
                 for name, data in figs:
                     self.put_raw(name, data)
             if error_collector._errors:
