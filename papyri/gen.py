@@ -947,6 +947,8 @@ class Gen:
 
     docs: Dict[str, bytes]
     examples: Dict[str, bytes]
+    data: Dict[str, bytes]
+    bdata: Dict[str, bytes]
 
     def __init__(self, dummy_progress, config):
 
@@ -1261,14 +1263,12 @@ class Gen:
         for file, v in self.docs.items():
             subf = where / "docs"
             subf.mkdir(exist_ok=True, parents=True)
-            with (subf / file).open("wb") as f:
-                f.write(v)
+            (subf / file).write_bytes(v)
 
     def write_examples(self, where: Path) -> None:
         (where / "examples").mkdir(exist_ok=True)
         for k, v in self.examples.items():
-            with (where / "examples" / k).open("wb") as f:
-                f.write(v)
+            (where / "examples" / k).write_bytes(v)
 
     def write_api(self, where: Path):
         """
@@ -1276,8 +1276,7 @@ class Gen:
         """
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
-            with (where / "module" / k).open("w") as f:
-                f.write(v)
+            (where / "module" / k).write_bytes(v)
 
     def write(self, where: Path):
         """
@@ -1295,8 +1294,7 @@ class Gen:
         assets = where / "assets"
         assets.mkdir()
         for k, v in self.bdata.items():
-            with (assets / k).open("wb") as f:
-                f.write(v)
+            (assets / k).write_bytes(v)
 
     def put(self, path: str, data):
         """
@@ -1304,7 +1302,7 @@ class Gen:
         """
         self.data[path + ".json"] = data
 
-    def put_raw(self, path: str, data):
+    def put_raw(self, path: str, data: bytes):
         """
         put some rbinary data at the given path.
         """
