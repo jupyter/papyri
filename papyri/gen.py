@@ -1706,7 +1706,10 @@ class Gen:
                 sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError):
                 sig = None
-            api_object = APIObjectInfo("function", target_item.__doc__, sig)
+            try:
+                api_object = APIObjectInfo("function", target_item.__doc__, sig)
+            except Exception as e:
+                raise type(e)(f"For object {qa!r}")
         elif isinstance(target_item, type):
             api_object = APIObjectInfo("class", target_item.__doc__, None)
         else:
