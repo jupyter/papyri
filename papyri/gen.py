@@ -945,6 +945,11 @@ class Gen:
 
     """
 
+    docs: Dict[str, bytes]
+    examples: Dict[str, bytes]
+    data: Dict[str, bytes]
+    bdata: Dict[str, bytes]
+
     def __init__(self, dummy_progress, config):
 
         if dummy_progress:
@@ -1248,7 +1253,7 @@ class Gen:
                 title_map[key] = title
                 if "generated" not in key and title_map[key] is None:
                     print(key, title)
-                self.docs[key] = json.dumps(blob.to_dict(), indent=2, sort_keys=True)
+                self.docs[key] = blob.to_json()
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
 
@@ -1258,14 +1263,12 @@ class Gen:
         for file, v in self.docs.items():
             subf = where / "docs"
             subf.mkdir(exist_ok=True, parents=True)
-            with (subf / file).open("w") as f:
-                f.write(v)
+            (subf / file).write_bytes(v)
 
     def write_examples(self, where: Path) -> None:
         (where / "examples").mkdir(exist_ok=True)
         for k, v in self.examples.items():
-            with (where / "examples" / k).open("w") as f:
-                f.write(v)
+            (where / "examples" / k).write_bytes(v)
 
     def write_api(self, where: Path):
         """
@@ -1273,8 +1276,7 @@ class Gen:
         """
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
-            with (where / "module" / k).open("w") as f:
-                f.write(v)
+            (where / "module" / k).write_bytes(v)
 
     def write(self, where: Path):
         """
@@ -1292,8 +1294,7 @@ class Gen:
         assets = where / "assets"
         assets.mkdir()
         for k, v in self.bdata.items():
-            with (assets / k).open("wb") as f:
-                f.write(v)
+            (assets / k).write_bytes(v)
 
     def put(self, path: str, data):
         """
@@ -1301,7 +1302,7 @@ class Gen:
         """
         self.data[path + ".json"] = data
 
-    def put_raw(self, path: str, data):
+    def put_raw(self, path: str, data: bytes):
         """
         put some rbinary data at the given path.
         """
@@ -1544,7 +1545,7 @@ class Gen:
         del blob.content["See Also"]
         return blob, figs
 
-    def collect_examples(self, folder, config):
+    def collect_examples(self, folder: Path, config):
         acc = []
         examples = list(folder.glob("**/*.py"))
 
@@ -1587,27 +1588,36 @@ class Gen:
                                 self.log.exception("%s failed %s", example, type(e))
                             else:
                                 raise type(e)(f"Within {example}")
-                entries = parse_script(
+                entries_p = parse_script(
                     script,
                     ns={},
                     prev="",
                     config=config,
                 )
-                if entries is None:
-                    print("Issue in ", self.qa)
+
+                entries: List[Any]
+                if entries_p is None:
+                    print("Issue in ", example)
                     entries = [("fail", "fail")]
+                else:
+                    entries = entries_p
+
+                assert isinstance(entries, list)
 
                 entries = _add_classes(entries)
-                assert set(len(x) for x in entries) == {3}, breakpoint()
+                assert set(len(x) for x in entries) == {3}
 
                 tok_entries = [GenToken(*x) for x in entries]
-
+                l: List[Any] = []  # get typechecker to shut up.
                 s = Section(
-                    [Code(tok_entries, "", ce_status)]
+                    l
+                    + [Code(tok_entries, "", ce_status)]  # ignore: type
                     + [
-                        Fig(RefInfo(self.root, self.version, "assets", name))
+                        Fig(
+                            RefInfo(self.root, self.version, "assets", name)
+                        )  # ignore: type
                         for name, _ in figs
-                    ],
+                    ],  # ignore: type
                     None,
                 )
                 s = processed_example_data(s)
@@ -1667,17 +1677,12 @@ class Gen:
                 config=self.config,
             )
             for edoc, figs in examples_data:
-                self.examples.update(
-                    {
-                        k: json.dumps(v.to_dict(), indent=2, sort_keys=True)
-                        for k, v in edoc.items()
-                    }
-                )
+                self.examples.update({k: v.to_json() for k, v in edoc.items()})
                 for name, data in figs:
                     self.put_raw(name, data)
 
     def helper_1(
-        self, *, qa: str, target_item
+        self, *, qa: str, target_item: Any
     ) -> Tuple[Optional[str], List[Section], Optional[APIObjectInfo]]:
         """
         Parameters
@@ -1685,10 +1690,10 @@ class Gen:
         qa : str
             fully qualified name of the object we are extracting the
             documentation from .
-        target_item : <Insert Type here>
-            <Multiline Description Here>
+        target_item : Any
+            Can be any kind of object
         """
-        item_docstring = target_item.__doc__
+        item_docstring: str = target_item.__doc__
         builtin_function_or_method = type(sum)
 
         if isinstance(target_item, ModuleType):
@@ -1928,7 +1933,7 @@ class Gen:
                     doc_blob.validate()
                 except Exception as e:
                     raise type(e)(f"Error in {qa}")
-                self.put(qa, json.dumps(doc_blob.to_dict(), indent=2, sort_keys=True))
+                self.put(qa, doc_blob.to_json())
                 for name, data in figs:
                     self.put_raw(name, data)
             if error_collector._errors:

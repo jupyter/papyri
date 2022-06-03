@@ -362,7 +362,7 @@ class GraphStore:
         mp = self._meta_path(key.module, key.version)
         return mp.read_bytes()
 
-    def put(self, key: Key, bytes_, refs) -> None:
+    def put(self, key: Key, bytes_: bytes, refs) -> None:
         """
         Store object ``bytes``, as path ``key`` with the corresponding
         links to other objects.

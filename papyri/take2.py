@@ -57,10 +57,11 @@ Unless your use case is widely adopted it is likely not worse the complexity
 
 from __future__ import annotations
 
+import json
 import sys
 import typing
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union, NewType
+from typing import Any, Dict, List, NewType, Optional, Tuple, Union
 
 import cbor2
 from there import print
@@ -212,6 +213,13 @@ class Node(Base):
             acc += f"{t}: {getattr(self, t)!r}\n"
 
         return f"<{self.__class__.__name__}: \n{indent(acc)}>"
+
+    def to_json(self) -> bytes:
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True).encode()
+
+    @classmethod
+    def from_json(cls, data: bytes):
+        return cls.from_dict(json.loads(data))
 
     def to_dict(self):
         return serialize(self, type(self))
@@ -725,7 +733,6 @@ class GenToken(Node):
     pygmentclass: str
 
 
-# @register(4021)
 class Code(Node):
     entries: List[GenToken]
     out: str

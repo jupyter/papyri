@@ -39,6 +39,7 @@ docspage = 'https://numpy.org/doc/1.22/'
 [global.expected_errors]
 ValueError = [
     "numpy.core.shape_base._concatenate_shapes",
+    "numpy.rollaxis",
     ]
 NumpydocParseError = [
     "numpy._from_dlpack",
@@ -49,7 +50,6 @@ VisitCitationReferenceNotImplementedError = [
     "numpy.fft",
     ]
 VisitSubstitutionDefinitionNotImplementedError = [
-    "numpy.rollaxis",
     ]
 IncorrectInternalDocsLen = [
     "numpy.tensordot",
@@ -57,7 +57,5 @@ IncorrectInternalDocsLen = [
     "numpy.core._internal._view_is_safe",
     "numpy.distutils.misc_util.Configuration.__init__",]
 AssertionError = [
-    "numpy.polynomial.polynomial.polyvalfromroots",
-    "numpy.random.bit_generator.ISeedSequence.generate_state",
 ]
 
