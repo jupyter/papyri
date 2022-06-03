@@ -68,7 +68,7 @@ def find_all_refs(
 class IngestedBlobs(Node):
 
     __slots__ = (
-        "_content",
+        "content",
         "ordered_sections",
         "item_file",
         "item_line",
@@ -83,7 +83,7 @@ class IngestedBlobs(Node):
         "arbitrary",
     )
 
-    _content: Dict[str, Section]
+    content: Dict[str, Section]
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
@@ -98,28 +98,34 @@ class IngestedBlobs(Node):
 
     __isfrozen = False
 
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        self._content = kwargs.pop("_content", {})
-        self.example_section_data = kwargs.pop("example_section_data", None)
-        self.ordered_sections = kwargs.pop("ordered_sections", None)
-        self.item_file = kwargs.pop("item_file", None)
-        self.item_line = kwargs.pop("item_line", None)
-        self.item_type = kwargs.pop("item_type", None)
-        self.aliases = kwargs.pop("aliases", [])
-        self.see_also = kwargs.pop("see_also", None)
-        assert "version" not in kwargs
-        self.signature = kwargs.pop("signature", None)
-        self.references = kwargs.pop("references", None)
-        assert "logo" not in kwargs
-        self.qa = kwargs.pop("qa", None)
-        self.arbitrary = kwargs.pop("arbitrary", None)
-        if self.arbitrary:
-            for a in self.arbitrary:
-                assert isinstance(a, Section), a
-        assert not kwargs, kwargs
-        assert not args, args
-        self._freeze()
+    @classmethod
+    def new(cls):
+        return cls(
+            {}, None, None, None, None, [], None, None, None, None, None, None, None
+        )
+
+    # def __init__(self, *args, **kwargs):
+    # super().__init__()
+    # self.content = kwargs.pop("content", {})
+    # self.example_section_data = kwargs.pop("example_section_data", None)
+    # self.ordered_sections = kwargs.pop("ordered_sections", None)
+    # self.item_file = kwargs.pop("item_file", None)
+    # self.item_line = kwargs.pop("item_line", None)
+    # self.item_type = kwargs.pop("item_type", None)
+    # self.aliases = kwargs.pop("aliases", [])
+    # self.see_also = kwargs.pop("see_also", None)
+    # assert "version" not in kwargs
+    # self.signature = kwargs.pop("signature", None)
+    # self.references = kwargs.pop("references", None)
+    # assert "logo" not in kwargs
+    # self.qa = kwargs.pop("qa", None)
+    # self.arbitrary = kwargs.pop("arbitrary", None)
+    # if self.arbitrary:
+    #    for a in self.arbitrary:
+    #        assert isinstance(a, Section), a
+    # assert not kwargs, kwargs
+    # assert not args, args
+    # self._freeze()
 
     def __setattr__(self, key, value):
         if self.__isfrozen and not hasattr(self, key):
@@ -128,18 +134,6 @@ class IngestedBlobs(Node):
 
     def _freeze(self):
         self.__isfrozen = True
-
-    @property
-    def content(self):
-        """
-        List of sections in the doc blob docstrings
-
-        """
-        return self._content
-
-    @content.setter
-    def content(self, new):
-        assert False
 
     def all_forward_refs(self) -> List[Key]:
 
@@ -167,7 +161,7 @@ class IngestedBlobs(Node):
         Process a doc blob, to find all local and nonlocal references.
         """
         assert isinstance(known_refs, frozenset)
-        assert self._content is not None
+        assert self.content is not None
         _local_refs: List[List[str]] = []
         sections_ = [
             "Parameters",
@@ -241,7 +235,7 @@ def load_one_uningested(
     old_data = DocBlob.from_json(data)
     assert hasattr(old_data, "arbitrary")
 
-    blob = IngestedBlobs()
+    blob = IngestedBlobs.new()
     blob.qa = qa
 
     for k in old_data.slots():

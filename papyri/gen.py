@@ -687,11 +687,9 @@ class DocBlob(Node):
     def _deserialise(cls, **kwargs):
         # print("will deserialise", cls)
         try:
-            instance = cls._instance()
+            instance = cls(**kwargs)
         except Exception as e:
             raise type(e)(f"Error deserialising {cls}, {kwargs})") from e
-        assert "_content" in kwargs
-        assert kwargs["_content"] is not None
         for k, v in kwargs.items():
             setattr(instance, k, v)
         return instance
@@ -716,39 +714,24 @@ class DocBlob(Node):
         "Examples",
     ]  # List of sections in order
 
-    _content: Dict[str, Optional[Section]]
+    content: Dict[str, Optional[Section]]
+    example_section_data: Section
     ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
     item_type: Optional[str]
     aliases: List[str]
-    example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
     signature: Signature
     references: Optional[List[str]]
     arbitrary: List[Section]
-
-    __slots__ = (
-        "_content",
-        "example_section_data",
-        "ordered_sections",
-        "signature",
-        "item_file",
-        "item_line",
-        "item_type",
-        "aliases",
-        "see_also",
-        "references",
-        "logo",
-        "arbitrary",
-    )
 
     def __repr__(self):
         return "<DocBlob ...>"
 
     def slots(self):
         return [
-            "_content",
+            "content",
             "example_section_data",
             "ordered_sections",
             "item_file",
@@ -760,48 +743,33 @@ class DocBlob(Node):
             "arbitrary",
         ]
 
-    def __init__(self):
-        self._content = None
-        self.example_section_data = None
-        self.ordered_sections = None
-        self.item_file = None
-        self.item_line = None
-        self.item_type = None
-        self.aliases = []
-        self.signature = Signature(None)
 
-    @property
-    def content(self):
-        """
-        List of sections in the doc blob docstrings
+    @classmethod
+    def new(cls):
+        return cls({}, None, None, None, None, None, [], [], Signature(None), None, [])
 
-        """
-        return self._content
-
-    @content.setter
-    def content(self, new):
-        assert not new.keys() - {
-            "Signature",
-            "Summary",
-            "Extended Summary",
-            "Parameters",
-            "Returns",
-            "Yields",
-            "Receives",
-            "Raises",
-            "Warns",
-            "Other Parameters",
-            "Attributes",
-            "Methods",
-            "See Also",
-            "Notes",
-            "Warnings",
-            "References",
-            "Examples",
-            "index",
-        }
-        self._content = new
-        assert self._content is not None
+    # def __init__(
+    #    self,
+    #    content,
+    #    example_section_data,
+    #    ordered_sections,
+    #    item_file,
+    #    item_line,
+    #    item_type,
+    #    aliases,
+    #    see_also,
+    #    signature,
+    #    references,
+    #    arbitrary,
+    # ):
+    #    self.content = content
+    #    self.example_section_data = example_section_data
+    #    self.ordered_sections = ordered_sections
+    #    self.item_file = item_file
+    #    self.item_line = item_line
+    #    self.item_type = item_type
+    #    self.aliases = aliases
+    #    self.signature = signature
 
 
 def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str):
@@ -1247,7 +1215,7 @@ class Gen:
                     data = ts.parse(p.read_bytes(), p)
                 except Exception as e:
                     raise type(e)(f"{p=}")
-                blob = DocBlob()
+                blob = DocBlob.new()
                 key = ":".join(parts)[:-4]
                 try:
                     dv = DVR(
@@ -1262,7 +1230,6 @@ class Gen:
                     raise type(e)(f"Error in {p!r}") from e
                 # if dv._tocs:
                 trees[key] = dv._tocs
-                blob.content = {}
 
                 blob.ordered_sections = []
                 blob.item_file = None
@@ -1448,7 +1415,7 @@ class Gen:
         collect_api_docs
         """
         assert isinstance(aliases, list)
-        blob = DocBlob()
+        blob = DocBlob.new()
 
         blob = self._transform_1(blob, ndoc)
         blob = self._transform_2(blob, target_item, qa)

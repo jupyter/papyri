@@ -68,6 +68,8 @@ from there import print
 from papyri.miniserde import deserialize, get_type_hints, serialize
 from papyri.utils import dedent_but_first
 
+import msgspec
+
 FullQual = NewType("FullQual", str)
 Cannonical = NewType("Cannonical", str)
 
@@ -224,7 +226,6 @@ class Leaf(Node):
     value: str
 
 
-
 class IntermediateNode(Node):
     """
     This is just a dummy class for Intermediate node that should not make it to the final Product
@@ -352,7 +353,6 @@ class ExternalLink(Node):
     target: str
 
 
-
 @register(4002)
 class Link(Node):
     """
@@ -381,7 +381,7 @@ class Link(Node):
     kind: str
     exists: bool
 
-    def __init__(self, value=None, reference=None, kind=None, exists=None):
+    def __init__(self, value, reference, kind, exists):
         assert kind in ("exists", "missing", "local", "module", None), kind
         self.value = value
         self.reference = reference
@@ -456,6 +456,7 @@ class Word(IntermediateNode):
     """
 
     value: str
+
 
 @register(4007)
 class Words(Node):
@@ -640,9 +641,9 @@ class Section(Node):
 class Parameters(Node):
     children: List[Param]
 
-    def __init__(self, children):
-        assert len(children) > 0
-        self.children = children
+    def validate(self):
+        assert len(self.children) > 0
+        return super().validate()
 
 
 @register(4016)
@@ -714,7 +715,6 @@ class Unimplemented(Node):
     placeholder: str
     value: str
 
-
     def __repr__(self):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
 
@@ -754,7 +754,6 @@ class Code2(Node):
     out: str
     ce_status: str
 
-
     @property
     def children(self):
         return [*self.entries, self.out, self.ce_status]
@@ -776,12 +775,11 @@ class Code(Node):
     out: str
     ce_status: str
 
-    def __init__(self, entries, out: str, ce_status):
-        for x in entries:
+    def validate(self):
+        for x in self.entries:
             assert isinstance(x, GenToken)
-        self.entries = entries
-        self.out = out
-        self.ce_status = ce_status
+
+        return super().validate()
 
     def _validate(self):
         for e in self.entries:  # noqa: B007
@@ -812,7 +810,7 @@ class BlockQuote(Node):
     ]
 
 
-def compress_word(stream):
+def compress_word(stream) -> List[Any]:
     acc = []
     wds = ""
     assert isinstance(stream, list)
@@ -857,28 +855,6 @@ class Paragraph(Node):
         ]
     ]
 
-    def __init__(self, children):
-
-        super().__init__()
-
-        for i in children:
-            assert isinstance(
-                i,
-                (
-                    Strong,
-                    Emph,
-                    Words,
-                    Unimplemented,
-                    Directive,
-                    Verbatim,
-                    Link,
-                    ExternalLink,
-                    Math,
-                    SubstitutionRef,
-                ),
-            ), i
-        self.children = children
-
     def __hash__(self):
         return hash((tuple(self.children)))
 
@@ -914,7 +890,6 @@ class Admonition(Node):
     ]
 
 
-
 @register(4021)
 class TocTree(Node):
     children: List[TocTree]
@@ -930,15 +905,18 @@ class BlockDirective(Node):
     options: List[Tuple[str]]
     content: str
 
-    def __init__(self, name, argument, options, content):
-        assert isinstance(name, str)
-        assert isinstance(argument, str)
-        assert isinstance(options, list)
-        for k, v in options:
+    def validate(self):
+
+        assert isinstance(self.name, str)
+        assert isinstance(self.argument, str)
+        assert isinstance(self.options, list)
+        for k, v in self.options:
             assert isinstance(k, str)
             assert isinstance(v, str)
-        assert isinstance(content, str)
+        assert isinstance(self.content, str)
+        return super().validate()
 
+    def __init__(self, name, argument, options, content):
         self.name = name
         self.argument = argument
         options = [tuple(x) for x in options]
@@ -954,10 +932,6 @@ class BlockDirective(Node):
 class BlockVerbatim(Node):
 
     value: str
-
-    def __init__(self, value):
-        assert isinstance(value, str)
-        self.value = value
 
     def __eq__(self, other):
         return (type(self) == type(other)) and (self.value == other.value)
@@ -996,15 +970,13 @@ class FieldListItem(Node):
     ]
     body: List[Union[Words, Paragraph, Verbatim, Admonition]]
 
-    def __init__(self, name=None, body=None):
-        if body is None:
-            body = []
-        for p in body:
+    def validate(self):
+
+        for p in self.body:
             assert isinstance(p, Paragraph), p
-        if name:
-            assert len(name) == 1, (name, [type(n) for n in name])
-        self.name = name
-        self.body = body
+        if self.name:
+            assert len(self.name) == 1, (name, [type(n) for n in name])
+        return super().validate()
 
     @property
     def children(self):
@@ -1044,10 +1016,6 @@ class DefListItem(Node):
     def children(self, value):
         self.dt, *self.dd = value
 
-    def __init__(self, dt=None, dd=None):
-        self.dt = dt
-        assert isinstance(dd, (list, type(None))), dd
-        self.dd = dd
 
 
 @register(4028)
@@ -1056,14 +1024,6 @@ class SeeAlsoItem(Node):
     descriptions: List[Paragraph]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]
-
-    def __init__(self, name=None, descriptions=None, type=None):
-        self.name = name
-        if descriptions is not None:
-            for d in descriptions:
-                assert isinstance(d, Paragraph), repr(d)
-        self.descriptions = descriptions
-        self.type = type
 
     @property
     def children(self):
