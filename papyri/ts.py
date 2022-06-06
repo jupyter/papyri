@@ -31,6 +31,7 @@ from papyri.take2 import (
     Word,
     Words,
     compress_word,
+    inline_nodes,
 )
 
 from . import errors
@@ -249,9 +250,12 @@ class TSVisitor:
             if kind == "::":
                 if acc and isinstance(acc[-1], Word):
                     word = acc.pop()
-                    acc.append(Word(word.value + "::"))
+                    acc.append(Word(word.value + ":"))
+                elif acc and isinstance(acc[-1], inline_nodes):
+                    print(acc[-1])
+                    acc.append(Word(":"))
                 # else:
-                #    acc.append(Word("::"))
+                #    assert False
                 continue
             if not hasattr(self, "visit_" + kind):
                 raise ValueError(

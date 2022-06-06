@@ -799,6 +799,21 @@ class Transition(Node):
     pass
 
 
+inline_nodes = tuple(
+    [
+        Words,
+        Strong,
+        Emph,
+        Directive,
+        Verbatim,
+        Link,
+        ExternalLink,
+        Math,
+        SubstitutionRef,
+    ]
+)
+
+
 @register(4025)
 class Paragraph(Node):
 
