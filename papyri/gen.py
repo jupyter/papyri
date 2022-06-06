@@ -1600,9 +1600,9 @@ class Gen:
                     print("Issue in ", example)
                     entries = [("fail", "fail")]
                 else:
-                    entries = entries_p
+                    entries = list(entries_p)
 
-                assert isinstance(entries, list)
+                assert isinstance(entries, list), entries
 
                 entries = _add_classes(entries)
                 assert set(len(x) for x in entries) == {3}

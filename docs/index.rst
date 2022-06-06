@@ -12,6 +12,54 @@ If you are working only on API docs, you can use ``papyri gen <conffile.toml> --
 part. Though be aware that some of the cross linking features will not work. 
 
 
+Examples
+--------
+
+These are examples of various RST constructs, mostly as a visual test they render
+correctly (or not yet). 
+
+
+Lists
+-----
+
+Enumerated lists
+~~~~~~~~~~~~~~~~
+
+1. item 1
+2. item 2
+2. item 3
+
+
+
+Bullet Lists
+~~~~~~~~~~~~
+
+- Item 
+- other item
+- another one
+
+
+Headers
+-------
+
+Header 3
+~~~~~~~~
+
+Header 4
+^^^^^^^^
+
+Header 5
+````````
+
+
+Directives
+-----------
+
+Note that directive are not a thing in themselves, and convert to other kind of nodes, 
+when they are not understood they are currently rendered raw, but will be an error
+
+
+
 .. warning:: no title
 
    This is a warning
