@@ -372,19 +372,12 @@ class TSVisitor:
         return [t]
 
     def visit_literal_block(self, node, prev_end=None):
-        data = self.bytes[node.start_byte : node.end_byte].decode().splitlines()
-        dedent_amount = node.start_point[1]
+        datas = self.bytes[node.start_byte : node.end_byte].decode()
+        first_offset = node.start_point[1]
+        datas = " " * first_offset + datas
 
-        # here we need to do a bit of custom logic to properly dedent
-        acc = [data[0]]
-        for x in data[1:]:
-            # TODO : maybe assert here that what we remove is actually only whitespace ?
-            # should we have a blcok verbatim with the first node more indented than subsequent ones ?
-            acc.append(x[dedent_amount:])
 
-        b = BlockVerbatim("\n".join(acc))
-
-        # print(' '*self.depth*4, b)
+        b = BlockVerbatim(dedent(datas))
         return [b]
 
     def visit_bullet_list(self, node, prev_end=None):

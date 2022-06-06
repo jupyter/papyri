@@ -180,6 +180,9 @@ def register(value):
     return _inner
 
 
+register(tuple)(4444)
+
+
 class Node(Base):
     def __init__(self, *args, **kwargs):
         tt = get_type_hints(type(self))
@@ -188,6 +191,8 @@ class Node(Base):
         for k, v in kwargs.items():
             assert k in tt
             setattr(self, k, v)
+        if hasattr(self, "_post_deserialise"):
+            self._post_deserialise()
 
     def cbor(self, encoder):
 
@@ -889,11 +894,16 @@ class BlockDirective(Node):
         assert isinstance(self.name, str)
         assert isinstance(self.argument, str)
         assert isinstance(self.options, list)
-        for k, v in self.options:
+        for it in self.options:
+            assert isinstance(it, tuple)
+            k, v = it
             assert isinstance(k, str)
             assert isinstance(v, str)
         assert isinstance(self.content, str)
         return super().validate()
+
+    def _post_deserialise(self):
+        self.options = [tuple(x) for x in self.options]
 
     @property
     def value(self):
