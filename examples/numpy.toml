@@ -20,7 +20,7 @@ submodules = ['distutils','typing','dual']
 docs_path = '~/dev/numpy/doc/source'
 
 exec = true
-exclude = []
+exclude = ['numpy._from_dlpack','numpy.lib.utils.get_include','numpy.core.shape_base._concatenate_shapes']
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
 homepage = 'https://numpy.org'

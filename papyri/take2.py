@@ -575,6 +575,7 @@ class Section(Node):
     ]
     # might need to be more complicated like verbatim.
     title: Optional[str]
+    level: int = 0
 
     def __eq__(self, other):
         return super().__eq__(other)

@@ -145,10 +145,18 @@ li > p {
 
 h1,
 h2,
-h3 {
+h3,
+h4,
+h5,
+h6 {
   color: #4e4e4e;
   font-weight: 400;
   margin-bottom: 1rem;
+  border-bottom: none;
+}
+
+h1,
+h2 {
   border-bottom: 1px solid var(--nc-bg-3);
 }
 

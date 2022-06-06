@@ -5,6 +5,8 @@ from typing import List
 
 from tree_sitter import Language, Parser
 
+allowed_adorn = "=-`:.'\"~^_*+#<>"
+
 from papyri.take2 import (
     BlockDirective,
     BlockQuote,
@@ -186,6 +188,7 @@ class TSVisitor:
         self.root = root
         self.qa = qa
         self.depth = 0
+        self._section_levels = {}
 
     def as_text(self, node):
         return self.bytes[node.start_byte : node.end_byte].decode()
@@ -252,7 +255,6 @@ class TSVisitor:
                     word = acc.pop()
                     acc.append(Word(word.value + ":"))
                 elif acc and isinstance(acc[-1], inline_nodes):
-                    print(acc[-1])
                     acc.append(Word(":"))
                 # else:
                 #    assert False
@@ -409,15 +411,49 @@ class TSVisitor:
             tc = node.children[1]
             assert node.children[2].type == "adornment"
             assert len(node.children) == 3
+
+            pre_text = self.as_text(node.children[0])
+            set_pre_a = set(pre_text)
+
+            post_text = self.as_text(node.children[2])
+            set_post_a = set(post_text)
+
+            assert len(set_pre_a) == 1
+            assert len(set_post_a) == 1
+
+            pre_a = next(iter(set_pre_a))
+            post_a = next(iter(set_post_a))
+
+            assert pre_a == post_a
+
+            assert len(pre_text) == len(post_text)
+
+            assert len(pre_text) >= len(self.as_text(tc))
         else:
             assert node.children[0].type == "title"
             tc = node.children[0]
             assert node.children[1].type == "adornment"
             assert len(node.children) == 2
-        title = self.bytes[tc.start_byte : tc.end_byte].decode()
+            pre_a = ""
+            post_text = self.as_text(node.children[1])
+            set_post_a = set(post_text)
+            assert len(set_post_a) == 1
+            post_a = next(iter(set_post_a))
+
+            assert len(post_text) >= len(self.as_text(tc)), self.as_text(tc)
+
+        assert post_a in allowed_adorn
+
+        if pre_a + post_a in self._section_levels:
+            level = self._section_levels[pre_a + post_a]
+        else:
+            level = len(self._section_levels)
+            self._section_levels[pre_a + post_a] = level
+
+        title = self.as_text(tc)
         # print(' '*self.depth*4, '== Section: ', title, '==')
         # print(' '*self.depth*4, '->', node)
-        return [Section([], title)]
+        return [Section([], title, level=level)]
 
     def visit_block_quote(self, node, prev_end=None):
         return [BlockQuote(self.visit(node))]
@@ -694,7 +730,9 @@ def parse(text: bytes, qa=None) -> List[Section]:
 
     tree = parser.parse(text)
     root = Node(tree.root_node)
-    return nest_sections(TSVisitor(text, root, qa).visit_document(root))
+    tsv = TSVisitor(text, root, qa)
+    res = tsv.visit_document(root)
+    return nest_sections(res)
 
 
 class TreeSitterParseError(Exception):

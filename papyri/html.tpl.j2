@@ -82,7 +82,7 @@
 
 {% for s in doc.arbitrary -%}
     {% if s.title -%}
-        <h1>{{s.title}}</h1>
+        <h{{s.level+1}}>{{s.title}}</h{{s.level+1}}>
     {% endif -%}
 
 {{render_II(s)}}

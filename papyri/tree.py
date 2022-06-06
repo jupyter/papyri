@@ -615,7 +615,7 @@ class DirectiveVisiter(TreeReplacer):
                 assert "<" not in link
                 toc.append([title, link])
             else:
-                assert "<" not in line, breakpoint()
+                assert "<" not in line
                 toc.append([None, line])
 
         self._tocs.append(toc)
