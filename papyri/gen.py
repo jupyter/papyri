@@ -329,7 +329,7 @@ def get_classes(code):
 
 
 def _add_classes(entries):
-    assert set(len(x) for x in entries) == {2}, breakpoint()
+    assert set(len(x) for x in entries) == {2}
     text = "".join([x for x, y in entries])
     classes = get_classes(text)
     return [ii + (cc,) for ii, cc in zip(entries, classes)]

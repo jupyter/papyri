@@ -10,7 +10,12 @@ exec = true
 exclude_jedi = ['networkx.algorithms.planarity.PlanarEmbedding']
 exec_failure = 'fallback'
 source = 'https://github.com/networkx/networkx'
-exclude = [ 'networkx.algorithms.distance_measures.barycenter',
+exclude = [ 
+            # https://github.com/stsewd/tree-sitter-rst/issues/31:
+            'networkx.algorithms.smallworld.random_reference',
+            'networkx.generators.joint_degree_seq._directed_neighbor_switch',
+            # ??
+            'networkx.algorithms.distance_measures.barycenter',
             'networkx.generators.geometric.geographical_threshold_graph',
              # `k`th parsing issue
             'networkx.algorithms.operators.product.power',

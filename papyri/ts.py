@@ -5,7 +5,7 @@ from typing import List
 
 from tree_sitter import Language, Parser
 
-allowed_adorn = "=-`:'\"~^_*+#<>"
+allowed_adorn = "=-`:.'\"~^_*+#<>"
 
 from papyri.take2 import (
     BlockDirective,
@@ -426,7 +426,7 @@ class TSVisitor:
 
             assert pre_a == post_a
 
-            assert len(pre_text) == len(post_text), breakpoint()
+            assert len(pre_text) == len(post_text)
 
             assert len(pre_text) >= len(self.as_text(tc))
         else:
@@ -437,10 +437,10 @@ class TSVisitor:
             pre_a = ""
             post_text = self.as_text(node.children[1])
             set_post_a = set(post_text)
-            assert len(set_post_a) == 1, breakpoint()
+            assert len(set_post_a) == 1
             post_a = next(iter(set_post_a))
 
-            assert len(post_text) >= len(self.as_text(tc)), breakpoint()
+            assert len(post_text) >= len(self.as_text(tc)), self.as_text(tc)
 
         assert post_a in allowed_adorn
 

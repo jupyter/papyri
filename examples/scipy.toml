@@ -3,7 +3,14 @@ module = 'scipy'
 logo = "../scipy_logo.png"
 exec = true
 submodules = [ "signal","misc"]
-exclude = [ "scipy.sparse.csgraph._traversal.breadth_first_tree",
+exclude = [
+    # https://github.com/stsewd/tree-sitter-rst/issues/31
+    "scipy.interpolate._fitpack_py.splprep",
+    "scipy.sparse._construct._compressed_sparse_stack",
+    "scipy.sparse._construct._stack_along_minor_axis",
+    # OTHER.
+
+    "scipy.sparse.csgraph._traversal.breadth_first_tree",
     "scipy.sparse.csgraph._traversal.depth_first_tree",
 
     # this just prints quad docs to stdout and should be removed.

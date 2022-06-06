@@ -312,7 +312,7 @@ class Ingester:
                     refs,
                 )
             except Exception:
-                breakpoint()
+                raise
 
     def _ingest_assets(self, path, root, version, aliases, gstore):
         for _, f2 in self.progress(
