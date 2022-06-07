@@ -243,13 +243,16 @@ class Ingester:
             description=f"{path.name} Reading narrative docs ",
         ):
 
-            doc = load_one_uningested(
-                document.read_bytes(),
-                qa=document.name,
-                known_refs=frozenset(),
-                aliases={},
-                version=None,
-            )
+            try:
+                doc = load_one_uningested(
+                    document.read_bytes(),
+                    qa=document.name,
+                    known_refs=frozenset(),
+                    aliases={},
+                    version=None,
+                )
+            except Exception as e:
+                raise type(e)(f"at path: {document}")
             ref = document.name
 
             module, version = path.name.split("_")

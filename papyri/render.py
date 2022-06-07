@@ -379,7 +379,7 @@ class HtmlRenderer:
             # a2 = visitor.generic_visit(obj.content)
             # print(a1, a2)
 
-        doc = IngestedBlobs()
+        doc = IngestedBlobs.new()
 
         class S:
             pass

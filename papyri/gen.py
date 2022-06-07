@@ -1743,11 +1743,12 @@ class Gen:
         if self.config.logo:
             logo_path = relative_dir / self.config.logo
             self.put_raw(logo_path.name, logo_path.read_bytes())
+            logo = logo_path.name
+        else:
+            logo = None
         module = __import__(root)
         self.version = module.__version__
-        self._meta.update(
-            {"logo": logo_path.name, "module": root, "version": self.version}
-        )
+        self._meta.update({"logo": logo, "module": root, "version": self.version})
         self._meta.update(meta)
 
     def collect_api_docs(
