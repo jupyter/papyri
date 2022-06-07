@@ -376,7 +376,6 @@ class TSVisitor:
         first_offset = node.start_point[1]
         datas = " " * first_offset + datas
 
-
         b = BlockVerbatim(dedent(datas))
         return [b]
 
