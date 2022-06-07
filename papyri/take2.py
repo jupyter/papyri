@@ -881,6 +881,8 @@ class TocTree(Node):
     children: List[TocTree]
     title: str
     ref: RefInfo
+    open: bool = False
+    current: bool = False
 
 
 @register(4031)

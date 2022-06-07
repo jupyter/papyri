@@ -191,7 +191,7 @@
          <hr/>
 
      {% elif type == 'TocTree' %}
-             {%if obj.children%}
+        {%if obj.children%}
             <details class='toctree' open>
             <summary><a class="toctree" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a></summary>
               <ul>

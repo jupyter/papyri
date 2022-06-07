@@ -221,7 +221,7 @@ strong {
 .sidenav {
   height: 100%;
   /* Full-height: remove this if you want "auto" height */
-  width: 200px;
+  width: 300px;
   /* Set the width of the sidebar */
   position: fixed;
   /* Fixed Sidebar (stay in place on scroll) */
@@ -237,6 +237,17 @@ strong {
   /* Disable horizontal scroll */
   padding-top: 3rem;
   /*box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;*/
+  transition: width 2s;
+  transition-delay: 3s;
+}
+
+.sidenav:hover {
+  width: 500px;
+}
+
+.sidenav ul {
+  list-style: none;
+  padding-left: 0.2rem;
 }
 
 .sidenav a {
@@ -248,6 +259,34 @@ strong {
 
 .sidenav a:hover {
   text-decoration: underline;
+}
+
+.sidenav summary a {
+  display: inline;
+}
+
+.toctree ul {
+  padding-left: 30px;
+}
+
+.toctree ul li {
+  margin-top: 0.1rem;
+}
+
+.toctree.True {
+  color: black;
+}
+
+details.toctree[open] {
+  background-color: #8080802e;
+}
+
+.toctree summary a {
+  padding-left: 4px;
+}
+
+.toctree ul li a {
+  padding: 0;
 }
 
 .sidenav img {
