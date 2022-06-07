@@ -1,0 +1,21 @@
+[global]
+module = 'readthedocs'
+execute_exclude_patterns = []
+
+submodules = []
+
+docs_path = '~/dev/readthedocs.org/docs'
+
+exec = false
+exclude = []
+exec_failure = 'fallback'
+source = 'https://github.com/readthedocs/readthedocs.org'
+homepage = 'https://readthedocs.org'
+early_error = true
+
+[meta]
+github_slug = 'readthedocs/readthedocs.org'
+tag = ''
+pypi = ''
+homepage = ''
+docspage = ''
