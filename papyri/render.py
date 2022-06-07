@@ -730,6 +730,15 @@ class HtmlRenderer:
                     config.output_dir / module / version / "docs" / f"{path}.html"
                 ).write_text(data)
 
+        tocs = set([(m, v) for m, v, _, _ in narrative])
+        for module, version in tocs:
+            print("toc for", module, version)
+            toc = await self._list_narative(module, version, "")
+            if config.output_dir:
+                (config.output_dir / module / version / "docs" / "toc.html").write_text(
+                    toc
+                )
+
     async def examples_handler(self, package, version, subpath):
 
         meta = encoder.decode(self.store.get_meta(Key(package, version, None, None)))
