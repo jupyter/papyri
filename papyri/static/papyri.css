@@ -277,7 +277,7 @@ strong {
   color: black;
 }
 
-details.toctree[open] {
+.sidebar details.toctree[open] {
   background-color: #8080802e;
 }
 
