@@ -20,15 +20,22 @@ def dotdotcount(path):
 
 
 def _tree(current_path, unnest, counter, depth=0) -> Dict:
-    assert current_path in counter
+    if current_path not in counter:
+        print("Warning, ", current_path, "not in Counter")
+        counter[current_path] = 0
     counter[current_path] += 1
     children = {}
     children_path = unnest.get(current_path, [])
     directory = current_path.split(":")[:-1]
     # print(' '*depth*4, 'dir', directory, f'({current_path})')
     for cp in children_path:
+        if not cp:
+            continue
 
-        assert not cp.startswith("/")
+        # assert not cp.startswith("/"), breakpoint()
+        if cp.startswith("/"):
+            print("skip absolute path", cp, "in", current_path)
+            continue
         if cp.endswith("/"):
             cp = cp + "index"
 
@@ -45,7 +52,7 @@ def _tree(current_path, unnest, counter, depth=0) -> Dict:
         # print(' '*depth*4,cp, '->', p)
         assert p not in children
         if p not in counter:
-            print("SKIP Path", p)
+            print("skip Path", p, "in", current_path, repr(cp))
             continue
         children[p] = _tree(p, unnest, depth=depth + 1, counter=counter)
 

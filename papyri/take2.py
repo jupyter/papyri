@@ -510,6 +510,7 @@ class ListItem(Node):
             BlockMath,
             Unimplemented,
             Admonition,
+            Comment,
         ]
     ]
 
@@ -870,6 +871,7 @@ class Admonition(Node):
             BlockDirective,
             Admonition,
             Unimplemented,  # skimage.util._regular_grid.regular_grid
+            EnumeratedList,
         ]
     ]
 
@@ -947,7 +949,9 @@ class FieldListItem(Node):
             Verbatim,
         ]
     ]
-    body: List[Union[Words, Paragraph, Verbatim, Admonition]]
+    body: List[
+        Union[Words, Paragraph, Verbatim, Admonition, BlockDirective, BulletList]
+    ]
 
     def validate(self):
 
