@@ -2,9 +2,11 @@
 {% set current_type = 'TocTree' %}
 {% from 'macros.tpl.j2' import render_inner, block_paragraph, render_paragraph, lines, block, block_directive, example, render_II with context %}
 {%block api%}
+    <ul>
     {% for toctree in  toctrees%}
 
-         {{render_II(toctree)}}
+        <li> {{render_II(toctree)}}</li>
 
-    {% endfor %}
+     {% endfor %}
+    </ul>
 {% endblock %}

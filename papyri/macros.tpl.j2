@@ -194,14 +194,14 @@
              {%if obj.children%}
             <details class='toctree' open>
             <summary><a class="toctree" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a></summary>
-             <ul>
+              <ul>
                {% for c in obj.children %}
                    <li>{{render_II(c)}}</li>
                {% endfor %}
-             </ul>
+              </ul>
             </details>
         {% else %}
-                <a class="toctree" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a>
+            <a class="toctree" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a>
         {%endif%}
          
        {% elif type == 'BlockQuote' %}
