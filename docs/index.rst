@@ -1,5 +1,12 @@
+.. _index:
+   
 Papyri
 ======
+
+
+.. toctree::
+
+   crossrefs
 
 Welcome to Papyri narrative docs. 
 
@@ -11,6 +18,7 @@ If you find issues feel free to `Open and issue on GitHub <https://github.com/ju
 If you are working only on API docs, you can use ``papyri gen <conffile.toml> --no-api``, to skip the API generation
 part. Though be aware that some of the cross linking features will not work. 
 
+.. _examples:
 
 Examples
 --------
