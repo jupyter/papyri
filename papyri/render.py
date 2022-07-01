@@ -495,11 +495,14 @@ class HtmlRenderer:
             doc=doc,
         )
 
-    async def _list_narative(self, package: str, version: str, ext=""):
+    async def _get_toc_for(self, package, version):
         keys = self.store.glob((package, version, "meta", "toc.cbor"))
         assert len(keys) == 1
         data = self.store.get(keys[0])
-        toctrees = encoder.decode(data)
+        return encoder.decode(data)
+
+    async def _list_narative(self, package: str, version: str, ext=""):
+        toctrees = await self._get_toc_for(package, version)
 
         meta = encoder.decode(self.store.get_meta(Key(package, version, None, None)))
         logo = meta["logo"]
@@ -535,7 +538,28 @@ class HtmlRenderer:
 
         assert isinstance(doc_blob, IngestedBlobs), type(doc_blob)
 
-        # ...
+        toctrees = await self._get_toc_for(package, version)
+
+        def open_toctree(toc, path):
+            """
+            Temporary, we really need a custom object.
+            This mark specific toctree elements to be open in the rendering.
+            Typically all nodes that link to current page.
+            """
+            for c in toc.children:
+                if open_toctree(c, path):
+                    toc.open = True
+                # else:
+                #    toc.open = False
+            if toc.ref.path == path:
+                toc.open = False
+                toc.current = True
+                return True
+            return toc.open
+
+        for t in toctrees:
+            open_toctree(t, ref)
+
         return render_one(
             current_type="docs",
             meta=meta,
@@ -547,6 +571,7 @@ class HtmlRenderer:
             parts_links={},
             backrefs=[],
             graph="{}",
+            toctrees=toctrees,
         )
 
     async def _route_data(self, ref, version, known_refs):
@@ -610,6 +635,7 @@ class HtmlRenderer:
                 backrefs=backrefs,
                 graph=json_str,
                 meta=meta,
+                toctrees=[],
             )
         else:
             # The reference we are trying to render does not exists
@@ -659,6 +685,7 @@ class HtmlRenderer:
                     backrefs=backward_r,
                     graph=json_str,
                     meta=meta,
+                    toctrees=[],
                 )
                 if config.output_dir:
                     (config.output_dir / module / version / "api").mkdir(
@@ -883,6 +910,7 @@ def render_one(
     parts_links=(),
     graph="{}",
     meta,
+    toctrees,
 ):
     """
     Return the rendering of one document
@@ -943,6 +971,7 @@ def render_one(
             parts_links=parts_links,
             graph=graph,
             meta=meta,
+            toctrees=toctrees,
         )
     except Exception as e:
         raise ValueError("qa=", qa) from e
@@ -1004,6 +1033,7 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
         ext="",
         backrefs=[],
         graph="{}",
+        toctrees=[],
     )
 
 

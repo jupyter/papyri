@@ -189,6 +189,7 @@ class TSVisitor:
         self.qa = qa
         self.depth = 0
         self._section_levels = {}
+        self._targets = []
 
     def as_text(self, node):
         return self.bytes[node.start_byte : node.end_byte].decode()
@@ -198,21 +199,6 @@ class TSVisitor:
         items = self.visit(new_node)
         res = [x for x in items if not isinstance(x, Whitespace)]
         return res
-
-    def _compressorII(self, nodes):
-        acc = []
-        for n in nodes:
-            if (
-                acc
-                and isinstance(n, (EnumeratedList, BulletList))
-                and isinstance(acc[-1], type(n))
-            ):
-                acc[-1].children.extend(n.children)
-                continue
-
-            acc.append(n)
-
-        return acc
 
     def _compressor(self, nodes):
         """
@@ -244,6 +230,25 @@ class TSVisitor:
 
         return acc
 
+    def _targetify(self, acc):
+        """
+        Here we look for targets, and if they are just
+        before a section
+        """
+        nacc = []
+        for i, a in enumerate(acc):
+            if isinstance(a, Unimplemented) and a.placeholder == "untarget":
+                if len(acc) > i and isinstance(acc[i + 1], Section):
+                    # TODO: don't mutate. Copy
+                    target_name = a.value[1:-1]
+                    acc[i + 1].target = target_name
+                    self._targets.append(target_name)
+                    continue
+
+            nacc.append(a)
+
+        return nacc
+
     def visit(self, node):
         self.depth += 1
         acc = []
@@ -269,6 +274,7 @@ class TSVisitor:
             prev_end = c.end_point
         self.depth -= 1
         acc = self._compressor(acc)
+        acc = self._targetify(acc)
         return acc
 
     def visit_citation(self, node, prev_end=None):
@@ -518,6 +524,13 @@ class TSVisitor:
     def visit_target(self, node, prev_end=None):
         # TODO:
         # raise VisitTargetNotImplementedError()
+        # self.as_text(node)
+        if len(node.children) == 2:
+            pp, name = node.children
+            # breakpoint()
+            if pp.type == ".." and name.type == "name":
+                return [Unimplemented("untarget", self.as_text(name))]
+        # print(node.children)
         return [Unimplemented("target", self.as_text(node))]
 
     # def visit_arguments(self, node, prev_end=None):

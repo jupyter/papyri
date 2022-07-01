@@ -76,6 +76,36 @@
         <a class='external' href="{{meta.docspage}}">Other Docs</a>
     {% endif %}
     <hr/>
+    {% macro tc(obj) -%}
+    {%if obj.children%}
+        {% if obj.open %}
+        <details class='toctree' open>
+        {% else %}
+        <details class='toctree'>
+        {% endif %}
+        <summary><a class="toctree {{obj.current}}" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a></summary>
+            <ul>
+            {% for c in obj.children %}
+                <li>{{tc(c)}}</li>
+            {% endfor %}
+            </ul>
+        </details>
+    {% else %}
+        <a class="toctree {{obj.current}}" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a>
+    {%endif%}
+{% endmacro %}
+    {% block toctree %}
+        {% if toctrees  is defined %}
+        <ul>
+          {% for toctree in  toctrees%}
+               <li> {{tc(toctree)}}</li>
+
+          {% endfor %}
+        </ul>
+        <hr/>
+        {% endif %}
+    {% endblock  %}
+
     {% block plus %}
     {% endblock %}
     </div><!--end sidenav-->

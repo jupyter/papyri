@@ -371,6 +371,8 @@ class Link(Node):
      - Web : a url to another page non papyri aware.
      - Exist: bool wether the thing they point to exists.
 
+     - Anchor: reference to a particular anchor in the target document.
+
 
     - I'm wondering if those should be descendant of directive not to lose information and be able to reconsruct the
     directive from it.
@@ -384,12 +386,13 @@ class Link(Node):
     # either keep exists/true/false, but that can be a property as to wether reference is None ?
     kind: str
     exists: bool
+    anchor: Optional[str] = None
 
     def __repr__(self):
         return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
 
     def __hash__(self):
-        return hash((self.value, self.reference, self.kind, self.exists))
+        return hash((self.value, self.reference, self.kind, self.exists, self.anchor))
 
 
 @register(4003)
@@ -582,6 +585,7 @@ class Section(Node):
     # might need to be more complicated like verbatim.
     title: Optional[str]
     level: int = 0
+    target: Optional[str] = None
 
     def __eq__(self, other):
         return super().__eq__(other)
@@ -881,6 +885,8 @@ class TocTree(Node):
     children: List[TocTree]
     title: str
     ref: RefInfo
+    open: bool = False
+    current: bool = False
 
 
 @register(4031)
