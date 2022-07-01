@@ -685,6 +685,7 @@ class HtmlRenderer:
                     backrefs=backward_r,
                     graph=json_str,
                     meta=meta,
+                    toctrees=[],
                 )
                 if config.output_dir:
                     (config.output_dir / module / version / "api").mkdir(
