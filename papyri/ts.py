@@ -245,20 +245,7 @@ class TSVisitor:
                     self._targets.append(target_name)
                     continue
 
-                print(
-                    type(acc[i + 1]),
-                    "->",
-                    a.value,
-                )
             nacc.append(a)
-
-            # if isinstance(a, Unimplemented):
-            #    if len(acc) > (i + 1):
-            #        # if isinstance(acc[i + 1], Unimplemented):
-            #        print(a, type(acc[i + 1]))
-
-            #    else:
-            #        print("no after", a)
 
         return nacc
 

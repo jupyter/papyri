@@ -1032,6 +1032,7 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
         ext="",
         backrefs=[],
         graph="{}",
+        toctrees=[],
     )
 
 
