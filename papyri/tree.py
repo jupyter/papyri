@@ -680,7 +680,9 @@ class DirectiveVisiter(TreeReplacer):
             loc = self.local_refs
         text = directive.value
         assert "`" not in text
+        text = text.replace("\n", " ")
         to_resolve = text
+
         if (
             ("<" in text)
             and text.endswith(">")
@@ -706,6 +708,7 @@ class DirectiveVisiter(TreeReplacer):
             to_resolve = to_resolve.rstrip(">")
 
         if to_resolve.startswith(("https://", "http://", "mailto://")):
+            to_resolve = to_resolve.replace(" ", "")
             return [ExternalLink(text, to_resolve)]
 
         r = self._resolve(loc, to_resolve)

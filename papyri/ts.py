@@ -373,7 +373,8 @@ class TSVisitor:
         return [t]
 
     def visit_literal(self, node, prev_end=None):
-        t = Verbatim([self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()])
+        text = self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()
+        t = Verbatim([text])
         # print(' '*self.depth*4, t)
         return [t]
 
@@ -549,6 +550,9 @@ class TSVisitor:
         # args0: List[str]
         ## TODO : this is likely wrong...
         # inner: Optional[Paragraph]
+        text = self.bytes[node.start_byte : node.end_byte].decode()
+        if "anaconda" in text:
+            print("...", text)
 
         is_substitution_definition = False
 
