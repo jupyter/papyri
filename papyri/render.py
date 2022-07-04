@@ -887,7 +887,10 @@ def serve(*, sidebar: bool, port=1234):
         html_renderer.examples_handler
     )
     app.route(f"{prefix}<package>/<version>/gallery")(html_renderer.gallery)
-    app.route(f"{prefix}<package>/<version>/docs/")(html_renderer._list_narative)
+    app.route(f"{prefix}<package>/<version>/toc/")(html_renderer._list_narative)
+    app.route(f"{prefix}<package>/<version>/docs/")(
+        lambda package, version: redirect(f"{prefix}{package}/{version}/docs/index")
+    )
     app.route(f"{prefix}<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
     app.route(f"{prefix}<package>/<version>/api/<ref>")(full)
     app.route(f"{prefix}<package>/static/<path:subpath>")(full)
