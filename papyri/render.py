@@ -14,7 +14,7 @@ from typing import Optional, Set, Any, Dict, List, Callable
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pygments.formatters import HtmlFormatter
-from quart import send_from_directory, Response
+from quart import send_from_directory, Response, redirect
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
 import minify_html
@@ -861,6 +861,12 @@ def serve(*, sidebar: bool, port=1234):
     )
 
     async def full(package, version, ref):
+        if version == "*":
+            res = list(html_renderer.store.glob([package, None]))
+            assert len(res) == 1
+            version = res[0][1]
+            return redirect(f"{prefix}{package}/{version}/api/{ref}")
+            # print(list(html_renderer.store.glob(
         return await html_renderer._route(ref, version)
 
     async def g(module):
