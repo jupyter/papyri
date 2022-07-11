@@ -1,4 +1,4 @@
-.. _crossref:
+.. _crossrefs:
 
 Crossrefs
 =========

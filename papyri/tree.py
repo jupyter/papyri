@@ -14,19 +14,22 @@ from .take2 import (
     Admonition,
     BlockDirective,
     BlockMath,
+    BlockVerbatim,
+    BulletList,
+    Cannonical,
     Code2,
     Directive,
-    Link,
     ExternalLink,
+    FullQual,
+    Link,
+    ListItem,
     Math,
     Node,
+    Paragraph,
     RefInfo,
     SubstitutionDef,
     Token,
     Verbatim,
-    FullQual,
-    Cannonical,
-    BlockVerbatim,
 )
 from .utils import full_qual
 from textwrap import indent
@@ -94,6 +97,37 @@ def endswith(end, refs):
     Compute as subset of references that ends with given root.
     """
     return frozenset(r for r in refs if r.endswith(end))
+
+
+class DelayedResolver:
+    _targets: Dict[str, RefInfo]
+    _references: Dict[str, List[Link]]
+
+    def __init__(self):
+        self._targets = dict()
+        self._references = dict()
+
+    def add_target(self, target_ref: RefInfo, target: str):
+        assert target is not None
+        print("T add", target)
+        assert target not in self._targets, "two targets with the same name"
+        self._targets[target] = target_ref
+        self._resolve(target)
+
+    def add_reference(self, link: Link, target: str) -> None:
+        print("R add", target)
+        self._references.setdefault(target, []).append(link)
+        self._resolve(target)
+
+    def _resolve(self, target: str) -> None:
+        if (target in self._targets) and (target in self._references):
+            for link in self._references[target]:
+                link.reference = self._targets[target]
+                print("Updating link to point to", self._targets[target], link)
+            self._references[target] = []
+
+
+RESOLVER = DelayedResolver()
 
 
 def resolve_(
@@ -297,6 +331,8 @@ class TreeReplacer:
         assert isinstance(node, Node)
         try:
             name = node.__class__.__name__
+            if vmethod := getattr(self, "visit_" + name, None):
+                vmethod(node)
             if method := getattr(self, "replace_" + name, None):
                 self._replacements.update([name])
                 new_nodes = method(node)
@@ -322,6 +358,7 @@ class TreeReplacer:
                 "Words",
                 "SubstitutionDef",
             ]:
+
                 return [node]
             else:
                 new_children = []
@@ -607,6 +644,8 @@ class DirectiveVisiter(TreeReplacer):
         assert not argument
         toc = []
 
+        lls = []
+
         for line in content.splitlines():
             line = line.strip()
             if line == "self":
@@ -617,13 +656,35 @@ class DirectiveVisiter(TreeReplacer):
                 title = title.strip()
                 assert "<" not in link
                 toc.append([title, link])
+                l = Link(
+                    title,
+                    reference=RefInfo(module="", version="", kind="", path=""),
+                    kind="docs",
+                    exists=True,
+                    anchor=None,
+                )
+                RESOLVER.add_reference(l, link)
+                lls.append(l)
             else:
                 assert "<" not in line
                 toc.append([None, line])
+                l = Link(
+                    line,
+                    reference=RefInfo(module="", version="", kind="", path=""),
+                    kind="docs",
+                    exists=True,
+                    anchor=None,
+                )
+                RESOLVER.add_reference(l, line)
+                lls.append(l)
 
         self._tocs.append(toc)
 
-        return [BlockDirective("toctree", argument, options, content)]
+        acc = []
+        for l in lls:
+            acc.append(ListItem([Paragraph([l])]))
+        return [BulletList(acc)]
+        # return [BlockDirective("toctree", argument, options, content)]
 
     def replace_BlockDirective(self, block_directive: BlockDirective):
         meth = getattr(self, "_" + block_directive.name + "_handler", None)
@@ -804,6 +865,13 @@ def _obj_from_path(parts):
 
 
 class DVR(DirectiveVisiter):
+    def visit_Section(self, sec):
+        if sec.target:
+            print("Section has target:", sec.target)
+            RESOLVER.add_target(
+                RefInfo("papyri", "0.0.8", "docs", sec.target), sec.target
+            )
+
     def replace_Fig(self, fig):
 
         # todo: add version number here
