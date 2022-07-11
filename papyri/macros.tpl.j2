@@ -87,7 +87,7 @@
 
 {% macro block_admonition(adm) -%}
 <div class='admonition'>
-    <div>{{adm.kind}}</div>
+    <div>{{adm.kind}} {{adm.title}}</div>
     {% for it in adm.children %}
         {{render_II(it)}}
     {% endfor %}
