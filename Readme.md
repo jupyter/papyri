@@ -1,23 +1,40 @@
 # Papyri
 
-
-Papyri is a set of tools to build, publish (to be done), install and render
+**Papyri** is a set of tools to build, publish (future functionality - to be done), install and render
 documentation within IPython and Jupyter.
 
-It allows bidirectional crosslink across libraries, navigation, proper reflow of
-user docstrings text, inline images (when rendered to html), proper math
-rendering (both in terminal and html) and many other things.
+Papyri allows:
+- bidirectional crosslinking across libraries, 
+- navigation, 
+- proper reflow of user docstrings text,
+- proper reflow of inline images (when rendered to html),
+- proper math rendering (both in terminal and html),
+- and more.
 
-See some of the reason behind it  on [this blog post](https://labs.quansight.org/blog/2021/05/rethinking-jupyter-documentation/)
+## Motivation
 
-And this [small presentation at CZI EOSS4 meeting in early november 2021](https://docs.google.com/presentation/d/1sSh44smooCiOlj0-Zrac9n5KX0K_ABBFznDmMIwUnbM/edit?usp=sharing)
+See some of the reasons behind the project on [this blog post](https://labs.quansight.org/blog/2021/05/rethinking-jupyter-documentation/).
 
-Papyri doe not completely build it's own docs yet but you might be able to view a static rending of it
-[here](https://pydocs.github.io/). It is not yet automatically built, so might be out of date. 
+Key motivation is building a set of tools to build better documentation for Python project.
+  - Uses an opinionated implementation to enable better understanding more about the structure of your project.
+  - Allow automatic cross link (back and forth) between documentation across python packages.
+  - Use a documentation IR (intermediate representation), to separate building the docs from rendering the docs in many contexts.
 
-# screenshots
+This approach should hopefully allow a conda-forge-like model, where projects upload their IR to a given repo, a _single
+website_ that contains multiple project documentation (without sub domains) can be buildt with better cross links between
+projects, and _efficient_ page rebuild.
 
+This should also allow displaying reader documentation on _non html_ backend (think terminal), or provide documentation in an
+IDE (Spyder/Jupyterlab), without having to iframe it.
 
+## Overview Presentation
+
+And this [small presentation at CZI EOSS4 meeting in early november 2021](https://docs.google.com/presentation/d/1sSh44smooCiOlj0-Zrac9n5KX0K_ABBFznDmMIwUnbM/edit?usp=sharing).
+
+## Screenshots
+
+<detail>
+<summary>Click to expand</summary>
 Navigating astropy's documentation from within IPython, note that this include
 forward ref but also backward reference (which pages link to current page)
 
@@ -51,31 +68,9 @@ Math are properly rendered even in terminal, here `polyfit` in IPyhton with
 papyri enabled (left) and disabled (right).
 
 ![](assets/vs_math.png)
+</detail>
 
-
-
-
-## why the name
-
-See the legendary [Villa of Papyri](https://en.wikipedia.org/wiki/Villa_of_the_Papyri), who get its name from it's
-collection of many papyrus scrolls.
-
-## What
-
-A set of tools to build better documentation for Python project.
-  - Opinionated therefore can understand more about the structure of your project.
-  - Allow automatic cross link (back and forth) between documentation across python packages.
-  - Use a documentation IR, to separate building the docs from rendering the docs in many contexts.
-
-This should hopefully allow a conda-forge-like model, where project upload their IR to a given repo, and a _single
-website_ that contain multiple project documentation (without sub domains) can be build with better cross link between
-project and _efficient_ page rebuild.
-
-This should also allow to reader documentation on _non html_ backend (think terminal), or provide documentation if
-IDE (Spyder/Jupyterlab), without having to iframe it.
-
-
-# install (not fully functional):
+## Installation (not fully functional):
 
 Some functionality are not yet available when installing from PyPI,
 For now you need a dev-install to access all features.
@@ -105,8 +100,10 @@ $ ipython --ext papyri.ipython
 
 This will augment the `?` operator to show better documentation (when install with `papyri install ...`
 
+*Papyri doe not completely build it's own docs yet but you might be able to view a static rending of it
+[here](https://pydocs.github.io/). It is not yet automatically built, so might be out of date.*
 
-## dev install
+### Development install
 
 You may need to get a modified version of numpydoc depending on the stage of development. You will need [pip >
 21.3](https://pip.pypa.io/en/stable/news/#v21-3-1) if you want to make editable installs
@@ -130,9 +127,7 @@ $ papyri build-parser
 
 Note that papyri still uses a custom parser which will be removed in the future to rely mostly on TreeSitter.
 
-
-
-# Usage
+## Usage
 
 In the end there should be roughly 3 steps,
 
@@ -207,7 +202,7 @@ pre-installed, but are likely to break with each new version of papyri, we
 suggest for you to use the developer install and ingestion procedure for now.
 
 
-# Rendering
+## Rendering
 
 The last step of the papyri pipeline is to render the docs, or the subset that
 is of interest to you. This will likely be done by your favorite IDE, probably
@@ -231,7 +226,7 @@ $ papyri install papyri
 ```
 
 
-## Standalone Html rendering
+### Standalone Html rendering
 
 
 ```bash
@@ -244,7 +239,7 @@ $ papyri serve # start a server that will render the pages on the fly (nice to d
 ```
 
 
-## Ascii  terminal rendering
+### Ascii  terminal rendering
 
 
 ```
@@ -257,14 +252,16 @@ The next step uses urwid to provide a browsable interface in terminal.
 $ papyri browse <fully qualified name> # urwid documentation browser.
 ```
 
-
-
 Hacking on scrapping libraries `papyri gen --no-infer [...]` will skip type
 inference of examples. `--exec` option need to be passed to try to execute examples.
 
+## Papyri - Name's meaning
+
+See the legendary [Villa of Papyri](https://en.wikipedia.org/wiki/Villa_of_the_Papyri), who get its name from it's
+collection of many papyrus scrolls.
 
 
-# MISC/OLD innacurate:
+## Legacy (MISC/OLD) documentation (Inaccurate):
 
 
 #### generation (papyri gen ),
