@@ -658,8 +658,8 @@ class DirectiveVisiter(TreeReplacer):
                 toc.append([title, link])
                 l = Link(
                     title,
-                    reference=RefInfo(module="", version="", kind="", path=""),
-                    kind="docs",
+                    reference=RefInfo(module="", version="", kind="?", path=link),
+                    kind="exists",
                     exists=True,
                     anchor=None,
                 )
@@ -670,8 +670,8 @@ class DirectiveVisiter(TreeReplacer):
                 toc.append([None, line])
                 l = Link(
                     line,
-                    reference=RefInfo(module="", version="", kind="", path=""),
-                    kind="docs",
+                    reference=RefInfo(module="", version="", kind="?", path=line),
+                    kind="exists",
                     exists=True,
                     anchor=None,
                 )

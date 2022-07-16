@@ -54,7 +54,7 @@ def url(info, prefix, suffix):
         "?",
         "docs",
         "to-resolve",
-    ), info.kind
+    ), repr(info)
     # assume same package/version for now.
     assert info.module is not None
     if info.module is None:
