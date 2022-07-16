@@ -315,3 +315,24 @@ for example, numpy.array have an extremely large number of back-references.
 
 https://tree-sitter.github.io/tree-sitter/creating-parsers
 
+
+### When things don't work !
+
+
+#### `SqlOperationalError`:
+
+- The DB schema likely have changed, try: `rm -rf ~/.papyri/ingest/`.
+
+#### Can't build tree-sitter:
+
+An error occurred trying to build-tree-sitter with clang, you likely have a conda environment. Install all the compilers
+in the current conda env:
+
+```
+conda install compilers
+```
+
+
+
+
+
