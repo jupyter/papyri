@@ -109,13 +109,11 @@ class DelayedResolver:
 
     def add_target(self, target_ref: RefInfo, target: str):
         assert target is not None
-        print("T add", target)
         assert target not in self._targets, "two targets with the same name"
         self._targets[target] = target_ref
         self._resolve(target)
 
     def add_reference(self, link: Link, target: str) -> None:
-        print("R add", target)
         self._references.setdefault(target, []).append(link)
         self._resolve(target)
 
