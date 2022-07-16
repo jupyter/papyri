@@ -73,10 +73,11 @@ papyri enabled (left) and disabled (right).
 ## Installation (not fully functional):
 
 Some functionality are not yet available when installing from PyPI,
-For now you need a dev-install to access all features.
+For now you need a dev-install (see next section) to access all features.
+
+You'll need Python 3.8 or newer, otherwise pip will tell you it can't find any matching distribution.
 
 Pip install from Pypi:
-
 
 ```bash
 $ pip install papyri
