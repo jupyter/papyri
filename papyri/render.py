@@ -14,7 +14,7 @@ from typing import Optional, Set, Any, Dict, List, Callable
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pygments.formatters import HtmlFormatter
-from quart import send_from_directory, Response
+from quart import send_from_directory, Response, redirect
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
 import minify_html
@@ -54,7 +54,7 @@ def url(info, prefix, suffix):
         "?",
         "docs",
         "to-resolve",
-    ), info.kind
+    ), repr(info)
     # assume same package/version for now.
     assert info.module is not None
     if info.module is None:
@@ -861,6 +861,12 @@ def serve(*, sidebar: bool, port=1234):
     )
 
     async def full(package, version, ref):
+        if version == "*":
+            res = list(html_renderer.store.glob([package, None]))
+            assert len(res) == 1
+            version = res[0][1]
+            return redirect(f"{prefix}{package}/{version}/api/{ref}")
+            # print(list(html_renderer.store.glob(
         return await html_renderer._route(ref, version)
 
     async def g(module):
@@ -881,7 +887,10 @@ def serve(*, sidebar: bool, port=1234):
         html_renderer.examples_handler
     )
     app.route(f"{prefix}<package>/<version>/gallery")(html_renderer.gallery)
-    app.route(f"{prefix}<package>/<version>/docs/")(html_renderer._list_narative)
+    app.route(f"{prefix}<package>/<version>/toc/")(html_renderer._list_narative)
+    app.route(f"{prefix}<package>/<version>/docs/")(
+        lambda package, version: redirect(f"{prefix}{package}/{version}/docs/index")
+    )
     app.route(f"{prefix}<package>/<version>/docs/<ref>")(html_renderer._serve_narrative)
     app.route(f"{prefix}<package>/<version>/api/<ref>")(full)
     app.route(f"{prefix}<package>/static/<path:subpath>")(full)

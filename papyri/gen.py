@@ -1205,6 +1205,7 @@ class Gen:
         files = list(path.glob("**/*.rst"))
         trees = {}
         title_map = {}
+        blbs = {}
         with self.progress() as p2:
             task = p2.add_task("Parsing narative", total=len(files))
 
@@ -1221,6 +1222,7 @@ class Gen:
                     raise type(e)(f"{p=}")
                 blob = DocBlob.new()
                 key = ":".join(parts)[:-4]
+                print(key)
                 try:
                     dv = DVR(
                         key,
@@ -1253,7 +1255,11 @@ class Gen:
                 title_map[key] = title
                 if "generated" not in key and title_map[key] is None:
                     print(key, title)
-                self.docs[key] = blob.to_json()
+
+                blbs[key] = blob
+        for k, b in blbs.items():
+
+            self.docs[k] = b.to_json()
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
 
@@ -1862,7 +1868,7 @@ class Gen:
                     )
                 if c.errored:
                     continue
-                _local_refs: List[List[str]] = []
+                _local_refs: List[str] = []
 
                 sections_ = [
                     "Parameters",
@@ -1885,10 +1891,12 @@ class Gen:
                                 if new_ref:
                                     _local_refs = _local_refs + new_ref
 
-                def flat(l) -> List[str]:
-                    return [y for x in l for y in x]
-
-                lr: FrozenSet[str] = frozenset(flat(_local_refs))
+                # def flat(l) -> List[str]:
+                #    return [y for x in l for y in x]
+                for lr1 in _local_refs:
+                    assert isinstance(lr1, str)
+                # lr: FrozenSet[str] = frozenset(flat(_local_refs))
+                lr: FrozenSet[str] = frozenset(_local_refs)
                 dv = DVR(
                     qa, known_refs, local_refs=lr, aliases={}, version=self.version
                 )

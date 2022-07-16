@@ -11,13 +11,15 @@
         <code class='not-implemented'>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
     {%- elif type_ == 'ExternalLink' -%}
         <a link href="{{obj.target}}" class='external'>{{obj.value}}</a>
-    {%- elif type_ == 'Link' -%}
+   {%- elif type_ == 'Link' -%}
+   <!--link-->
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
             <code><a href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
         {%- elif obj.kind in ('api', 'exists', 'module', 'assets') -%}
             <code><a href="{{url(obj.reference)}}{{ext}}" class='exists'>{{obj.value}}</a></code>
         {% else %}
+            <!--link ur {{obj}}-->
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
         {%- endif -%}
     {%- elif type_ == 'RefInfo' -%}
@@ -37,7 +39,7 @@
         <pre class='not-implemented'>{{obj}}</pre>
     {% else %}
         <code>|{{type_}}| not implemeted yet</code>
-        <pre class='not-implemented'>{{-unreachable(obj, type_)-}}</pre>
+        <pre class='not-implemented unreachable'>{{-unreachable(obj, type_)-}}</pre>
     {%- endif -%}
 {%- endmacro %}
 
@@ -87,7 +89,7 @@
 
 {% macro block_admonition(adm) -%}
 <div class='admonition'>
-    <div>{{adm.kind}}</div>
+    <div>{{adm.kind}} {{adm.title}}</div>
     {% for it in adm.children %}
         {{render_II(it)}}
     {% endfor %}

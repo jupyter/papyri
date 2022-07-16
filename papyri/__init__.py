@@ -240,7 +240,7 @@ def _intro():
 def ingest(
     paths: List[Path],
     check: bool = False,
-    relink: bool = True,
+    relink: bool = False,
     dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
 ):
     """
@@ -275,7 +275,7 @@ def install(
     names: List[str],
     check: bool = False,
     dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
-    relink: bool = True,
+    relink: bool = False,
 ):
     """
     WIP, download and install a remote docbundle
