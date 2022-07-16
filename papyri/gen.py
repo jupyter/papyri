@@ -947,7 +947,7 @@ class Gen:
 
     docs: Dict[str, bytes]
     examples: Dict[str, bytes]
-    data: Dict[str, bytes]
+    data: Dict[str, DocBlob]
     bdata: Dict[str, bytes]
 
     def __init__(self, dummy_progress, config):
@@ -1222,7 +1222,6 @@ class Gen:
                     raise type(e)(f"{p=}")
                 blob = DocBlob.new()
                 key = ":".join(parts)[:-4]
-                print(key)
                 try:
                     dv = DVR(
                         key,
@@ -1282,7 +1281,7 @@ class Gen:
         """
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
-            (where / "module" / k).write_bytes(v)
+            (where / "module" / (k + ".json")).write_bytes(v.to_json())
 
     def write(self, where: Path):
         """
@@ -1302,11 +1301,11 @@ class Gen:
         for k, v in self.bdata.items():
             (assets / k).write_bytes(v)
 
-    def put(self, path: str, data):
+    def put(self, path: str, obj):
         """
         put some json data at the given path
         """
-        self.data[path + ".json"] = data
+        self.data[path] = obj
 
     def put_raw(self, path: str, data: bytes):
         """
@@ -1945,7 +1944,7 @@ class Gen:
                     doc_blob.validate()
                 except Exception as e:
                     raise type(e)(f"Error in {qa}")
-                self.put(qa, doc_blob.to_json())
+                self.put(qa, doc_blob)
                 for name, data in figs:
                     self.put_raw(name, data)
             if error_collector._errors:
