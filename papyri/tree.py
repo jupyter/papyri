@@ -500,10 +500,6 @@ class DirectiveVisiter(TreeReplacer):
             current version when linking
 
         """
-        #if qa == 'numpy.where':
-            #print(qa, local_refs)
-            #assert False
-        super().__init__()
         assert isinstance(qa, str), qa
         assert isinstance(known_refs, (set, frozenset)), known_refs
         assert isinstance(local_refs, (set, frozenset)), local_refs

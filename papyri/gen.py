@@ -1893,8 +1893,8 @@ class Gen:
 
                 # def flat(l) -> List[str]:
                 #    return [y for x in l for y in x]
-                for r in _local_refs:
-                    assert isinstance(r, str)
+                for lr1 in _local_refs:
+                    assert isinstance(lr1, str)
                 # lr: FrozenSet[str] = frozenset(flat(_local_refs))
                 lr: FrozenSet[str] = frozenset(_local_refs)
                 dv = DVR(
