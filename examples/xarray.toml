@@ -1,0 +1,25 @@
+[global]
+module = 'xarray'
+execute_exclude_patterns = []
+
+submodules = []
+
+
+exec = true
+exclude = []
+exec_failure = 'fallback'
+source = 'https://github.com/pydata/xarray'
+logo = './xarray.png'
+early_error = false
+
+[meta]
+github_slug = 'pydata/xarray'
+tag = '2022.3.0'
+pypi = 'xarray'
+homepage = 'https://docs.xarray.dev/'
+docs = 'https://docs.xarray.dev/en/stable/'
+
+[global.implied_imports]
+xr = 'xarray'
+pd = 'pandas'
+
