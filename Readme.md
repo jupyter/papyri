@@ -101,7 +101,7 @@ $ ipython --ext papyri.ipython
 
 This will augment the `?` operator to show better documentation (when install with `papyri install ...`
 
-*Papyri doe not completely build it's own docs yet but you might be able to view a static rending of it
+*Papyri does not completely build it's own docs yet but you might be able to view a static rending of it
 [here](https://pydocs.github.io/). It is not yet automatically built, so might be out of date.*
 
 ### Development install
