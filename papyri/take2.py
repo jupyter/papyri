@@ -994,7 +994,7 @@ class DefListItem(Node):
             Admonition,
             BlockMath,
             BlockVerbatim,
-            Optional[TocTree], # remove this, that should not be the case ?
+            Optional[TocTree],  # remove this, that should not be the case ?
         ]
     ]
 

@@ -73,11 +73,11 @@ from .vref import NumpyDocString
 
 
 class ErrorCollector:
-    def __init__(self, config:Config, log):
+    def __init__(self, config: Config, log):
         self.config: Config = config
         self.log = log
 
-        self._expected_unseen:Dict[str, Any] = {}
+        self._expected_unseen: Dict[str, Any] = {}
         for err, names in self.config.expected_errors.items():
             for name in names:
                 self._expected_unseen.setdefault(name, []).append(err)

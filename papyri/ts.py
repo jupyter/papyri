@@ -4,7 +4,6 @@ from textwrap import dedent, indent
 from typing import List
 
 from tree_sitter import Language, Parser
-from tree_sitter_languages import get_language, get_parser
 
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
@@ -257,8 +256,8 @@ class TSVisitor:
         acc = []
         prev_end = None
         # TODO: FIX
-        if node.type == 'ERROR':
-            #print(f'ERROR node: {self.as_text(c)!r}, skipping')
+        if node.type == "ERROR":
+            # print(f'ERROR node: {self.as_text(c)!r}, skipping')
             return []
         for c in node.children:
             kind = c.type
@@ -499,7 +498,7 @@ class TSVisitor:
         acc = []
 
         lens = {len(f.children) for f in node.children}
-        if lens == {3} : # need test here don't know why it was here.
+        if lens == {3}:  # need test here don't know why it was here.
             # we likely have an option list
             for list_item in node.children:
                 assert list_item.type == "field"

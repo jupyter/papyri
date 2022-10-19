@@ -1,5 +1,3 @@
-import matplotlib
-import papyri
 import matplotlib.pyplot as plt
 import numpy as np
 

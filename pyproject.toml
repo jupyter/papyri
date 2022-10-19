@@ -33,7 +33,7 @@ dependencies = [
     # "tree_sitter", # tree sitter does not currently provide builds for all platform. tree-sitter-builds is an
     # alternative build that provide more wheels.
     "tree-sitter-builds", 
-    "tree_sitter_languages>=1.5"
+    "tree_sitter_languages>=1.5",
     # 
     "matplotlib",
     "cbor2",
