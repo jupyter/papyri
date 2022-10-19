@@ -256,6 +256,10 @@ class TSVisitor:
         self.depth += 1
         acc = []
         prev_end = None
+        # TODO: FIX
+        if node.type == 'ERROR':
+            #print(f'ERROR node: {self.as_text(c)!r}, skipping')
+            return []
         for c in node.children:
             kind = c.type
             if kind == "::":
@@ -491,17 +495,18 @@ class TSVisitor:
     def visit_field(self, node, prev_end=None):
         return []
 
-    def visit_field_list(self, node, prev_end=None):
+    def visit_field_list(self, node, prev_end=None) -> List[FieldListItem]:
         acc = []
 
         lens = {len(f.children) for f in node.children}
-        if lens == {3}:
+        if lens == {3} : # need test here don't know why it was here.
             # we likely have an option list
             for list_item in node.children:
                 assert list_item.type == "field"
                 _, name, _ = list_item.children
                 # TODO, assert _ and _ are `:`
                 acc.append(self.as_text(name))
+            return []
             return [Options(acc)]
 
         elif lens == {4}:
