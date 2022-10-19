@@ -377,12 +377,7 @@ class TreeReplacer:
                 if node.children != new_children:  # type: ignore
                     self._cr += 1
                     # print("Replaced !", node.children, new_children)
-                try:
-                    old_ch = node.children
-                    node.children = new_children  # type: ignore
-                except Exception:
-                    breakpoint()
-                    raise
+                node.children = new_children  # type: ignore
                 new_nodes = [node]
             assert isinstance(new_nodes, list)
             return new_nodes

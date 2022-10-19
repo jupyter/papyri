@@ -443,7 +443,7 @@ class TSVisitor:
             pre_a = ""
             post_text = self.as_text(node.children[1])
             set_post_a = set(post_text)
-            assert len(set_post_a) == 1
+            assert len(set_post_a) == 1, breakpoint()
             post_a = next(iter(set_post_a))
 
             assert len(post_text) >= len(self.as_text(tc)), self.as_text(tc)
@@ -495,7 +495,7 @@ class TSVisitor:
     def visit_field(self, node, prev_end=None):
         return []
 
-    def visit_field_list(self, node, prev_end=None) -> List[FieldListItem]:
+    def visit_field_list(self, node, prev_end=None) -> List[FieldList]:
         acc = []
 
         lens = {len(f.children) for f in node.children}
