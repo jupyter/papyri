@@ -4,6 +4,8 @@ from textwrap import dedent, indent
 from typing import List
 
 from tree_sitter import Language, Parser
+from tree_sitter_languages import get_language, get_parser
+
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
@@ -44,6 +46,7 @@ from .errors import (
 
 pth = str(Path(__file__).parent / "rst.so")
 
+# replace by tree-sitter-languages once it works See https://github.com/grantjenks/py-tree-sitter-languages/issues/15
 RST = Language(pth, "rst")
 parser = Parser()
 parser.set_language(RST)
