@@ -81,7 +81,7 @@ class ErrorCollector:
         for err, names in self.config.expected_errors.items():
             for name in names:
                 self._expected_unseen.setdefault(name, []).append(err)
-        self._errors = {}
+        self._errors:Dict[str, Any] = {}
 
     def __call__(self, qa):
         self._qa = qa
