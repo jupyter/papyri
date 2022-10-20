@@ -43,10 +43,6 @@ jobs:
     - name: dependency tree (reversed)
       run: |
         pipdeptree -r
-    - name: Test with pytest
-      run: |
-        pytest --cov=papyri --cov-append
-        ls -al
     - name: Misc cli
       run: |
         coverage run -m papyri --help
@@ -71,6 +67,10 @@ jobs:
 
         # coverage html
         # papyri serve
+        ls -al
+    - name: Test with pytest
+      run: |
+        pytest --cov=papyri --cov-append
         ls -al
     - name: Convert .coverage sql to xml for upload
       run: |
