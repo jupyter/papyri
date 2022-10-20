@@ -62,6 +62,7 @@ jobs:
     - name: Ingest
       run: |
         coverage run -a -m papyri ingest  --no-relink ~/.papyri/data/papyri_0.0.8
+        coverage run -a -m papyri ingest  --no-relink ~/.papyri/data/*
         coverage run -a -m papyri relink
         coverage run -a -m papyri render --ascii
 
