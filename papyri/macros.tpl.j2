@@ -1,18 +1,18 @@
 {% macro render_inner(type_, obj) -%}
     {%- if type_ == 'Words' -%}
-        {{-obj.value-}}
+         {{-obj.value-}}
     {%- elif type_ == 'Emph' -%}
-        <em>{{render_inner('Words', obj.value)|safe}}</em>
+         <em>{{render_inner('Words', obj.value)|safe}}</em>
     {%- elif type_ == 'Strong' -%}
-        <strong>{{render_inner('Words', obj.content)}}</strong>
+         <strong>{{render_inner('Words', obj.content)}}</strong>
     {%- elif type_ == 'Word' -%}
-        {{-obj.value-}}
+         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
-        <code class='not-implemented'>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
+         <code class='not-implemented'>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
     {%- elif type_ == 'ExternalLink' -%}
-        <a link href="{{obj.target}}" class='external'>{{obj.value}}</a>
-   {%- elif type_ == 'Link' -%}
-   <!--link-->
+         <a link href="{{obj.target}}" class='external'>{{obj.value}}</a>
+    {%- elif type_ == 'Link' -%}
+    <!--link-->
         {# Links have : value, reference, kind exists#}
         {%- if obj.reference.kind=='local' -%}
             <code><a href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
@@ -31,13 +31,13 @@
         {%- else %}
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
         {%- endif -%}
-    {% elif type_ == 'Math' %}
+    {%- elif type_ == 'Math' -%}
         <span class="tex2jax_process">${{obj.value}}$</span>
-    {% elif type_ == 'Verbatim' %}
+    {%- elif type_ == 'Verbatim' -%}
         <code class='verbatim'>{{obj.text}}</code>
-    {% elif type_ in ['SubstitutionRef','Unimplemented'] %}
+    {%- elif type_ in ['SubstitutionRef','Unimplemented'] %}
         <pre class='not-implemented'>{{obj}}</pre>
-    {% else %}
+    {%- else %}
         <code>|{{type_}}| not implemeted yet</code>
         <pre class='not-implemented unreachable'>{{-unreachable(obj, type_)-}}</pre>
     {%- endif -%}

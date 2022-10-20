@@ -1,0 +1,1 @@
+[{"children": [{"type": "Paragraph", "data": {"children": [{"type": "Words", "data": {"value": "there should not be spaces ("}}, {"type": "Verbatim", "data": {"value": ["between"]}}, {"type": "Words", "data": {"value": ") the parenthesis."}}]}}], "title": null, "level": 0, "target": null}]
