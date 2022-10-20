@@ -68,6 +68,7 @@ jobs:
         # coverage html
         # papyri serve
         ls -al
+        ls -al ~/.papyri/html/p/numpy/
     - name: Test with pytest
       run: |
         pytest --cov=papyri --cov-append
