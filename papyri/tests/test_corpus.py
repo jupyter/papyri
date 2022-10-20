@@ -1,8 +1,4 @@
-from pathlib import Path
-
 import pytest
-
-import json
 
 from .utils import _expected_path, SAMPLES, _serialize, _process
 
