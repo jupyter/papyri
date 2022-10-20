@@ -73,15 +73,15 @@ from .vref import NumpyDocString
 
 
 class ErrorCollector:
-    def __init__(self, config, log):
-        self.config = config
+    def __init__(self, config: Config, log):
+        self.config: Config = config
         self.log = log
 
-        self._expected_unseen = {}
+        self._expected_unseen: Dict[str, Any] = {}
         for err, names in self.config.expected_errors.items():
             for name in names:
                 self._expected_unseen.setdefault(name, []).append(err)
-        self._errors = {}
+        self._errors: Dict[str, Any] = {}
 
     def __call__(self, qa):
         self._qa = qa
@@ -408,6 +408,7 @@ class Config:
     docs_path: Optional[str] = None
     wait_for_plt_show: Optional[bool] = True
     examples_exclude: Sequence[str] = ()
+    narrative_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
     implied_imports: Dict[str, str] = dataclasses.field(default_factory=dict)
     expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
@@ -1212,6 +1213,10 @@ class Gen:
             for p in files:
                 p2.update(task, description=compress_user(str(p)).ljust(7))
                 p2.advance(task)
+
+                if any([str(p).endswith(k) for k in self.config.narrative_exclude]):
+                    print(f"Skipping {p} – excluded in config file")
+                    continue
 
                 assert p.is_file()
                 parts = p.relative_to(path).parts

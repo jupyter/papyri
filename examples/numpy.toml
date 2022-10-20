@@ -21,6 +21,7 @@ docs_path = '~/dev/numpy/doc/source'
 
 exec = true
 exclude = ['numpy._from_dlpack','numpy.lib.utils.get_include','numpy.core.shape_base._concatenate_shapes']
+narrative_exclude = ['doc/source/reference/arrays.ndarray.rst']
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
 homepage = 'https://numpy.org'
@@ -30,7 +31,7 @@ early_error = false
 
 [meta]
 github_slug = 'numpy/numpy'
-tag = 'v1.22.3'
+tag = 'v1.22.4'
 pypi = 'numpy'
 homepage = 'https://numpy.org/'
 docspage = 'https://numpy.org/doc/1.22/'

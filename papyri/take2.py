@@ -994,6 +994,7 @@ class DefListItem(Node):
             Admonition,
             BlockMath,
             BlockVerbatim,
+            Optional[TocTree],  # remove this, that should not be the case ?
         ]
     ]
 
@@ -1004,6 +1005,7 @@ class DefListItem(Node):
     @children.setter
     def children(self, value):
         self.dt, *self.dd = value
+        self.validate()
 
 
 @register(4028)

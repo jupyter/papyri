@@ -554,7 +554,7 @@ def build_parser():
         ],
     )
 
-    PY_LANGUAGE = Language(spth, "rst")
+    RST = Language(spth, "rst")
 
 
 @app.command()

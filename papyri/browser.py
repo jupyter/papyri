@@ -28,7 +28,8 @@ from typing import List
 import urwid
 import urwid.raw_display
 import urwid.web_display
-from there import syslogprint as LOG
+
+# from there import syslogprint as LOG
 from urwid import Text
 from urwid.canvas import CompositeCanvas, apply_text_layout
 from urwid.command_map import CURSOR_DOWN, CURSOR_LEFT, CURSOR_RIGHT, CURSOR_UP
@@ -63,7 +64,7 @@ class TextWithLink(urwid.Text):
 
         (maxcol,) = size
 
-        LOG(len(self.get_text()[0]))
+        # LOG(len(self.get_text()[0]))
         trans = self.get_line_translation(maxcol)
 
         current_len = 0
@@ -91,7 +92,7 @@ class TextWithLink(urwid.Text):
                 elif isinstance(item, str):
                     current_len += len(item)
 
-        LOG("FOCUS at pos", current_len)
+        # LOG("FOCUS at pos", current_len)
         x, y = calc_coords(self.get_text()[0], trans, current_len)
 
         return (x, y)

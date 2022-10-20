@@ -5,6 +5,7 @@ from typing import List
 
 from tree_sitter import Language, Parser
 
+
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
 from papyri.take2 import (
@@ -44,6 +45,7 @@ from .errors import (
 
 pth = str(Path(__file__).parent / "rst.so")
 
+# replace by tree-sitter-languages once it works See https://github.com/grantjenks/py-tree-sitter-languages/issues/15
 RST = Language(pth, "rst")
 parser = Parser()
 parser.set_language(RST)
@@ -253,6 +255,10 @@ class TSVisitor:
         self.depth += 1
         acc = []
         prev_end = None
+        # TODO: FIX
+        if node.type == "ERROR":
+            # print(f'ERROR node: {self.as_text(c)!r}, skipping')
+            return []
         for c in node.children:
             kind = c.type
             if kind == "::":
@@ -436,7 +442,7 @@ class TSVisitor:
             pre_a = ""
             post_text = self.as_text(node.children[1])
             set_post_a = set(post_text)
-            assert len(set_post_a) == 1
+            assert len(set_post_a) == 1, breakpoint()
             post_a = next(iter(set_post_a))
 
             assert len(post_text) >= len(self.as_text(tc)), self.as_text(tc)
@@ -488,17 +494,18 @@ class TSVisitor:
     def visit_field(self, node, prev_end=None):
         return []
 
-    def visit_field_list(self, node, prev_end=None):
+    def visit_field_list(self, node, prev_end=None) -> List[FieldList]:
         acc = []
 
         lens = {len(f.children) for f in node.children}
-        if lens == {3}:
+        if lens == {3}:  # need test here don't know why it was here.
             # we likely have an option list
             for list_item in node.children:
                 assert list_item.type == "field"
                 _, name, _ = list_item.children
                 # TODO, assert _ and _ are `:`
                 acc.append(self.as_text(name))
+            return []
             return [Options(acc)]
 
         elif lens == {4}:
