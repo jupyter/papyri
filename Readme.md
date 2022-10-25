@@ -117,13 +117,14 @@ pip install -e .
 
 Build the TreeSitter rst parser:
 
-Some functionality require ``tree_sitter_rst``, see run `papyri build-parser`, and CI config file on how to build the tree-sitter
-shared object locally.
+Some functionality require ``tree_sitter_rst``.
 
 ```bash
 $ git clone https://github.com/stsewd/tree-sitter-rst
 $ papyri build-parser
 ```
+
+Look at CI file if those instructions are not up to date. 
 
 
 Note that papyri still uses a custom parser which will be removed in the future to rely mostly on TreeSitter.
