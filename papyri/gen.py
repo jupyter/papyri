@@ -1758,6 +1758,12 @@ class Gen:
             logo = None
         module = __import__(root)
         self.version = module.__version__
+
+        try:
+            meta["tag"] = meta["tag"].format(version=self.version)
+        except ValueError:
+            meta["tag"] = self.version
+
         self._meta.update({"logo": logo, "module": root, "version": self.version})
         self._meta.update(meta)
 
