@@ -238,6 +238,7 @@ class Ingester:
     def _ingest_narrative(self, path, gstore: GraphStore) -> None:
         meta = json.loads((path / "papyri.json").read_text())
         version = meta["version"]
+        module = None
         for _console, document in self.progress(
             (path / "docs").glob("*"),
             description=f"{path.name} Reading narrative docs ",
@@ -264,6 +265,8 @@ class Ingester:
                 [],
             )
         tocfile = path / "toc.json"
+        if module is None:
+            return
         if tocfile.exists():
             toc = json.loads((path / "toc.json").read_text())
             if not toc.keys():
