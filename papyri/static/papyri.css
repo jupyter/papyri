@@ -442,3 +442,22 @@ blockquote {
   background: none;
   border-left: none;
 }
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: rgb(200, 200, 200);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: #c7c7c7;
+  }
+
+  .exists {
+    color: #c7c7c7;
+  }
+}
