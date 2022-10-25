@@ -1,6 +1,9 @@
+import logging
+
 from papyri.config import html_dir
 import pytest
 
+log = logging.getLogger("papyri")
 
 PRESENT_PATTERNS = [
     (
@@ -13,5 +16,12 @@ PRESENT_PATTERNS = [
 
 @pytest.mark.parametrize("path, reason, expected", PRESENT_PATTERNS)
 def test_render(path, reason, expected):
-    text = (html_dir / path).read_text()
+    html_path = html_dir / path
+    if not html_path.exists():
+        logging.info("papyri render not done, rendering now.")
+        from papyri.render import main as m2
+        import trio
+
+        trio.run(m2, False, True, False, True, True, False)
+    text = html_path.read_text()
     assert expected in text, reason
