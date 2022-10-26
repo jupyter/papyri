@@ -31,7 +31,7 @@ early_error = false
 
 [meta]
 github_slug = 'numpy/numpy'
-tag = 'v1.22.4'
+tag = 'v{version}'
 pypi = 'numpy'
 homepage = 'https://numpy.org/'
 docspage = 'https://numpy.org/doc/1.22/'
