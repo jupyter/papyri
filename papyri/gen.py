@@ -1761,7 +1761,7 @@ class Gen:
 
         try:
             meta["tag"] = meta["tag"].format(version=self.version)
-        except ValueError:
+        except KeyError:
             meta["tag"] = self.version
 
         self._meta.update({"logo": logo, "module": root, "version": self.version})
