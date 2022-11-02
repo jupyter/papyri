@@ -968,7 +968,10 @@ class Gen:
 
         FORMAT = "%(message)s"
         logging.basicConfig(
-            level="INFO", format=FORMAT, datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)]
+            level="INFO",
+            format=FORMAT,
+            datefmt="[%X]",
+            handlers=[RichHandler(rich_tracebacks=True)],
         )
 
         self.log = logging.getLogger("papyri")
@@ -1110,7 +1113,9 @@ class Gen:
                                 obj_lineno = meta_.co_firstlineno
                                 obj_name = meta_.co_name
 
-                                example_section_split = "\n".join(example_section).split(script)
+                                example_section_split = "\n".join(
+                                    example_section
+                                ).split(script)
                                 err_lineno = example_section_split[0].count("\n")
                                 log.exception(
                                     "error in execution: "
