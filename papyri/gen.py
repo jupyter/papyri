@@ -968,7 +968,10 @@ class Gen:
 
         FORMAT = "%(message)s"
         logging.basicConfig(
-            level="INFO", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+            level="INFO",
+            format=FORMAT,
+            datefmt="[%X]",
+            handlers=[RichHandler(rich_tracebacks=True)],
         )
 
         self.log = logging.getLogger("papyri")
@@ -1102,7 +1105,24 @@ class Gen:
                             ce_status = "execed"
                         except Exception:
                             if "Traceback" not in "\n".join(out):
-                                log.exception("error in execution: %s", qa)
+                                script = script.replace("\n", "\n>>> ")
+                                script = ">>> " + script
+
+                                meta_ = obj.__code__
+                                obj_fname = meta_.co_filename
+                                obj_lineno = meta_.co_firstlineno
+                                obj_name = meta_.co_name
+
+                                example_section_split = "\n".join(
+                                    example_section
+                                ).split(script)
+                                err_lineno = example_section_split[0].count("\n")
+                                log.exception(
+                                    "error in execution: "
+                                    f"{obj_fname}:{obj_lineno} in {obj_name}"
+                                    f"\n-> Example section line {err_lineno}:"
+                                    f"\n\n{script}\n",
+                                )
                             ce_status = "exception_in_exec"
                             if config.exec_failure != "fallback":
                                 raise
