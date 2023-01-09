@@ -1781,7 +1781,7 @@ class Gen:
 
         try:
             meta["tag"] = meta["tag"].format(version=self.version)
-        except ValueError:
+        except KeyError:
             meta["tag"] = self.version
 
         self._meta.update({"logo": logo, "module": root, "version": self.version})
@@ -1851,6 +1851,7 @@ class Gen:
                         target_item=target_item,
                     )
                 if c.errored:
+                    print("error with", qa)
                     continue
                 assert api_object is not None, c.errored
 

@@ -861,7 +861,7 @@ def _obj_from_path(parts):
 class DVR(DirectiveVisiter):
     def visit_Section(self, sec):
         if sec.target:
-            print("Section has target:", sec.target)
+            # print("Section has target:", sec.target)
             RESOLVER.add_target(
                 RefInfo("papyri", "0.0.8", "docs", sec.target), sec.target
             )
