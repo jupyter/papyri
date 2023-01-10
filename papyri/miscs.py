@@ -82,7 +82,7 @@ class BlockExecutor:
             figs.append(buf.read())
         return figs
 
-    def _exec(self, text, ns):
+    def _exec(self, text, ns, name):
         """
         A variant of exec that can run multi line,
         and capture sys_displayhook
@@ -94,16 +94,16 @@ class BlockExecutor:
             *nodes, interactive_node = module.body
         except Exception as e:
             raise type(e)(f"{module.body} {text}")
-        exec(compile(ast.Module(nodes, []), "<papyri>", "exec"), ns)
+        exec(compile(ast.Module(nodes, []), name, "exec"), ns)
         acc = []
         with capture_displayhook(acc):
-            exec(compile(ast.Interactive([interactive_node]), "<papyri>", "single"), ns)
+            exec(compile(ast.Interactive([interactive_node]), name, "single"), ns)
         if len(acc) == 1:
             return acc[0]
         else:
             return None
 
-    def exec(self, text):
+    def exec(self, text, *, name='<papyri>'):
         from matplotlib import _pylab_helpers, cbook
         from matplotlib.backend_bases import FigureManagerBase
 
@@ -111,7 +111,7 @@ class BlockExecutor:
         stderr = io.StringIO()
         with cbook._setattr_cm(FigureManagerBase, show=lambda self: None):
             with redirect_stdout(stdout), redirect_stderr(stderr):
-                res = self._exec(text, self.ns)
+                res = self._exec(text, self.ns, name)
 
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
 

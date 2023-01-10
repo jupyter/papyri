@@ -222,7 +222,8 @@ View given function docs in text with ANSI coloring
     $ papyri ascii numpy.linspace
 
 
-"""
+""",
+pretty_exceptions_enable=False
 )
 
 
@@ -287,11 +288,9 @@ def install(
     import httpx
     import rich
     import trio
-    from rich.console import Console
 
     from . import crosslink as cr
 
-    console = Console()
 
     _intro()
 

@@ -974,6 +974,16 @@ class Gen:
             handlers=[RichHandler(rich_tracebacks=True)],
         )
 
+        class MF(logging.Filter):
+
+            def filter(self, record):
+                if 'Generic family' in record.msg:
+                    return 0
+                return 1
+
+        mlog = logging.getLogger('matplotlib.font_manager')
+        mlog.addFilter(MF('serif'))
+
         self.log = logging.getLogger("papyri")
         self.config = config
         self.log.debug("Configuration: %s", self.config)
@@ -1119,7 +1129,7 @@ class Gen:
                                 err_lineno = example_section_split[0].count("\n")
                                 log.exception(
                                     "error in execution: "
-                                    f"{obj_fname}:{obj_lineno} in {obj_name}"
+                                    f"{obj_fname}:{obj_lineno} ({full_qual(obj)}) in {obj_name}"
                                     f"\n-> Example section line {err_lineno}:"
                                     f"\n\n{script}\n",
                                 )
@@ -1606,7 +1616,7 @@ class Gen:
                 if config.exec:
                     with executor:
                         try:
-                            executor.exec(script)
+                            executor.exec(script, name=str(example))
                             figs = [
                                 (f"ex-{example.name}-{i}.png", f)
                                 for i, f in enumerate(executor.get_figs())
