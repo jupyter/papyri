@@ -1855,15 +1855,18 @@ class Gen:
                 p2.update(taskp, description=qa)
                 p2.advance(taskp)
 
-                with error_collector(qa=qa) as c:
+                with error_collector(qa=qa) as ecollector:
                     item_docstring, arbitrary, api_object = self.helper_1(
                         qa=qa,
                         target_item=target_item,
                     )
-                if c.errored:
-                    print("error with", qa)
+                if ecollector.errored:
+                    if ecollector._errors.keys():
+                        print("error with", qa, list(ecollector._errors.keys()))
+                    else:
+                        print("only expected error with", qa)
                     continue
-                assert api_object is not None, c.errored
+                assert api_object is not None, ecollector.errored
 
                 try:
                     if item_docstring is None:

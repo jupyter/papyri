@@ -36,7 +36,9 @@ exclude = [
              "networkx.readwrite.nx_shp.read_shp",
              "networkx.algorithms.connectivity.edge_augmentation.greedy_k_edge_augmentation",
              "networkx.algorithms.connectivity.edge_kcomponents.general_k_edge_subgraphs",
-             "networkx.generators.geometric.navigable_small_world_graph"
+             "networkx.generators.geometric.navigable_small_world_graph",
+             "networkx.readwrite.json_graph.node_link.node_link_graph",
+             "networkx.algorithms.minors.contraction.quotient_graph",
              ]
 logo = './nx.png'
 [meta]
