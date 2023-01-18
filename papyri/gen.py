@@ -898,7 +898,6 @@ def _normalize_see_also(see_also: List[Any], qa):
         return []
     assert see_also is not None
     new_see_also = []
-    section: Section
     name_and_types: List[Tuple[str, str]]
     name: str
     type_or_description: str
