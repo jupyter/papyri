@@ -155,7 +155,6 @@ def _hashf(text):
 
 
 def _jedi_get_cache(text):
-
     _JEDI_CACHE.mkdir(exist_ok=True, parents=True)
 
     _cache = _JEDI_CACHE / _hashf(text)
@@ -173,7 +172,6 @@ def _jedi_set_cache(text, value):
 
 
 def obj_from_qualname(name):
-
     mod_name, sep, objs = name.partition(":")
     module = importlib.import_module(mod_name)
     if not sep:
@@ -907,7 +905,7 @@ def _normalize_see_also(see_also: List[Any], qa):
 
     for name_and_types, raw_description in see_also:
         try:
-            for (name, type_or_description) in name_and_types:
+            for name, type_or_description in name_and_types:
                 if type_or_description and not raw_description:
                     assert isinstance(type_or_description, str)
                     type_ = None
@@ -952,7 +950,6 @@ class Gen:
     bdata: Dict[str, bytes]
 
     def __init__(self, dummy_progress, config):
-
         if dummy_progress:
             self.Progress = DummyP
         else:
@@ -975,14 +972,13 @@ class Gen:
         )
 
         class MF(logging.Filter):
-
             def filter(self, record):
-                if 'Generic family' in record.msg:
+                if "Generic family" in record.msg:
                     return 0
                 return 1
 
-        mlog = logging.getLogger('matplotlib.font_manager')
-        mlog.addFilter(MF('serif'))
+        mlog = logging.getLogger("matplotlib.font_manager")
+        mlog.addFilter(MF("serif"))
 
         self.log = logging.getLogger("papyri")
         self.config = config
@@ -1292,7 +1288,6 @@ class Gen:
 
                 blbs[key] = blob
         for k, b in blbs.items():
-
             self.docs[k] = b.to_json()
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
@@ -1380,7 +1375,6 @@ class Gen:
                     repr(type(target_item).__name__),
                 )
             else:
-
                 self.log.warn(
                     "Could not find source file for %s (%s) [%s], will not be able to link to it.",
                     repr(qa),
@@ -1707,7 +1701,6 @@ class Gen:
         return DFSCollector(n0, submodules)
 
     def collect_examples_out(self):
-
         examples_folder = self.config.examples_folder
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
@@ -1845,7 +1838,6 @@ class Gen:
 
         error_collector = ErrorCollector(self.config, self.log)
         with self.progress() as p2:
-
             # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
 

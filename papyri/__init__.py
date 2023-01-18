@@ -223,7 +223,7 @@ View given function docs in text with ANSI coloring
 
 
 """,
-pretty_exceptions_enable=False
+    pretty_exceptions_enable=False,
 )
 
 
@@ -290,7 +290,6 @@ def install(
     import trio
 
     from . import crosslink as cr
-
 
     _intro()
 
@@ -527,7 +526,6 @@ def serve_static():
 
 @app.command()
 def browse(qualname: str):
-
     from papyri.browser import main as browse
 
     browse(qualname)

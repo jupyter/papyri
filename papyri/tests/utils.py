@@ -32,7 +32,6 @@ def _process(sample: Path):
 
 
 if __name__ == "__main__":
-
     targets = [Path(p) for p in sys.argv[1:]]
     for p in targets:
         if CORP not in p.resolve().parents:

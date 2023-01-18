@@ -619,7 +619,6 @@ def main(qualname: str):
             doc.append(Text([("signature", blob.signature.value)]))
 
         for k, v in blob.content.items():
-
             if not v.empty():
                 if k not in ["Summary", "Extended Summary"]:
                     doc.append(Text([("section", k)]))

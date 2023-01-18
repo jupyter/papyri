@@ -66,7 +66,6 @@ def find_all_refs(
 @register(4010)
 @dataclass
 class IngestedBlobs(Node):
-
     __slots__ = (
         "content",
         "ordered_sections",
@@ -111,7 +110,6 @@ class IngestedBlobs(Node):
         self.__isfrozen = True
 
     def all_forward_refs(self) -> List[Key]:
-
         visitor = TreeVisitor({RefInfo, Fig})
         res: Dict[Any, List[Any]] = {}
         for sec in (
@@ -162,7 +160,6 @@ class IngestedBlobs(Node):
 
         aliases = {}
         for s in sections_:
-
             _local_refs = _local_refs + [
                 [u.strip() for u in x[0].split(",")]
                 for x in self.content.get(s, [])
@@ -243,7 +240,6 @@ class Ingester:
             (path / "docs").glob("*"),
             description=f"{path.name} Reading narrative docs ",
         ):
-
             try:
                 doc = load_one_uningested(
                     document.read_bytes(),
@@ -296,7 +292,6 @@ class Ingester:
     def _ingest_examples(
         self, path: Path, gstore: GraphStore, known_refs, aliases, version, root
     ):
-
         for _, fe in self.progress(
             (path / "examples/").glob("*"),
             description=f"{path.name} Reading Examples ...   ",
@@ -335,7 +330,6 @@ class Ingester:
         )
 
     def ingest(self, path: Path, check: bool) -> None:
-
         gstore = self.gstore
 
         known_refs, _ = find_all_refs(gstore)
@@ -432,7 +426,6 @@ class Ingester:
                 raise RuntimeError(f"error writing to {path}") from e
 
     def relink(self) -> None:
-
         gstore = self.gstore
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}

@@ -102,7 +102,6 @@ def serialize(instance, annotation):
             return {k: serialize(v, value_annotation) for k, v in instance.items()}
 
         elif getattr(annotation, "__origin__", None) is Union:
-
             inner_annotation = annotation.__args__
             if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
                 # assert inner_annotation[0] is not None

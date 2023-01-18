@@ -103,7 +103,7 @@ class BlockExecutor:
         else:
             return None
 
-    def exec(self, text, *, name='<papyri>'):
+    def exec(self, text, *, name="<papyri>"):
         from matplotlib import _pylab_helpers, cbook
         from matplotlib.backend_bases import FigureManagerBase
 

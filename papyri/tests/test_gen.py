@@ -9,7 +9,6 @@ def ex1():
 
 
 def test_BlockExecutor():
-
     b = BlockExecutor({})
     b.exec("# this is a comment")
 
