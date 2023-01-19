@@ -990,6 +990,7 @@ class Gen:
             messages that are emitted if font are not found
 
             """
+
             def filter(self, record):
                 if "Generic family" in record.msg:
                     return 0
@@ -1855,7 +1856,7 @@ class Gen:
         collected = {k: v for k, v in collected.items() if k not in excluded}
         if limit_to:
             collected = {k: v for k, v in collected.items() if k in limit_to}
-            print(f"DEV: regenerating docs only for")
+            print("DEV: regenerating docs only for")
             for k, v in collected.items():
                 print(f"    {k}:{v}")
         aliases: Dict[FullQual, Cannonical]
