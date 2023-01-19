@@ -1,7 +1,7 @@
 import logging
 
-from papyri.config import html_dir
-import pytest
+# from papyri.config import html_dir
+# import pytest
 
 log = logging.getLogger("papyri")
 
