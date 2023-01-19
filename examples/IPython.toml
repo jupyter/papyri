@@ -4,34 +4,27 @@ logo = "../ipython-logo.png"
 exec_failure = "fallback"
 docs_path = "~/dev/IPython/docs/source"
 exec = true
-exclude = [
-    'IPython.lib.display.Audio',
-    'IPython.core.magics.execution.ExecutionMagics.run',
-    'IPython.core.magics.script.ScriptMagics.shebang',
-    'IPython.core.magics.basic.BasicMagics.alias_magic',
-    #'IPython.utils.text.strip_email_quotes',
-    # requires IPython instance
-    'IPython.core.display_functions.display',
-    #"ExecError-<class 'ValueError'>": [
-    "IPython.core.magics.basic.BasicMagics.colors",
-    "IPython.core.magics.config.ConfigMagics.config",
-    "IPython.core.magics.execution.ExecutionMagics.time",
-    "IPython.core.magics.namespace.NamespaceMagics.psearch",
-    "IPython.core.magics.namespace.NamespaceMagics.who_ls",
-    "IPython.core.magics.namespace.NamespaceMagics.who",
-    "IPython.core.magics.namespace.NamespaceMagics.whos",
-    "IPython.core.magics.namespace.NamespaceMagics.reset_selective",
-    "IPython.core.magics.pylab.PylabMagics.matplotlib",
-    "IPython.core.magics.basic.BasicMagics.notebook",
-    "IPython.core.magics.display.DisplayMagics.html",
-    "IPython.core.magics.execution.ExecutionMagics.debug",
-    "IPython.core.magics.namespace.NamespaceMagics.xdel",
-    "IPython.core.magics.execution.ExecutionMagics.capture",
-    "IPython.core.magics.history.HistoryMagics.history",
-    "IPython.core.magics.osm.OSMagics.writefile",
-    "IPython.core.magics.pylab.PylabMagics.pylab",
-    "IPython.terminal.embed.EmbeddedMagics.kill_embedded"
+execute_exclude_patterns = [
+   'IPython.lib.display.Audio',
+   'IPython.core.display_functions.display'
 ]
+exclude = []
+[global.expected_errors]
+IncorrectInternalDocsLen = [
+  "IPython.core.magics.basic.BasicMagics.alias_magic",
+  "IPython.core.magics.script.ScriptMagics.shebang",
+  "IPython.core.magics.basic.BasicMagics.notebook",
+  "IPython.core.magics.display.DisplayMagics.html",
+  "IPython.core.magics.execution.ExecutionMagics.debug",
+  "IPython.core.magics.execution.ExecutionMagics.capture",
+  "IPython.core.magics.history.HistoryMagics.history",
+  "IPython.core.magics.namespace.NamespaceMagics.xdel",
+  "IPython.core.magics.osm.OSMagics.writefile",
+  "IPython.core.magics.pylab.PylabMagics.matplotlib",
+  "IPython.core.magics.pylab.PylabMagics.pylab",
+  "IPython.terminal.embed.EmbeddedMagics.kill_embedded",
+]
+
 [meta]
 github_slug = 'IPython/IPython'
 tag = '8.2.0'
