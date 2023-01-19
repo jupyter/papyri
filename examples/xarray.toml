@@ -6,7 +6,14 @@ submodules = []
 
 
 exec = true
-exclude = []
+exclude = [
+            "xarray.core.dataarray.DataArray.drop_vars",
+            "xarray.core.dataarray.DataArray.convert_calendar",
+            "xarray.core.dataset.Dataset.convert_calendar",
+            "xarray.core.utils.is_remote_uri",
+            "xarray.core.extensions.register_dataset_accessor",
+            "xarray.backends.api.open_mfdataset",
+]
 exec_failure = 'fallback'
 source = 'https://github.com/pydata/xarray'
 logo = './xarray.png'

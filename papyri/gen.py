@@ -303,7 +303,10 @@ def _get_implied_imports(obj):
         else:
             c_o = obj.__qualname__.split(".")
             if len(c_o) > 2:
-                print(obj.__qualname__)
+                print(
+                    "get implied import qualname got more than 2 parts: ",
+                    obj.__qualname__,
+                )
                 return {}
             cname, oname = c_o
             mod_name = obj.__module__
