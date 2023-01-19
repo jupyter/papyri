@@ -420,6 +420,7 @@ def gen(
     fail_unseen_error: bool = typer.Option(
         False, help="Overwrite fail on unseen error option"
     ),
+    only: List[str] = typer.Option(None, "--only"),
 ):
     """
     Generate documentation for a given package.
@@ -458,6 +459,7 @@ def gen(
                 narrative=narrative,
                 fail_early=fail_early,
                 fail_unseen_error=fail_unseen_error,
+                limit_to=only,
             )
 
 
