@@ -7,7 +7,7 @@ log = logging.getLogger("papyri")
 
 PRESENT_PATTERNS = [
     (
-        "p/numpy/1.23.4/api/numpy.html",
+        "p/numpy/1.24.1/api/numpy.html",
         "Make sure there is no space between verbabim and surrounding words",
         "profile (<code class='verbatim'>ipython -p numpy</code>),",
     ),
