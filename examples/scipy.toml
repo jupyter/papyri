@@ -17,6 +17,16 @@ exclude = [
     "scipy.integrate._quadpack_py.quad_explain",
     # Example is incorrect https://github.com/scipy/scipy/issues/15595
     "scipy.signal._peak_finding._identify_ridge_lines",
+    "scipy.stats._continuous_distns.crystalball_gen._pdf",
+    "scipy.stats._ksstats._kolmogn_PelzGood",
+    "scipy.stats._discrete_distns.betabinom_gen",
+    "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree",
+    "scipy.stats._morestats.wilcoxon",
+    "scipy.stats._distn_infrastructure.rv_continuous",
+    "scipy.stats._stats_py.moment",
+    "scipy.stats._mannwhitneyu.mannwhitneyu",
+    "scipy.stats._resampling.bootstrap",
+    "scipy.sparse.linalg._expm_multiply.expm_multiply",
             ]
 exclude_jedi = [
     "scipy.linalg._sketches.clarkson_woodruff_transform",
@@ -32,7 +42,21 @@ exclude_jedi = [
 
 execute_exclude_patterns = [
     'scipy._lib._uarray._backend.determine_backend_multi',
-    'scipy.interpolate._bspl.evaluate_all_bspl']
+    'scipy.integrate._quadrature._qmc_quad',
+    'scipy.interpolate._bspl.evaluate_all_bspl',
+    'scipy.optimize._root.root',
+    'scipy.signal._filter_design.normalize',
+    'scipy.signal._signaltools.filtfilt',
+    'scipy.stats._axis_nan_policy._broadcast_array_shapes_remove_axis',
+    'scipy.stats._multivariate.multivariate_normal_frozen.__init__',
+    'scipy.stats._multivariate.multivariate_t_frozen.__init__',
+    'scipy.stats._stats_py._ttest_nans',
+    'scipy.io.matlab._mio5.varmats_from_mat',
+    'scipy.io.matlab._byteordercodes.to_numpy_code',
+    'scipy._lib._uarray._backend.determine_backend',
+    'scipy._lib._uarray._backend.all_of_type',
+    'scipy._lib._util._nan_allsame',
+    ]
 exec_failure = "fallback"
 jedi_failure_mode = "log"
 early_error = false
@@ -90,6 +114,7 @@ VisitCitationReferenceNotImplementedError = [
     "scipy.special._orthogonal._pbcf",
     "scipy.spatial._spherical_voronoi.SphericalVoronoi",
     "scipy.spatial._spherical_voronoi.calculate_solid_angles",
+    "scipy.integrate._ode.ode",
     ]
 ExampleError1 = [ "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree",
                   "scipy.optimize._root.root", "scipy.interpolate._fitpack2.LSQSphereBivariateSpline",
@@ -99,10 +124,22 @@ AssertionError = [
     "scipy.special._orthogonal._compute_tauk",
     ]
 NumpydocParseError = [
-    "scipy.optimize._linprog_highs._linprog_highs", "scipy.optimize._linprog_doc._linprog_highs_doc",
-    "scipy.optimize._linprog_doc._linprog_highs_ds_doc", "scipy.optimize._linprog_doc._linprog_highs_ipm_doc",
-    "scipy.optimize._linprog_ip._linprog_ip", "scipy.optimize._linprog_doc._linprog_ip_doc",
-    "scipy.optimize._linprog_rs._linprog_rs", "scipy.optimize._linprog_doc._linprog_rs_doc",
-    "scipy.optimize._linprog_simplex._linprog_simplex", "scipy.optimize._linprog_doc._linprog_simplex_doc",
-    "scipy.optimize._qap._quadratic_assignment_2opt", "scipy.optimize._qap._quadratic_assignment_faq",
+    "scipy.optimize._linprog_doc._linprog_highs_doc",
+    "scipy.optimize._linprog_doc._linprog_highs_ds_doc",
+    "scipy.optimize._linprog_doc._linprog_highs_ipm_doc",
+    "scipy.optimize._linprog_doc._linprog_ip_doc",
+    "scipy.optimize._linprog_doc._linprog_rs_doc",
+    "scipy.optimize._linprog_doc._linprog_simplex_doc",
+    "scipy.optimize._linprog_highs._linprog_highs",
+    "scipy.optimize._linprog_ip._linprog_ip",
+    "scipy.optimize._linprog_rs._linprog_rs",
+    "scipy.optimize._linprog_simplex._linprog_simplex",
+    "scipy.stats._discrete_distns.geom_gen",
+    "scipy.sparse.linalg._expm_multiply.expm_multiply",
+    "scipy.optimize._optimize._minimize_powell",
+    "scipy.optimize._qap._quadratic_assignment_2opt",
+    "scipy.optimize._qap._quadratic_assignment_faq",
+    "scipy.stats._discrete_distns.planck_gen",
     ]
+SpaceAfterBlockDirectiveError = ['scipy.optimize._tnc._minimize_tnc']
+    

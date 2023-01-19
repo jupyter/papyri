@@ -685,7 +685,6 @@ class TSVisitor:
         return []
 
     def visit_definition_list(self, node, prev_end=None):
-
         acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"

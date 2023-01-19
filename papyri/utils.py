@@ -28,7 +28,6 @@ def full_qual(obj):
 
 
 class TimeElapsedColumn(ProgressColumn):
-
     # Only refresh twice a second to prevent jitter
     max_refresh = 0.5
 

@@ -17,7 +17,6 @@ from ..take2 import (
     ],
 )
 def test_parse_blocks(target, type_, number):
-
     sections = parse(dedent_but_first(get_object(target).__doc__).encode())
     filtered = [b for section in sections for b in section.children if type(b) == type_]
     assert len(filtered) == number

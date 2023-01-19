@@ -74,7 +74,6 @@ Cannonical = NewType("Cannonical", str)
 
 
 def not_type_check(item, annotation):
-
     if not hasattr(annotation, "__origin__"):
         if isinstance(item, annotation):
             return None
@@ -195,7 +194,6 @@ class Node(Base):
             self._post_deserialise()
 
     def cbor(self, encoder):
-
         tag = TAG_MAP[type(self)]
         attrs = get_type_hints(type(self))
         encoder.encode(cbor2.CBORTag(tag, [getattr(self, k) for k in attrs]))
@@ -397,7 +395,6 @@ class Link(Node):
 
 @register(4003)
 class Directive(Node):
-
     value: str
     domain: Optional[str]
     role: Optional[str]
@@ -738,7 +735,6 @@ class Code2(Node):
 
 
 class GenToken(Node):
-
     value: str
     qa: Optional[str]
     pygmentclass: str
@@ -827,7 +823,6 @@ inline_nodes = tuple(
 
 @register(4025)
 class Paragraph(Node):
-
     children: List[
         Union[
             Words,
@@ -861,7 +856,6 @@ def indent(text, marker="   |"):
 
 @register(4038)
 class Admonition(Node):
-
     kind: str
     title: Optional[str]
     children: List[
@@ -891,14 +885,12 @@ class TocTree(Node):
 
 @register(4031)
 class BlockDirective(Node):
-
     name: str
     argument: str
     options: List[Tuple[str]]
     content: str
 
     def validate(self):
-
         assert isinstance(self.name, str)
         assert isinstance(self.argument, str)
         assert isinstance(self.options, list)
@@ -920,7 +912,6 @@ class BlockDirective(Node):
 
 @register(4032)
 class BlockVerbatim(Node):
-
     value: str
 
     def __eq__(self, other):
@@ -937,7 +928,6 @@ class DefList(Node):
 
 @register(4034)
 class Options(Node):
-
     values: List[str]
 
 
@@ -960,7 +950,6 @@ class FieldListItem(Node):
     ]
 
     def validate(self):
-
         for p in self.body:
             assert isinstance(p, Paragraph), p
         if self.name:

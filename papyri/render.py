@@ -93,7 +93,6 @@ def until_ruler(doc):
     lines = doc.split("\n")
     new = []
     for l in lines:
-
         while len(l.lstrip()) >= 1 and l.lstrip()[0] == "|":
             l = l.lstrip()[1:]
         new.append(l)
@@ -153,7 +152,6 @@ def compute_siblings_II(ref, family: set):
 
 
 def make_tree(names):
-
     rd = lambda: defaultdict(rd)
     tree = defaultdict(rd)
 
@@ -421,7 +419,6 @@ class HtmlRenderer:
                 ).write_text(data)
 
     async def gallery(self, package, version, ext=""):
-
         if package == version == "*":
             package = version = None
 
@@ -651,7 +648,6 @@ class HtmlRenderer:
         config,
         graph,
     ):
-
         template = self.env.get_template("html.tpl.j2")
         gfiles = list(self.store.glob((None, None, "module", None)))
         random.shuffle(gfiles)
@@ -745,7 +741,7 @@ class HtmlRenderer:
 
     async def _write_narrative_files(self, config):
         narrative = list(self.store.glob((None, None, "docs", None)))
-        for (_, (module, version, _, path)) in progress(
+        for _, (module, version, _, path) in progress(
             narrative, description="Rendering Narrative..."
         ):
             data = await self._serve_narrative(module, version, path)
@@ -767,7 +763,6 @@ class HtmlRenderer:
                 )
 
     async def examples_handler(self, package, version, subpath):
-
         meta = encoder.decode(self.store.get_meta(Key(package, version, None, None)))
 
         pap_keys = self.store.glob((None, None, "meta", "aliases.cbor"))
@@ -799,7 +794,6 @@ class HtmlRenderer:
         )
 
     async def render_single_examples(self, module, version, *, ext, data):
-
         mod_vers = self.store.glob((None, None))
         meta = encoder.decode(self.store.get_meta(Key(module, version, None, None)))
         logo = meta["logo"]
@@ -851,7 +845,6 @@ def pygment_css() -> Response:
 
 
 def serve(*, sidebar: bool, port=1234):
-
     app = QuartTrio(__name__)
 
     gstore = GraphStore(ingest_dir)
@@ -953,7 +946,6 @@ def render_one(
     # Here if we have too many references we group them on where they come from.
     assert not hasattr(doc, "logo")
     if len(backrefs) > 30:
-
         b2 = defaultdict(lambda: [])
         for ref in backrefs:
             assert isinstance(ref, RefInfo)
@@ -998,7 +990,6 @@ def _ascii_env():
     env.globals["unreachable"] = unreachable
     env.globals["sidebar"] = False
     try:
-
         c = converter()
 
         def math(s):

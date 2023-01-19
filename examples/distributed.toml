@@ -15,5 +15,8 @@ exclude = [
     "distributed.protocol.core.dumps",
     "distributed.diagnostics.progress.MultiProgress",
     "distributed.diagnostics.progress.Progress",
+    "distributed.shuffle._shuffle.ShuffleId",
+    "distributed.shuffle._disk.DiskShardsBuffer",
+    "distributed.shuffle._comms.CommShardsBuffer",
 ] #docs_path = "~/dev/dask/docs/source"
 exec_failure = 'fallback'

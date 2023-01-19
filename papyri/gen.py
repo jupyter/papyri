@@ -155,7 +155,6 @@ def _hashf(text):
 
 
 def _jedi_get_cache(text):
-
     _JEDI_CACHE.mkdir(exist_ok=True, parents=True)
 
     _cache = _JEDI_CACHE / _hashf(text)
@@ -173,7 +172,6 @@ def _jedi_set_cache(text, value):
 
 
 def obj_from_qualname(name):
-
     mod_name, sep, objs = name.partition(":")
     module = importlib.import_module(mod_name)
     if not sep:
@@ -305,7 +303,10 @@ def _get_implied_imports(obj):
         else:
             c_o = obj.__qualname__.split(".")
             if len(c_o) > 2:
-                print(obj.__qualname__)
+                print(
+                    "get implied import qualname got more than 2 parts: ",
+                    obj.__qualname__,
+                )
                 return {}
             cname, oname = c_o
             mod_name = obj.__module__
@@ -900,14 +901,13 @@ def _normalize_see_also(see_also: List[Any], qa):
         return []
     assert see_also is not None
     new_see_also = []
-    section: Section
     name_and_types: List[Tuple[str, str]]
     name: str
     type_or_description: str
 
     for name_and_types, raw_description in see_also:
         try:
-            for (name, type_or_description) in name_and_types:
+            for name, type_or_description in name_and_types:
                 if type_or_description and not raw_description:
                     assert isinstance(type_or_description, str)
                     type_ = None
@@ -952,7 +952,6 @@ class Gen:
     bdata: Dict[str, bytes]
 
     def __init__(self, dummy_progress, config):
-
         if dummy_progress:
             self.Progress = DummyP
         else:
@@ -973,6 +972,15 @@ class Gen:
             datefmt="[%X]",
             handlers=[RichHandler(rich_tracebacks=True)],
         )
+
+        class MF(logging.Filter):
+            def filter(self, record):
+                if "Generic family" in record.msg:
+                    return 0
+                return 1
+
+        mlog = logging.getLogger("matplotlib.font_manager")
+        mlog.addFilter(MF("serif"))
 
         self.log = logging.getLogger("papyri")
         self.config = config
@@ -1119,7 +1127,7 @@ class Gen:
                                 err_lineno = example_section_split[0].count("\n")
                                 log.exception(
                                     "error in execution: "
-                                    f"{obj_fname}:{obj_lineno} in {obj_name}"
+                                    f"{obj_fname}:{obj_lineno} ({full_qual(obj)}) in {obj_name}"
                                     f"\n-> Example section line {err_lineno}:"
                                     f"\n\n{script}\n",
                                 )
@@ -1282,7 +1290,6 @@ class Gen:
 
                 blbs[key] = blob
         for k, b in blbs.items():
-
             self.docs[k] = b.to_json()
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
@@ -1370,7 +1377,6 @@ class Gen:
                     repr(type(target_item).__name__),
                 )
             else:
-
                 self.log.warn(
                     "Could not find source file for %s (%s) [%s], will not be able to link to it.",
                     repr(qa),
@@ -1606,7 +1612,7 @@ class Gen:
                 if config.exec:
                     with executor:
                         try:
-                            executor.exec(script)
+                            executor.exec(script, name=str(example))
                             figs = [
                                 (f"ex-{example.name}-{i}.png", f)
                                 for i, f in enumerate(executor.get_figs())
@@ -1697,7 +1703,6 @@ class Gen:
         return DFSCollector(n0, submodules)
 
     def collect_examples_out(self):
-
         examples_folder = self.config.examples_folder
         self.log.debug("Example Folder: %s", examples_folder)
         if examples_folder is not None:
@@ -1835,7 +1840,6 @@ class Gen:
 
         error_collector = ErrorCollector(self.config, self.log)
         with self.progress() as p2:
-
             # just nice display of progression.
             taskp = p2.add_task(description="parsing", total=len(collected))
 
@@ -1845,14 +1849,18 @@ class Gen:
                 p2.update(taskp, description=qa)
                 p2.advance(taskp)
 
-                with error_collector(qa=qa) as c:
+                with error_collector(qa=qa) as ecollector:
                     item_docstring, arbitrary, api_object = self.helper_1(
                         qa=qa,
                         target_item=target_item,
                     )
-                if c.errored:
+                if ecollector.errored:
+                    if ecollector._errors.keys():
+                        print("error with", qa, list(ecollector._errors.keys()))
+                    else:
+                        print("only expected error with", qa)
                     continue
-                assert api_object is not None, c.errored
+                assert api_object is not None, ecollector.errored
 
                 try:
                     if item_docstring is None:

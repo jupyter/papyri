@@ -356,7 +356,6 @@ class TreeReplacer:
                 "Words",
                 "SubstitutionDef",
             ]:
-
                 return [node]
             else:
                 new_children = []
@@ -594,7 +593,6 @@ class DirectiveVisiter(TreeReplacer):
     def _admonition_handler_x(self, name, argument, options, content):
         assert not options
         if content:
-
             inner = parse(content.encode())
             assert len(inner) == 1
 
@@ -831,7 +829,6 @@ class DirectiveVisiter(TreeReplacer):
 
 
 def _import_max(parts):
-
     p = parts[0]
     try:
         __import__(p)
@@ -861,13 +858,12 @@ def _obj_from_path(parts):
 class DVR(DirectiveVisiter):
     def visit_Section(self, sec):
         if sec.target:
-            print("Section has target:", sec.target)
+            # print("Section has target:", sec.target)
             RESOLVER.add_target(
                 RefInfo("papyri", "0.0.8", "docs", sec.target), sec.target
             )
 
     def replace_Fig(self, fig):
-
         # todo: add version number here
         self._targets.add(fig.value)
 

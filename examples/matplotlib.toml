@@ -6,6 +6,18 @@ exec_failure = "fallback"
 submodules = [ "image", "pyplot", "axes", "axes._base", "dviread", "image","figure",'colors', 'transforms']
 examples_folder = '/Users/bussonniermatthias/dev/matplotlib/examples/'
 early_error = false
+execute_exclude_patterns = [
+ "matplotlib.axes._base._AxesBase.set_prop_cycle",
+ "matplotlib.axes._axes.Axes.axvspan",
+ "matplotlib.backend_bases.FigureCanvasBase.new_timer",
+ "matplotlib.cbook.pts_to_prestep",
+ "matplotlib.cbook.pts_to_poststep",
+ "matplotlib.cbook.pts_to_midstep",
+ "matplotlib._api.check_shape",
+ "matplotlib._api.check_isinstance",
+ "matplotlib._api.check_in_list",
+ "matplotlib._api.check_getitem",
+   ]
 examples_exclude = [
 # jedi inference issue
 "logos2.py",
@@ -69,7 +81,7 @@ examples_exclude = [
 "lines_bars_and_markers/fill.py",
 "lines_bars_and_markers/span_regions.py",
 "lines_bars_and_markers/bar_stacked.py",
-"lines_bars_and_markers/gradient_bar.py",
+"lines_bars_and_markers/gradient_check_in_listbar.py",
 "lines_bars_and_markers/xcorr_acorr_demo.py",
 "lines_bars_and_markers/fill_betweenx_demo.py",
 "lines_bars_and_markers/scatter_symbol.py",
@@ -99,6 +111,8 @@ IncorrectInternalDocsLen = [
     "matplotlib.transforms.Transform.__sub__",
     "matplotlib.patches.ConnectionStyle._Base",
     "matplotlib.tri.triinterpolate._safe_inv22_vectorized",
+    "matplotlib.transforms.Affine2D.from_values",
+    "matplotlib.backend_bases.FigureCanvasBase._switch_canvas_and_return_print_method",
     ]
 ValueError = [
     "matplotlib.image.thumbnail",
@@ -110,13 +124,22 @@ ValueError = [
     "matplotlib.patches.FancyBboxPatch.set_boxstyle",
     "matplotlib.spines.Spine.set_bounds",
     "matplotlib.backends.backend_agg.FigureCanvasAgg.print_png",
+    "matplotlib.patches.FancyArrowPatch.set_connectionstyle",
+    "matplotlib.backends.backend_svg.FigureCanvasSVG.print_svg",
     ]
 SpaceAfterBlockDirectiveError = [
     "matplotlib.pyplot.subplot_mosaic",
     "matplotlib.cm.unregister_cmap",
     "matplotlib.axes._base._AxesBase.set_navigate_mode",
     "matplotlib.figure.FigureBase.subplot_mosaic",
+    "matplotlib.image.imsave",
+    "matplotlib.pyplot.imsave",
+    "matplotlib.ft2font.FT2Font"
     ]
 AssertionError = [
     "matplotlib.ticker.ScalarFormatter.set_powerlimits",
 ]
+
+[global.implied_imports]
+_api = 'matplotlib._api'
+

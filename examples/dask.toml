@@ -5,6 +5,7 @@ submodules = ["array"]
 exclude = [ "dask.utils.Dispatch",
             # target not implemented
             'dask.highlevelgraph.HighLevelGraph.visualize',
+            'dask.array.overlap.map_overlap',
             'dask.order.graph_metrics',
             # AssertionError : Serialisation proble
             "dask.array.routines.matmul",
@@ -26,10 +27,15 @@ exclude = [ "dask.utils.Dispatch",
             # imbalanced backticks, need dask fix. https://github.com/dask/dask/pull/8693
             "dask.array.reductions.cumreduction",
             # "ErrorHelper1-<class 'AssertionError'>": [
-                        "dask.array.routines.tensordot",
-                        "dask.utils.tensordot",
-                        "dask.array.slicing.replace_ellipsis",
+            "dask.array.routines.tensordot",
+            "dask.utils.tensordot",
+            "dask.array.slicing.replace_ellipsis",
+            "dask.array.overlap.sliding_window_view",
+            "dask.array.overlap.ensure_minimum_chunksize",
+            "dask.array.overlap.overlap",
+            "dask.array.overlap.sliding_window_view"
   ]
+
 
 #docs_path = "~/dev/dask/docs/source"
 exec_failure = 'fallback'

@@ -116,7 +116,6 @@ class GraphStore:
     """
 
     def __init__(self, root: _Path, link_finder=None):
-
         # for now we are going to try to do in-memory operation, just to
         # see how we can handle that with SQL, and move to on-disk later.
         p = _Path("~/.papyri/ingest/papyri.db")

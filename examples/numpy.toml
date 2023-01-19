@@ -13,6 +13,9 @@ execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', '
 'numpy.info',
 # Misc
 'numpy.distutils',
+'numpy.char.multiply',
+'numpy.polynomial.chebyshev.chebinterpolate',
+'numpy.lib.npyio._read',
 ]
 
 submodules = ['distutils','typing','dual']

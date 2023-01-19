@@ -24,7 +24,6 @@ def test_parse_space_in_directive_section():
 
 
 def test_parse_space():
-
     [section] = parse(
         "Element-wise maximum of two arrays, propagating any NaNs.".encode()
     )
@@ -35,7 +34,6 @@ def test_parse_space():
 
 
 def test_parse_reference():
-
     [section] = parse("This is a `reference <to this>`_".encode())
     [paragraph] = section.children
     [text, reference] = paragraph.children
