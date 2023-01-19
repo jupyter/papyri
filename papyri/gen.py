@@ -412,6 +412,8 @@ class Config:
     narrative_exclude: Sequence[str] = ()
     exclude_jedi: Sequence[str] = ()
     implied_imports: Dict[str, str] = dataclasses.field(default_factory=dict)
+    # mapping from expected name of error instances, to which fully-qualified names are raising those errors.
+    # the build will fail if the given item does not raise this error.
     expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
     early_error: bool = True
     fail_unseen_error: bool = False
