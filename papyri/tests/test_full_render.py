@@ -6,11 +6,12 @@ import pytest
 log = logging.getLogger("papyri")
 
 PRESENT_PATTERNS = [
-    (
-        "p/numpy/1.24.1/api/numpy.html",
-        "Make sure there is no space between verbabim and surrounding words",
-        "profile (<code class='verbatim'>ipython -p numpy</code>),",
-    ),
+    # removed in upstream numpy
+    # (
+    #     "p/numpy/1.24.1/api/numpy.html",
+    #     "Make sure there is no space between verbabim and surrounding words",
+    #     "profile (<code class='verbatim'>ipython -p numpy</code>),",
+    # ),
 ]
 
 
