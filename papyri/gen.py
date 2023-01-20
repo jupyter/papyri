@@ -1824,9 +1824,9 @@ class Gen:
             module name to generate docbundle for.
         limit_to : list of string
             For partial documentation building and testing purposes
-            we may want to generate documentation only a single item.
+            we may want to generate documentation for only a single item.
             If this list is non-empty we will collect documentation
-            just for this item.
+            just for these items.
 
         See Also
         --------
