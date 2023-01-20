@@ -1856,9 +1856,9 @@ class Gen:
         collected = {k: v for k, v in collected.items() if k not in excluded}
         if limit_to:
             collected = {k: v for k, v in collected.items() if k in limit_to}
-            print("DEV: regenerating docs only for")
+            self.log.info("DEV: regenerating docs only for")
             for k, v in collected.items():
-                print(f"    {k}:{v}")
+                self.log.info(f"    {k}:{v}")
         aliases: Dict[FullQual, Cannonical]
         aliases, not_found = collector.compute_aliases()
         rev_aliases: Dict[Cannonical, FullQual] = {v: k for k, v in aliases.items()}
