@@ -458,6 +458,7 @@ def gen_main(
     narrative,
     fail_early: bool,
     fail_unseen_error: bool,
+    limit_to=None,
 ) -> None:
     """
     Main entry point to generate docbundle files,
@@ -499,6 +500,8 @@ def gen_main(
     None
 
     """
+    if limit_to is None:
+        limit_to = set()
     target_module_name, conf, meta = load_configuration(target_file)
     conf["early_error"] = fail_early
     conf["fail_unseen_error"] = fail_unseen_error
@@ -530,7 +533,7 @@ def gen_main(
     if examples:
         g.collect_examples_out()
     if api:
-        g.collect_api_docs(target_module_name)
+        g.collect_api_docs(target_module_name, limit_to=limit_to)
     if narrative:
         g.collect_narrative_docs()
 
@@ -538,8 +541,11 @@ def gen_main(
     p.mkdir(exist_ok=True)
 
     g.log.info("Saving current Doc bundle to %s", p)
-    g.clean(p)
-    g.write(p)
+    if not limit_to:
+        g.clean(p)
+        g.write(p)
+    else:
+        g.partial_write(p)
     if dry_run:
         temp_dir.cleanup()
 
@@ -975,7 +981,16 @@ class Gen:
             handlers=[RichHandler(rich_tracebacks=True)],
         )
 
+        # TODO:
+        # At some point it would be better to have that be matplotlib
+        # specific and not hardcoded.
         class MF(logging.Filter):
+            """
+            This is a matplotlib filter to temporarily silence a bunch of warning
+            messages that are emitted if font are not found
+
+            """
+
             def filter(self, record):
                 if "Generic family" in record.msg:
                     return 0
@@ -983,6 +998,8 @@ class Gen:
 
         mlog = logging.getLogger("matplotlib.font_manager")
         mlog.addFilter(MF("serif"))
+
+        # end TODO
 
         self.log = logging.getLogger("papyri")
         self.config = config
@@ -1316,6 +1333,9 @@ class Gen:
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
             (where / "module" / (k + ".json")).write_bytes(v.to_json())
+
+    def partial_write(self, where):
+        self.write_api(where)
 
     def write(self, where: Path):
         """
@@ -1794,10 +1814,7 @@ class Gen:
         self._meta.update({"logo": logo, "module": root, "version": self.version})
         self._meta.update(meta)
 
-    def collect_api_docs(
-        self,
-        root: str,
-    ):
+    def collect_api_docs(self, root: str, limit_to: List[str]):
         """
         Crawl one module and stores resulting docbundle in self.store.
 
@@ -1805,6 +1822,11 @@ class Gen:
         ----------
         root : str
             module name to generate docbundle for.
+        limit_to : list of string
+            For partial documentation building and testing purposes
+            we may want to generate documentation for only a single item.
+            If this list is non-empty we will collect documentation
+            just for these items.
 
         See Also
         --------
@@ -1832,6 +1854,11 @@ class Gen:
             )
 
         collected = {k: v for k, v in collected.items() if k not in excluded}
+        if limit_to:
+            collected = {k: v for k, v in collected.items() if k in limit_to}
+            self.log.info("DEV: regenerating docs only for")
+            for k, v in collected.items():
+                self.log.info(f"    {k}:{v}")
         aliases: Dict[FullQual, Cannonical]
         aliases, not_found = collector.compute_aliases()
         rev_aliases: Dict[Cannonical, FullQual] = {v: k for k, v in aliases.items()}

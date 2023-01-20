@@ -18,12 +18,31 @@ execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', '
 'numpy.lib.npyio._read',
 ]
 
-submodules = ['distutils','typing','dual']
+submodules = [
+    'array_api',
+    'compat',
+    'core',
+    'ctypeslib',
+    'distutils',
+    'doc',
+    'dual',
+    'fft',
+    'lib',
+    'linalg',
+    'ma',
+    'matlib',
+    'matrixlib',
+    'polynomial',
+    'random',
+    'testing',
+    'tests',
+    'typing',
+    'version',
+]
 
 docs_path = '~/dev/numpy/doc/source'
 
 exec = true
-exclude = ['numpy._from_dlpack','numpy.lib.utils.get_include','numpy.core.shape_base._concatenate_shapes']
 narrative_exclude = ['doc/source/reference/arrays.ndarray.rst']
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
