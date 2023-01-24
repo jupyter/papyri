@@ -1866,170 +1866,170 @@ class Gen:
         )
 
         error_collector = ErrorCollector(self.config, self.log)
-        with self.progress() as p2:
+        # with self.progress() as p2:
             # just nice display of progression.
-            taskp = p2.add_task(description="parsing", total=len(collected))
+            # taskp = p2.add_task(description="parsing", total=len(collected))
 
-            failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
+        failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
 
-            for qa, target_item in collected.items():
-                p2.update(taskp, description=qa)
-                p2.advance(taskp)
+        for qa, target_item in collected.items():
+            # p2.update(taskp, description=qa)
+            # p2.advance(taskp)
 
-                with error_collector(qa=qa) as ecollector:
-                    item_docstring, arbitrary, api_object = self.helper_1(
-                        qa=qa,
-                        target_item=target_item,
-                    )
-                if ecollector.errored:
-                    if ecollector._errors.keys():
-                        print("error with", qa, list(ecollector._errors.keys()))
-                    else:
-                        print("only expected error with", qa)
-                    continue
-                assert api_object is not None, ecollector.errored
+            with error_collector(qa=qa) as ecollector:
+                item_docstring, arbitrary, api_object = self.helper_1(
+                    qa=qa,
+                    target_item=target_item,
+                )
+            if ecollector.errored:
+                if ecollector._errors.keys():
+                    print("error with", qa, list(ecollector._errors.keys()))
+                else:
+                    print("only expected error with", qa)
+                continue
+            assert api_object is not None, ecollector.errored
 
-                try:
-                    if item_docstring is None:
-                        ndoc = NumpyDocString(dedent_but_first("No Docstrings"))
-                    else:
-                        ndoc = NumpyDocString(dedent_but_first(item_docstring))
-                        # note currentlu in ndoc we use:
-                        # _parsed_data
-                        # direct access to  ["See Also"], and [""]
-                        # and :
-                        # ndoc.ordered_sections
-                except Exception as e:
-                    if not isinstance(target_item, ModuleType):
-                        self.log.exception(
-                            "Unexpected error parsing %s – %s",
-                            qa,
-                            target_item.__name__,
-                        )
-                        failure_collection["NumpydocError-" + str(type(e))].append(qa)
-                    if isinstance(target_item, ModuleType):
-                        # TODO: ndoc-placeholder : remove placeholder here
-                        ndoc = NumpyDocString(f"To remove in the future –– {qa}")
-                    else:
-                        continue
+            try:
+                if item_docstring is None:
+                    ndoc = NumpyDocString(dedent_but_first("No Docstrings"))
+                else:
+                    ndoc = NumpyDocString(dedent_but_first(item_docstring))
+                    # note currentlu in ndoc we use:
+                    # _parsed_data
+                    # direct access to  ["See Also"], and [""]
+                    # and :
+                    # ndoc.ordered_sections
+            except Exception as e:
                 if not isinstance(target_item, ModuleType):
-                    arbitrary = []
-                ex = self.config.exec
-                if self.config.exec and any(
-                    qa.startswith(pat) for pat in self.config.execute_exclude_patterns
-                ):
-                    ex = False
-
-                # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
-                assert api_object is not None
-                with error_collector(qa=qa) as c:
-                    doc_blob, figs = self.prepare_doc_for_one_object(
-                        target_item,
-                        ndoc,
-                        qa=qa,
-                        config=self.config.replace(exec=ex),
-                        aliases=collector.aliases[qa],
-                        api_object=api_object,
-                    )
-                if c.errored:
-                    continue
-                _local_refs: List[str] = []
-
-                sections_ = [
-                    "Parameters",
-                    "Returns",
-                    "Raises",
-                    "Yields",
-                    "Attributes",
-                    "Other Parameters",
-                    "Warns",
-                    ##"Warnings",
-                    "Methods",
-                    # "Summary",
-                    "Receives",
-                ]
-                for s in sections_:
-                    for child in doc_blob.content.get(s, []):
-                        if isinstance(child, Parameters):
-                            for param in child.children:
-                                new_ref = [u.strip() for u in param[0].split(",") if u]
-                                if new_ref:
-                                    _local_refs = _local_refs + new_ref
-
-                # def flat(l) -> List[str]:
-                #    return [y for x in l for y in x]
-                for lr1 in _local_refs:
-                    assert isinstance(lr1, str)
-                # lr: FrozenSet[str] = frozenset(flat(_local_refs))
-                lr: FrozenSet[str] = frozenset(_local_refs)
-                dv = DVR(
-                    qa, known_refs, local_refs=lr, aliases={}, version=self.version
-                )
-                doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
-                doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
-
-                for section in ["Extended Summary", "Summary", "Notes"] + sections_:
-                    if section in doc_blob.content:
-                        doc_blob.content[section] = dv.visit(doc_blob.content[section])
-
-                for sa in doc_blob.see_also:
-                    from .tree import resolve_
-
-                    r = resolve_(
+                    self.log.exception(
+                        "Unexpected error parsing %s – %s",
                         qa,
-                        known_refs,
-                        frozenset(),
-                        sa.name.value,
-                        rev_aliases=rev_aliases,
+                        target_item.__name__,
                     )
-                    assert isinstance(r, RefInfo)
-                    if r.kind == "module":
-                        sa.name.reference = r
-                    else:
-                        imp = DVR._import_solver(sa.name.value)
-                        if imp:
-                            self.log.debug(
-                                "TODO: see also resolve for %s in %s, %s",
-                                sa.name.value,
-                                qa,
-                                imp,
-                            )
+                    failure_collection["NumpydocError-" + str(type(e))].append(qa)
+                if isinstance(target_item, ModuleType):
+                    # TODO: ndoc-placeholder : remove placeholder here
+                    ndoc = NumpyDocString(f"To remove in the future –– {qa}")
+                else:
+                    continue
+            if not isinstance(target_item, ModuleType):
+                arbitrary = []
+            ex = self.config.exec
+            if self.config.exec and any(
+                qa.startswith(pat) for pat in self.config.execute_exclude_patterns
+            ):
+                ex = False
 
-                # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
-                assert isinstance(doc_blob.references, (list, str, type(None))), (
-                    repr(doc_blob.references),
-                    qa,
+            # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
+            assert api_object is not None
+            with error_collector(qa=qa) as c:
+                doc_blob, figs = self.prepare_doc_for_one_object(
+                    target_item,
+                    ndoc,
+                    qa=qa,
+                    config=self.config.replace(exec=ex),
+                    aliases=collector.aliases[qa],
+                    api_object=api_object,
                 )
+            if c.errored:
+                continue
+            _local_refs: List[str] = []
 
-                if isinstance(doc_blob.references, str):
-                    print(repr(doc_blob.references))
-                doc_blob.references = None
+            sections_ = [
+                "Parameters",
+                "Returns",
+                "Raises",
+                "Yields",
+                "Attributes",
+                "Other Parameters",
+                "Warns",
+                ##"Warnings",
+                "Methods",
+                # "Summary",
+                "Receives",
+            ]
+            for s in sections_:
+                for child in doc_blob.content.get(s, []):
+                    if isinstance(child, Parameters):
+                        for param in child.children:
+                            new_ref = [u.strip() for u in param[0].split(",") if u]
+                            if new_ref:
+                                _local_refs = _local_refs + new_ref
 
-                # end processing
-                try:
-                    doc_blob.validate()
-                except Exception as e:
-                    raise type(e)(f"Error in {qa}")
-                self.put(qa, doc_blob)
-                for name, data in figs:
-                    self.put_raw(name, data)
-            if error_collector._errors:
-                self.log.info("ERRORS:" + toml.dumps(error_collector._errors))
-            if error_collector._expected_unseen:
-                self.log.info(
-                    "UNSEEN ERRORS:" + toml.dumps(error_collector._expected_unseen)
-                )
-            if failure_collection:
-                self.log.info(
-                    "The following parsing failed \n%s",
-                    json.dumps(failure_collection, indent=2, sort_keys=True),
-                )
-
-            self._meta.update(
-                {
-                    "aliases": aliases,
-                }
+            # def flat(l) -> List[str]:
+            #    return [y for x in l for y in x]
+            for lr1 in _local_refs:
+                assert isinstance(lr1, str)
+            # lr: FrozenSet[str] = frozenset(flat(_local_refs))
+            lr: FrozenSet[str] = frozenset(_local_refs)
+            dv = DVR(
+                qa, known_refs, local_refs=lr, aliases={}, version=self.version
             )
+            doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
+            doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
+
+            for section in ["Extended Summary", "Summary", "Notes"] + sections_:
+                if section in doc_blob.content:
+                    doc_blob.content[section] = dv.visit(doc_blob.content[section])
+
+            for sa in doc_blob.see_also:
+                from .tree import resolve_
+
+                r = resolve_(
+                    qa,
+                    known_refs,
+                    frozenset(),
+                    sa.name.value,
+                    rev_aliases=rev_aliases,
+                )
+                assert isinstance(r, RefInfo)
+                if r.kind == "module":
+                    sa.name.reference = r
+                else:
+                    imp = DVR._import_solver(sa.name.value)
+                    if imp:
+                        self.log.debug(
+                            "TODO: see also resolve for %s in %s, %s",
+                            sa.name.value,
+                            qa,
+                            imp,
+                        )
+
+            # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
+            assert isinstance(doc_blob.references, (list, str, type(None))), (
+                repr(doc_blob.references),
+                qa,
+            )
+
+            if isinstance(doc_blob.references, str):
+                print(repr(doc_blob.references))
+            doc_blob.references = None
+
+            # end processing
+            try:
+                doc_blob.validate()
+            except Exception as e:
+                raise type(e)(f"Error in {qa}")
+            self.put(qa, doc_blob)
+            for name, data in figs:
+                self.put_raw(name, data)
+        if error_collector._errors:
+            self.log.info("ERRORS:" + toml.dumps(error_collector._errors))
+        if error_collector._expected_unseen:
+            self.log.info(
+                "UNSEEN ERRORS:" + toml.dumps(error_collector._expected_unseen)
+            )
+        if failure_collection:
+            self.log.info(
+                "The following parsing failed \n%s",
+                json.dumps(failure_collection, indent=2, sort_keys=True),
+            )
+
+        self._meta.update(
+            {
+                "aliases": aliases,
+            }
+        )
 
 
 def is_private(path):

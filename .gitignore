@@ -12,3 +12,4 @@ test.dat
 test.npy
 test.out
 tree-sitter-rst/
+.idea/

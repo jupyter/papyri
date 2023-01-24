@@ -363,14 +363,16 @@ class TSVisitor:
         return self.visit_text(node)
 
     def visit_text(self, node, prev_end=None):
-        t = Word(self.bytes[node.start_byte : node.end_byte].decode())
+        t = Word(self.bytes[node.start_byte: node.end_byte].decode())
+        from papyri.myst_ast import MText
+        t = MText(self.bytes[node.start_byte: node.end_byte].decode())
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
         return [t]
 
     def visit_whitespace(self, node, prev_end=None):
-        content = self.bytes[node.start_byte : node.end_byte].decode()
+        content = self.bytes[node.start_byte: node.end_byte].decode()
         # assert set(content) == {' '}, repr(content)
         t = Word(" " * len(content))
         t.start_byte = node.start_byte

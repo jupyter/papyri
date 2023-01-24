@@ -67,6 +67,7 @@ import cbor2
 from there import print
 
 from papyri.miniserde import deserialize, get_type_hints, serialize
+from papyri.myst_ast import MText
 from papyri.utils import dedent_but_first
 
 FullQual = NewType("FullQual", str)
@@ -74,6 +75,7 @@ Cannonical = NewType("Cannonical", str)
 
 
 def not_type_check(item, annotation):
+    # import ipdb as pdb; pdb.set_trace()
     if not hasattr(annotation, "__origin__"):
         if isinstance(item, annotation):
             return None
@@ -122,8 +124,13 @@ def _invalidate(obj, depth=0):
 
     annotations = get_type_hints(type(obj))
     for k, v in annotations.items():
+        # FIX: AttributeError: 'MText' object has no attribute 'position'
         item = getattr(obj, k)
-        res = not_type_check(item, v)
+        try:
+            res = not_type_check(item, v)
+        except Exception as e:
+            import ipdb as pdb; pdb.set_trace()
+            one = 1
         if res:
             return f"{k} field of  {type(obj)} : {res}"
 
@@ -821,6 +828,7 @@ class Paragraph(Node):
     children: List[
         Union[
             Words,
+            MText,
             Strong,
             Unimplemented,
             Emph,
