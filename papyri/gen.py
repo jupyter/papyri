@@ -53,6 +53,7 @@ from .take2 import (
     GenToken,
     Fig,
     Node,
+    Words,
     Link,
     NumpydocExample,
     NumpydocSeeAlso,
@@ -63,7 +64,6 @@ from .take2 import (
     Section,
     SeeAlsoItem,
     Signature,
-    Text,
     parse_rst_section,
 )
 from .toc import make_tree
@@ -343,9 +343,7 @@ def processed_example_data(example_section_data) -> Section:
         type_ = in_out.__class__.__name__
         # color examples with pygments classes
         if type_ == "Text":
-            blocks = parse_rst_section(in_out.value)
-            for b in blocks:
-                new_example_section_data.append(b)
+            assert False
 
         if type_ != "Text":
             new_example_section_data.append(in_out)
@@ -1115,7 +1113,7 @@ class Gen:
                 figs = []
                 if not isinstance(item, InOut):
                     assert isinstance(item.out, list)
-                    example_section_data.append(Text("\n".join(item.out)))
+                    example_section_data.append(Words("\n".join(item.out)))
                     continue
                 script, out, ce_status = _execute_inout(item)
                 raise_in_fig = None
