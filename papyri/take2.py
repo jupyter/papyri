@@ -637,19 +637,19 @@ def compress_word(stream) -> List[Any]:
     wds = ""
     assert isinstance(stream, list)
     for item in stream:
-        if isinstance(item, Word):
+        if isinstance(item, MText):
             wds += item.value
         else:
             if type(item).__name__ == "Whitespace":
-                acc.append(Words(item.value))
+                acc.append(MText(item.value))
                 wds = ""
             else:
                 if wds:
-                    acc.append(Words(wds))
+                    acc.append(MText(wds))
                     wds = ""
                 acc.append(item)
     if wds:
-        acc.append(Words(wds))
+        acc.append(MText(wds))
     return acc
 
 
