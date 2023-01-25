@@ -354,6 +354,7 @@ class TreeReplacer:
                 "Verbatim",
                 # "Word",
                 "Words",
+                "MText",
                 "SubstitutionDef",
             ]:
                 return [node]
