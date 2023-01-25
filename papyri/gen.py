@@ -52,7 +52,6 @@ from .take2 import (
     Code,
     GenToken,
     Fig,
-    Node,
     Words,
     Link,
     NumpydocExample,
@@ -66,6 +65,7 @@ from .take2 import (
     Signature,
     parse_rst_section,
 )
+from .common_ast import Node
 from .toc import make_tree
 from .tree import DVR
 from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress, full_qual

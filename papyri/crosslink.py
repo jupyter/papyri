@@ -12,11 +12,11 @@ from rich.logging import RichHandler
 import cbor2
 from there import print
 
+import papyri.common_ast
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
 from .take2 import (
-    Node,
     Param,
     RefInfo,
     Fig,
@@ -29,6 +29,7 @@ from .take2 import (
     Cannonical,
     TocTree,
 )
+from .common_ast import Node
 from .tree import PostDVR, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
 
@@ -392,7 +393,7 @@ class Ingester:
             for k, v in doc_blob.content.items():
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
             try:
-                doc_blob.validate()
+                papyri.common_ast.validate()
             except Exception as e:
                 raise type(e)(f"from {qa}")
             mod_root = qa.split(".")[0]
