@@ -279,11 +279,6 @@ class Comment(Leaf):
     """
 
 
-@register(4022)
-class Text(Leaf):
-    pass
-
-
 @register(4024)
 class Fig(Node):
     value: RefInfo
@@ -559,7 +554,7 @@ class Section(Node):
             Unimplemented,
             Comment,
             Target,
-            Text,
+            Words,
             Fig,
             Options,
             Paragraph,
@@ -625,7 +620,7 @@ class Param(Node):
     desc: List[
         Union[
             # Code,
-            Text,
+            Words,
             Fig,
             Paragraph,
             DefListItem,

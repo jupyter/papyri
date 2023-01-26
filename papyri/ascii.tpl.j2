@@ -161,11 +161,7 @@
    |{% elif section in ['Examples'] %}
    |   |{% for data in doc.example_section_data %}
    |   |   |{%- set type = data.__class__.__name__ -%}
-   |   |   |{% if type=='Text' %}
-   |   |   |
-   |   |   |    {{render_paragraph(data)}}
-   |   |   |
-   |   |   |{% elif type=='Fig' %}
+   |   |   |{% if type=='Fig' %}
    |   |   |        {{yellow("┌────────────────────┐")}}
    |   |   |        {{yellow("│ Image not included │")}}
    |   |   |        {{yellow("└────────────────────┘")}}
