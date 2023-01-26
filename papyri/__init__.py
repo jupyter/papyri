@@ -402,7 +402,7 @@ def relink(
 
 @app.command()
 def gen(
-    files: List[str],
+    file: str,
     infer: Optional[bool] = typer.Option(
         True, help="Whether to run type inference on code examples."
     ),
@@ -428,39 +428,35 @@ def gen(
     First item should be the root package to import, if subpackages need to be
     analyzed  but are not accessible from the root pass them as extra arguments.
 
+    This take a single file, and build the documentation for a single package,
+    and building for multiple packages may have side effects. For example
+    import seaborn change matplotlib defaults.
     """
     _intro()
     from papyri.gen import gen_main
     from IPython.utils.tempdir import TemporaryWorkingDirectory
 
-    if len(files) > 1:
-        print(
-            """
-            Warning, it is not recommended to run papyri on multiple libraries at once,
-            as many libraries might have side effects. """
-        )
     from os.path import join
     import os
 
     here = os.getcwd()
 
-    for file in files:
-        with TemporaryWorkingDirectory():
-            gen_main(
-                infer=infer,
-                exec_=exec,
-                target_file=join(here, file),
-                debug=debug,
-                dummy_progress=dummy_progress,
-                dry_run=dry_run,
-                api=api,
-                examples=examples,
-                fail=fail,
-                narrative=narrative,
-                fail_early=fail_early,
-                fail_unseen_error=fail_unseen_error,
-                limit_to=only,
-            )
+    with TemporaryWorkingDirectory():
+        gen_main(
+            infer=infer,
+            exec_=exec,
+            target_file=join(here, file),
+            debug=debug,
+            dummy_progress=dummy_progress,
+            dry_run=dry_run,
+            api=api,
+            examples=examples,
+            fail=fail,
+            narrative=narrative,
+            fail_early=fail_early,
+            fail_unseen_error=fail_unseen_error,
+            limit_to=only,
+        )
 
 
 @app.command()
