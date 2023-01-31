@@ -478,8 +478,8 @@ class TSVisitor:
         if acc[-1] == MText(" "):
             acc.pop()
         assert len(acc2) < 2
-        p = Paragraph(compress_word(acc))
-        # p = MParagraph(compress_word(acc))
+        # p = Paragraph(compress_word(acc))
+        p = MParagraph(compress_word(acc))
         return [p, *acc2]
 
     def visit_line_block(self, node, prev_end=None):
@@ -716,7 +716,7 @@ class TSVisitor:
                 # TODO missing type
                 acc.append(
                     DefListItem(
-                        dt=Paragraph(compress_word(self.visit(term))),
+                        dt=MParagraph(compress_word(self.visit(term))),
                         dd=self.visit_paragraph(term),
                     )
                 )
