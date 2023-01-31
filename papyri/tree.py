@@ -356,6 +356,7 @@ class TreeReplacer:
                 "Words",
                 "MText",
                 "MCode",
+                "MInlineCode",
                 "SubstitutionDef",
             ]:
                 return [node]

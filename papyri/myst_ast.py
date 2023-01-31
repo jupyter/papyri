@@ -53,6 +53,13 @@ class MCode(Node):
     # data: Any
 
 
+class MInlineCode(Node):
+    type = 'inlineCode'
+    value: str
+    # position: Any
+    # data: Any
+
+
 # class LinkReference:
 #     type = 'linkReference'
 #     children: List[StaticPhrasingContent]
@@ -84,6 +91,7 @@ class MParagraph(Node):
 
 StaticPhrasingContent = Union[
     MText,
+    MInlineCode
 ]
 
 PhrasingContent = Union[

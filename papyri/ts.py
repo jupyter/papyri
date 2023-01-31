@@ -5,7 +5,7 @@ from typing import List
 
 from tree_sitter import Language, Parser
 
-from .myst_ast import MText, MCode, MParagraph, MEmphasis
+from .myst_ast import MText, MCode, MParagraph, MEmphasis, MInlineCode
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
@@ -382,7 +382,7 @@ class TSVisitor:
 
     def visit_literal(self, node, prev_end=None):
         text = self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()
-        t = Verbatim([text])
+        t = MInlineCode(text)
         # print(' '*self.depth*4, t)
         return [t]
 
