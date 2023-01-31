@@ -406,6 +406,7 @@ class Section(Node):
         Union[
             Transition,
             # Code,
+            MCode,
             Code2,
             Code3,
             Unimplemented,

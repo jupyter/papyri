@@ -472,7 +472,7 @@ class TSVisitor:
         acc2 = []
 
         for item in sub:
-            if isinstance(item, BlockVerbatim):
+            if isinstance(item, MCode):
                 acc2.append(item)
                 continue
             acc.append(item)
