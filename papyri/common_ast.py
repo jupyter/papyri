@@ -89,11 +89,7 @@ def _invalidate(obj, depth=0):
     annotations = get_type_hints(type(obj))
     for k, v in annotations.items():
         # FIX: AttributeError: 'MText' object has no attribute 'position'
-        try:
-            item = getattr(obj, k)
-        except AttributeError:
-            import ipdb as pdb; pdb.set_trace()
-            one = 1
+        item = getattr(obj, k)
         res = not_type_check(item, v)
         if res:
             return f"{k} field of  {type(obj)} : {res}"
@@ -123,7 +119,6 @@ def validate(obj):
 
 
 def not_type_check(item, annotation):
-    # import ipdb as pdb; pdb.set_trace()
     if not hasattr(annotation, "__origin__"):
         if isinstance(item, annotation):
             return None

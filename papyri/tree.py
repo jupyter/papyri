@@ -355,6 +355,7 @@ class TreeReplacer:
                 # "Word",
                 "Words",
                 "MText",
+                "MCode",
                 "SubstitutionDef",
             ]:
                 return [node]

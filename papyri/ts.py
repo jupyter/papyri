@@ -5,7 +5,7 @@ from typing import List
 
 from tree_sitter import Language, Parser
 
-from .myst_ast import MText
+from .myst_ast import MText, MCode, MParagraph
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
@@ -391,8 +391,8 @@ class TSVisitor:
         datas = self.bytes[node.start_byte : node.end_byte].decode()
         first_offset = node.start_point[1]
         datas = " " * first_offset + datas
-
-        b = BlockVerbatim(dedent(datas))
+        # b = BlockVerbatim(dedent(datas))
+        b = MCode(dedent(datas))
         return [b]
 
     def visit_bullet_list(self, node, prev_end=None):
@@ -480,6 +480,7 @@ class TSVisitor:
             acc.pop()
         assert len(acc2) < 2
         p = Paragraph(compress_word(acc))
+        # p = MParagraph(compress_word(acc))
         return [p, *acc2]
 
     def visit_line_block(self, node, prev_end=None):
@@ -750,7 +751,8 @@ def parse(text: bytes, qa=None) -> List[Section]:
     root = Node(tree.root_node)
     tsv = TSVisitor(text, root, qa)
     res = tsv.visit_document(root)
-    return nest_sections(res)
+    ns = nest_sections(res)
+    return ns
 
 
 class TreeSitterParseError(Exception):
