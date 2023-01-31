@@ -66,7 +66,7 @@ from there import print
 
 from papyri.common_ast import Node, TAG_MAP, REV_TAG_MAP
 from papyri.miniserde import get_type_hints
-from papyri.myst_ast import MText, MCode, MParagraph
+from papyri.myst_ast import MText, MCode, MParagraph, MEmphasis
 from papyri.utils import dedent_but_first
 
 FullQual = NewType("FullQual", str)
@@ -685,6 +685,7 @@ class Paragraph(Node):
             Strong,
             Unimplemented,
             Emph,
+            MEmphasis,
             Target,
             Directive,
             Verbatim,
