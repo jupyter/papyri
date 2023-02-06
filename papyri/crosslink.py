@@ -12,7 +12,6 @@ from rich.logging import RichHandler
 import cbor2
 from there import print
 
-from . import common_ast
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key

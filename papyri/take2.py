@@ -220,15 +220,12 @@ class Math(Leaf):
 from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode
 
 
-
 class IntermediateNode(Node):
     """
     This is just a dummy class for Intermediate node that should not make it to the final Product
     """
 
     pass
-
-
 
 
 @register(4004)
@@ -300,13 +297,6 @@ class RefInfo(Node):
         return iter([self.module, self.version, self.kind, self.path])
 
 
-
-
-
-
-
-
-
 class Word(IntermediateNode):
     """
     This is a temporary node, while we visit the tree-sitter tree,
@@ -354,8 +344,6 @@ class Emph(Node):
 
     def __repr__(self):
         return "*" + repr(self.value) + "*"
-
-
 
 
 class _XList(Node):
