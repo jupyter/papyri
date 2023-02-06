@@ -12,7 +12,7 @@ from rich.logging import RichHandler
 import cbor2
 from there import print
 
-import papyri.common_ast
+from . import common_ast
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
@@ -393,7 +393,7 @@ class Ingester:
             for k, v in doc_blob.content.items():
                 assert isinstance(v, Section), f"section {k} is not a Section: {v!r}"
             try:
-                papyri.common_ast.validate()
+                doc_blob.validate()
             except Exception as e:
                 raise type(e)(f"from {qa}")
             mod_root = qa.split(".")[0]
