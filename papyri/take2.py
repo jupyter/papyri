@@ -64,10 +64,10 @@ from typing import Any, List, NewType, Optional, Tuple, Union
 import cbor2
 from there import print
 
-from papyri.common_ast import Node, TAG_MAP, REV_TAG_MAP
-from papyri.miniserde import get_type_hints
-from papyri.myst_ast import MText, MCode, MParagraph, MEmphasis, MInlineCode
-from papyri.utils import dedent_but_first
+from .common_ast import Node, TAG_MAP, REV_TAG_MAP
+from .miniserde import get_type_hints
+
+from .utils import dedent_but_first
 
 FullQual = NewType("FullQual", str)
 Cannonical = NewType("Cannonical", str)
@@ -89,8 +89,136 @@ def register(value):
 register(tuple)(4444)
 
 
+@register(4043)
+class ExternalLink(Node):
+    """
+    ExternalLink are link to external resources.
+    Most of the time they will be URL to other web resources,
+    """
+
+    value: str
+    target: str
+
+
+@register(4001)
+class Verbatim(Node):
+    value: List[str]
+
+    def __eq__(self, other):
+        if not type(self) == type(other):
+            return False
+
+        return self.text == other.text
+
+    def __hash__(self):
+        return hash(tuple(self.value))
+
+    @property
+    def text(self):
+        return "".join(self.value)
+
+    def __repr__(self):
+        return "<Verbatim ``" + "".join(self.value) + "``>"
+
+
+@register(4003)
+class Directive(Node):
+    value: str
+    domain: Optional[str]
+    role: Optional[str]
+
+    def __hash__(self):
+        return hash((tuple(self.value), self.domain, self.role))
+
+    def __eq__(self, other):
+        return (
+            (type(self) == type(other))
+            and (self.role == other.role)
+            and (other.domain == self.domain)
+            and (self.value == other.value)
+        )
+
+    def __len__(self):
+        return len(self.value) + len(self.prefix) + 2
+
+    @property
+    def prefix(self):
+        prefix = ""
+        if self.domain:
+            prefix += ":" + self.domain
+        if self.role:
+            prefix += ":" + self.role + ":"
+        return prefix
+
+    def __repr__(self):
+        return f"<Directive {self.prefix}`{self.value}`>"
+
+
+@register(4002)
+class Link(Node):
+    """
+    Links are usually the end goal of a directive,
+    they are a way to link to another document.
+    They contain a text; which will be what the user will see,
+    as well as a reference to the document pointed to.
+    They should also have an attribute to know whether the link is a
+     - Local item (same document)
+     - Internal item (same module)
+     - External item (another module)
+     - Web : a url to another page non papyri aware.
+     - Exist: bool wether the thing they point to exists.
+
+     - Anchor: reference to a particular anchor in the target document.
+
+
+    - I'm wondering if those should be descendant of directive not to lose information and be able to reconsruct the
+    directive from it.
+    - A Link might get several token for multiline; I'm not sure about that either, and wether the inner text should be
+      a block or not.
+    """
+
+    value: str
+    reference: RefInfo
+    # kind likely should be deprecated, or renamed
+    # either keep exists/true/false, but that can be a property as to wether reference is None ?
+    kind: str
+    exists: bool
+    anchor: Optional[str] = None
+
+    def __repr__(self):
+        return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
+
+    def __hash__(self):
+        return hash((self.value, self.reference, self.kind, self.exists, self.anchor))
+
+
+@register(4009)
+class Strong(Node):
+    content: Words
+
+    @property
+    def children(self):
+        return [self.content]
+
+    @children.setter
+    def children(self, children):
+        [self.content] = children
+
+    def __hash__(self):
+        return hash(repr(self))
+
+
 class Leaf(Node):
     value: str
+
+
+@register(4005)
+class Math(Leaf):
+    pass
+
+
+from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode
+
 
 
 class IntermediateNode(Node):
@@ -101,9 +229,6 @@ class IntermediateNode(Node):
     pass
 
 
-@register(4005)
-class Math(Leaf):
-    pass
 
 
 @register(4004)
@@ -175,107 +300,11 @@ class RefInfo(Node):
         return iter([self.module, self.version, self.kind, self.path])
 
 
-@register(4001)
-class Verbatim(Node):
-    value: List[str]
-
-    def __eq__(self, other):
-        if not type(self) == type(other):
-            return False
-
-        return self.text == other.text
-
-    def __hash__(self):
-        return hash(tuple(self.value))
-
-    @property
-    def text(self):
-        return "".join(self.value)
-
-    def __repr__(self):
-        return "<Verbatim ``" + "".join(self.value) + "``>"
 
 
-@register(4043)
-class ExternalLink(Node):
-    """
-    ExternalLink are link to external resources.
-    Most of the time they will be URL to other web resources,
-    """
-
-    value: str
-    target: str
 
 
-@register(4002)
-class Link(Node):
-    """
-    Links are usually the end goal of a directive,
-    they are a way to link to another document.
-    They contain a text; which will be what the user will see,
-    as well as a reference to the document pointed to.
-    They should also have an attribute to know whether the link is a
-     - Local item (same document)
-     - Internal item (same module)
-     - External item (another module)
-     - Web : a url to another page non papyri aware.
-     - Exist: bool wether the thing they point to exists.
 
-     - Anchor: reference to a particular anchor in the target document.
-
-
-    - I'm wondering if those should be descendant of directive not to lose information and be able to reconsruct the
-    directive from it.
-    - A Link might get several token for multiline; I'm not sure about that either, and wether the inner text should be
-      a block or not.
-    """
-
-    value: str
-    reference: RefInfo
-    # kind likely should be deprecated, or renamed
-    # either keep exists/true/false, but that can be a property as to wether reference is None ?
-    kind: str
-    exists: bool
-    anchor: Optional[str] = None
-
-    def __repr__(self):
-        return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
-
-    def __hash__(self):
-        return hash((self.value, self.reference, self.kind, self.exists, self.anchor))
-
-
-@register(4003)
-class Directive(Node):
-    value: str
-    domain: Optional[str]
-    role: Optional[str]
-
-    def __hash__(self):
-        return hash((tuple(self.value), self.domain, self.role))
-
-    def __eq__(self, other):
-        return (
-            (type(self) == type(other))
-            and (self.role == other.role)
-            and (other.domain == self.domain)
-            and (self.value == other.value)
-        )
-
-    def __len__(self):
-        return len(self.value) + len(self.prefix) + 2
-
-    @property
-    def prefix(self):
-        prefix = ""
-        if self.domain:
-            prefix += ":" + self.domain
-        if self.role:
-            prefix += ":" + self.role + ":"
-        return prefix
-
-    def __repr__(self):
-        return f"<Directive {self.prefix}`{self.value}`>"
 
 
 class Word(IntermediateNode):
@@ -327,20 +356,6 @@ class Emph(Node):
         return "*" + repr(self.value) + "*"
 
 
-@register(4009)
-class Strong(Node):
-    content: Words
-
-    @property
-    def children(self):
-        return [self.content]
-
-    @children.setter
-    def children(self, children):
-        [self.content] = children
-
-    def __hash__(self):
-        return hash(repr(self))
 
 
 class _XList(Node):
@@ -363,6 +378,8 @@ class ListItem(Node):
             Unimplemented,
             Admonition,
             Comment,
+            MParagraph,
+            MCode,
         ]
     ]
 
@@ -491,6 +508,8 @@ class Param(Node):
             BulletList,
             BlockQuote,
             EnumeratedList,
+            MParagraph,
+            MCode,
         ]
     ]
 
@@ -630,6 +649,8 @@ class BlockQuote(Node):
             Unimplemented,
             Comment,
             BlockMath,
+            MParagraph,
+            MCode,
         ]
     ]
 
@@ -711,6 +732,8 @@ class Admonition(Node):
     children: List[
         Union[
             Paragraph,
+            MParagraph,
+            MCode,
             BulletList,
             BlockVerbatim,
             BlockQuote,
@@ -793,10 +816,22 @@ class FieldListItem(Node):
             Paragraph,
             Words,
             Verbatim,
+            MText,
+            MCode,
         ]
     ]
     body: List[
-        Union[Words, Paragraph, Verbatim, Admonition, BlockDirective, BulletList]
+        Union[
+            Words,
+            Paragraph,
+            Verbatim,
+            Admonition,
+            BlockDirective,
+            BulletList,
+            MText,
+            MParagraph,
+            MCode,
+        ]
     ]
 
     def validate(self):
@@ -819,11 +854,12 @@ class FieldListItem(Node):
 
 @register(4037)
 class DefListItem(Node):
-    dt: Paragraph  # TODO: this is technically incorrect and should
+    dt: Union[Paragraph, MParagraph]  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
     dd: List[
         Union[
             Paragraph,
+            MParagraph,
             BulletList,
             EnumeratedList,
             BlockQuote,
@@ -850,7 +886,7 @@ class DefListItem(Node):
 @register(4028)
 class SeeAlsoItem(Node):
     name: Link
-    descriptions: List[Paragraph]
+    descriptions: List[Union[Paragraph, MParagraph]]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]
 

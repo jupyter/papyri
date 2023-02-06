@@ -7,6 +7,8 @@ from typing import List, Union, Any
 
 from papyri.common_ast import Node
 
+from . import take2
+
 
 # Prefixed with "M" as Text exists in take2.py as well
 class MText(Node):
@@ -89,7 +91,15 @@ class MParagraph(Node):
     # data: Any
 
 
-StaticPhrasingContent = Union[MText, MInlineCode]
+StaticPhrasingContent = Union[
+    MText,
+    MInlineCode,
+    take2.Verbatim,
+    take2.Directive,
+    take2.Link,
+    take2.Strong,
+    take2.Math,
+]
 
 PhrasingContent = Union[
     StaticPhrasingContent,
@@ -103,6 +113,7 @@ PhrasingContent = Union[
     # Abbreviation,
     # CrossReference,
     # FootnoteReference,
+    take2.ExternalLink,
 ]
 
 FlowContent = Union[
