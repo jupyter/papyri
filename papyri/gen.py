@@ -1867,8 +1867,8 @@ class Gen:
 
         error_collector = ErrorCollector(self.config, self.log)
         # with self.progress() as p2:
-            # just nice display of progression.
-            # taskp = p2.add_task(description="parsing", total=len(collected))
+        # just nice display of progression.
+        # taskp = p2.add_task(description="parsing", total=len(collected))
 
         failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
 
@@ -1962,9 +1962,7 @@ class Gen:
                 assert isinstance(lr1, str)
             # lr: FrozenSet[str] = frozenset(flat(_local_refs))
             lr: FrozenSet[str] = frozenset(_local_refs)
-            dv = DVR(
-                qa, known_refs, local_refs=lr, aliases={}, version=self.version
-            )
+            dv = DVR(qa, known_refs, local_refs=lr, aliases={}, version=self.version)
             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
             doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
 

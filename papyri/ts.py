@@ -23,18 +23,16 @@ from papyri.take2 import (
     FieldListItem,
     ListItem,
     Options,
-    Paragraph,
     Section,
     Strong,
     SubstitutionDef,
     SubstitutionRef,
     Transition,
     Unimplemented,
-    Verbatim,
     Word,
     Words,
     compress_word,
-    inline_nodes, Emph,
+    inline_nodes,
 )
 
 from . import errors
@@ -364,14 +362,14 @@ class TSVisitor:
 
     def visit_text(self, node, prev_end=None):
         # t = Word(self.bytes[node.start_byte: node.end_byte].decode())
-        t = MText(self.bytes[node.start_byte: node.end_byte].decode())
+        t = MText(self.bytes[node.start_byte : node.end_byte].decode())
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
         return [t]
 
     def visit_whitespace(self, node, prev_end=None):
-        content = self.bytes[node.start_byte: node.end_byte].decode()
+        content = self.bytes[node.start_byte : node.end_byte].decode()
         # assert set(content) == {' '}, repr(content)
         # t = Word(" " * len(content))
         t = MText(" " * len(content))
@@ -647,7 +645,9 @@ class TSVisitor:
     def visit_emphasis(self, node, prev_end=None):
         # TODO
         return [
-            MEmphasis([MText(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode())])
+            MEmphasis(
+                [MText(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode())]
+            )
             # Emph(Words(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode()))
         ]
 

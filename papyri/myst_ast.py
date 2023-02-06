@@ -10,7 +10,7 @@ from papyri.common_ast import Node
 
 # Prefixed with "M" as Text exists in take2.py as well
 class MText(Node):
-    type = 'text'
+    type = "text"
     value: str
     # position: Any
     # data: Any
@@ -18,7 +18,7 @@ class MText(Node):
 
 class MEmphasis(Node):
     type = "emphasis"
-    children: List['PhrasingContent']
+    children: List["PhrasingContent"]
     # position: Any
     # data: Any
 
@@ -30,8 +30,8 @@ class MStrong(Node):
 
 
 class MLink(Node):
-    type = 'link'
-    children: List['StaticPhrasingContent']
+    type = "link"
+    children: List["StaticPhrasingContent"]
     url: Any
     title: Any
     # position: Any
@@ -39,7 +39,7 @@ class MLink(Node):
 
 
 class MCode(Node):
-    type = 'code'
+    type = "code"
     # lang: str
     # meta: str
     # class_: str
@@ -54,7 +54,7 @@ class MCode(Node):
 
 
 class MInlineCode(Node):
-    type = 'inlineCode'
+    type = "inlineCode"
     value: str
     # position: Any
     # data: Any
@@ -66,8 +66,8 @@ class MInlineCode(Node):
 #     referenceType: Any
 #     identifier: Any
 #     label: Any
-    # position: Any
-    # data: Any
+# position: Any
+# data: Any
 
 
 # class Abbreviation:
@@ -83,16 +83,13 @@ class MInlineCode(Node):
 
 
 class MParagraph(Node):
-    type = 'paragraph'
-    children: List['PhrasingContent']
+    type = "paragraph"
+    children: List["PhrasingContent"]
     # position: Any
     # data: Any
 
 
-StaticPhrasingContent = Union[
-    MText,
-    MInlineCode
-]
+StaticPhrasingContent = Union[MText, MInlineCode]
 
 PhrasingContent = Union[
     StaticPhrasingContent,
