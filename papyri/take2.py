@@ -203,17 +203,6 @@ class Math(Leaf):
     pass
 
 
-from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode
-
-
-class IntermediateNode(Node):
-    """
-    This is just a dummy class for Intermediate node that should not make it to the final Product
-    """
-
-    pass
-
-
 @register(4004)
 class BlockMath(Leaf):
     pass
@@ -232,6 +221,26 @@ class SubstitutionRef(Leaf):
 
 @register(4042)
 class Target(Leaf):
+    pass
+
+
+@register(4018)
+class Unimplemented(Node):
+    placeholder: str
+    value: str
+
+    def __repr__(self):
+        return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
+
+
+from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode
+
+
+class IntermediateNode(Node):
+    """
+    This is just a dummy class for Intermediate node that should not make it to the final Product
+    """
+
     pass
 
 
@@ -527,15 +536,6 @@ class Token(Node):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.link=} {self.type=} >"
-
-
-@register(4018)
-class Unimplemented(Node):
-    placeholder: str
-    value: str
-
-    def __repr__(self):
-        return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
 
 
 @register(4029)
@@ -834,6 +834,7 @@ class DefListItem(Node):
         Union[
             Paragraph,
             MParagraph,
+            MCode,
             BulletList,
             EnumeratedList,
             BlockQuote,

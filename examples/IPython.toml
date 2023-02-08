@@ -25,6 +25,12 @@ IncorrectInternalDocsLen = [
   "IPython.terminal.embed.EmbeddedMagics.kill_embedded",
 ]
 
+
+ValueError = [
+   "IPython.core.magics.osm.OSMagics.env",
+   "IPython.core.magics.osm.OSMagics.set_env",
+]
+
 [meta]
 github_slug = 'IPython/IPython'
 tag = '8.2.0'

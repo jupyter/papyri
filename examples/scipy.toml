@@ -73,14 +73,14 @@ array = 'numpy:array'
 arange = 'numpy:arange'
 [global.expected_errors]
 IncorrectInternalDocsLen = [
-    "scipy.signal._spline.symiirorder1", "scipy.signal._spline.symiirorder2",
-    "scipy.signal._filter_design._ellipdeg", "scipy.special._logsumexp.log_softmax", "scipy.linalg._decomp.cdf2rdf",
-    "scipy.linalg._special_matrices.fiedler", "scipy.interpolate._fitpack_impl.bisplev",
-    "scipy.interpolate._fitpack_py.spalde", "scipy.interpolate._fitpack_impl.spalde",
+    "scipy.linalg._decomp.cdf2rdf",
     "scipy.optimize._lsq.common.regularized_lsq_operator",
-    "scipy.optimize._trustregion_constr.tr_interior_point.tr_interior_point",
-    "scipy.sparse._bsr.bsr_matrix.check_format",
     "scipy.optimize._trustregion_constr.tr_interior_point.BarrierSubproblem.gradient_and_jacobian",
+    "scipy.optimize._trustregion_constr.tr_interior_point.tr_interior_point",
+    "scipy.signal._filter_design._ellipdeg",
+    "scipy.signal._spline.symiirorder1",
+    "scipy.signal._spline.symiirorder2",
+    "scipy.sparse._bsr.bsr_matrix.check_format",
     ]
 VisitCitationReferenceNotImplementedError = [
     "scipy.optimize._nonlin.anderson",
@@ -116,9 +116,6 @@ VisitCitationReferenceNotImplementedError = [
     "scipy.spatial._spherical_voronoi.calculate_solid_angles",
     "scipy.integrate._ode.ode",
     ]
-ExampleError1 = [ "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree",
-                  "scipy.optimize._root.root", "scipy.interpolate._fitpack2.LSQSphereBivariateSpline",
-                    "scipy.interpolate._fitpack2.SmoothSphereBivariateSpline", "scipy.sparse.linalg._eigen._svds.svds",]
 AssertionError = [
     "scipy.optimize._linprog_ip._ip_hsd",
     "scipy.special._orthogonal._compute_tauk",
@@ -134,12 +131,13 @@ NumpydocParseError = [
     "scipy.optimize._linprog_ip._linprog_ip",
     "scipy.optimize._linprog_rs._linprog_rs",
     "scipy.optimize._linprog_simplex._linprog_simplex",
-    "scipy.stats._discrete_distns.geom_gen",
-    "scipy.sparse.linalg._expm_multiply.expm_multiply",
     "scipy.optimize._optimize._minimize_powell",
     "scipy.optimize._qap._quadratic_assignment_2opt",
     "scipy.optimize._qap._quadratic_assignment_faq",
+    "scipy.stats._discrete_distns.geom_gen",
     "scipy.stats._discrete_distns.planck_gen",
     ]
-SpaceAfterBlockDirectiveError = ['scipy.optimize._tnc._minimize_tnc']
+SpaceAfterBlockDirectiveError = [
+    "scipy.optimize._tnc._minimize_tnc",
+    ]
     
