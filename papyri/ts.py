@@ -5,6 +5,7 @@ from typing import List
 
 from tree_sitter import Language, Parser
 
+from .myst_ast import MText, MCode, MParagraph, MEmphasis, MInlineCode
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
@@ -17,20 +18,17 @@ from papyri.take2 import (
     DefList,
     DefListItem,
     Directive,
-    Emph,
     EnumeratedList,
     FieldList,
     FieldListItem,
     ListItem,
     Options,
-    Paragraph,
     Section,
     Strong,
     SubstitutionDef,
     SubstitutionRef,
     Transition,
     Unimplemented,
-    Verbatim,
     Word,
     Words,
     compress_word,
@@ -264,9 +262,9 @@ class TSVisitor:
             if kind == "::":
                 if acc and isinstance(acc[-1], Word):
                     word = acc.pop()
-                    acc.append(Word(word.value + ":"))
+                    acc.append(MText(word.value + ":"))
                 elif acc and isinstance(acc[-1], inline_nodes):
-                    acc.append(Word(":"))
+                    acc.append(MText(":"))
                 # else:
                 #    assert False
                 continue
@@ -363,7 +361,8 @@ class TSVisitor:
         return self.visit_text(node)
 
     def visit_text(self, node, prev_end=None):
-        t = Word(self.bytes[node.start_byte : node.end_byte].decode())
+        # t = Word(self.bytes[node.start_byte: node.end_byte].decode())
+        t = MText(self.bytes[node.start_byte : node.end_byte].decode())
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
@@ -372,7 +371,8 @@ class TSVisitor:
     def visit_whitespace(self, node, prev_end=None):
         content = self.bytes[node.start_byte : node.end_byte].decode()
         # assert set(content) == {' '}, repr(content)
-        t = Word(" " * len(content))
+        # t = Word(" " * len(content))
+        t = MText(" " * len(content))
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
@@ -380,7 +380,7 @@ class TSVisitor:
 
     def visit_literal(self, node, prev_end=None):
         text = self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()
-        t = Verbatim([text])
+        t = MInlineCode(text)
         # print(' '*self.depth*4, t)
         return [t]
 
@@ -388,8 +388,8 @@ class TSVisitor:
         datas = self.bytes[node.start_byte : node.end_byte].decode()
         first_offset = node.start_point[1]
         datas = " " * first_offset + datas
-
-        b = BlockVerbatim(dedent(datas))
+        # b = BlockVerbatim(dedent(datas))
+        b = MCode(dedent(datas))
         return [b]
 
     def visit_bullet_list(self, node, prev_end=None):
@@ -469,14 +469,15 @@ class TSVisitor:
         acc2 = []
 
         for item in sub:
-            if isinstance(item, BlockVerbatim):
+            if isinstance(item, MCode):
                 acc2.append(item)
                 continue
             acc.append(item)
-        if acc[-1] == Word(" "):
+        if acc[-1] == MText(" "):
             acc.pop()
         assert len(acc2) < 2
-        p = Paragraph(compress_word(acc))
+        # p = Paragraph(compress_word(acc))
+        p = MParagraph(compress_word(acc))
         return [p, *acc2]
 
     def visit_line_block(self, node, prev_end=None):
@@ -644,7 +645,10 @@ class TSVisitor:
     def visit_emphasis(self, node, prev_end=None):
         # TODO
         return [
-            Emph(Words(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode()))
+            MEmphasis(
+                [MText(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode())]
+            )
+            # Emph(Words(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode()))
         ]
 
     def visit_substitution_definition(self, node, prev_end=None):
@@ -712,7 +716,7 @@ class TSVisitor:
                 # TODO missing type
                 acc.append(
                     DefListItem(
-                        dt=Paragraph(compress_word(self.visit(term))),
+                        dt=MParagraph(compress_word(self.visit(term))),
                         dd=self.visit_paragraph(term),
                     )
                 )
@@ -747,7 +751,8 @@ def parse(text: bytes, qa=None) -> List[Section]:
     root = Node(tree.root_node)
     tsv = TSVisitor(text, root, qa)
     res = tsv.visit_document(root)
-    return nest_sections(res)
+    ns = nest_sections(res)
+    return ns
 
 
 class TreeSitterParseError(Exception):

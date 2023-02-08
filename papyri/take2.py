@@ -57,183 +57,153 @@ Unless your use case is widely adopted it is likely not worse the complexity
 
 from __future__ import annotations
 
-import json
 import sys
-import typing
 from dataclasses import dataclass
-from typing import Any, Dict, List, NewType, Optional, Tuple, Union
+from typing import Any, List, NewType, Optional, Tuple, Union
 
 import cbor2
 from there import print
 
-from papyri.miniserde import deserialize, get_type_hints, serialize
-from papyri.utils import dedent_but_first
+from .common_ast import Node, REV_TAG_MAP, register
+from .miniserde import get_type_hints
+
+from .utils import dedent_but_first
 
 FullQual = NewType("FullQual", str)
 Cannonical = NewType("Cannonical", str)
 
-
-def not_type_check(item, annotation):
-    if not hasattr(annotation, "__origin__"):
-        if isinstance(item, annotation):
-            return None
-        else:
-            return f"expecting {annotation} got {type(item)}"
-    elif annotation.__origin__ is dict:
-        if not isinstance(item, dict):
-            return f"got  {type(item)}, Yexpecting list"
-        inner_type = annotation.__args__[0]
-        a = [not_type_check(i, inner_type) for i in item.keys()]
-        ax = [x for x in a if x is not None]
-        inner_type = annotation.__args__[1]
-        b = [not_type_check(i, inner_type) for i in item.values()]
-        bx = [x for x in b if x is not None]
-        if ax:
-            return ":invalid key type {ax[0]}"
-        if bx:
-            return bx[0]
-        return None
-    elif annotation.__origin__ in (list, tuple):
-        # technically incorrect
-        if not isinstance(item, (list, tuple)):
-            return f"got  {type(item)}, Yexpecting list"
-        # todo, this does not support Tuple[x,x] < len of tuple, and treat is as a list.
-        assert len(annotation.__args__) == 1
-        inner_type = annotation.__args__[0]
-
-        b = [not_type_check(i, inner_type) for i in item]
-
-        bp = [x for x in b if x is not None]
-        if bp:
-            return bp[0]
-        else:
-            return None
-    elif annotation.__origin__ is typing.Union:
-        if any([not_type_check(item, arg) is None for arg in annotation.__args__]):
-            return None
-        return f"expecting one of {annotation!r}, got {item!r}"
-    raise ValueError(item, annotation)
-
-
-def _invalidate(obj, depth=0):
-    """
-    Recursively validate type anotated classes.
-    """
-
-    annotations = get_type_hints(type(obj))
-    for k, v in annotations.items():
-        item = getattr(obj, k)
-        res = not_type_check(item, v)
-        if res:
-            return f"{k} field of  {type(obj)} : {res}"
-
-        if isinstance(item, (list, tuple)):
-            for ii, i in enumerate(item):
-                sub = _invalidate(i, depth + 1)
-                if sub is not None:
-                    return f"{k}.{ii}." + sub
-        if isinstance(item, dict):
-            for ii, i in item.items():
-                sub = _invalidate(i, depth + 1)
-                if sub is not None:
-                    return f"{k}.{ii}." + sub
-        else:
-            sub = _invalidate(item, depth + 1)
-            if sub is not None:
-                return f"{k}.{sub}." + sub
-
-    # return outcome,s
-
-
-def validate(obj):
-    res = _invalidate(obj)
-    if res:
-        raise ValueError(f"Wrong type at field :: {res}")
-
-
-# tag=True
-class Base:
-    def validate(self):
-        validate(self)
-        return self
-
-    @classmethod
-    def _instance(cls):
-        return cls()
-
-
-TAG_MAP: Dict[Any, int] = {}
-REV_TAG_MAP: Dict[int, Any] = {}
-
-
-def register(value):
-    assert value not in REV_TAG_MAP
-
-    def _inner(type_):
-        assert type_ not in TAG_MAP
-        TAG_MAP[type_] = value
-        REV_TAG_MAP[value] = type_
-
-        return type_
-
-    return _inner
-
-
 register(tuple)(4444)
 
 
-class Node(Base):
-    def __init__(self, *args, **kwargs):
-        tt = get_type_hints(type(self))
-        for attr, val in zip(tt, args):
-            setattr(self, attr, val)
-        for k, v in kwargs.items():
-            assert k in tt
-            setattr(self, k, v)
-        if hasattr(self, "_post_deserialise"):
-            self._post_deserialise()
+@register(4043)
+class ExternalLink(Node):
+    """
+    ExternalLink are link to external resources.
+    Most of the time they will be URL to other web resources,
+    """
 
-    def cbor(self, encoder):
-        tag = TAG_MAP[type(self)]
-        attrs = get_type_hints(type(self))
-        encoder.encode(cbor2.CBORTag(tag, [getattr(self, k) for k in attrs]))
+    value: str
+    target: str
+
+
+@register(4001)
+class Verbatim(Node):
+    value: List[str]
 
     def __eq__(self, other):
-        if not (type(self) == type(other)):
+        if not type(self) == type(other):
             return False
-        tt = get_type_hints(type(self))
-        for attr in tt:
-            a, b = getattr(self, attr), getattr(other, attr)
-            if a != b:
-                return False
 
-        return True
+        return self.text == other.text
+
+    def __hash__(self):
+        return hash(tuple(self.value))
+
+    @property
+    def text(self):
+        return "".join(self.value)
 
     def __repr__(self):
-        tt = get_type_hints(type(self))
-        acc = ""
-        for t in tt:
-            acc += f"{t}: {getattr(self, t)!r}\n"
+        return "<Verbatim ``" + "".join(self.value) + "``>"
 
-        return f"<{self.__class__.__name__}: \n{indent(acc)}>"
 
-    def to_json(self) -> bytes:
-        return json.dumps(self.to_dict(), indent=2, sort_keys=True).encode()
+@register(4003)
+class Directive(Node):
+    value: str
+    domain: Optional[str]
+    role: Optional[str]
 
-    @classmethod
-    def from_json(cls, data: bytes):
-        return cls.from_dict(json.loads(data))
+    def __hash__(self):
+        return hash((tuple(self.value), self.domain, self.role))
 
-    def to_dict(self):
-        return serialize(self, type(self))
+    def __eq__(self, other):
+        return (
+            (type(self) == type(other))
+            and (self.role == other.role)
+            and (other.domain == self.domain)
+            and (self.value == other.value)
+        )
 
-    @classmethod
-    def from_dict(cls, data):
-        return deserialize(cls, cls, data)
+    def __len__(self):
+        return len(self.value) + len(self.prefix) + 2
+
+    @property
+    def prefix(self):
+        prefix = ""
+        if self.domain:
+            prefix += ":" + self.domain
+        if self.role:
+            prefix += ":" + self.role + ":"
+        return prefix
+
+    def __repr__(self):
+        return f"<Directive {self.prefix}`{self.value}`>"
+
+
+@register(4002)
+class Link(Node):
+    """
+    Links are usually the end goal of a directive,
+    they are a way to link to another document.
+    They contain a text; which will be what the user will see,
+    as well as a reference to the document pointed to.
+    They should also have an attribute to know whether the link is a
+     - Local item (same document)
+     - Internal item (same module)
+     - External item (another module)
+     - Web : a url to another page non papyri aware.
+     - Exist: bool wether the thing they point to exists.
+
+     - Anchor: reference to a particular anchor in the target document.
+
+
+    - I'm wondering if those should be descendant of directive not to lose information and be able to reconsruct the
+    directive from it.
+    - A Link might get several token for multiline; I'm not sure about that either, and wether the inner text should be
+      a block or not.
+    """
+
+    value: str
+    reference: RefInfo
+    # kind likely should be deprecated, or renamed
+    # either keep exists/true/false, but that can be a property as to wether reference is None ?
+    kind: str
+    exists: bool
+    anchor: Optional[str] = None
+
+    def __repr__(self):
+        return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
+
+    def __hash__(self):
+        return hash((self.value, self.reference, self.kind, self.exists, self.anchor))
+
+
+@register(4009)
+class Strong(Node):
+    content: Words
+
+    @property
+    def children(self):
+        return [self.content]
+
+    @children.setter
+    def children(self, children):
+        [self.content] = children
+
+    def __hash__(self):
+        return hash(repr(self))
 
 
 class Leaf(Node):
     value: str
+
+
+@register(4005)
+class Math(Leaf):
+    pass
+
+
+from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode
 
 
 class IntermediateNode(Node):
@@ -241,11 +211,6 @@ class IntermediateNode(Node):
     This is just a dummy class for Intermediate node that should not make it to the final Product
     """
 
-    pass
-
-
-@register(4005)
-class Math(Leaf):
     pass
 
 
@@ -318,109 +283,6 @@ class RefInfo(Node):
         return iter([self.module, self.version, self.kind, self.path])
 
 
-@register(4001)
-class Verbatim(Node):
-    value: List[str]
-
-    def __eq__(self, other):
-        if not type(self) == type(other):
-            return False
-
-        return self.text == other.text
-
-    def __hash__(self):
-        return hash(tuple(self.value))
-
-    @property
-    def text(self):
-        return "".join(self.value)
-
-    def __repr__(self):
-        return "<Verbatim ``" + "".join(self.value) + "``>"
-
-
-@register(4043)
-class ExternalLink(Node):
-    """
-    ExternalLink are link to external resources.
-    Most of the time they will be URL to other web resources,
-    """
-
-    value: str
-    target: str
-
-
-@register(4002)
-class Link(Node):
-    """
-    Links are usually the end goal of a directive,
-    they are a way to link to another document.
-    They contain a text; which will be what the user will see,
-    as well as a reference to the document pointed to.
-    They should also have an attribute to know whether the link is a
-     - Local item (same document)
-     - Internal item (same module)
-     - External item (another module)
-     - Web : a url to another page non papyri aware.
-     - Exist: bool wether the thing they point to exists.
-
-     - Anchor: reference to a particular anchor in the target document.
-
-
-    - I'm wondering if those should be descendant of directive not to lose information and be able to reconsruct the
-    directive from it.
-    - A Link might get several token for multiline; I'm not sure about that either, and wether the inner text should be
-      a block or not.
-    """
-
-    value: str
-    reference: RefInfo
-    # kind likely should be deprecated, or renamed
-    # either keep exists/true/false, but that can be a property as to wether reference is None ?
-    kind: str
-    exists: bool
-    anchor: Optional[str] = None
-
-    def __repr__(self):
-        return f"<Link: {self.value=} {self.reference=} {self.kind=} {self.exists=}>"
-
-    def __hash__(self):
-        return hash((self.value, self.reference, self.kind, self.exists, self.anchor))
-
-
-@register(4003)
-class Directive(Node):
-    value: str
-    domain: Optional[str]
-    role: Optional[str]
-
-    def __hash__(self):
-        return hash((tuple(self.value), self.domain, self.role))
-
-    def __eq__(self, other):
-        return (
-            (type(self) == type(other))
-            and (self.role == other.role)
-            and (other.domain == self.domain)
-            and (self.value == other.value)
-        )
-
-    def __len__(self):
-        return len(self.value) + len(self.prefix) + 2
-
-    @property
-    def prefix(self):
-        prefix = ""
-        if self.domain:
-            prefix += ":" + self.domain
-        if self.role:
-            prefix += ":" + self.role + ":"
-        return prefix
-
-    def __repr__(self):
-        return f"<Directive {self.prefix}`{self.value}`>"
-
-
 class Word(IntermediateNode):
     """
     This is a temporary node, while we visit the tree-sitter tree,
@@ -470,22 +332,6 @@ class Emph(Node):
         return "*" + repr(self.value) + "*"
 
 
-@register(4009)
-class Strong(Node):
-    content: Words
-
-    @property
-    def children(self):
-        return [self.content]
-
-    @children.setter
-    def children(self, children):
-        [self.content] = children
-
-    def __hash__(self):
-        return hash(repr(self))
-
-
 class _XList(Node):
     children: List[ListItem]
 
@@ -506,6 +352,8 @@ class ListItem(Node):
             Unimplemented,
             Admonition,
             Comment,
+            MParagraph,
+            MCode,
         ]
     ]
 
@@ -549,6 +397,7 @@ class Section(Node):
         Union[
             Transition,
             # Code,
+            MCode,
             Code2,
             Code3,
             Unimplemented,
@@ -558,6 +407,7 @@ class Section(Node):
             Fig,
             Options,
             Paragraph,
+            MParagraph,
             DefList,
             BlockDirective,
             Unimplemented,
@@ -632,6 +482,8 @@ class Param(Node):
             BulletList,
             BlockQuote,
             EnumeratedList,
+            MParagraph,
+            MCode,
         ]
     ]
 
@@ -771,6 +623,8 @@ class BlockQuote(Node):
             Unimplemented,
             Comment,
             BlockMath,
+            MParagraph,
+            MCode,
         ]
     ]
 
@@ -780,19 +634,19 @@ def compress_word(stream) -> List[Any]:
     wds = ""
     assert isinstance(stream, list)
     for item in stream:
-        if isinstance(item, Word):
+        if isinstance(item, MText):
             wds += item.value
         else:
             if type(item).__name__ == "Whitespace":
-                acc.append(Words(item.value))
+                acc.append(MText(item.value))
                 wds = ""
             else:
                 if wds:
-                    acc.append(Words(wds))
+                    acc.append(MText(wds))
                     wds = ""
                 acc.append(item)
     if wds:
-        acc.append(Words(wds))
+        acc.append(MText(wds))
     return acc
 
 
@@ -821,9 +675,13 @@ class Paragraph(Node):
     children: List[
         Union[
             Words,
+            MText,
+            MCode,
             Strong,
             Unimplemented,
             Emph,
+            MEmphasis,
+            MInlineCode,
             Target,
             Directive,
             Verbatim,
@@ -841,14 +699,6 @@ class Paragraph(Node):
         return (type(self) == type(other)) and (self.children == other.children)
 
 
-def indent(text, marker="   |"):
-    """
-    Return the given text indented with 3 space plus a pipe for display.
-    """
-    lines = text.split("\n")
-    return "\n".join(marker + l for l in lines)
-
-
 @register(4038)
 class Admonition(Node):
     kind: str
@@ -856,6 +706,8 @@ class Admonition(Node):
     children: List[
         Union[
             Paragraph,
+            MParagraph,
+            MCode,
             BulletList,
             BlockVerbatim,
             BlockQuote,
@@ -938,10 +790,22 @@ class FieldListItem(Node):
             Paragraph,
             Words,
             Verbatim,
+            MText,
+            MCode,
         ]
     ]
     body: List[
-        Union[Words, Paragraph, Verbatim, Admonition, BlockDirective, BulletList]
+        Union[
+            Words,
+            Paragraph,
+            Verbatim,
+            Admonition,
+            BlockDirective,
+            BulletList,
+            MText,
+            MParagraph,
+            MCode,
+        ]
     ]
 
     def validate(self):
@@ -964,11 +828,12 @@ class FieldListItem(Node):
 
 @register(4037)
 class DefListItem(Node):
-    dt: Paragraph  # TODO: this is technically incorrect and should
+    dt: Union[Paragraph, MParagraph]  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
     dd: List[
         Union[
             Paragraph,
+            MParagraph,
             BulletList,
             EnumeratedList,
             BlockQuote,
@@ -995,7 +860,7 @@ class DefListItem(Node):
 @register(4028)
 class SeeAlsoItem(Node):
     name: Link
-    descriptions: List[Paragraph]
+    descriptions: List[Union[Paragraph, MParagraph]]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]
 

@@ -24,13 +24,13 @@ from .take2 import (
     Link,
     ListItem,
     Math,
-    Node,
     Paragraph,
     RefInfo,
     SubstitutionDef,
     Token,
     Verbatim,
 )
+from .common_ast import Node
 from .utils import full_qual
 from textwrap import indent
 from .ts import parse
@@ -354,6 +354,9 @@ class TreeReplacer:
                 "Verbatim",
                 # "Word",
                 "Words",
+                "MText",
+                "MCode",
+                "MInlineCode",
                 "SubstitutionDef",
             ]:
                 return [node]

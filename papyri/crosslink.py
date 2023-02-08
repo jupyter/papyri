@@ -16,7 +16,6 @@ from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
 from .take2 import (
-    Node,
     Param,
     RefInfo,
     Fig,
@@ -24,11 +23,11 @@ from .take2 import (
     SeeAlsoItem,
     Signature,
     encoder,
-    register,
     FullQual,
     Cannonical,
     TocTree,
 )
+from .common_ast import Node, register
 from .tree import PostDVR, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
 
