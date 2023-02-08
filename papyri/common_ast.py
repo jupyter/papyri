@@ -158,3 +158,16 @@ def not_type_check(item, annotation):
             return None
         return f"expecting one of {annotation!r}, got {item!r}"
     raise ValueError(item, annotation)
+
+
+def register(value):
+    assert value not in REV_TAG_MAP
+
+    def _inner(type_):
+        assert type_ not in TAG_MAP
+        TAG_MAP[type_] = value
+        REV_TAG_MAP[value] = type_
+
+        return type_
+
+    return _inner

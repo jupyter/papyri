@@ -23,12 +23,11 @@ from .take2 import (
     SeeAlsoItem,
     Signature,
     encoder,
-    register,
     FullQual,
     Cannonical,
     TocTree,
 )
-from .common_ast import Node
+from .common_ast import Node, register
 from .tree import PostDVR, resolve_, TreeVisitor
 from .utils import progress, dummy_progress
 

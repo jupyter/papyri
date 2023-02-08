@@ -5,12 +5,13 @@ add Text from Myst to the generated structure in the ts.py.
 """
 from typing import List, Union, Any
 
-from papyri.common_ast import Node
+from papyri.common_ast import Node, register
 
 from . import take2
 
 
 # Prefixed with "M" as Text exists in take2.py as well
+@register(4046)
 class MText(Node):
     type = "text"
     value: str
@@ -18,6 +19,7 @@ class MText(Node):
     # data: Any
 
 
+@register(4047)
 class MEmphasis(Node):
     type = "emphasis"
     children: List["PhrasingContent"]
@@ -25,12 +27,14 @@ class MEmphasis(Node):
     # data: Any
 
 
+@register(4048)
 class MStrong(Node):
     type = "strong"
     # position: Any
     # data: Any
 
 
+@register(4049)
 class MLink(Node):
     type = "link"
     children: List["StaticPhrasingContent"]
@@ -40,6 +44,7 @@ class MLink(Node):
     # data: Any
 
 
+@register(4050)
 class MCode(Node):
     type = "code"
     # lang: str
@@ -55,6 +60,7 @@ class MCode(Node):
     # data: Any
 
 
+@register(4051)
 class MInlineCode(Node):
     type = "inlineCode"
     value: str
@@ -84,6 +90,7 @@ class MInlineCode(Node):
 #     type = "footnoteReference"
 
 
+@register(4045)
 class MParagraph(Node):
     type = "paragraph"
     children: List["PhrasingContent"]

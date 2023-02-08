@@ -64,27 +64,13 @@ from typing import Any, List, NewType, Optional, Tuple, Union
 import cbor2
 from there import print
 
-from .common_ast import Node, TAG_MAP, REV_TAG_MAP
+from .common_ast import Node, REV_TAG_MAP, register
 from .miniserde import get_type_hints
 
 from .utils import dedent_but_first
 
 FullQual = NewType("FullQual", str)
 Cannonical = NewType("Cannonical", str)
-
-
-def register(value):
-    assert value not in REV_TAG_MAP
-
-    def _inner(type_):
-        assert type_ not in TAG_MAP
-        TAG_MAP[type_] = value
-        REV_TAG_MAP[value] = type_
-
-        return type_
-
-    return _inner
-
 
 register(tuple)(4444)
 
