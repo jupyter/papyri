@@ -5,7 +5,7 @@ add Text from Myst to the generated structure in the ts.py.
 """
 from typing import List, Union, Any
 
-from papyri.common_ast import Node, register
+from .common_ast import Node, register
 
 from . import take2
 
