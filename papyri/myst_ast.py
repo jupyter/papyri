@@ -106,6 +106,8 @@ StaticPhrasingContent = Union[
     take2.Link,
     take2.Strong,
     take2.Math,
+    take2.SubstitutionRef,
+    take2.Unimplemented,
 ]
 
 PhrasingContent = Union[

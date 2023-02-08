@@ -957,11 +957,11 @@ class Gen:
     data: Dict[str, DocBlob]
     bdata: Dict[str, bytes]
 
-    def __init__(self, dummy_progress, config):
+    def __init__(self, dummy_progress: bool, config: Config):
         if dummy_progress:
             self.Progress = DummyP
         else:
-            self.Progress = Progress
+            self.Progress = Progress  # type: ignore
 
         self.progress = lambda: self.Progress(
             TextColumn("[progress.description]{task.description}", justify="right"),
@@ -992,10 +992,19 @@ class Gen:
             def filter(self, record):
                 if "Generic family" in record.msg:
                     return 0
+                if "found for the serif fontfamily" in record.msg:
+                    return 0
+                if "not found. Falling back to" in record.msg:
+                    return 0
+                if "Substituting symbol" in record.msg:
+                    return 0
                 return 1
 
         mlog = logging.getLogger("matplotlib.font_manager")
         mlog.addFilter(MF("serif"))
+
+        mplog = logging.getLogger("matplotlib.mathtext")
+        mplog.addFilter(MF("serif"))
 
         # end TODO
 
@@ -1005,10 +1014,10 @@ class Gen:
 
         self.data = {}
         self.bdata = {}
-        self._meta = {}
+        self._meta: Dict[str, Dict[FullQual, Cannonical]] = {}
         self.examples = {}
         self.docs = {}
-        self._doctree = {}
+        self._doctree: Dict[str, str] = {}
 
     def get_example_data(
         self, example_section, *, obj, qa: str, config, log
