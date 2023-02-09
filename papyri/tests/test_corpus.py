@@ -9,4 +9,5 @@ PAIRS = [(s, _expected_path(s)) for s in SAMPLES]
 def test_corpus(sample, expected):
     processed = _process(sample)
     exported = _serialize(processed)
+
     assert expected.read_bytes() == exported
