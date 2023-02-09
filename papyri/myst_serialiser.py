@@ -50,7 +50,10 @@ def serialize(instance, annotation):
         ma = [x for x in inner_annotation if type(instance) is x]
         # assert len(ma) == 1
         ann_ = ma[0]
-        return {"type": ann_.__name__, "data": serialize(instance, ann_)}
+        return {
+            # "type": ann_.__name__,
+            **serialize(instance, ann_)
+        }
     if (
         (type(annotation) is type)
         and type.__module__ not in ("builtins", "typing")
@@ -62,28 +65,3 @@ def serialize(instance, annotation):
         for k, ann in gth(type(instance)).items():
             data[k] = serialize(getattr(instance, k), ann)
         return data
-    # print(
-    #    instance,
-    #    (type(annotation) is type),
-    #    type.__module__,
-    #    type(instance) == annotation,
-    # )
-
-
-if __name__ == "__main__":
-
-    @dataclass
-    class Bar:
-        x: str
-        y: Union[int, bool]
-
-    @dataclass
-    class Foo:
-        a: int
-        b: List[int]
-        c: Bar
-
-    f = Foo(1, [1, 3], Bar("str", False))
-    import json
-
-    print(json.dumps(serialize(f, Foo), indent=2))
