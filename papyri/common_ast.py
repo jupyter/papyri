@@ -6,8 +6,9 @@ from typing import Dict, Any
 
 import cbor2
 
-from papyri.miniserde import get_type_hints, serialize, deserialize
+from .miniserde import get_type_hints, deserialize
 from .myst_serialiser import serialize as myst_serialize
+
 
 class Base:
     def validate(self):

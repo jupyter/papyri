@@ -11,8 +11,7 @@ This is a prototype of serializer that respect this layout.
 """
 
 
-from dataclasses import dataclass
-from typing import List, Union
+from typing import Union
 from typing import get_type_hints as gth
 
 base_types = {int, str, bool, type(None)}
