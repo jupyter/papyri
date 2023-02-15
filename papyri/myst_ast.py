@@ -30,6 +30,7 @@ class MEmphasis(Node):
 @register(4048)
 class MStrong(Node):
     type = "strong"
+    children: List["PhrasingContent"]
     # position: Any
     # data: Any
 
@@ -104,7 +105,6 @@ StaticPhrasingContent = Union[
     take2.Verbatim,
     take2.Directive,
     take2.Link,
-    take2.Strong,
     take2.Math,
     take2.SubstitutionRef,
     take2.Unimplemented,

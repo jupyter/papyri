@@ -178,22 +178,6 @@ class Link(Node):
         return hash((self.value, self.reference, self.kind, self.exists, self.anchor))
 
 
-@register(4009)
-class Strong(Node):
-    content: Words
-
-    @property
-    def children(self):
-        return [self.content]
-
-    @children.setter
-    def children(self, children):
-        [self.content] = children
-
-    def __hash__(self):
-        return hash(repr(self))
-
-
 class Leaf(Node):
     value: str
 
@@ -233,7 +217,7 @@ class Unimplemented(Node):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
 
 
-from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode
+from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode, MStrong
 
 
 class IntermediateNode(Node):
@@ -320,25 +304,6 @@ class Words(Node):
 
     def __hash__(self):
         return hash(self.value)
-
-
-@register(4008)
-class Emph(Node):
-    value: Words
-
-    def __hash__(self):
-        return hash(repr(self))
-
-    @property
-    def children(self):
-        return [self.value]
-
-    @children.setter
-    def children(self, children):
-        [self.value] = children
-
-    def __repr__(self):
-        return "*" + repr(self.value) + "*"
 
 
 class _XList(Node):
@@ -658,8 +623,6 @@ class Transition(Node):
 inline_nodes = tuple(
     [
         Words,
-        Strong,
-        Emph,
         Directive,
         Verbatim,
         Link,
@@ -677,9 +640,8 @@ class Paragraph(Node):
             Words,
             MText,
             MCode,
-            Strong,
+            MStrong,
             Unimplemented,
-            Emph,
             MEmphasis,
             MInlineCode,
             Target,

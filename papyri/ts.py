@@ -5,7 +5,7 @@ from typing import List
 
 from tree_sitter import Language, Parser
 
-from .myst_ast import MText, MCode, MParagraph, MEmphasis, MInlineCode
+from .myst_ast import MText, MCode, MParagraph, MEmphasis, MInlineCode, MStrong
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
@@ -24,13 +24,11 @@ from papyri.take2 import (
     ListItem,
     Options,
     Section,
-    Strong,
     SubstitutionDef,
     SubstitutionRef,
     Transition,
     Unimplemented,
     Word,
-    Words,
     compress_word,
     inline_nodes,
 )
@@ -648,7 +646,6 @@ class TSVisitor:
             MEmphasis(
                 [MText(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode())]
             )
-            # Emph(Words(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode()))
         ]
 
     def visit_substitution_definition(self, node, prev_end=None):
@@ -671,7 +668,9 @@ class TSVisitor:
 
     def visit_strong(self, node, prev_end=None):
         return [
-            Strong(Words(self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()))
+            MStrong(
+                [MText(self.bytes[node.start_byte + 2 : node.end_byte - 2].decode())]
+            )
         ]
 
     def visit_footnote(self, node, prev_end=None):
