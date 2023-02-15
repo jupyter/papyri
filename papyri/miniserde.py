@@ -197,7 +197,11 @@ def deserialize(type_, annotation, data):
             real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
             # assert len(real_type) == 1, real_type
             real_type = real_type[0]
-            return deserialize(real_type, real_type, data["data"])
+            if data.get("data"):
+                data_ = data["data"]
+            else:
+                data_ = {k: v for k, v in data.items() if k != "type"}
+            return deserialize(real_type, real_type, data_)
         else:
             assert False
     elif (type(annotation) is type) and annotation.__module__ not in (

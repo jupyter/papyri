@@ -1,1 +1,1 @@
-[{"children": [{"type": "MParagraph", "data": {"children": [{"type": "MText", "data": {"value": "This is just text."}}]}}], "title": null, "level": 0, "target": null}]
+[{"type": "Section", "children": [{"type": "MParagraph", "children": [{"type": "MText", "value": "This is just text."}]}], "title": null, "level": 0, "target": null}]

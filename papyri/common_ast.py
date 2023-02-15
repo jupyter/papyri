@@ -6,7 +6,8 @@ from typing import Dict, Any
 
 import cbor2
 
-from papyri.miniserde import get_type_hints, serialize, deserialize
+from .miniserde import get_type_hints, deserialize
+from .myst_serialiser import serialize as myst_serialize
 
 
 class Base:
@@ -62,7 +63,7 @@ class Node(Base):
         return cls.from_dict(json.loads(data))
 
     def to_dict(self):
-        return serialize(self, type(self))
+        return myst_serialize(self, type(self))
 
     @classmethod
     def from_dict(cls, data):
