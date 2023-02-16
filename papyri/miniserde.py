@@ -195,6 +195,9 @@ def deserialize(type_, annotation, data):
                 else:
                     return deserialize(inner_annotation[0], inner_annotation[0], data)
             real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
+            if len(real_type) == 0:
+                myst_type = f"M{data['type'][0].upper()}{data['type'][1:]}"
+                real_type = [t for t in inner_annotation if t.__name__ == myst_type]
             # assert len(real_type) == 1, real_type
             real_type = real_type[0]
             if data.get("data"):

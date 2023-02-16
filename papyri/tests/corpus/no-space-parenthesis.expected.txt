@@ -1,1 +1,1 @@
-[{"type": "Section", "children": [{"type": "MParagraph", "children": [{"type": "MText", "value": "there should not be spaces ("}, {"type": "MInlineCode", "value": "between"}, {"type": "MText", "value": ") the parenthesis."}]}], "title": null, "level": 0, "target": null}]
+[{"type": "Section", "children": [{"type": "paragraph", "children": [{"type": "text", "value": "there should not be spaces ("}, {"type": "inlineCode", "value": "between"}, {"type": "text", "value": ") the parenthesis."}]}], "title": null, "level": 0, "target": null}]
