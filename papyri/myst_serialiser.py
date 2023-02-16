@@ -51,8 +51,8 @@ def serialize(instance, annotation):
         ann_ = ma[0]
         serialized_data = serialize(instance, ann_)
         if isinstance(serialized_data, dict):
-            return {"type": ann_.__name__, **serialized_data}
-        return {"type": ann_.__name__, "data": serialized_data}
+            return {**serialized_data, "type": ann_.type}
+        return {"data": serialized_data, "type": ann_.type}
     if (
         (type(annotation) is type)
         and type.__module__ not in ("builtins", "typing")
