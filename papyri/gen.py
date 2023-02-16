@@ -1892,9 +1892,11 @@ class Gen:
                 )
             if ecollector.errored:
                 if ecollector._errors.keys():
-                    print("error with", qa, list(ecollector._errors.keys()))
+                    self.log.warning(
+                        "error with %s %s", qa, list(ecollector._errors.keys())
+                    )
                 else:
-                    print("only expected error with", qa)
+                    self.log.info("only expected error with %s %s", qa)
                 continue
             assert api_object is not None, ecollector.errored
 

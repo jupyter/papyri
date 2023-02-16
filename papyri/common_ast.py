@@ -69,6 +69,15 @@ class Node(Base):
     def from_dict(cls, data):
         return deserialize(cls, cls, data)
 
+    def __hash__(self):
+        return hash(
+            tuple(
+                tuple(getattr(self, x))
+                for x in dir(self)
+                if not x.startswith("_") and not callable(getattr(self, x))
+            )
+        )
+
 
 TAG_MAP: Dict[Any, int] = {}
 REV_TAG_MAP: Dict[int, Any] = {}
