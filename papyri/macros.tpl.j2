@@ -210,6 +210,17 @@
             <blockquote>
                {%- for child in obj.children %}{{render_II(child)}}{% endfor -%}
             </blockquote>
+        {% elif type[0] == 'M' %}
+        {% set astJson = obj.to_dict() %}
+           <div id="{{astJson.key}}"></div>
+            <script>
+                    function init() {
+                        const myst = new MyST();
+                        const html = myst.renderMdast({{astJson|tojson}});
+                        document.getElementById("{{astJson.key}}").innerHTML = html;
+                    }
+                init();
+            </script>
         {% elif type in ['Options','Unimplemented','Comment','SubstitutionRef'] %}
            <pre class='not-implemented'>
             {{obj}}
