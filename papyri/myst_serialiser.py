@@ -14,8 +14,6 @@ This is a prototype of serializer that respect this layout.
 from typing import Union
 from typing import get_type_hints as gth
 
-import uuid
-
 base_types = {int, str, bool, type(None)}
 
 
@@ -56,8 +54,8 @@ def serialize(instance, annotation):
         if hasattr(ann_, "type"):
             type_ = ann_.type
         if isinstance(serialized_data, dict):
-            return {**serialized_data, "type": type_, "key": uuid.uuid4().hex}
-        return {"data": serialized_data, "type": type_, "key": uuid.uuid4().hex}
+            return {**serialized_data, "type": type_}
+        return {"data": serialized_data, "type": type_}
     if (
         (type(annotation) is type)
         and type.__module__ not in ("builtins", "typing")
@@ -69,7 +67,6 @@ def serialize(instance, annotation):
         if hasattr(instance, "type"):
             type_ = instance.type
         data["type"] = type_
-        data["key"] = uuid.uuid4().hex
         for k, ann in gth(type(instance)).items():
             data[k] = serialize(getattr(instance, k), ann)
         return data

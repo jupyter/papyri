@@ -62,12 +62,13 @@
 
 {% macro render_myst(obj) -%}
     {% set astJson = obj.to_dict() %}
-    <div id="{{astJson.key}}"></div>
+    {% set key = uuid() %}
+    <div id="{{ key }}"></div>
     <script>
         function init() {
             const myst = new MyST();
-            const html = myst.renderMdast({{astJson|tojson}});
-            document.getElementById("{{astJson.key}}").innerHTML = html;
+            const html = myst.renderMdast({{ astJson|tojson }});
+            document.getElementById("{{ key }}").innerHTML = html;
         }
         init();
     </script>
