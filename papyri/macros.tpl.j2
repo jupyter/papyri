@@ -1,6 +1,8 @@
 {% macro render_inner(type_, obj) -%}
     {%- if type_ == 'Words' -%}
          {{-obj.value-}}
+    {% elif type_[0] == 'M' %}
+         {{ render_myst(obj) }}
     {%- elif type_ == 'Emph' -%}
          <em>{{render_inner('Words', obj.value)|safe}}</em>
     {%- elif type_ == 'Strong' -%}
@@ -58,7 +60,19 @@
     {%- endfor %}
 {%- endmacro %}
 
-
+{% macro render_myst(obj) -%}
+    {% set astJson = obj.to_dict() %}
+    {% set key = uuid() %}
+    <div id="{{ key }}"></div>
+    <script>
+        function init() {
+            const myst = new MyST();
+            const html = myst.renderMdast({{ astJson|tojson }});
+            document.getElementById("{{ key }}").innerHTML = html;
+        }
+        init();
+    </script>
+{%- endmacro %}
 
 
 {%- macro lines(self) -%}{%- for x in self %}
@@ -210,6 +224,8 @@
             <blockquote>
                {%- for child in obj.children %}{{render_II(child)}}{% endfor -%}
             </blockquote>
+        {% elif type[0] == 'M' %}
+            {{ render_myst(obj) }}
         {% elif type in ['Options','Unimplemented','Comment','SubstitutionRef'] %}
            <pre class='not-implemented'>
             {{obj}}

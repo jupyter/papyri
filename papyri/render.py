@@ -5,6 +5,7 @@ import operator
 import os
 import random
 import shutil
+import uuid
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
@@ -334,6 +335,7 @@ class HtmlRenderer:
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = suf
+        self.env.globals["uuid"] = lambda: uuid.uuid4().hex
 
     async def index(self):
         keys = self.store.glob((None, None, "meta", "aliases.cbor"))

@@ -63,7 +63,10 @@ def serialize(instance, annotation):
         or type(instance) == annotation
     ):
         data = {}
-        data["type"] = type(instance).__name__
+        type_ = type(instance).__name__
+        if hasattr(instance, "type"):
+            type_ = instance.type
+        data["type"] = type_
         for k, ann in gth(type(instance)).items():
             data[k] = serialize(getattr(instance, k), ann)
         return data
