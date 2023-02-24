@@ -164,6 +164,8 @@ def deserialize(type_, annotation, data):
         # assert isinstance(data, bool)
         return data
     orig = getattr(annotation, "__origin__", None)
+    if data is None:
+        return None
     if orig:
         if orig is tuple:
             # assert isinstance(data, list)

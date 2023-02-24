@@ -1896,7 +1896,7 @@ class Gen:
                         "error with %s %s", qa, list(ecollector._errors.keys())
                     )
                 else:
-                    self.log.info("only expected error with %s %s", qa)
+                    self.log.info("only expected error with %s", qa)
                 continue
             assert api_object is not None, ecollector.errored
 

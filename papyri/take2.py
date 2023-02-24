@@ -712,7 +712,7 @@ class BlockDirective(Node):
         return super().validate()
 
     def _post_deserialise(self):
-        self.options = [tuple(x) for x in self.options]
+        self.options = [tuple(x) for x in self.options if x is not None]
 
     @property
     def value(self):
