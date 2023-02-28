@@ -5,7 +5,7 @@ name: Python package
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "*" ]
   pull_request:
     branches: [ main ]
   workflow_dispatch: 
@@ -70,6 +70,12 @@ jobs:
         # papyri serve
         ls -al
         # ls -al ~/.papyri/html/p/numpy/
+
+    - name: Deploy preview
+      uses: rossjrw/pr-preview-action@v1
+      with:
+        source-dir: /home/runner/.papyri/html
+
     - name: Test with pytest
       run: |
         pytest --cov=papyri --cov-append
