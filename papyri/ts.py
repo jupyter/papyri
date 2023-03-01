@@ -12,8 +12,8 @@ from .myst_ast import (
     MEmphasis,
     MInlineCode,
     MStrong,
-    MListItem,
     MList,
+    MListItem,
 )
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
@@ -401,6 +401,7 @@ class TSVisitor:
 
     def visit_bullet_list(self, node, prev_end=None):
         acc = []
+        myst_acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
             assert len(list_item.children) == 2, list_item.children
@@ -408,8 +409,11 @@ class TSVisitor:
             # assert len(body.children) == 1
             # parg = body.children[0]
             # assert parg.type == "paragraph", parg.type
-            acc.append(MListItem(self.visit(body)))
-        return [MList(acc)]
+            acc.append(ListItem(self.visit(body)))
+            myst_acc.append(MListItem(False, self.visit(body)))
+        return [MList(ordered=False, start=1, spread=False, children=myst_acc)]
+
+        # return [BulletList(acc)]
 
         # t = Verbatim([self.bytes[node.start_byte+2: node.end_byte-2].decode()])
         # print(' '*self.depth*4, t)
@@ -531,11 +535,15 @@ class TSVisitor:
 
     def visit_enumerated_list(self, node, prev_end=None):
         acc = []
+        myst_acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
             _bullet, body = list_item.children
-            acc.append(MListItem(self.visit(body)))
-        return [MList(acc, ordered=True)]
+            acc.append(ListItem(self.visit(body)))
+            myst_acc.append(MListItem(False, self.visit(body)))
+        return [MList(ordered=True, start=1, spread=False, children=myst_acc)]
+
+        # return [EnumeratedList(acc)]
 
     def visit_target(self, node, prev_end=None):
         # TODO:

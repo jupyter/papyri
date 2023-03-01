@@ -315,6 +315,7 @@ class ListItem(Node):
     children: List[
         Union[
             Paragraph,
+            EnumeratedList,
             MList,
             BulletList,
             Target,
@@ -389,6 +390,7 @@ class Section(Node):
             BlockVerbatim,
             Parameters,
             BulletList,
+            EnumeratedList,
             MList,
             BlockQuote,
             Admonition,
@@ -455,6 +457,7 @@ class Param(Node):
             Admonition,
             BulletList,
             BlockQuote,
+            EnumeratedList,
             MList,
             MParagraph,
             MCode,
@@ -580,8 +583,9 @@ class BlockQuote(Node):
             BlockVerbatim,
             BulletList,
             DefList,
-            MList,
+            EnumeratedList,
             BlockDirective,
+            MList,
             BlockQuote,
             FieldList,
             Admonition,
@@ -678,6 +682,7 @@ class Admonition(Node):
             BlockDirective,
             Admonition,
             Unimplemented,  # skimage.util._regular_grid.regular_grid
+            EnumeratedList,
             MList,
         ]
     ]
@@ -728,11 +733,6 @@ class BlockVerbatim(Node):
 
     def __repr__(self):
         return f"<{self.__class__.__name__} '{len(self.value)}'>"
-
-
-@register(4033)
-class DefList(Node):
-    children: List[DefListItem]
 
 
 @register(4034)
@@ -788,6 +788,11 @@ class FieldListItem(Node):
         self.body = y
 
 
+@register(4033)
+class DefList(Node):
+    children: List[DefListItem]
+
+
 @register(4037)
 class DefListItem(Node):
     dt: Union[Paragraph, MParagraph]  # TODO: this is technically incorrect and should
@@ -798,6 +803,8 @@ class DefListItem(Node):
             MParagraph,
             MCode,
             BulletList,
+            EnumeratedList,
+            MList,
             BlockQuote,
             DefList,
             BlockDirective,

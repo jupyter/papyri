@@ -106,7 +106,7 @@ class ErrorCollector:
                     del self._expected_unseen[self._qa]
             else:
                 self._errors.setdefault(ename, []).append(self._qa)
-                self.log.exception("Unexpected error")
+                self.log.exception(f"Unexpected error (ctxmgr, {self._qa})")
             if not self.config.early_error:
                 return True
         expecting = self._expected_unseen.get(self._qa, [])

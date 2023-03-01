@@ -99,24 +99,37 @@ class MParagraph(Node):
     # data: Any
 
 
-@register(4052)
+@register(4053)
 class MList(Node):
     type = "list"
+    ordered: bool
+    # "Starting number of ordered list"
+    start: int
+    # "One or more children are separated with a blank line from others"
+    spread: bool
+    # "List of children nodes"
+    # {"type": "array", "items": {"$ref": "#/$defs/Node"}}
     children: List["ListContent"]
-    ordered: bool = False
-    # start: int
-    # spread: bool
-    # position: Any
-    # data: Any
 
 
-@register(4053)
+@register(4054)
 class MListItem(Node):
     type = "listItem"
-    children: List[Union["PhrasingContent", "FlowContent"]]
-    # spread: bool = False
-    # position: Any
-    # data: Any
+    # "One or more children are separated with a blank line from others"
+    spread: bool
+    # "List of children nodes"
+    children: List[
+        Union[
+            "FlowContent",
+            "PhrasingContent",
+            "take2.DefList",
+            "take2.Admonition",
+            "take2.BlockQuote",
+            "take2.BlockDirective",
+            "take2.BlockVerbatim",
+            "take2.BlockMath",
+        ]
+    ]
 
 
 StaticPhrasingContent = Union[
@@ -152,7 +165,7 @@ FlowContent = Union[
     # MHeading,
     # MThematicBreak,
     # MBlockquote,
-    # MList,
+    MList,
     # MHTML,
     # MComment,
     # MTarget,
@@ -164,7 +177,4 @@ FlowContent = Union[
     # MFootnoteDefinition,
 ]
 
-
-ListContent = Union[
-    MListItem,
-]
+ListContent = Union[MListItem,]
