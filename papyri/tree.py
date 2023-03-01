@@ -31,6 +31,7 @@ from .take2 import (
     Verbatim,
 )
 from .common_ast import Node
+from .myst_ast import MMystDirective
 from .utils import full_qual
 from textwrap import indent
 from .ts import parse
@@ -569,14 +570,14 @@ class DirectiveVisiter(TreeReplacer):
 
         return [Code2(new_entries, code.out, code.ce_status)]
 
-    def _block_verbatim_helper(self, name, argument, options, content):
+    def _block_verbatim_helper(self, name: str, argument: str, options: dict, content):
         data = f".. {name}:: {argument}\n"
-        for k, v in options:
+        for k, v in options.items():
             data = data + f"    :{k}:{v}\n"
         data = data + indent(content, "    ")
         return [BlockVerbatim(data)]
 
-    def _autosummary_handler(self, argument, options, content):
+    def _autosummary_handler(self, argument, options: dict, content):
         # assert False
         return self._block_verbatim_helper("autosummary", argument, options, content)
 
@@ -681,21 +682,24 @@ class DirectiveVisiter(TreeReplacer):
         return [BulletList(acc)]
         # return [BlockDirective("toctree", argument, options, content)]
 
-    def replace_BlockDirective(self, block_directive: BlockDirective):
-        meth = getattr(self, "_" + block_directive.name + "_handler", None)
+    def replace_MMystDirective(self, myst_directive: MMystDirective):
+        meth = getattr(self, "_" + myst_directive.name + "_handler", None)
         if meth:
             # TODO: we may want to recurse here on returned items.
             return meth(
-                block_directive.argument,
-                block_directive.options,
-                block_directive.content,
+                myst_directive.args,
+                myst_directive.options,
+                myst_directive.value,
             )
 
-        if block_directive.name not in _MISSING_DIRECTIVES:
-            _MISSING_DIRECTIVES.append(block_directive.name)
-            log.debug("TODO: %s", block_directive.name)
+        if myst_directive.name not in _MISSING_DIRECTIVES:
+            _MISSING_DIRECTIVES.append(myst_directive.name)
+            log.debug("TODO: %s", myst_directive.name)
 
-        return [block_directive]
+        return [myst_directive]
+
+    def replace_BlockDirective(self, block_directive: BlockDirective):
+        assert False, "we shoudl never reach there"
 
     def _resolve(self, loc, text):
         """
@@ -888,8 +892,11 @@ class PostDVR(DirectiveVisiter):
         return [refinfo]
 
     def replace_BlockDirective(self, block_directive: BlockDirective):
-        if block_directive.name not in _MISSING_DIRECTIVES:
-            _MISSING_DIRECTIVES.append(block_directive.name)
-            log.info("TODO: %r", block_directive.name)
+        assert False, "should be unreachable"
 
-        return [block_directive]
+    def replace_MMystDirective(self, myst_directive: MMystDirective):
+        if myst_directive.name not in _MISSING_DIRECTIVES:
+            _MISSING_DIRECTIVES.append(myst_directive.name)
+            log.info("TODO: %r", myst_directive.name)
+
+        return [myst_directive]

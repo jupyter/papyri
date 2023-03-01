@@ -195,7 +195,7 @@ class BlockMath(Leaf):
 @register(4027)
 class SubstitutionDef(Node):
     name: str
-    directive: BlockDirective
+    directive: MMystDirective
 
 
 @register(4041)
@@ -217,7 +217,16 @@ class Unimplemented(Node):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
 
 
-from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode, MStrong, MList
+from .myst_ast import (
+    MText,
+    MList,
+    MParagraph,
+    MEmphasis,
+    MInlineCode,
+    MMystDirective,
+    MCode,
+    MStrong,
+)
 
 
 class IntermediateNode(Node):
@@ -321,7 +330,7 @@ class ListItem(Node):
             DefList,
             BlockQuote,
             BlockVerbatim,
-            BlockDirective,
+            MMystDirective,
             BlockMath,
             Unimplemented,
             Admonition,
@@ -378,7 +387,7 @@ class Section(Node):
             Paragraph,
             MParagraph,
             DefList,
-            BlockDirective,
+            MMystDirective,
             Unimplemented,
             BlockMath,
             BlockVerbatim,
@@ -444,7 +453,7 @@ class Param(Node):
             Paragraph,
             DefListItem,
             DefList,
-            BlockDirective,
+            MMystDirective,
             BlockMath,
             BlockVerbatim,
             Admonition,
@@ -575,8 +584,8 @@ class BlockQuote(Node):
             BlockVerbatim,
             BulletList,
             DefList,
-            BlockDirective,
             MList,
+            MMystDirective,
             BlockQuote,
             FieldList,
             Admonition,
@@ -670,7 +679,7 @@ class Admonition(Node):
             BlockQuote,
             DefList,
             # I dont' like nested block directive/Admonitions.
-            BlockDirective,
+            MMystDirective,
             Admonition,
             Unimplemented,  # skimage.util._regular_grid.regular_grid
             MList,
@@ -695,6 +704,7 @@ class BlockDirective(Node):
     content: str
 
     def validate(self):
+        assert False, "Unreachable"
         assert isinstance(self.name, str)
         assert isinstance(self.argument, str)
         assert isinstance(self.options, list)
@@ -753,6 +763,7 @@ class FieldListItem(Node):
             Verbatim,
             Admonition,
             BlockDirective,
+            MMystDirective,
             BulletList,
             MText,
             MParagraph,
@@ -796,7 +807,7 @@ class DefListItem(Node):
             MList,
             BlockQuote,
             DefList,
-            BlockDirective,
+            MMystDirective,
             Unimplemented,
             Admonition,
             BlockMath,

@@ -344,42 +344,7 @@ class Renderer:
         return urwid.Padding(urwid.Text(("math", c.convert(math.value))), left=2)
 
     def render_BlockDirective(self, directive):
-        if directive.directive_name == "note":
-            return urwid.Padding(
-                urwid.LineBox(
-                    self.render(directive.inner), title="Note", title_align="left"
-                ),
-                left=2,
-                right=2,
-            )
-
-        elif directive.directive_name == "math":
-            assert False
-            # args0 = [a for a in directive.args0 if a]
-            inner = directive.inner
-            content = " ".join(directive.args0)
-            if content:
-                if inner:
-                    assert len(inner.children) == 1
-                    content = content + inner.children[0].value
-            else:
-                assert len(inner.children) == 1
-
-                content = inner.children[0].value
-
-            from flatlatex import converter
-
-            c = converter()
-            return urwid.Padding(urwid.Text(("math", c.convert(content))), left=2)
-        inn = [
-            blank,
-            Text(
-                [("param", ".. " + directive.directive_name + "::")] + directive.args0
-            ),
-        ]
-        if directive.inner:
-            inn.append(urwid.Padding(self.render(directive.inner), left=4)),
-        return urwid.Pile(inn)
+        raise NotImplementedError("We should nt have block directive in the end")
 
     def render_SeeAlsoItem(self, sa):
         return urwid.Pile(

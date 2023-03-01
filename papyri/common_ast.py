@@ -23,6 +23,8 @@ class Base:
 class Node(Base):
     def __init__(self, *args, **kwargs):
         tt = get_type_hints(type(self))
+        if type(self).__name__ == "MMystDirective":
+            tt = {k: v for k, v in tt.items() if k != "type"}
         for attr, val in zip(tt, args):
             setattr(self, attr, val)
         for k, v in kwargs.items():
@@ -171,7 +173,7 @@ def not_type_check(item, annotation):
 
 
 def register(value):
-    assert value not in REV_TAG_MAP
+    assert value not in REV_TAG_MAP, REV_TAG_MAP[value]
 
     def _inner(type_):
         assert type_ not in TAG_MAP
