@@ -103,7 +103,7 @@ class MParagraph(Node):
 class MList(Node):
     type = "list"
     children: List["ListContent"]
-    # ordered: bool = False
+    ordered: bool = False
     # start: int
     # spread: bool
     # position: Any

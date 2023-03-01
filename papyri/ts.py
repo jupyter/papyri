@@ -534,8 +534,8 @@ class TSVisitor:
         for list_item in node.children:
             assert list_item.type == "list_item"
             _bullet, body = list_item.children
-            acc.append(ListItem(self.visit(body)))
-        return [EnumeratedList(acc)]
+            acc.append(MListItem(self.visit(body)))
+        return [MList(acc, ordered=True)]
 
     def visit_target(self, node, prev_end=None):
         # TODO:

@@ -315,7 +315,7 @@ class ListItem(Node):
     children: List[
         Union[
             Paragraph,
-            EnumeratedList,
+            MList,
             BulletList,
             Target,
             DefList,
@@ -382,7 +382,6 @@ class Section(Node):
             Options,
             Paragraph,
             MParagraph,
-            MList,
             DefList,
             BlockDirective,
             Unimplemented,
@@ -390,7 +389,7 @@ class Section(Node):
             BlockVerbatim,
             Parameters,
             BulletList,
-            EnumeratedList,
+            MList,
             BlockQuote,
             Admonition,
             FieldList,
@@ -456,7 +455,7 @@ class Param(Node):
             Admonition,
             BulletList,
             BlockQuote,
-            EnumeratedList,
+            MList,
             MParagraph,
             MCode,
         ]
@@ -581,7 +580,7 @@ class BlockQuote(Node):
             BlockVerbatim,
             BulletList,
             DefList,
-            EnumeratedList,
+            MList,
             BlockDirective,
             BlockQuote,
             FieldList,
@@ -679,7 +678,7 @@ class Admonition(Node):
             BlockDirective,
             Admonition,
             Unimplemented,  # skimage.util._regular_grid.regular_grid
-            EnumeratedList,
+            MList,
         ]
     ]
 
@@ -799,7 +798,6 @@ class DefListItem(Node):
             MParagraph,
             MCode,
             BulletList,
-            EnumeratedList,
             BlockQuote,
             DefList,
             BlockDirective,
