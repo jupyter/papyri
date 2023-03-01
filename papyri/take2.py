@@ -217,7 +217,7 @@ class Unimplemented(Node):
         return f"<Unimplemented {self.placeholder!r} {self.value!r}>"
 
 
-from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode, MStrong
+from .myst_ast import MText, MParagraph, MEmphasis, MInlineCode, MCode, MStrong, MList
 
 
 class IntermediateNode(Node):
@@ -382,6 +382,7 @@ class Section(Node):
             Options,
             Paragraph,
             MParagraph,
+            MList,
             DefList,
             BlockDirective,
             Unimplemented,

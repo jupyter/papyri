@@ -5,7 +5,16 @@ from typing import List
 
 from tree_sitter import Language, Parser
 
-from .myst_ast import MText, MCode, MParagraph, MEmphasis, MInlineCode, MStrong
+from .myst_ast import (
+    MText,
+    MCode,
+    MParagraph,
+    MEmphasis,
+    MInlineCode,
+    MStrong,
+    MListItem,
+    MList,
+)
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
@@ -399,8 +408,8 @@ class TSVisitor:
             # assert len(body.children) == 1
             # parg = body.children[0]
             # assert parg.type == "paragraph", parg.type
-            acc.append(ListItem(self.visit(body)))
-        return [BulletList(acc)]
+            acc.append(MListItem(self.visit(body)))
+        return [MList(acc)]
 
         # t = Verbatim([self.bytes[node.start_byte+2: node.end_byte-2].decode()])
         # print(' '*self.depth*4, t)

@@ -99,6 +99,26 @@ class MParagraph(Node):
     # data: Any
 
 
+@register(4052)
+class MList(Node):
+    type = "list"
+    children: List["ListContent"]
+    # ordered: bool = False
+    # start: int
+    # spread: bool
+    # position: Any
+    # data: Any
+
+
+@register(4053)
+class MListItem(Node):
+    type = "listItem"
+    children: List[Union["PhrasingContent", "FlowContent"]]
+    # spread: bool = False
+    # position: Any
+    # data: Any
+
+
 StaticPhrasingContent = Union[
     MText,
     MInlineCode,
@@ -142,4 +162,9 @@ FlowContent = Union[
     # MMath,
     # MTable,
     # MFootnoteDefinition,
+]
+
+
+ListContent = Union[
+    MListItem,
 ]
