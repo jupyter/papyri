@@ -5,7 +5,7 @@ name: Python package
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "*" ]
   pull_request:
     branches: [ main ]
   workflow_dispatch: 
@@ -14,6 +14,10 @@ on:
         description: 'Reason'
         required: false
         default: 'Just Cause'
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
   build:
@@ -70,14 +74,15 @@ jobs:
         # papyri serve
         ls -al
         # ls -al ~/.papyri/html/p/numpy/
-    - name: Deploy to Vercel Action
-      uses: BetaHuhn/deploy-to-vercel-action@v1.9.10
-      with:
-        GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        WORKING_DIRECTORY: /home/runner/.papyri/html
+
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
+    - name: Pull Vercel Environment Information
+      run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+    - name: Build Project Artifacts
+      run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+    - name: Deploy Project Artifacts to Vercel
+      run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} /home/runner/.papyri/html
 
     - name: Test with pytest
       run: |
