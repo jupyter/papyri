@@ -27,7 +27,6 @@ from papyri.take2 import (
     DefList,
     DefListItem,
     Directive,
-    EnumeratedList,
     FieldList,
     FieldListItem,
     ListItem,
@@ -217,7 +216,7 @@ class TSVisitor:
         acc = []
         current = None
         for n in nodes:
-            if isinstance(n, (EnumeratedList, BulletList, FieldList, DefList)):
+            if isinstance(n, (BulletList, FieldList, DefList, MList)):
                 if current is None:
                     current = n
                 elif type(current) == type(n):
@@ -400,7 +399,6 @@ class TSVisitor:
         return [b]
 
     def visit_bullet_list(self, node, prev_end=None):
-        acc = []
         myst_acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
@@ -409,7 +407,6 @@ class TSVisitor:
             # assert len(body.children) == 1
             # parg = body.children[0]
             # assert parg.type == "paragraph", parg.type
-            acc.append(ListItem(self.visit(body)))
             myst_acc.append(MListItem(False, self.visit(body)))
         return [MList(ordered=False, start=1, spread=False, children=myst_acc)]
 
@@ -534,16 +531,12 @@ class TSVisitor:
             raise ValueError("mixed len...")
 
     def visit_enumerated_list(self, node, prev_end=None):
-        acc = []
         myst_acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
             _bullet, body = list_item.children
-            acc.append(ListItem(self.visit(body)))
             myst_acc.append(MListItem(False, self.visit(body)))
         return [MList(ordered=True, start=1, spread=False, children=myst_acc)]
-
-        # return [EnumeratedList(acc)]
 
     def visit_target(self, node, prev_end=None):
         # TODO:
