@@ -29,7 +29,6 @@ from papyri.take2 import (
     Directive,
     FieldList,
     FieldListItem,
-    ListItem,
     Options,
     Section,
     SubstitutionDef,
