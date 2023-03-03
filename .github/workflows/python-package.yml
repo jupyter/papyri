@@ -76,17 +76,6 @@ jobs:
         ls -al
         # ls -al ~/.papyri/html/p/numpy/
 
-    - name: Install Vercel CLI
-      run: npm install --global vercel@latest
-
-    - name: Deploy Project Artifacts to Vercel
-      working-directory: "/home/runner/.papyri/html"
-      run: |
-        vercel --version
-        vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
-        vercel build --token=$VERCEL_TOKEN
-        vercel deploy --prebuilt --archive=tgz --token=$VERCEL_TOKEN
-
     - name: Test with pytest
       run: |
         pytest --cov=papyri --cov-append
@@ -101,3 +90,57 @@ jobs:
       with:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
+
+  vercel:
+    runs-on: ubuntu-latest
+    environment: vercel-deployment
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov flit scipy numpy matplotlib 'velin>=0.0.5' pytest-trio tree_sitter coverage pipdeptree 'jinja2<3.1'
+        flit install --symlink
+        git clone https://github.com/stsewd/tree-sitter-rst
+        papyri build-parser
+
+    - name: Gen numpy
+      run: |
+        papyri gen examples/numpy.toml  --no-exec --no-infer --no-narrative
+        sleep 1 # time for coverage to write its stuff
+    - name: Gen Scipy
+      run: |
+        papyri gen examples/scipy.toml  --no-exec --no-infer
+        sleep 1 # time for coverage to write its stuff
+    - name: Self gen
+      run: |
+        papyri gen examples/papyri.toml  --exec --no-narrative
+        sleep 1 # time for coverage to write its stuff
+
+    - name: Ingest and Render
+      run: |
+        papyri ingest  --no-relink ~/.papyri/data/papyri_0.0.8
+        papyri ingest  --no-relink ~/.papyri/data/*
+        papyri relink
+        papyri render --ascii
+        ls -al
+
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
+
+    - name: Deploy Project Artifacts to Vercel
+      working-directory: "/home/runner/.papyri/html"
+      run: |
+        vercel --version
+        vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+        vercel build --token=$VERCEL_TOKEN
+        vercel deploy --prebuilt --archive=tgz --token=$VERCEL_TOKEN
