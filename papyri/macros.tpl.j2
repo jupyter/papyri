@@ -168,12 +168,20 @@
                <li>{{render_II(item)}}</li>
                {% endfor %}
             </ul>
-       {% elif type == 'EnumeratedList' %}
-           <ol>
+        {% elif type == 'List' %}
+            {% if obj.ordered %}
+            <ol>
                {%- for item in obj.children %}
                <li>{{render_II(item)}}</li>
                {% endfor %}
             </ol>
+        {% else %}
+            <ul>
+               {%- for item in obj.children %}
+               <li>{{render_II(item)}}</li>
+               {% endfor %}
+            </ul>
+            {% endif %}
        {% elif type == 'ListItem' %}
                {%- for item in obj.children %}
                {{render_II(item)}}
