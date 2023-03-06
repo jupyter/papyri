@@ -11,7 +11,6 @@ exclude = [
             'skimage.transform.radon_transform.iradon',
            'skimage.morphology._skeletonize.skeletonize_3d',
            'skimage.morphology._skeletonize_3d_cy',
-           'skimage.feature.texture.greycoprops',
            'skimage.util.dtype._convert',
            'skimage.util.dtype.convert',
             # VisitCitationReferenceNotImplementedError": [
@@ -23,17 +22,12 @@ exclude = [
            "skimage.morphology._skeletonize_3d_cy.fill_Euler_LUT",
            "skimage.morphology._skeletonize_3d_cy.fill_Euler_LUT",
             # serialisation Errors
-           "skimage.draw.draw.circle",
-           "skimage.segmentation.morphsnakes.circle_level_set",
            "skimage.segmentation.slic_superpixels.slic",
            "skimage.color.delta_e.get_dH2",
            "skimage.color.delta_e.get_dH2",
-           "skimage.filters.rank.generic.bottomhat",
-           "skimage.filters.rank.generic.tophat",
            # "NumpydocError-<class 'ValueError'>"
            "skimage.measure._marching_cubes_lewiner_cy.Cell",
            # "ParseDesc-<class 'AssertionError'>"
-           "skimage.measure.simple_metrics.compare_nrmse",
            "skimage.metrics.simple_metrics.normalized_root_mse",
            # "ParseDesc-<class 'IndexError'>"
            "skimage.draw.draw.circle_perimeter",
@@ -44,3 +38,25 @@ exclude = [
                         "skimage.transform._warps._stackcopy"
           ]
 exclude_jedi = ['skimage.viewer.plugins.base.Plugin']
+[global.expected_errors]
+ValueError = [
+             "skimage.morphology.gray.black_tophat",
+             "skimage.morphology.extrema.h_maxima",
+             "skimage.morphology.extrema.h_minima",
+             "skimage.measure._label.label",
+             "skimage.morphology.extrema.local_maxima",
+             "skimage.morphology.extrema.local_minima",
+             "skimage.morphology._skeletonize.thin",
+             "skimage.morphology.gray.white_tophat",
+             "skimage.segmentation.morphsnakes.morphological_chan_vese",
+             "skimage.segmentation.morphsnakes.morphological_geodesic_active_contour",
+             "skimage.filters._gaussian.difference_of_gaussians",
+             "skimage.measure._find_contours.find_contours",
+             "skimage.filters.rank.generic.maximum",
+             "skimage.filters.rank.bilateral.mean_bilateral",
+             "skimage.filters.rank.generic.minimum",
+             "skimage.filters.rank.bilateral.sum_bilateral"
+            ]
+AssertionError = [
+              "skimage._shared.utils.docstring_add_deprecated"
+]

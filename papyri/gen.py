@@ -2023,7 +2023,9 @@ class Gen:
             for name, data in figs:
                 self.put_raw(name, data)
         if error_collector._errors:
-            self.log.info("ERRORS:" + toml.dumps(error_collector._errors))
+            self.log.info(
+                "ERRORS:" + toml.dumps(error_collector._errors).replace(",", ",    \n")
+            )
         if error_collector._expected_unseen:
             self.log.info(
                 "UNSEEN ERRORS:" + toml.dumps(error_collector._expected_unseen)
