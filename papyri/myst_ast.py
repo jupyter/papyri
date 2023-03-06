@@ -3,7 +3,7 @@ An attempt to create AST from MyST spec. At the moment just trying to
 add Text from Myst to the generated structure in the ts.py.
 
 """
-from typing import List, Union, Any
+from typing import List, Union, Any, Optional, Dict
 
 from .common_ast import Node, register
 
@@ -132,6 +132,16 @@ class MListItem(Node):
     ]
 
 
+@register(4052)
+class MMystDirective(Node):
+    type = "mystDirective"
+    name: str
+    args: Optional[str]
+    options: Dict[str, str]
+    value: Optional[str]
+    children: List[Union["FlowContent", "PhrasingContent", None]] = []
+
+
 StaticPhrasingContent = Union[
     MText,
     MInlineCode,
@@ -169,7 +179,7 @@ FlowContent = Union[
     # MHTML,
     # MComment,
     # MTarget,
-    # MDirective,
+    MMystDirective,
     # MAdmonition,
     # MContainer,
     # MMath,

@@ -91,13 +91,13 @@
 {%- endif -%}
 {%- endmacro %}
 
-{% macro block_directive(dve) -%}
+{% macro myst_directive(dve) -%}
     <pre class='not-implemented'>
-.. {{dve.name}}:: {{dve.argument}}
+.. {{dve.name}}:: {{dve.args}}
     {% for opt in dve.options %}
     {{ opt }}
     {% endfor %}
-    {{dve.content|indent -}}
+    {{dve.value|indent -}}
     </pre>
 {% endmacro %}
 
@@ -131,8 +131,8 @@
            {% else %}
                {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
            {%- endif -%}
-       {%- elif type == 'BlockDirective' -%}
-           {{block_directive(obj)}}
+       {%- elif type == 'MMystDirective' -%}
+           {{myst_directive(obj)}}
        {% elif type == 'Admonition' %}
             {{block_admonition(obj)}}
        {% elif type == 'Paragraph' %}

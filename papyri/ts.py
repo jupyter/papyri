@@ -14,12 +14,12 @@ from .myst_ast import (
     MStrong,
     MList,
     MListItem,
+    MMystDirective,
 )
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
-from papyri.take2 import (
-    BlockDirective,
+from .take2 import (
     BlockQuote,
     BlockVerbatim,
     BulletList,
@@ -641,7 +641,7 @@ class TSVisitor:
         assert not groups
         # todo , we may want to see about the indentation of the content.
 
-        directive = BlockDirective(role, argument, options, content)
+        directive = MMystDirective(role, argument, dict(options), content)
         return [directive]
 
     def visit_footnote_reference(self, node, prev_end=None):

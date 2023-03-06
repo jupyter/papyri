@@ -55,13 +55,13 @@
    |{%- endfor -%}
 {% endmacro %}
 
-{% macro block_directive(dve) -%}
-{{blue("..")}}{{blue(dve.name)}}{{blue("::")}} {{dve.argument}}
+{% macro myst_directive(dve) -%}
+{{blue("..")}}{{blue(dve.name)}}{{blue("::")}} {{dve.args}}
     {% if dve.options %}
       {{dve.options}}
     {% endif %}
-    {% if dve.content %}
-      {{dve.content}}
+    {% if dve.value %}
+      {{dve.value}}
     {% endif %}
 {% endmacro %}
 
@@ -72,8 +72,8 @@
    |{%- set type = obj.__class__.__name__ -%}
    |   |{%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim') -%}
    |   |   |{{unreachable()}}
-   |   |{% elif type == 'BlockDirective' %}
-   |   |   |{{'\n'}}{{block_directive(obj)}}
+   |   |{% elif type == 'MMystDirective' %}
+   |   |   |{{'\n'}}{{myst_directive(obj)}}
    |   |{% elif type == 'Verbatim' %}
    |   |   |{{obj}}
    |   |{% elif type == 'Paragraph' %}

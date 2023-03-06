@@ -201,7 +201,10 @@ def deserialize(type_, annotation, data):
                 myst_type = f"M{data['type'][0].upper()}{data['type'][1:]}"
                 real_type = [t for t in inner_annotation if t.__name__ == myst_type]
             # assert len(real_type) == 1, real_type
-            real_type = real_type[0]
+            try:
+                real_type = real_type[0]
+            except IndexError:
+                breakpoint()
             if data.get("data"):
                 data_ = data["data"]
             else:
