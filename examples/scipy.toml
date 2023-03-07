@@ -13,8 +13,6 @@ exclude = [
     "scipy.sparse.csgraph._traversal.breadth_first_tree",
     "scipy.sparse.csgraph._traversal.depth_first_tree",
 
-    # this just prints quad docs to stdout and should be removed.
-    "scipy.integrate._quadpack_py.quad_explain",
     # Example is incorrect https://github.com/scipy/scipy/issues/15595
     "scipy.signal._peak_finding._identify_ridge_lines",
     "scipy.stats._continuous_distns.crystalball_gen._pdf",

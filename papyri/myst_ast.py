@@ -165,7 +165,6 @@ PhrasingContent = Union[
     # Abbreviation,
     # CrossReference,
     # FootnoteReference,
-    take2.ExternalLink,
 ]
 
 FlowContent = Union[

@@ -11,8 +11,6 @@
          {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
          <code class='not-implemented'>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
-    {%- elif type_ == 'ExternalLink' -%}
-         <a link href="{{obj.target}}" class='external'>{{obj.value}}</a>
     {%- elif type_ == 'Link' -%}
     <!--link-->
         {# Links have : value, reference, kind exists#}

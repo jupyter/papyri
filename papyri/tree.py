@@ -19,7 +19,6 @@ from .take2 import (
     Cannonical,
     Code2,
     Directive,
-    ExternalLink,
     FullQual,
     Link,
     ListItem,
@@ -31,7 +30,7 @@ from .take2 import (
     Verbatim,
 )
 from .common_ast import Node
-from .myst_ast import MMystDirective
+from .myst_ast import MMystDirective, MLink, MText
 from .utils import full_qual
 from textwrap import indent
 from .ts import parse
@@ -343,7 +342,6 @@ class TreeReplacer:
                 "Comment",
                 "Directive",
                 "Example",
-                "ExternalLink",
                 "Fig",
                 "Link",
                 "Math",
@@ -448,17 +446,27 @@ for role in (
     )
 
 
+# TODO: make that a plugin/extension/generic to the project.
 @directive_handler("py", "ghpull")
 def py_ghpull_handler(value):
     return [
-        ExternalLink(f"#{value}", f"https://github.com/ipython/ipython/pull/{value}")
+        MLink(
+            children=[MText(f"#{value}")],
+            url=f"https://github.com/ipython/ipython/pull/{value}",
+            title="",
+        )
     ]
 
 
+# TODO: make that a plugin/extension/generic to the project.
 @directive_handler("py", "ghissue")
 def py_ghissue_handler(value):
     return [
-        ExternalLink(f"#{value}", f"https://github.com/ipython/ipython/issue/{value}")
+        MLink(
+            children=[MText(f"#{value}")],
+            url=f"https://github.com/ipython/ipython/issue/{value}",
+            title="",
+        )
     ]
 
 
@@ -472,7 +480,13 @@ def py_math_handler(value):
 def py_pep_hander(value):
     number = int(value)
     target = f"https://peps.python.org/pep-{number:04d}/"
-    return [ExternalLink(f"Pep {number}", target)]
+    return [
+        MLink(
+            children=[MText(f"Pep {number}")],
+            url=target,
+            title="",
+        )
+    ]
 
 
 _MISSING_DIRECTIVES: List[str] = []
@@ -772,7 +786,13 @@ class DirectiveVisiter(TreeReplacer):
 
         if to_resolve.startswith(("https://", "http://", "mailto://")):
             to_resolve = to_resolve.replace(" ", "")
-            return [ExternalLink(text, to_resolve)]
+            return [
+                MLink(
+                    children=[MText(text)],
+                    url=to_resolve,
+                    title="",
+                )
+            ]
 
         r = self._resolve(loc, to_resolve)
         # this is now likely incorrect as Ref kind should not be exists,
