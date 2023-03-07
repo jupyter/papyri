@@ -29,7 +29,7 @@ from .take2 import (
     Verbatim,
 )
 from .common_ast import Node
-from .myst_ast import MMystDirective, MLink, MText, MAdmonition
+from .myst_ast import MMystDirective, MLink, MText, MAdmonition, MAdmonitionTitle
 from .utils import full_qual
 from textwrap import indent
 from .ts import parse
@@ -617,17 +617,15 @@ class DirectiveVisiter(TreeReplacer):
 
             return [
                 MAdmonition(
-                    name,
-                    argument,
-                    inner[0].children,
+                    [
+                        MAdmonitionTitle([MText(f"{name} {argument}")])
+                    ] + inner[0].children,
                 )
             ]
         else:
             return [
                 MAdmonition(
-                    name,
-                    argument,
-                    [],
+                    [MAdmonitionTitle([MText(f"{name} {argument}")])],
                 )
             ]
 

@@ -145,14 +145,14 @@ class MMystDirective(Node):
 @register(4055)
 class MAdmonitionTitle(Node):
     type = "admonitionTitle"
-    children: List["PhrasingContent"] = []
+    children: List[Union["PhrasingContent", None]] = []
 
 
 @register(4056)
 class MAdmonition(Node):
     type = "admonition"
-    kind: str
-    children: List[Union["FlowContent", "AdmonitionTitle"]] = []
+    children: List[Union["FlowContent", "MAdmonitionTitle", take2.Unimplemented]] = []
+    kind: str = "note"
 
 
 StaticPhrasingContent = Union[
