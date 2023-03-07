@@ -206,6 +206,4 @@ FlowContent = Union[
     # MFootnoteDefinition,
 ]
 
-ListContent = Union[
-    MListItem,
-]
+ListContent = Union[MListItem,]
