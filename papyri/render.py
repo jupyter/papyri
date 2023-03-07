@@ -23,7 +23,7 @@ import minify_html
 from . import config as default_config
 from . import take2
 from .config import ingest_dir
-from .crosslink import IngestedBlobs, RefInfo, find_all_refs
+from .crosslink import IngestedBlobs, find_all_refs
 from .graphstore import GraphStore, Key
 from .myst_ast import MLink, MText
 from .take2 import RefInfo, encoder, Section
@@ -1022,10 +1022,11 @@ class Resolver:
         if version_number == "*":
             if info.module in self.version:
                 version_number = self.version[info.module]
-                print(info, "->", version_number)
 
         i2 = RefInfo(module, version_number, kind, path)
-
+        # TODO: Fix
+        if kind == "?":
+            return False, None
         sgi = self.store.glob(i2)
         if sgi:
             exists, url = self._resolve(i2)

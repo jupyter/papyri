@@ -19,7 +19,6 @@ import logging
 import os
 import re
 import site
-import sys
 import tempfile
 import warnings
 from collections import defaultdict
@@ -30,7 +29,6 @@ from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple, FrozenSet
-from hashlib import sha256
 
 import jedi
 import toml
