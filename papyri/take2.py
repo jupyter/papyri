@@ -75,17 +75,6 @@ Cannonical = NewType("Cannonical", str)
 register(tuple)(4444)
 
 
-@register(4043)
-class ExternalLink(Node):
-    """
-    ExternalLink are link to external resources.
-    Most of the time they will be URL to other web resources,
-    """
-
-    value: str
-    target: str
-
-
 @register(4001)
 class Verbatim(Node):
     value: List[str]
@@ -226,6 +215,7 @@ from .myst_ast import (
     MMystDirective,
     MCode,
     MStrong,
+    MLink,
 )
 
 
@@ -630,7 +620,7 @@ inline_nodes = tuple(
         Directive,
         Verbatim,
         Link,
-        ExternalLink,
+        MLink,
         Math,
         SubstitutionRef,
     ]
@@ -652,7 +642,7 @@ class Paragraph(Node):
             Directive,
             Verbatim,
             Link,
-            ExternalLink,
+            MLink,
             Math,
             SubstitutionRef,
         ]

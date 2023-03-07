@@ -307,9 +307,6 @@ class Renderer:
         b = urwid.Padding(urwid.Pile(acc), left=4)
         return urwid.Pile([a, b])
 
-    def render_ExternalLink(self, link):
-        return link.value
-
     def render_Link(self, link):
         if link.reference.kind == "local":
             return ("local", link.value)
