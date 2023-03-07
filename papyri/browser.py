@@ -731,7 +731,7 @@ def main(qualname: str):
     return found
 
 
-def setup():
+def setup() -> None:
     urwid.web_display.set_preferences("Urwid Tour")
     # try to handle short web requests quickly
     if urwid.web_display.handle_short_request():

@@ -560,7 +560,7 @@ class DFSCollector:
 
     """
 
-    def __init__(self, root, others):
+    def __init__(self, root: "ModuleType", others: List["ModuleType"]):
         """
         Parameters
         ----------
@@ -578,7 +578,7 @@ class DFSCollector:
         self.root = root.__name__
         assert "." not in self.root
         self.obj: Dict[str, Any] = dict()
-        self.aliases = defaultdict(lambda: [])
+        self.aliases: Dict[str, List[str]] = defaultdict(lambda: [])
         self._open_list = [(root, [root.__name__])]
         for o in others:
             self._open_list.append((o, o.__name__.split(".")))
