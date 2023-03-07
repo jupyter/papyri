@@ -617,9 +617,8 @@ class DirectiveVisiter(TreeReplacer):
 
             return [
                 MAdmonition(
-                    [
-                        MAdmonitionTitle([MText(f"{name} {argument}")])
-                    ] + inner[0].children,
+                    [MAdmonitionTitle([MText(f"{name} {argument}")])]
+                    + inner[0].children,
                 )
             ]
         else:

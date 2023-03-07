@@ -151,7 +151,14 @@ class MAdmonitionTitle(Node):
 @register(4056)
 class MAdmonition(Node):
     type = "admonition"
-    children: List[Union["FlowContent", "MAdmonitionTitle", take2.Unimplemented]] = []
+    children: List[
+        Union[
+            "FlowContent",
+            "MAdmonitionTitle",
+            take2.Unimplemented,
+            "take2.DefList",
+        ]
+    ] = []
     kind: str = "note"
 
 
@@ -199,4 +206,6 @@ FlowContent = Union[
     # MFootnoteDefinition,
 ]
 
-ListContent = Union[MListItem,]
+ListContent = Union[
+    MListItem,
+]
