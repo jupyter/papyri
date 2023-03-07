@@ -11,7 +11,6 @@ from functools import lru_cache
 from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
 
 from .take2 import (
-    Admonition,
     BlockDirective,
     BlockMath,
     BlockVerbatim,
@@ -30,7 +29,7 @@ from .take2 import (
     Verbatim,
 )
 from .common_ast import Node
-from .myst_ast import MMystDirective, MLink, MText
+from .myst_ast import MMystDirective, MLink, MText, MAdmonition
 from .utils import full_qual
 from textwrap import indent
 from .ts import parse
@@ -617,7 +616,7 @@ class DirectiveVisiter(TreeReplacer):
             assert isinstance(inner[0], Section)
 
             return [
-                Admonition(
+                MAdmonition(
                     name,
                     argument,
                     inner[0].children,
@@ -625,7 +624,7 @@ class DirectiveVisiter(TreeReplacer):
             ]
         else:
             return [
-                Admonition(
+                MAdmonition(
                     name,
                     argument,
                     [],
