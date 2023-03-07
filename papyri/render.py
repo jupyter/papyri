@@ -47,7 +47,7 @@ def minify(s):
     )
 
 
-def url(info, prefix, suffix):
+def _url(info, prefix, suffix):
     assert isinstance(info, RefInfo), info
     assert info.kind in (
         "module",
@@ -59,6 +59,7 @@ def url(info, prefix, suffix):
         "to-resolve",
     ), repr(info)
     # assume same package/version for now.
+    # assert info.version is not "*", info
     assert info.module is not None
     if info.module is None:
         assert info.version is None
@@ -303,7 +304,7 @@ def compute_graph(
         else:
             # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
             latest_version = list(sorted(candidates))[-1]
-            uu = url(RefInfo(*latest_version), "/p/", "")
+            uu = _url(RefInfo(*latest_version), "/p/", "")
 
         data["nodes"].append(
             {
@@ -328,12 +329,14 @@ class HtmlRenderer:
             autoescape=select_autoescape(["html", "tpl.j2"]),
             undefined=StrictUndefined,
         )
+
         self.env.trim_blocks = True
         self.env.lstrip_blocks = True
         self.prefix = prefix
         suf = ".html" if trailing_html else ""
+        resolver = Resolver(store, prefix, suf)
         self.env.globals["len"] = len
-        self.env.globals["url"] = lambda x: url(x, prefix, suf)
+        self.env.globals["url"] = resolver.resolve
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = suf
@@ -904,6 +907,68 @@ def serve(*, sidebar: bool, port=1234):
         app.run(port=port)
 
 
+class Resolver:
+    def __init__(self, store, prefix: str, extension: str):
+        """
+        Given a RefInfo to an object, resolve it to a full http-link
+        with the current configuration.
+
+        Parameters
+        ----------
+        store:
+            current store which knows about the current existing objects, and
+            references.
+        prefix:
+            url prefix that should be prepended when the documentation is hosted
+            at a subpath.
+        extension:
+            Depending on the context, (ssg, or webserver), links may need an
+            explicit extension.
+
+        """
+        if extension != "":
+            assert extension.startswith(".")
+        assert prefix.startswith("/")
+        assert prefix.endswith("/")
+        self.store = store
+        self.prefix = prefix
+        self.extension = extension
+
+        self.version = {}
+
+        for p, v in {
+            (package, version)
+            for (package, version, _, _) in self.store.glob((None, "*", "meta", None))
+        }:
+            if p in self.version:
+                assert self.version[p] == v
+            self.version[p] = v
+
+    def resolve(self, info):
+        assert isinstance(info, RefInfo), info
+        assert info.kind in (
+            "module",
+            "api",
+            "examples",
+            "assets",
+            "?",
+            "docs",
+            "to-resolve",
+        ), repr(info)
+        # assume same package/version for now.
+        # assert info.version is not "*", info
+        assert info.module is not None
+        if info.module is None:
+            assert info.version is None
+            return info.path + suffix
+        if info.kind == "module":
+            return f"{self.prefix}{info.module}/{info.version}/api/{info.path}"
+        if info.kind == "examples":
+            return f"{self.prefix}{info.module}/{info.version}/examples/{info.path}"
+        else:
+            return f"{self.prefix}{info.module}/{info.version}/{info.kind}/{info.path}{self.extension}"
+
+
 class LinkReifier(TreeReplacer):
     def __init__(self, prefix, suffix):
         """
@@ -932,7 +997,7 @@ class LinkReifier(TreeReplacer):
                 )
             ]
         else:
-            turl = url(link.reference, prefix=self.prefix, suffix=self.suffix)
+            turl = _url(link.reference, prefix=self.prefix, suffix=self.suffix)
             return [MLink(children=[MText(link.value)], url=turl, title="")]
 
 
