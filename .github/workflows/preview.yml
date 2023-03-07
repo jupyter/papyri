@@ -47,10 +47,8 @@ jobs:
 
     - name: Ingest and Render
       run: |
-        papyri ingest  --no-relink ~/.papyri/data/papyri_0.0.8
         papyri ingest  --no-relink ~/.papyri/data/*
         papyri relink
-        papyri render --ascii
         ls -al
 
     - name: Install Vercel CLI

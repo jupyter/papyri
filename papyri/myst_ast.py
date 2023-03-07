@@ -3,7 +3,7 @@ An attempt to create AST from MyST spec. At the moment just trying to
 add Text from Myst to the generated structure in the ts.py.
 
 """
-from typing import List, Union, Any, Optional, Dict
+from typing import List, Union, Optional, Dict
 
 from .common_ast import Node, register
 
@@ -39,8 +39,8 @@ class MStrong(Node):
 class MLink(Node):
     type = "link"
     children: List["StaticPhrasingContent"]
-    url: Any
-    title: Any
+    url: str
+    title: str
     # position: Any
     # data: Any
 

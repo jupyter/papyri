@@ -21,13 +21,15 @@ from rich.logging import RichHandler
 import minify_html
 
 from . import config as default_config
+from . import take2
 from .config import ingest_dir
 from .crosslink import IngestedBlobs, RefInfo, find_all_refs
 from .graphstore import GraphStore, Key
+from .myst_ast import MLink, MText
 from .take2 import RefInfo, encoder, Section
+from .tree import TreeReplacer, TreeVisitor
 from .utils import progress, dummy_progress
-from .tree import TreeVisitor
-from . import take2
+
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -902,6 +904,38 @@ def serve(*, sidebar: bool, port=1234):
         app.run(port=port)
 
 
+class LinkReifier(TreeReplacer):
+    def __init__(self, prefix, suffix):
+        """
+        Prefix :
+            urls prefix, liek if hosted as a sub-path
+        Suffix:
+            suffix of pages (.html/ø)
+
+        """
+        self.prefix = prefix
+        self.suffix = suffix
+
+    def replace_Link(self, link):
+        """
+        By default our links resolution is delayed,
+        Here we resolve them.
+
+        Some of this resolution should be moved to earlier.
+        """
+        if link.reference.kind == "local":
+            return [
+                MLink(
+                    children=[MText(link.value)],
+                    url=f"#{link.reference.path}",
+                    title=str(link.reference),
+                )
+            ]
+        else:
+            turl = url(link.reference, prefix=self.prefix, suffix=self.suffix)
+            return [MLink(children=[MText(link.value)], url=turl, title="")]
+
+
 def render_one(
     template,
     doc: IngestedBlobs,
@@ -943,6 +977,7 @@ def render_one(
         <Multiline Description Here>
 
     """
+
     assert isinstance(meta, dict)
     # TODO : move this to ingest likely.
     # Here if we have too many references we group them on where they come from.
@@ -961,6 +996,11 @@ def render_one(
         backrefs = (backrefs, None)
 
     try:
+        LR = LinkReifier(prefix="/p/", suffix="")
+        for k, v in doc.content.items():
+            doc.content[k] = LR.visit(v)
+
+        doc.arbitrary = [LR.visit(x) for x in doc.arbitrary]
         return template.render(
             current_type=current_type,
             doc=doc,
