@@ -325,7 +325,7 @@ pre.highlight.execed,
   padding-left: 1em;
 }
 
-.admonition > div {
+.admonition-title  {
   background-color: rgba(0, 123, 255, 0.1);
   position: relative;
   margin: 0 -1rem;
