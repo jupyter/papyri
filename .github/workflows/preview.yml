@@ -58,9 +58,22 @@ jobs:
       run: npm install --global vercel@latest
 
     - name: Deploy Project Artifacts to Vercel
+      id: vercel
       working-directory: "/home/runner/.papyri/html"
       run: |
         vercel --version
         vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
         vercel build --token=$VERCEL_TOKEN
-        vercel deploy --prebuilt --archive=tgz --token=$VERCEL_TOKEN --meta commit={{ github.event.pull_request.head.sha }}
+        vercel deploy --prebuilt --archive=tgz --token=$VERCEL_TOKEN --meta commit=${{ github.event.pull_request.head.sha }}
+        echo "test=world" >> "$GITHUB_OUTPUT"
+
+        vercel ls --token=$VERCEL_TOKEN --meta commit=${{ github.event.pull_request.head.sha }} &> vercel-output
+        url=$(cat vercel-output | grep http | awk '{print $2}')
+        echo "VERCEL_URL=$url" >> "$GITHUB_OUTPUT"
+
+    - name: Comment Deployment URL
+      uses: thollander/actions-comment-pull-request@v2
+      with:
+        message: |
+          ▲ Deployed preview to 👉 ${{ steps.vercel.outputs.VERCEL_URL }}
+        pr_number: ${{ github.event.pull_request.number }}
