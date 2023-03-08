@@ -170,13 +170,11 @@ Directive must not have spaces before double colon::
 import io
 import sys
 import zipfile
-from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
 
 import toml
 import typer
-import json
 
 from . import examples
 
@@ -532,7 +530,7 @@ def browse(qualname: str):
 
 @app.command()
 def build_parser():
-    from tree_sitter import Language, Parser
+    from tree_sitter import Language
 
     pth = Path(__file__).parent / "rst.so"
     if pth.exists():
@@ -550,7 +548,7 @@ def build_parser():
         ],
     )
 
-    RST = Language(spth, "rst")
+    Language(spth, "rst")
 
 
 @app.command()

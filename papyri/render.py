@@ -10,7 +10,7 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Set, Any, Dict, List, Callable
+from typing import Optional, Set, Any, Dict, List, Callable, Tuple
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
@@ -23,7 +23,7 @@ import minify_html
 from . import config as default_config
 from . import take2
 from .config import ingest_dir
-from .crosslink import IngestedBlobs, RefInfo, find_all_refs
+from .crosslink import IngestedBlobs, find_all_refs
 from .graphstore import GraphStore, Key
 from .myst_ast import MLink, MText
 from .take2 import RefInfo, encoder, Section
@@ -47,7 +47,7 @@ def minify(s):
     )
 
 
-def url(info, prefix, suffix):
+def _url(info, prefix, suffix):
     assert isinstance(info, RefInfo), info
     assert info.kind in (
         "module",
@@ -59,6 +59,7 @@ def url(info, prefix, suffix):
         "to-resolve",
     ), repr(info)
     # assume same package/version for now.
+    # assert info.version is not "*", info
     assert info.module is not None
     if info.module is None:
         assert info.version is None
@@ -303,7 +304,7 @@ def compute_graph(
         else:
             # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
             latest_version = list(sorted(candidates))[-1]
-            uu = url(RefInfo(*latest_version), "/p/", "")
+            uu = _url(RefInfo(*latest_version), "/p/", "")
 
         data["nodes"].append(
             {
@@ -328,15 +329,18 @@ class HtmlRenderer:
             autoescape=select_autoescape(["html", "tpl.j2"]),
             undefined=StrictUndefined,
         )
+
         self.env.trim_blocks = True
         self.env.lstrip_blocks = True
         self.prefix = prefix
-        suf = ".html" if trailing_html else ""
+        extension = ".html" if trailing_html else ""
+        resolver = Resolver(store, prefix, extension)
+        self.LR = LinkReifier(resolver=resolver)
         self.env.globals["len"] = len
-        self.env.globals["url"] = lambda x: url(x, prefix, suf)
+        self.env.globals["url"] = resolver.resolve
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
-        self.env.globals["dothtml"] = suf
+        self.env.globals["dothtml"] = extension
         self.env.globals["uuid"] = lambda: uuid.uuid4().hex
 
     async def index(self):
@@ -490,7 +494,6 @@ class HtmlRenderer:
             figmap=figmap,
             module=package,
             parts=parts,
-            ext=ext,
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -517,12 +520,89 @@ class HtmlRenderer:
             meta=meta,
             module=package,
             parts={},
-            ext=ext,
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
             toctrees=toctrees,
         )
+
+    def render_one(
+        self,
+        template,
+        doc: IngestedBlobs,
+        qa,
+        *,
+        current_type,
+        backrefs,
+        parts=(),
+        parts_links=(),
+        graph="{}",
+        meta,
+        toctrees,
+    ):
+        """
+        Return the rendering of one document
+
+        Parameters
+        ----------
+        template
+            a Jinja@ template object used to render.
+        doc : DocBlob
+            a Doc object with the informations for current obj
+        qa : str
+            fully qualified name for current object
+        backrefs : list of str
+            backreferences of document pointing to this.
+        parts : Dict[str, list[(str, str)]
+            used for navigation and for parts of the breakcrumbs to have navigation to siblings.
+            This is not directly related to current object.
+        parts_links : <Insert Type here>
+            <Multiline Description Here>
+        graph : <Insert Type here>
+            <Multiline Description Here>
+        logo : <Insert Type here>
+            <Multiline Description Here>
+
+        """
+
+        assert isinstance(meta, dict)
+        # TODO : move this to ingest likely.
+        # Here if we have too many references we group them on where they come from.
+        assert not hasattr(doc, "logo")
+        if len(backrefs) > 30:
+            b2 = defaultdict(lambda: [])
+            for ref in backrefs:
+                assert isinstance(ref, RefInfo)
+                if "." in ref.path:
+                    mod, _ = ref.path.split(".", maxsplit=1)
+                else:
+                    mod = ref.path
+                b2[mod].append(ref)
+            backrefs = (None, b2)
+        else:
+            backrefs = (backrefs, None)
+
+        try:
+            for k, v in doc.content.items():
+                doc.content[k] = self.LR.visit(v)
+
+            doc.arbitrary = [self.LR.visit(x) for x in doc.arbitrary]
+            return template.render(
+                current_type=current_type,
+                doc=doc,
+                logo=meta.get("logo", None),
+                qa=qa,
+                version=meta["version"],
+                module=qa.split(".")[0],
+                backrefs=backrefs,
+                parts=parts,
+                parts_links=parts_links,
+                graph=graph,
+                meta=meta,
+                toctrees=toctrees,
+            )
+        except Exception as e:
+            raise ValueError("qa=", qa) from e
 
     async def _serve_narrative(self, package: str, version: str, ref: str):
         """
@@ -561,13 +641,12 @@ class HtmlRenderer:
         for t in toctrees:
             open_toctree(t, ref)
 
-        return render_one(
+        return self.render_one(
             current_type="docs",
             meta=meta,
             template=template,
             doc=doc_blob,
             qa=package,  # incorrect
-            ext="",
             parts={package: [], ref: []},
             parts_links={},
             backrefs=[],
@@ -625,12 +704,11 @@ class HtmlRenderer:
                 parts_links[k] = acc
                 acc += "."
             backrefs = [RefInfo(*k) for k in backward]
-            return render_one(
+            return self.render_one(
                 current_type="api",
                 template=template,
                 doc=doc_blob,
                 qa=ref,
-                ext="",
                 parts=siblings,
                 parts_links=parts_links,
                 backrefs=backrefs,
@@ -674,12 +752,11 @@ class HtmlRenderer:
                     data = {}
                 json_str = json.dumps(data)
                 meta = encoder.decode(self.store.get_meta(key))
-                data = render_one(
+                data = self.render_one(
                     current_type="API",
                     template=template,
                     doc=doc_blob,
                     qa=qa,
-                    ext=".html",
                     parts=siblings,
                     parts_links=parts_links,
                     backrefs=backward_r,
@@ -732,7 +809,6 @@ class HtmlRenderer:
             data = await self.render_single_examples(
                 module,
                 version,
-                ext=".html",
                 data=self.store.get(example),
             )
             if config.output_dir:
@@ -790,14 +866,13 @@ class HtmlRenderer:
             logo=meta["logo"],
             module=package,
             parts=parts,
-            ext="",
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
             ex=ex,
         )
 
-    async def render_single_examples(self, module, version, *, ext, data):
+    async def render_single_examples(self, module, version, *, data):
         mod_vers = self.store.glob((None, None))
         meta = encoder.decode(self.store.get_meta(Key(module, version, None, None)))
         logo = meta["logo"]
@@ -819,7 +894,6 @@ class HtmlRenderer:
             logo=logo,
             module=module,
             parts=parts,
-            ext=ext,
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -904,8 +978,107 @@ def serve(*, sidebar: bool, port=1234):
         app.run(port=port)
 
 
+class Resolver:
+    def __init__(self, store, prefix: str, extension: str):
+        """
+        Given a RefInfo to an object, resolve it to a full http-link
+        with the current configuration.
+
+        Parameters
+        ----------
+        store:
+            current store which knows about the current existing objects, and
+            references.
+        prefix:
+            url prefix that should be prepended when the documentation is hosted
+            at a subpath.
+        extension:
+            Depending on the context, (ssg, or webserver), links may need an
+            explicit extension.
+
+        """
+        if extension != "":
+            assert extension.startswith(".")
+        assert prefix.startswith("/")
+        assert prefix.endswith("/")
+        self.store = store
+        self.prefix = prefix
+        self.extension = extension
+
+        self.version: Dict[str, str] = {}
+
+        for p, v in {
+            (package, version)
+            for (package, version, _, _) in self.store.glob((None, "*", "meta", None))
+        }:
+            if p in self.version:
+                assert self.version[p] == v
+            self.version[p] = v
+
+    def exists_resolve(self, info) -> Tuple[bool, Optional[str]]:
+        module, version_number, kind, path = info
+        if kind == "api":
+            kind = "module"
+        if version_number == "*":
+            if info.module in self.version:
+                version_number = self.version[info.module]
+
+        i2 = RefInfo(module, version_number, kind, path)
+        # TODO: Fix
+        if kind == "?":
+            return False, None
+        sgi = self.store.glob(i2)
+        if sgi:
+            exists, url = self._resolve(i2)
+            return exists, url
+
+        # we may want to find older versions.
+
+        return False, None
+
+    def resolve(self, info) -> str:
+        return self._resolve(info)[1]
+
+    def _resolve(self, info) -> Tuple[bool, str]:
+        """
+        TODO : refactor this in a better  way so that the link reifier can know whether the link will resolve.
+        """
+        assert isinstance(info, RefInfo), info
+        assert info.kind in (
+            "module",
+            "api",
+            "examples",
+            "assets",
+            "?",
+            "docs",
+            "to-resolve",
+        ), repr(info)
+        # assume same package/version for now.
+        # assert info.version is not "*", info
+        assert info.module is not None
+        version_number = info.version
+        if version_number == "*":
+            if info.module in self.version:
+                version_number = self.version[info.module]
+        if info.module is None:
+            assert info.version is None
+            return True, info.path + self.extension
+        if info.kind == "module":
+            return True, f"{self.prefix}{info.module}/{version_number}/api/{info.path}"
+        if info.kind == "examples":
+            return (
+                True,
+                f"{self.prefix}{info.module}/{version_number}/examples/{info.path}",
+            )
+        else:
+            return (
+                True,
+                f"{self.prefix}{info.module}/{version_number}/{info.kind}/{info.path}{self.extension}",
+            )
+
+
 class LinkReifier(TreeReplacer):
-    def __init__(self, prefix, suffix):
+    def __init__(self, resolver):
         """
         Prefix :
             urls prefix, liek if hosted as a sub-path
@@ -913,8 +1086,7 @@ class LinkReifier(TreeReplacer):
             suffix of pages (.html/ø)
 
         """
-        self.prefix = prefix
-        self.suffix = suffix
+        self.resolver = resolver
 
     def replace_Link(self, link):
         """
@@ -932,15 +1104,18 @@ class LinkReifier(TreeReplacer):
                 )
             ]
         else:
-            turl = url(link.reference, prefix=self.prefix, suffix=self.suffix)
-            return [MLink(children=[MText(link.value)], url=turl, title="")]
+            exists, turl = self.resolver.exists_resolve(link.reference)
+            if exists:
+                return [MLink(children=[MText(link.value)], url=turl, title="")]
+            else:
+                return [MText(link.value + "(?)")]
 
 
-def render_one(
+def old_render_one(
+    store: GraphStore,
     template,
     doc: IngestedBlobs,
     qa,
-    ext,
     *,
     current_type,
     backrefs,
@@ -961,9 +1136,6 @@ def render_one(
         a Doc object with the informations for current obj
     qa : str
         fully qualified name for current object
-    ext : str
-        file extension for url  – should likely be removed and be set on the template
-        I think that might be passed down to resolve maybe ?
     backrefs : list of str
         backreferences of document pointing to this.
     parts : Dict[str, list[(str, str)]
@@ -996,7 +1168,8 @@ def render_one(
         backrefs = (backrefs, None)
 
     try:
-        LR = LinkReifier(prefix="/p/", suffix="")
+        resolver = Resolver(store, prefix="/p/", extension="")
+        LR = LinkReifier(resolver=resolver)
         for k, v in doc.content.items():
             doc.content[k] = LR.visit(v)
 
@@ -1009,7 +1182,6 @@ def render_one(
             version=meta["version"],
             module=qa.split(".")[0],
             backrefs=backrefs,
-            ext=ext,
             parts=parts,
             parts_links=parts_links,
             graph=graph,
@@ -1066,13 +1238,13 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
     # exercise the reprs
     assert str(doc_blob)
 
-    return render_one(
+    return old_render_one(
+        store,
         current_type="API",
         meta=meta,
         template=template,
         doc=doc_blob,
         qa=ref,
-        ext="",
         backrefs=[],
         graph="{}",
         toctrees=[],

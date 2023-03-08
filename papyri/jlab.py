@@ -2,6 +2,7 @@ import sys
 
 from IPython.core.magic import Magics, line_magic, magics_class
 from IPython.display import IFrame
+import IPython
 
 
 # The class MUST call this class decorator at creation time
@@ -25,8 +26,6 @@ class Papyri(Magics):
             obj = getattr(obj, p)
         return self.newhelp(obj)
 
-
-import IPython
 
 ip = IPython.get_ipython()
 if ip:

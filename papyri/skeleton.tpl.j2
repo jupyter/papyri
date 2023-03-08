@@ -7,23 +7,23 @@
                 <a href={{module}}>{{module}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
                             {% for link,name in parts.get(module, []) -%}
-                                <a href="{{url(link)}}{{ext}}">{{link.path}}</a>
+                                <a href="{{url(link)}}{{dothtml}}">{{link.path}}</a>
                             {% endfor %}
                      </div>
                 </div>
                 <div class="dropdown">
-                <a href='/p/{{module}}/{{version}}/api/{{module}}{{ext}}'>{{version}}</a>&nbsp;/&nbsp;
+                <a href='/p/{{module}}/{{version}}/api/{{module}}{{dothtml}}'>{{version}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
                             {% for v in [version] -%}
-                                <a href="/p/{{module}}/{{v}}/api/{{module}}{{ext}}">{{v}}</a>
+                                <a href="/p/{{module}}/{{v}}/api/{{module}}{{dothtml}}">{{v}}</a>
                             {% endfor %}
                     </div>
                 </div>
 
                 <div class="dropdown">
-                    <a href='/p/{{module}}/{{version}}/api/{{module}}{{ext}}'>{{current_type}}</a>&nbsp;/&nbsp;
+                    <a href='/p/{{module}}/{{version}}/api/{{module}}{{dothtml}}'>{{current_type}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
-                        <a href="/p/{{module}}/{{version}}/api/{{module}}{{ext}}">API</a>
+                        <a href="/p/{{module}}/{{version}}/api/{{module}}{{dothtml}}">API</a>
                         <a href="/p/{{module}}/{{version}}/gallery">Gallery</a>
                         <a href="/p/{{module}}/{{version}}/examples">Examples</a>
                         <a href="/p/{{module}}/{{version}}/docs">Narrative</a>
@@ -36,12 +36,12 @@
                         {% if p =='+' %}
                             <a class="dropbtn" >{{p}}</a>{% if not loop.last %}.{% endif %}
                         {% else %}
-                            <a class="dropbtn" href='{{parts_links[p]}}{{ext}}'>{{p}}</a>{% if not loop.last %}.{% endif %}
+                            <a class="dropbtn" href='{{parts_links[p]}}{{dothtml}}'>{{p}}</a>{% if not loop.last %}.{% endif %}
                         {% endif %}
                         {% if not loop.first %}
                             <div class="dropdown-content">
                             {% for link,name in links -%}
-                                <a href="{{url(link)}}{{ext}}">{{name}}</a>
+                                <a href="{{url(link)}}{{dothtml}}">{{name}}</a>
                             {% endfor %}
                             </div>
                         {% endif %}
@@ -83,7 +83,7 @@
         {% else %}
         <details class='toctree'>
         {% endif %}
-        <summary><a class="toctree {{obj.current}}" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a></summary>
+        <summary><a class="toctree {{obj.current}}" href="{{url(obj.ref)}}{{dothtml}}">{{obj.title}}</a></summary>
             <ul>
             {% for c in obj.children %}
                 <li>{{tc(c)}}</li>
@@ -91,7 +91,7 @@
             </ul>
         </details>
     {% else %}
-        <a class="toctree {{obj.current}}" href="{{url(obj.ref)}}{{ext}}">{{obj.title}}</a>
+        <a class="toctree {{obj.current}}" href="{{url(obj.ref)}}{{dothtml}}">{{obj.title}}</a>
     {%endif%}
 {% endmacro %}
     {% block toctree %}

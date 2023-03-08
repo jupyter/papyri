@@ -37,6 +37,7 @@ from urwid.text_layout import calc_coords
 from urwid.widget import LEFT, SPACE
 
 from papyri.crosslink import RefInfo, encoder
+from papyri.config import ingest_dir
 
 
 class Link:
@@ -209,7 +210,6 @@ class TextWithLink(urwid.Text):
 
 
 blank = urwid.Divider()
-from papyri.config import ingest_dir
 
 
 def dedup(l):
@@ -731,7 +731,7 @@ def main(qualname: str):
     return found
 
 
-def setup():
+def setup() -> None:
     urwid.web_display.set_preferences("Urwid Tour")
     # try to handle short web requests quickly
     if urwid.web_display.handle_short_request():

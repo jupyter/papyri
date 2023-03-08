@@ -22,7 +22,7 @@
 
 {% macro ref(r) -%}
     {% if r.exists %}
-                <a href="{{r.ref}}{{ext}}" class='exists'>{{r.name}}</a>
+                <a href="{{r.ref}}{{dothtml}}" class='exists'>{{r.name}}</a>
     {% else %}
                 <b class='missing'>{{r.name}}</b>
     {% endif %}
