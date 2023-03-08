@@ -156,6 +156,7 @@ class MAdmonition(Node):
             "FlowContent",
             "MAdmonitionTitle",
             take2.Unimplemented,
+            "take2.BlockQuote",
             "take2.DefList",
         ]
     ] = []
