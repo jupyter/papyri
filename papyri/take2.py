@@ -216,6 +216,7 @@ from .myst_ast import (
     MCode,
     MStrong,
     MLink,
+    MAdmonition,
 )
 
 
@@ -324,6 +325,7 @@ class ListItem(Node):
             BlockMath,
             Unimplemented,
             Admonition,
+            MAdmonition,
             Comment,
             MParagraph,
             MCode,
@@ -386,6 +388,7 @@ class Section(Node):
             MList,
             BlockQuote,
             Admonition,
+            MAdmonition,
             FieldList,
             Target,
             SubstitutionRef,
@@ -447,6 +450,7 @@ class Param(Node):
             BlockMath,
             BlockVerbatim,
             Admonition,
+            MAdmonition,
             BulletList,
             BlockQuote,
             MList,
@@ -579,6 +583,7 @@ class BlockQuote(Node):
             BlockQuote,
             FieldList,
             Admonition,
+            MAdmonition,
             Unimplemented,
             Comment,
             BlockMath,
@@ -800,6 +805,7 @@ class DefListItem(Node):
             MMystDirective,
             Unimplemented,
             Admonition,
+            MAdmonition,
             BlockMath,
             BlockVerbatim,
             Optional[TocTree],  # remove this, that should not be the case ?

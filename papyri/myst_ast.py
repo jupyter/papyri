@@ -142,6 +142,27 @@ class MMystDirective(Node):
     children: List[Union["FlowContent", "PhrasingContent", None]] = []
 
 
+@register(4055)
+class MAdmonitionTitle(Node):
+    type = "admonitionTitle"
+    children: List[Union["PhrasingContent", None]] = []
+
+
+@register(4056)
+class MAdmonition(Node):
+    type = "admonition"
+    children: List[
+        Union[
+            "FlowContent",
+            "MAdmonitionTitle",
+            take2.Unimplemented,
+            "take2.BlockQuote",
+            "take2.DefList",
+        ]
+    ] = []
+    kind: str = "note"
+
+
 StaticPhrasingContent = Union[
     MText,
     MInlineCode,
@@ -179,7 +200,7 @@ FlowContent = Union[
     # MComment,
     # MTarget,
     MMystDirective,
-    # MAdmonition,
+    MAdmonition,
     # MContainer,
     # MMath,
     # MTable,
