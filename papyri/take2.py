@@ -276,17 +276,6 @@ class RefInfo(Node):
         return iter([self.module, self.version, self.kind, self.path])
 
 
-class Word(IntermediateNode):
-    """
-    This is a temporary node, while we visit the tree-sitter tree,
-    we will compress those into words with subsequent whitespace
-
-
-    """
-
-    value: str
-
-
 @register(4007)
 class Words(Node):
     """A sequence of words that does not start not ends with spaces"""

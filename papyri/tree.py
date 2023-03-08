@@ -350,7 +350,6 @@ class TreeReplacer:
                 "Transition",
                 "Unimplemented",
                 "Verbatim",
-                # "Word",
                 "Words",
                 "MText",
                 "MCode",
