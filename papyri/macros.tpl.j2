@@ -7,8 +7,6 @@
          <em>{{render_inner('Words', obj.value)|safe}}</em>
     {%- elif type_ == 'Strong' -%}
          <strong>{{render_inner('Words', obj.content)}}</strong>
-    {%- elif type_ == 'Word' -%}
-         {{-obj.value-}}
     {%- elif type_ == 'Directive' -%}
          <code class='not-implemented'>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
     {%- elif type_ == 'Link' -%}
@@ -116,7 +114,7 @@
     {%- else -%}
       
     {%- set type = obj.__class__.__name__ -%}
-       {%- if type in ('Word', 'Directive', 'Math', 'Verbatim','Words') -%}
+       {%- if type in ('Directive', 'Math', 'Verbatim','Words') -%}
            {# {{unreachable(obj)}} #}
            {{obj.value}}  {# TODO : likely smth wrong with field list #}
        {%- elif type == 'Link' -%}

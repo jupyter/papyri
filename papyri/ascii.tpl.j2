@@ -27,8 +27,6 @@
 {% macro render_inner(type, obj) -%}
    |{%- if type == 'Words' -%}
    |   |{{- obj.value -}}
-   |{%- elif type == 'Word' -%}
-   |   |{{- obj.value -}}
    |{%- elif type == 'Directive' -%}
    |   |:{{blue(obj.domain)}}:{{blue(obj.role)}}:`{{blue(obj.value)}}`
    |{%- elif type == 'Link' %}
@@ -70,7 +68,7 @@
    |   |{{block_paragraph(obj)}}
    |{% else %}
    |{%- set type = obj.__class__.__name__ -%}
-   |   |{%- if type in ('Word', 'Directive', 'Link', 'Math', 'Verbatim') -%}
+   |   |{%- if type in ('Directive', 'Link', 'Math', 'Verbatim') -%}
    |   |   |{{unreachable()}}
    |   |{% elif type == 'MMystDirective' %}
    |   |   |{{'\n'}}{{myst_directive(obj)}}

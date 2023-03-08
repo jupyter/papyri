@@ -35,7 +35,6 @@ from .take2 import (
     SubstitutionRef,
     Transition,
     Unimplemented,
-    Word,
     compress_word,
     inline_nodes,
 )
@@ -265,10 +264,7 @@ class TSVisitor:
         for c in node.children:
             kind = c.type
             if kind == "::":
-                if acc and isinstance(acc[-1], Word):
-                    word = acc.pop()
-                    acc.append(MText(word.value + ":"))
-                elif acc and isinstance(acc[-1], inline_nodes):
+                if acc and isinstance(acc[-1], inline_nodes):
                     acc.append(MText(":"))
                 # else:
                 #    assert False
@@ -366,17 +362,14 @@ class TSVisitor:
         return self.visit_text(node)
 
     def visit_text(self, node, prev_end=None):
-        # t = Word(self.bytes[node.start_byte: node.end_byte].decode())
         t = MText(self.bytes[node.start_byte : node.end_byte].decode())
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
-        # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
         return [t]
 
     def visit_whitespace(self, node, prev_end=None):
         content = self.bytes[node.start_byte : node.end_byte].decode()
         # assert set(content) == {' '}, repr(content)
-        # t = Word(" " * len(content))
         t = MText(" " * len(content))
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
