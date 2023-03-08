@@ -52,7 +52,7 @@ jobs:
         papyri ingest  --no-relink ~/.papyri/data/papyri_0.0.8
         papyri ingest  --no-relink ~/.papyri/data/*
         papyri relink
-        papyri render --ascii
+        papyri render
 
     - name: Install Vercel CLI
       run: npm install --global vercel@latest
