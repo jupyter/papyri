@@ -1,12 +1,6 @@
 {% macro render_inner(type_, obj) -%}
-    {%- if type_ == 'Words' -%}
-         {{-obj.value-}}
-    {% elif type_[0] == 'M' %}
+    {% if type_[0] == 'M' %}
          {{ render_myst(obj) }}
-    {%- elif type_ == 'Emph' -%}
-         <em>{{render_inner('Words', obj.value)|safe}}</em>
-    {%- elif type_ == 'Strong' -%}
-         <strong>{{render_inner('Words', obj.content)}}</strong>
     {%- elif type_ == 'Directive' -%}
          <code class='not-implemented'>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
     {%- elif type_ == 'Link' -%}
@@ -114,7 +108,7 @@
     {%- else -%}
       
     {%- set type = obj.__class__.__name__ -%}
-       {%- if type in ('Directive', 'Math', 'Verbatim','Words') -%}
+       {%- if type in ('Directive', 'Math', 'Verbatim') -%}
            {# {{unreachable(obj)}} #}
            {{obj.value}}  {# TODO : likely smth wrong with field list #}
        {%- elif type == 'Link' -%}

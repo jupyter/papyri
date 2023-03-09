@@ -25,9 +25,7 @@
 {%- endmacro %}
 {#--#}
 {% macro render_inner(type, obj) -%}
-   |{%- if type == 'Words' -%}
-   |   |{{- obj.value -}}
-   |{%- elif type == 'Directive' -%}
+   |{%- if type == 'Directive' -%}
    |   |:{{blue(obj.domain)}}:{{blue(obj.role)}}:`{{blue(obj.value)}}`
    |{%- elif type == 'Link' %}
    |   |{% if obj.kind=='local' %}

@@ -276,25 +276,6 @@ class RefInfo(Node):
         return iter([self.module, self.version, self.kind, self.path])
 
 
-@register(4007)
-class Words(Node):
-    """A sequence of words that does not start not ends with spaces"""
-
-    value: str
-
-    def __eq__(self, other):
-        return type(self) == type(other) and self.value.strip() == other.value.strip()
-
-    def __repr__(self):
-        return self.value
-
-    def __len__(self):
-        return len(self.value)
-
-    def __hash__(self):
-        return hash(self.value)
-
-
 class _XList(Node):
     children: List[ListItem]
 
@@ -357,12 +338,12 @@ class Section(Node):
             Transition,
             # Code,
             MCode,
+            MText,
             Code2,
             Code3,
             Unimplemented,
             Comment,
             Target,
-            Words,
             Fig,
             Options,
             Paragraph,
@@ -430,7 +411,6 @@ class Param(Node):
     desc: List[
         Union[
             # Code,
-            Words,
             Fig,
             Paragraph,
             DefListItem,
@@ -610,7 +590,6 @@ class Transition(Node):
 
 inline_nodes = tuple(
     [
-        Words,
         Directive,
         Verbatim,
         Link,
@@ -625,7 +604,6 @@ inline_nodes = tuple(
 class Paragraph(Node):
     children: List[
         Union[
-            Words,
             MText,
             MCode,
             MStrong,
@@ -734,7 +712,6 @@ class FieldListItem(Node):
     name: List[
         Union[
             Paragraph,
-            Words,
             Verbatim,
             MText,
             MCode,
@@ -742,7 +719,6 @@ class FieldListItem(Node):
     ]
     body: List[
         Union[
-            Words,
             Paragraph,
             Verbatim,
             Admonition,

@@ -293,9 +293,6 @@ class Renderer:
             return ("math", c.convert(cont))
         return ("directive", f"{d.domain}:{d.role}:`{cont}`")
 
-    def render_Words(self, words):
-        return words.value
-
     def render_Example(self, ex):
         acc = []
         for line in ex.lines:
@@ -360,12 +357,6 @@ class Renderer:
                 ),
             ]
         )
-
-    def render_Emph(self, emph):
-        return ("emph", emph.value.value)
-
-    def render_Strong(self, strong):
-        return ("strong", strong.content.value)
 
     def render_Verbatim(self, verb):
         return ("verbatim", verb.value)
