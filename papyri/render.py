@@ -218,106 +218,6 @@ def cs2(ref, tree, ref_map):
         cpath += p + "."
     return siblings
 
-
-def compute_graph(
-    gs: GraphStore, backrefs: Set[Key], refs: Set[Key], key: Key
-) -> Dict[Any, Any]:
-    """
-    Compute local reference graph for a given item.
-
-    gs: Graphstore
-        the graphstore to get data out of.
-    backrefs:
-        list of backreferences
-    refs:
-        list of forward references
-    keys:
-        current iten
-
-    """
-    weights = {}
-    assert isinstance(backrefs, set)
-    for b in backrefs:
-        assert isinstance(b, Key)
-    assert isinstance(refs, set)
-    for f in refs:
-        assert isinstance(f, Key)
-
-    all_nodes = set(backrefs).union(set(refs))
-    # all_nodes = set(Key(*k) for k in all_nodes)
-
-    raw_edges = []
-    for k in set(all_nodes):
-        name = tuple(k)[3]
-        neighbors_refs = gs.get_backref(k)
-        weights[name] = len(neighbors_refs)
-        orig = [x[3] for x in neighbors_refs]
-        all_nodes = all_nodes.union(neighbors_refs)
-        for o in orig:
-            raw_edges.append((k.path, o))
-
-    data: Dict[str, List[Any]] = {"nodes": [], "links": []}
-
-    if len(weights) > 50:
-        for thresh in sorted(set(weights.values())):
-            log.debug("%s items ; remove items %s or lower", len(weights), thresh)
-            weights = {k: v for k, v in weights.items() if v > thresh}
-            log.debug("down to %s items", len(weights))
-            if len(weights) < 50:
-                break
-
-    all_nodes = set(all_nodes)
-    nums_ = set()
-    edges = list(raw_edges)
-    nodes = list(set(weights.keys()))
-    for a, b in edges:
-        if (a not in nodes) or (b not in nodes):
-            continue
-        nums_.add(a)
-        nums_.add(b)
-    nums = {x: i for i, x in enumerate(nodes, start=1)}
-
-    for i, (from_, to) in enumerate(edges):
-        if from_ == to:
-            continue
-        if from_ not in nodes:
-            continue
-        if to not in nodes:
-            continue
-        if key[3] in (to, from_):
-            continue
-        data["links"].append({"source": nums[from_], "target": nums[to], "id": i})
-
-    for node in nodes:
-        diam = 8.0
-        if node == key[3]:
-            continue
-            diam = 18.0
-        elif node in weights:
-            import math
-
-            diam = 8.0 + math.sqrt(weights[node])
-
-        candidates = [n for n in all_nodes if n[3] == node and "??" not in n]
-        if not candidates:
-            uu = None
-        else:
-            # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
-            latest_version = list(sorted(candidates))[-1]
-            uu = _url(RefInfo(*latest_version), "/p/", "")
-
-        data["nodes"].append(
-            {
-                "id": nums[node],
-                "val": diam,
-                "label": node,
-                "mod": ".".join(node.split(".")[0:1]),
-                "url": uu,
-            }
-        )
-    return data
-
-
 class HtmlRenderer:
     def __init__(self, store: GraphStore, *, sidebar, prefix, trailing_html):
         assert prefix.startswith("/")
@@ -342,6 +242,102 @@ class HtmlRenderer:
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = extension
         self.env.globals["uuid"] = lambda: uuid.uuid4().hex
+
+    def compute_graph(
+        self, backrefs: Set[Key], refs: Set[Key], key: Key
+    ) -> Dict[Any, Any]:
+        """
+        Compute local reference graph for a given item.
+
+        backrefs:
+            list of backreferences
+        refs:
+            list of forward references
+        keys:
+            current iten
+
+        """
+        weights = {}
+        assert isinstance(backrefs, set)
+        for b in backrefs:
+            assert isinstance(b, Key)
+        assert isinstance(refs, set)
+        for f in refs:
+            assert isinstance(f, Key)
+
+        all_nodes = set(backrefs).union(set(refs))
+        # all_nodes = set(Key(*k) for k in all_nodes)
+
+        raw_edges = []
+        for k in set(all_nodes):
+            name = tuple(k)[3]
+            neighbors_refs = self.store.get_backref(k)
+            weights[name] = len(neighbors_refs)
+            orig = [x[3] for x in neighbors_refs]
+            all_nodes = all_nodes.union(neighbors_refs)
+            for o in orig:
+                raw_edges.append((k.path, o))
+
+        data: Dict[str, List[Any]] = {"nodes": [], "links": []}
+
+        if len(weights) > 50:
+            for thresh in sorted(set(weights.values())):
+                log.debug("%s items ; remove items %s or lower", len(weights), thresh)
+                weights = {k: v for k, v in weights.items() if v > thresh}
+                log.debug("down to %s items", len(weights))
+                if len(weights) < 50:
+                    break
+
+        all_nodes = set(all_nodes)
+        nums_ = set()
+        edges = list(raw_edges)
+        nodes = list(set(weights.keys()))
+        for a, b in edges:
+            if (a not in nodes) or (b not in nodes):
+                continue
+            nums_.add(a)
+            nums_.add(b)
+        nums = {x: i for i, x in enumerate(nodes, start=1)}
+
+        for i, (from_, to) in enumerate(edges):
+            if from_ == to:
+                continue
+            if from_ not in nodes:
+                continue
+            if to not in nodes:
+                continue
+            if key[3] in (to, from_):
+                continue
+            data["links"].append({"source": nums[from_], "target": nums[to], "id": i})
+
+        for node in nodes:
+            diam = 8.0
+            if node == key[3]:
+                continue
+                diam = 18.0
+            elif node in weights:
+                import math
+
+                diam = 8.0 + math.sqrt(weights[node])
+
+            candidates = [n for n in all_nodes if n[3] == node and "??" not in n]
+            if not candidates:
+                uu = None
+            else:
+                # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
+                latest_version = list(sorted(candidates))[-1]
+                uu = _url(RefInfo(*latest_version), "/p/", "")
+
+            data["nodes"].append(
+                {
+                    "id": nums[node],
+                    "val": diam,
+                    "label": node,
+                    "mod": ".".join(node.split(".")[0:1]),
+                    "url": uu,
+                }
+            )
+        return data
 
     async def index(self):
         keys = self.store.glob((None, None, "meta", "aliases.cbor"))
@@ -693,8 +689,8 @@ class HtmlRenderer:
             # we will now just render it.
             assert root is not None
             # assert version is not None
-            data = compute_graph(
-                self.store, backward, forward, Key(root, version, "module", ref)
+            data = self.compute_graph(
+                backward, forward, Key(root, version, "module", ref)
             )
             json_str = json.dumps(data)
             parts_links = {}
@@ -747,7 +743,7 @@ class HtmlRenderer:
                 )
                 backward_r = [RefInfo(*x) for x in backward]
                 if graph:
-                    data = compute_graph(self.store, set(backward), set(forward), key)
+                    data = self.compute_graph(set(backward), set(forward), key)
                 else:
                     data = {}
                 json_str = json.dumps(data)
