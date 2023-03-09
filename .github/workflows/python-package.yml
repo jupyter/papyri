@@ -111,7 +111,7 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pip isntall scipy
+        pip install scipy
         pytest --cov=papyri --cov-append
         ls -al
     - name: Convert .coverage sql to xml for upload
