@@ -1,4 +1,5 @@
 import builtins
+import math
 import json
 import logging
 import operator
@@ -218,6 +219,7 @@ def cs2(ref, tree, ref_map):
         cpath += p + "."
     return siblings
 
+
 class HtmlRenderer:
     def __init__(self, store: GraphStore, *, sidebar, prefix, trailing_html):
         assert prefix.startswith("/")
@@ -234,10 +236,10 @@ class HtmlRenderer:
         self.env.lstrip_blocks = True
         self.prefix = prefix
         extension = ".html" if trailing_html else ""
-        resolver = Resolver(store, prefix, extension)
-        self.LR = LinkReifier(resolver=resolver)
+        self.resolver = Resolver(store, prefix, extension)
+        self.LR = LinkReifier(resolver=self.resolver)
         self.env.globals["len"] = len
-        self.env.globals["url"] = resolver.resolve
+        self.env.globals["url"] = self.resolver.resolve
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = extension
@@ -247,7 +249,9 @@ class HtmlRenderer:
         self, backrefs: Set[Key], refs: Set[Key], key: Key
     ) -> Dict[Any, Any]:
         """
-        Compute local reference graph for a given item.
+
+        Compute local reference graph for a given item, and return a usefull
+        representation to show a d3 graph in javascript
 
         backrefs:
             list of backreferences
@@ -266,14 +270,14 @@ class HtmlRenderer:
             assert isinstance(f, Key)
 
         all_nodes = set(backrefs).union(set(refs))
-        # all_nodes = set(Key(*k) for k in all_nodes)
 
         raw_edges = []
         for k in set(all_nodes):
-            name = tuple(k)[3]
+            name = k.path
+            assert k.path == tuple(k)[3]
             neighbors_refs = self.store.get_backref(k)
             weights[name] = len(neighbors_refs)
-            orig = [x[3] for x in neighbors_refs]
+            orig = [x.path for x in neighbors_refs]
             all_nodes = all_nodes.union(neighbors_refs)
             for o in orig:
                 raw_edges.append((k.path, o))
@@ -316,8 +320,6 @@ class HtmlRenderer:
                 continue
                 diam = 18.0
             elif node in weights:
-                import math
-
                 diam = 8.0 + math.sqrt(weights[node])
 
             candidates = [n for n in all_nodes if n[3] == node and "??" not in n]
@@ -326,7 +328,7 @@ class HtmlRenderer:
             else:
                 # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
                 latest_version = list(sorted(candidates))[-1]
-                uu = _url(RefInfo(*latest_version), "/p/", "")
+                uu = self.resolver.resolve(RefInfo(*latest_version))
 
             data["nodes"].append(
                 {
