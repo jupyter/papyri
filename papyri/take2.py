@@ -276,17 +276,12 @@ class RefInfo(Node):
         return iter([self.module, self.version, self.kind, self.path])
 
 
-class _XList(Node):
-    children: List[ListItem]
-
-
 @register(4006)
 class ListItem(Node):
     children: List[
         Union[
             Paragraph,
             MList,
-            BulletList,
             Target,
             DefList,
             BlockQuote,
@@ -301,11 +296,6 @@ class ListItem(Node):
             MCode,
         ]
     ]
-
-
-@register(4040)
-class BulletList(_XList):
-    pass
 
 
 @register(4011)
@@ -354,7 +344,6 @@ class Section(Node):
             BlockMath,
             BlockVerbatim,
             Parameters,
-            BulletList,
             MList,
             BlockQuote,
             Admonition,
@@ -420,7 +409,6 @@ class Param(Node):
             BlockVerbatim,
             Admonition,
             MAdmonition,
-            BulletList,
             BlockQuote,
             MList,
             MParagraph,
@@ -545,7 +533,6 @@ class BlockQuote(Node):
         Union[
             Paragraph,
             BlockVerbatim,
-            BulletList,
             DefList,
             MList,
             MMystDirective,
@@ -636,7 +623,6 @@ class Admonition(Node):
             Paragraph,
             MParagraph,
             MCode,
-            BulletList,
             BlockVerbatim,
             BlockQuote,
             DefList,
@@ -724,7 +710,6 @@ class FieldListItem(Node):
             Admonition,
             BlockDirective,
             MMystDirective,
-            BulletList,
             MText,
             MParagraph,
             MCode,
@@ -763,7 +748,6 @@ class DefListItem(Node):
             Paragraph,
             MParagraph,
             MCode,
-            BulletList,
             MList,
             BlockQuote,
             DefList,

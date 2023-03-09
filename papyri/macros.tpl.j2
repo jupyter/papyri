@@ -152,12 +152,6 @@
            {% for item in obj %}
                {{ render_II(item) }}
            {% endfor %}
-       {% elif type == 'BulletList' %}
-           <ul>
-               {%- for item in obj.children %}
-               <li>{{render_II(item)}}</li>
-               {% endfor %}
-            </ul>
         {% elif type == 'List' %}
             {% if obj.ordered %}
             <ol>
