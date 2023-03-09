@@ -17,6 +17,7 @@ import inspect
 import json
 import logging
 import os
+import sys
 import re
 import site
 import tempfile
@@ -117,8 +118,6 @@ class ErrorCollector:
 try:
     from . import ts
 except (ImportError, OSError):
-    import sys
-
     sys.exit(
         """
             Tree Sitter RST parser not available, you may need to:
@@ -544,6 +543,16 @@ def gen_main(
         g.partial_write(p)
     if dry_run:
         temp_dir.cleanup()
+
+
+def pack():
+    import shutil
+
+    target_dir = Path("~/.papyri/data").expanduser()
+    dirs = [d for d in target_dir.glob("*") if d.is_dir()]
+    for d in dirs:
+        print(f"packing {d} to {d}.zip")
+        shutil.make_archive(d, "zip", d)
 
 
 class DFSCollector:

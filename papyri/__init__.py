@@ -316,6 +316,18 @@ def install(
                 buf.seek(0)
                 results[(name, version)] = buf.read()
 
+    to_download_names = []
+    rs = {}
+    for name in names:
+        p = Path(name)
+        if p.exists() and p.is_file():
+            print(p, "appear to be a file", p.name)
+            name, version = p.name[:-4].rsplit("_")
+            print(name, version)
+            rs[(name, version)] = p.read_bytes()
+        else:
+            to_download_names.append(name)
+
     async def trio_main():
         """
         Main trio routine to download docbundles concurently.
@@ -324,10 +336,10 @@ def install(
         results = {}
         client = httpx.AsyncClient()
         index = (await client.get(f"{ROOT}/index.json")).json()
-        assert len(set(names)) == len(names)
+        assert len(set(to_download_names)) == len(to_download_names)
 
         requested = {}
-        for name in names:
+        for name in to_download_names:
             if "==" in name:
                 name, version = name.split("==")
             else:
@@ -368,12 +380,16 @@ def install(
         return results
 
     datas = trio.run(trio_main)
+    datas.update(rs)
     for (name, version), data in datas.items():
         if data is not None:
             # print("Downloaded", name, version, len(data) // 1024, "kb")
             zf = zipfile.ZipFile(io.BytesIO(data), "r")
             with TemporaryDirectory() as d:
-                zf.extractall(d)
+                print("extract in", d)
+                import os
+
+                zf.extractall(os.path.join(d, f"{name}_{version}"))
                 cr.main(
                     next(iter([x for x in Path(d).iterdir() if x.is_dir()])),
                     check,
@@ -456,6 +472,13 @@ def gen(
             fail_unseen_error=fail_unseen_error,
             limit_to=only,
         )
+
+
+@app.command()
+def pack():
+    from papyri.gen import pack
+
+    pack()
 
 
 @app.command()

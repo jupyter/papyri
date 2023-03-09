@@ -9,6 +9,7 @@ exclude = [
     "scipy.sparse._construct._compressed_sparse_stack",
     "scipy.sparse._construct._stack_along_minor_axis",
     # OTHER.
+    "scipy.interpolate._fitpack_impl.spalde",
 
     "scipy.sparse.csgraph._traversal.breadth_first_tree",
     "scipy.sparse.csgraph._traversal.depth_first_tree",
@@ -71,7 +72,11 @@ array = 'numpy:array'
 arange = 'numpy:arange'
 [global.expected_errors]
 IncorrectInternalDocsLen = [
+    "scipy.interpolate._fitpack_impl.bisplev",
+    "scipy.interpolate._fitpack_impl.spalde",
+    "scipy.interpolate._fitpack_py.spalde",
     "scipy.linalg._decomp.cdf2rdf",
+    "scipy.linalg._special_matrices.fiedler",
     "scipy.optimize._lsq.common.regularized_lsq_operator",
     "scipy.optimize._trustregion_constr.tr_interior_point.BarrierSubproblem.gradient_and_jacobian",
     "scipy.optimize._trustregion_constr.tr_interior_point.tr_interior_point",
@@ -138,4 +143,4 @@ NumpydocParseError = [
 SpaceAfterBlockDirectiveError = [
     "scipy.optimize._tnc._minimize_tnc",
     ]
-    
+
