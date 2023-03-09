@@ -407,13 +407,6 @@ class Renderer:
             p.extend(res)
         return urwid.Pile(p)
 
-    def render_BulletList(self, blist):
-        p = [blank]
-        for c in blist.children:
-            res = [self.render(x) for x in c.children]
-            p.extend([urwid.Columns([(3, urwid.Text("-")), urwid.Pile(res)])])
-        return urwid.Pile(p)
-
     def render_EnumeratedList(self, elist):
         p = [blank]
         for i, c in enumerate(elist.children, start=1):

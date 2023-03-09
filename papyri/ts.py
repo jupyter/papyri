@@ -22,7 +22,6 @@ allowed_adorn = "=-`:.'\"~^_*+#<>"
 from .take2 import (
     BlockQuote,
     BlockVerbatim,
-    BulletList,
     Comment,
     DefList,
     DefListItem,
@@ -214,7 +213,7 @@ class TSVisitor:
         acc = []
         current = None
         for n in nodes:
-            if isinstance(n, (BulletList, FieldList, DefList, MList)):
+            if isinstance(n, (FieldList, DefList, MList)):
                 if current is None:
                     current = n
                 elif type(current) == type(n):
@@ -401,12 +400,6 @@ class TSVisitor:
             # assert parg.type == "paragraph", parg.type
             myst_acc.append(MListItem(False, self.visit(body)))
         return [MList(ordered=False, start=1, spread=False, children=myst_acc)]
-
-        # return [BulletList(acc)]
-
-        # t = Verbatim([self.bytes[node.start_byte+2: node.end_byte-2].decode()])
-        # print(' '*self.depth*4, t)
-        # return [t]
 
     def visit_section(self, node, prev_end=None):
         # print(' '*self.depth*4, '->', node)

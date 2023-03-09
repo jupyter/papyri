@@ -14,13 +14,11 @@ from .take2 import (
     BlockDirective,
     BlockMath,
     BlockVerbatim,
-    BulletList,
     Cannonical,
     Code2,
     Directive,
     FullQual,
     Link,
-    ListItem,
     Math,
     Paragraph,
     RefInfo,
@@ -29,7 +27,15 @@ from .take2 import (
     Verbatim,
 )
 from .common_ast import Node
-from .myst_ast import MMystDirective, MLink, MText, MAdmonition, MAdmonitionTitle
+from .myst_ast import (
+    MMystDirective,
+    MLink,
+    MText,
+    MAdmonition,
+    MAdmonitionTitle,
+    MList,
+    MListItem,
+)
 from .utils import full_qual
 from textwrap import indent
 from .ts import parse
@@ -686,9 +692,8 @@ class DirectiveVisiter(TreeReplacer):
 
         acc = []
         for l in lls:
-            acc.append(ListItem([Paragraph([l])]))
-        return [BulletList(acc)]
-        # return [BlockDirective("toctree", argument, options, content)]
+            acc.append(MListItem(False, [Paragraph([l])]))
+        return [MList(ordered=False, start=1, spread=False, children=acc)]
 
     def replace_MMystDirective(self, myst_directive: MMystDirective):
         meth = getattr(self, "_" + myst_directive.name + "_handler", None)
