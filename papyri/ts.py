@@ -697,9 +697,6 @@ class TSVisitor:
                 term, definition = list_item.children
                 assert term.type == "term"
                 assert definition.type == "definition"
-                # dl = Paragraph(
-                #     [Words(self.bytes[term.start_byte : term.end_byte].decode())], []
-                # )
                 _dd = self.visit(definition)
                 acc.append(
                     DefListItem(

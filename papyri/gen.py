@@ -50,7 +50,6 @@ from .take2 import (
     Code,
     GenToken,
     Fig,
-    Words,
     Link,
     NumpydocExample,
     NumpydocSeeAlso,
@@ -68,6 +67,7 @@ from .toc import make_tree
 from .tree import DVR
 from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress, full_qual
 from .vref import NumpyDocString
+from .myst_ast import MText
 
 
 class ErrorCollector:
@@ -1120,7 +1120,7 @@ class Gen:
                 figs = []
                 if not isinstance(item, InOut):
                     assert isinstance(item.out, list)
-                    example_section_data.append(Words("\n".join(item.out)))
+                    example_section_data.append(MText("\n".join(item.out)))
                     continue
                 script, out, ce_status = _execute_inout(item)
                 raise_in_fig = None
