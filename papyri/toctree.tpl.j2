@@ -5,7 +5,7 @@
 {% macro tci(obj) -%}
     {%if obj.children%}
         <details class='toctree' open >
-        <summary><a class="toctree" href="{{url(obj.ref)}}{{dothtml}}">{{obj.title}}</a></summary>
+        <summary><a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a></summary>
             <ul>
             {% for c in obj.children %}
                 <li>{{tci(c)}}</li>
@@ -13,7 +13,7 @@
             </ul>
         </details>
     {% else %}
-        <a class="toctree" href="{{url(obj.ref)}}{{dothtml}}">{{obj.title}}</a>
+        <a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a>
     {%endif%}
 {% endmacro %}
 
