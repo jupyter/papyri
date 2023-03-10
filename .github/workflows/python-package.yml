@@ -30,10 +30,10 @@ jobs:
             python-version: 3.9
           - lib: 'numpy'
             python-version: 3.9
-            flags: '--no-narrative'
+            flags: '--no-narrative --no-exec'
           - lib: 'scipy'
             python-version: 3.9
-            flags: '--no-narrative'
+            flags: '--no-narrative --no-exec'
 
     steps:
     - uses: actions/checkout@v3
@@ -58,7 +58,7 @@ jobs:
     - name: Gen ${{matrix.lib}}
       run: |
         pip install ${{matrix.lib}}
-        coverage run -a -m papyri gen examples/${{matrix.lib}}.toml  --no-exec --no-infer ${{matrix.flags}}
+        coverage run -a -m papyri gen examples/${{matrix.lib}}.toml  --no-infer ${{matrix.flags}}
         sleep 1 # time for coverage to write its stuff
         papyri pack
         ls ~/.papyri/data
