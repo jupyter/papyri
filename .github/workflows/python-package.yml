@@ -66,6 +66,16 @@ jobs:
       with:
         name: doc-bundles
         path: ~/.papyri/data/*.zip
+    - name: Convert .coverage sql to xml for upload
+      run: |
+        coverage report
+        coverage xml
+        ls -la
+    - name: "Upload coverage to Codecov"
+      uses: codecov/codecov-action@v2
+      with:
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   ingest:
 
