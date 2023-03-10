@@ -17,9 +17,10 @@ import inspect
 import json
 import logging
 import os
-import sys
 import re
+import shutil
 import site
+import sys
 import tempfile
 import warnings
 from collections import defaultdict
@@ -29,7 +30,7 @@ from hashlib import sha256
 from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple, FrozenSet
+from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
 
 import jedi
 import toml
@@ -39,18 +40,19 @@ from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 from rich.logging import RichHandler
-from rich.progress import BarColumn, Progress, TextColumn
+from rich.progress import BarColumn, Progress, TextColumn, track
 from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
+from .common_ast import Node
 from .errors import IncorrectInternalDocsLen, NumpydocParseError, UnseenError
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
-    FullQual,
     Cannonical,
     Code,
-    GenToken,
     Fig,
+    FullQual,
+    GenToken,
     Link,
     NumpydocExample,
     NumpydocSeeAlso,
@@ -63,11 +65,13 @@ from .take2 import (
     Signature,
     parse_rst_section,
 )
-from .common_ast import Node
 from .toc import make_tree
 from .tree import DVR
-from .utils import TimeElapsedColumn, dedent_but_first, pos_to_nl, progress, full_qual
+from .utils import TimeElapsedColumn, dedent_but_first, full_qual, pos_to_nl, progress
 from .vref import NumpyDocString
+
+# delayed import
+
 from .myst_ast import MText
 
 
@@ -546,12 +550,9 @@ def gen_main(
 
 
 def pack():
-    import shutil
-
     target_dir = Path("~/.papyri/data").expanduser()
     dirs = [d for d in target_dir.glob("*") if d.is_dir()]
-    for d in dirs:
-        print(f"packing {d} to {d}.zip")
+    for d in track(dirs, description=f"packing {len(dirs)} items..."):
         shutil.make_archive(d, "zip", d)
 
 
