@@ -48,31 +48,6 @@ def minify(s):
     )
 
 
-def _url(info, prefix, suffix):
-    assert isinstance(info, RefInfo), info
-    assert info.kind in (
-        "module",
-        "api",
-        "examples",
-        "assets",
-        "?",
-        "docs",
-        "to-resolve",
-    ), repr(info)
-    # assume same package/version for now.
-    # assert info.version is not "*", info
-    assert info.module is not None
-    if info.module is None:
-        assert info.version is None
-        return info.path + suffix
-    if info.kind == "module":
-        return f"{prefix}{info.module}/{info.version}/api/{info.path}"
-    if info.kind == "examples":
-        return f"{prefix}{info.module}/{info.version}/examples/{info.path}"
-    else:
-        return f"{prefix}{info.module}/{info.version}/{info.kind}/{info.path}{suffix}"
-
-
 def unreachable(*obj):
     return str(obj[1])
     assert False, f"Unreachable: {obj=}"
@@ -1010,7 +985,9 @@ class Resolver:
             for (package, version, _, _) in self.store.glob((None, "*", "meta", None))
         }:
             if p in self.version:
-                assert self.version[p] == v
+                # todo, likely parse version here if possible.
+                maxv = max(v, self.version[p])
+                print("multiple version for package", p, "Trying most recent", maxv)
             self.version[p] = v
 
     def exists_resolve(self, info) -> Tuple[bool, Optional[str]]:
@@ -1062,11 +1039,14 @@ class Resolver:
             assert info.version is None
             return True, info.path + self.extension
         if info.kind == "module":
-            return True, f"{self.prefix}{info.module}/{version_number}/api/{info.path}"
+            return (
+                True,
+                f"{self.prefix}{info.module}/{version_number}/api/{info.path}{self.extension}",
+            )
         if info.kind == "examples":
             return (
                 True,
-                f"{self.prefix}{info.module}/{version_number}/examples/{info.path}",
+                f"{self.prefix}{info.module}/{version_number}/examples/{info.path}{self.extension}",
             )
         else:
             return (
@@ -1077,13 +1057,6 @@ class Resolver:
 
 class LinkReifier(TreeReplacer):
     def __init__(self, resolver):
-        """
-        Prefix :
-            urls prefix, liek if hosted as a sub-path
-        Suffix:
-            suffix of pages (.html/ø)
-
-        """
         self.resolver = resolver
 
     def replace_Link(self, link):

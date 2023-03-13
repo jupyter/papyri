@@ -7,7 +7,7 @@
                 <a href={{module}}>{{module}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
                             {% for link,name in parts.get(module, []) -%}
-                                <a href="{{url(link)}}{{dothtml}}">{{link.path}}</a>
+                                <a href="{{url(link)}}">{{link.path}}</a>
                             {% endfor %}
                      </div>
                 </div>
@@ -41,7 +41,7 @@
                         {% if not loop.first %}
                             <div class="dropdown-content">
                             {% for link,name in links -%}
-                                <a href="{{url(link)}}{{dothtml}}">{{name}}</a>
+                                <a href="{{url(link)}}">{{name}}</a>
                             {% endfor %}
                             </div>
                         {% endif %}
@@ -83,7 +83,7 @@
         {% else %}
         <details class='toctree'>
         {% endif %}
-        <summary><a class="toctree {{obj.current}}" href="{{url(obj.ref)}}{{dothtml}}">{{obj.title}}</a></summary>
+        <summary><a class="toctree {{obj.current}}" href="{{url(obj.ref)}}">{{obj.title}}</a></summary>
             <ul>
             {% for c in obj.children %}
                 <li>{{tc(c)}}</li>
@@ -91,7 +91,7 @@
             </ul>
         </details>
     {% else %}
-        <a class="toctree {{obj.current}}" href="{{url(obj.ref)}}{{dothtml}}">{{obj.title}}</a>
+        <a class="toctree {{obj.current}}" href="{{url(obj.ref)}}">{{obj.title}}</a>
     {%endif%}
 {% endmacro %}
     {% block toctree %}

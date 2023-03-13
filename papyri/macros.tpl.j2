@@ -9,7 +9,7 @@
         {%- if obj.reference.kind=='local' -%}
             <code><a href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
         {%- elif obj.kind in ('api', 'exists', 'module', 'assets') -%}
-        <code><a href="{{url(obj.reference)}}{{dothtml}}" class='exists'>{{obj.value}}</a></code>
+        <code><a href="{{url(obj.reference)}}" class='exists'>{{obj.value}}</a></code>
         {% else %}
             <!--link ur {{obj}}-->
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
@@ -19,7 +19,7 @@
         {%- if obj.kind=='local' -%}
             <code><a link href="#{{obj.path}}" class='{{obj.kind}}'>{{obj.path}}</a></code>
         {%- elif obj.kind in ('api', 'exists', 'module','assets', 'examples') -%}
-            <code><a link href="{{url(obj)}}{{dothtml}}" class='exists'>{{obj.path}}</a></code>
+            <code><a link href="{{url(obj)}}" class='exists'>{{obj.path}}</a></code>
         {%- else %}
             {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
         {%- endif -%}
@@ -117,7 +117,7 @@
            {%- if obj.reference.kind=='local' -%}
                <code><a href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
            {%- elif obj.kind in ('api', 'exists', 'module', 'assets') -%}
-               <code><a href="{{url(obj.reference)}}{{dothtml}}" class='exists'>{{obj.value}}</a></code>
+               <code><a href="{{url(obj.reference)}}" class='exists'>{{obj.value}}</a></code>
            {% else %}
                {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
            {%- endif -%}
@@ -201,7 +201,7 @@
      {% elif type == 'TocTree' %}
         {%if obj.children%}
             <details class='toctree' open>
-            <summary><a class="toctree" href="{{url(obj.ref)}}{{dothtml}}">{{obj.title}}</a></summary>
+            <summary><a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a></summary>
               <ul>
                {% for c in obj.children %}
                    <li>{{render_II(c)}}</li>
@@ -209,7 +209,7 @@
               </ul>
             </details>
         {% else %}
-            <a class="toctree" href="{{url(obj.ref)}}{{dothtml}}">{{obj.title}}</a>
+            <a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a>
         {%endif%}
          
        {% elif type == 'BlockQuote' %}
@@ -237,7 +237,7 @@
 <span class='nsl'>{{'>>> ' -}}</span>{{ '' -}}
 {%- for token in entries -%}
         {%- if token.link.__class__.__name__ == 'Link' -%}
-            <a class="foo {{token.type}}" href="{{url(token.link.reference)}}{{dothtml}}">{{token.link.value}}</a>
+            <a class="foo {{token.type}}" href="{{url(token.link.reference)}}">{{token.link.value}}</a>
         {%- else -%}
             {%- if token.link == '\n' -%}
                 <br><span class='nsl'>...&nbsp;</span>
