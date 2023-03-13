@@ -71,9 +71,12 @@ jobs:
         url=$(cat vercel-output | grep http | awk '{print $2}')
         echo "VERCEL_URL=$url" >> "$GITHUB_OUTPUT"
 
-    - name: Comment Deployment URL
-      uses: thollander/actions-comment-pull-request@v2
+    - name: Update PR status with Deployment URL
+      uses: Sibz/github-status-action@v1
       with:
-        message: |
-          ▲ Deployed preview to 👉 ${{ steps.vercel.outputs.VERCEL_URL }}
-        pr_number: ${{ github.event.pull_request.number }}
+        authToken: ${{ github.token }}
+        context: 'Vercel Deployment Preview'
+        description: 'Deployed'
+        state: 'success'
+        target_url: ${{ steps.vercel.outputs.VERCEL_URL }}
+        sha: ${{ github.event.pull_request.head.sha || github.sha }}
