@@ -350,7 +350,7 @@ class TreeReplacer:
                 "Fig",
                 "Link",
                 "Math",
-                "MMath",
+                "MInlineMath",
                 "Options",
                 "SeeAlsoItems",
                 "SubstitutionRef",
