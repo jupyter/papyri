@@ -18,7 +18,6 @@ from .take2 import (
     Directive,
     FullQual,
     Link,
-    Math,
     Paragraph,
     RefInfo,
     SubstitutionDef,
@@ -35,6 +34,7 @@ from .myst_ast import (
     MList,
     MListItem,
     MMath,
+    MInlineMath,
 )
 from .utils import full_qual
 from textwrap import indent
@@ -351,6 +351,7 @@ class TreeReplacer:
                 "Link",
                 "Math",
                 "MMath",
+                "MInlineMath",
                 "Options",
                 "SeeAlsoItems",
                 "SubstitutionRef",
@@ -476,7 +477,7 @@ def py_ghissue_handler(value):
 
 @directive_handler("py", "math")
 def py_math_handler(value):
-    m = Math(value)
+    m = MInlineMath(value)
     return [m]
 
 
