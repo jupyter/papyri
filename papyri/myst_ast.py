@@ -164,6 +164,12 @@ class MAdmonition(Node):
     kind: str = "note"
 
 
+@register(4058)
+class MMath(Node):
+    type = "math"
+    value: str
+
+
 @register(4057)
 class MInlineMath(Node):
     type = "inlineMath"
@@ -212,7 +218,7 @@ FlowContent = Union[
     MMystDirective,
     MAdmonition,
     # MContainer,
-    # MMath,
+    MMath,
     # MTable,
     # MFootnoteDefinition,
 ]
