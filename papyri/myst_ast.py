@@ -164,9 +164,18 @@ class MAdmonition(Node):
     kind: str = "note"
 
 
+@register(4057)
+class MInlineMath(Node):
+    type = "inlineMath"
+    value: str
+    # position: Any
+    # data: Any
+
+
 StaticPhrasingContent = Union[
     MText,
     MInlineCode,
+    MInlineMath,
     take2.Verbatim,
     take2.Directive,
     take2.Link,
