@@ -12,7 +12,6 @@ from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
 
 from .take2 import (
     BlockDirective,
-    BlockMath,
     BlockVerbatim,
     Cannonical,
     Code2,
@@ -35,6 +34,7 @@ from .myst_ast import (
     MAdmonitionTitle,
     MList,
     MListItem,
+    MMath,
 )
 from .utils import full_qual
 from textwrap import indent
@@ -350,6 +350,7 @@ class TreeReplacer:
                 "Fig",
                 "Link",
                 "Math",
+                "MMath",
                 "Options",
                 "SeeAlsoItems",
                 "SubstitutionRef",
@@ -609,7 +610,7 @@ class DirectiveVisiter(TreeReplacer):
         elif argument and not content:
             # TODO: do we want to allow that ?
             content = argument
-        return [BlockMath(content)]
+        return [MMath(content)]
 
     def _admonition_handler_x(self, name, argument, options, content):
         assert not options

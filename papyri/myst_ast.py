@@ -164,6 +164,14 @@ class MAdmonition(Node):
     kind: str = "note"
 
 
+@register(4058)
+class MMath(Node):
+    type = "math"
+    value: str
+    # position: Any
+    # data: Any
+
+
 StaticPhrasingContent = Union[
     MText,
     MInlineCode,
