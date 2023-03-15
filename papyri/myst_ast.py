@@ -211,7 +211,7 @@ FlowContent = Union[
     MMystDirective,
     MAdmonition,
     # MContainer,
-    # MMath,
+    MMath,
     # MTable,
     # MFootnoteDefinition,
 ]
