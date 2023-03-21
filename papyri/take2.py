@@ -218,6 +218,7 @@ from .myst_ast import (
     MLink,
     MAdmonition,
     MMath,
+    MComment,
 )
 
 
@@ -335,6 +336,7 @@ class Section(Node):
             Code3,
             Unimplemented,
             Comment,
+            MComment,
             Target,
             Fig,
             Options,
@@ -546,6 +548,7 @@ class BlockQuote(Node):
             MAdmonition,
             Unimplemented,
             Comment,
+            MComment,
             BlockMath,
             MMath,
             MParagraph,

@@ -345,6 +345,7 @@ class TreeReplacer:
                 "Code",
                 "Code2",
                 "Comment",
+                "MComment",
                 "Directive",
                 "Example",
                 "Fig",

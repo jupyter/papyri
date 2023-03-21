@@ -15,6 +15,7 @@ from .myst_ast import (
     MList,
     MListItem,
     MMystDirective,
+    MComment,
 )
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
@@ -22,7 +23,6 @@ allowed_adorn = "=-`:.'\"~^_*+#<>"
 from .take2 import (
     BlockQuote,
     BlockVerbatim,
-    Comment,
     DefList,
     DefListItem,
     Directive,
@@ -658,7 +658,7 @@ class TSVisitor:
 
     def visit_comment(self, node, prev_end=None):
         # TODO
-        return [Comment(self.bytes[node.start_byte : node.end_byte].decode())]
+        return [MComment(self.bytes[node.start_byte : node.end_byte].decode())]
         # raise VisitCommentNotImplementedError()
 
     def visit_strong(self, node, prev_end=None):
