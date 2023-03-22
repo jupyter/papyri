@@ -178,6 +178,14 @@ class MInlineMath(Node):
     # data: Any
 
 
+@register(4059)
+class MBlockquote(Node):
+    type = "blockquote"
+    children: List["FlowContent"] = []
+    # position: Any
+    # data: Any
+
+
 StaticPhrasingContent = Union[
     MText,
     MInlineCode,
@@ -210,7 +218,7 @@ FlowContent = Union[
     # MDefinition,
     # MHeading,
     # MThematicBreak,
-    # MBlockquote,
+    MBlockquote,
     MList,
     # MHTML,
     # MComment,
@@ -219,6 +227,8 @@ FlowContent = Union[
     MAdmonition,
     # MContainer,
     MMath,
+    "take2.DefList",
+    "take2.DefListItem",
     # MTable,
     # MFootnoteDefinition,
 ]
