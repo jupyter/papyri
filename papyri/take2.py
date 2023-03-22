@@ -231,15 +231,6 @@ class IntermediateNode(Node):
     pass
 
 
-@register(4030)
-class Comment(Leaf):
-    """
-    Comment should not make it in the final document,
-    but we store them for now, to help with error reporting and
-    custom transformations.
-    """
-
-
 @register(4024)
 class Fig(Node):
     value: RefInfo
@@ -287,7 +278,6 @@ class ListItem(Node):
             MList,
             Target,
             DefList,
-            BlockQuote,
             MBlockquote,
             BlockVerbatim,
             MMystDirective,
@@ -296,7 +286,6 @@ class ListItem(Node):
             Unimplemented,
             Admonition,
             MAdmonition,
-            Comment,
             MParagraph,
             MCode,
         ]
@@ -337,7 +326,6 @@ class Section(Node):
             Code2,
             Code3,
             Unimplemented,
-            Comment,
             MComment,
             Target,
             Fig,
@@ -352,7 +340,6 @@ class Section(Node):
             BlockVerbatim,
             Parameters,
             MList,
-            BlockQuote,
             MBlockquote,
             Admonition,
             MAdmonition,
@@ -418,7 +405,6 @@ class Param(Node):
             BlockVerbatim,
             Admonition,
             MAdmonition,
-            BlockQuote,
             MBlockquote,
             MList,
             MParagraph,
@@ -537,30 +523,6 @@ class Code(Node):
         return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
 
-@register(4023)
-class BlockQuote(Node):
-    children: List[
-        Union[
-            Paragraph,
-            BlockVerbatim,
-            DefList,
-            MList,
-            MMystDirective,
-            BlockQuote,
-            FieldList,
-            Admonition,
-            MAdmonition,
-            Unimplemented,
-            Comment,
-            MComment,
-            BlockMath,
-            MMath,
-            MParagraph,
-            MCode,
-        ]
-    ]
-
-
 def compress_word(stream) -> List[Any]:
     acc = []
     wds = ""
@@ -636,7 +598,6 @@ class Admonition(Node):
             MParagraph,
             MCode,
             BlockVerbatim,
-            BlockQuote,
             MBlockquote,
             DefList,
             # I dont' like nested block directive/Admonitions.
@@ -762,7 +723,6 @@ class DefListItem(Node):
             MParagraph,
             MCode,
             MList,
-            BlockQuote,
             MBlockquote,
             DefList,
             MMystDirective,

@@ -125,7 +125,6 @@ class MListItem(Node):
             "take2.DefList",
             "take2.Paragraph",
             "take2.Admonition",
-            "take2.BlockQuote",
             "take2.BlockDirective",
             "take2.BlockVerbatim",
             "take2.BlockMath",
@@ -157,7 +156,6 @@ class MAdmonition(Node):
             "FlowContent",
             "MAdmonitionTitle",
             take2.Unimplemented,
-            "take2.BlockQuote",
             "take2.DefList",
         ]
     ] = []
