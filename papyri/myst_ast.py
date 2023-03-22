@@ -164,6 +164,14 @@ class MAdmonition(Node):
     kind: str = "note"
 
 
+@register(4060)
+class MComment(Node):
+    type = "mystComment"
+    value: str
+    # position: Any
+    # data: Any
+
+
 @register(4058)
 class MMath(Node):
     type = "math"
