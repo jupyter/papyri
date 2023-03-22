@@ -141,10 +141,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.9
         cache: 'pip'
 
     - name: Install dependencies
@@ -175,7 +175,7 @@ jobs:
         vercel --version
         vercel pull --yes --environment=production --token=$VERCEL_TOKEN
         vercel build --prod --token=$VERCEL_TOKEN
-        vercel deploy --prebuilt --prod --archive=tgz --token=$VERCEL_TOKEN --meta commit=${{ github.sha }}
+        vercel deploy --prebuilt --prod --archive=tgz --token=$VERCEL_TOKEN --meta commit=${{ github.sha }}--${{ github.run_id }}
       env:
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

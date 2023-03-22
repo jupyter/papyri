@@ -61,6 +61,11 @@ jobs:
     - name: Install Vercel CLI
       run: npm install --global vercel@latest
 
+    - name: Unique Deploy ID
+      id: deploy
+      run: |
+        echo "DEPLOY_ID=${{ github.event.pull_request.head.sha }}--${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+
     - name: Deploy Project Artifacts to Vercel
       id: vercel
       working-directory: "/home/runner/.papyri/html"
@@ -68,10 +73,9 @@ jobs:
         vercel --version
         vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
         vercel build --token=$VERCEL_TOKEN
-        vercel deploy --prebuilt --archive=tgz --token=$VERCEL_TOKEN --meta commit=${{ github.event.pull_request.head.sha }}
-        echo "test=world" >> "$GITHUB_OUTPUT"
+        vercel deploy --prebuilt --archive=tgz --token=$VERCEL_TOKEN --meta commit=${{ steps.deploy.outputs.DEPLOY_ID }}
 
-        vercel ls --token=$VERCEL_TOKEN --meta commit=${{ github.event.pull_request.head.sha }} &> vercel-output
+        vercel ls --token=$VERCEL_TOKEN --meta commit=${{ steps.deploy.outputs.DEPLOY_ID }} &> vercel-output
         url=$(cat vercel-output | grep http | awk '{print $2}')
         echo "VERCEL_URL=$url" >> "$GITHUB_OUTPUT"
 
