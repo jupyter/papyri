@@ -219,6 +219,7 @@ from .myst_ast import (
     MAdmonition,
     MMath,
     MComment,
+    MBlockquote,
 )
 
 
@@ -287,6 +288,7 @@ class ListItem(Node):
             Target,
             DefList,
             BlockQuote,
+            MBlockquote,
             BlockVerbatim,
             MMystDirective,
             BlockMath,
@@ -351,6 +353,7 @@ class Section(Node):
             Parameters,
             MList,
             BlockQuote,
+            MBlockquote,
             Admonition,
             MAdmonition,
             FieldList,
@@ -416,6 +419,7 @@ class Param(Node):
             Admonition,
             MAdmonition,
             BlockQuote,
+            MBlockquote,
             MList,
             MParagraph,
             MCode,
@@ -633,6 +637,7 @@ class Admonition(Node):
             MCode,
             BlockVerbatim,
             BlockQuote,
+            MBlockquote,
             DefList,
             # I dont' like nested block directive/Admonitions.
             MMystDirective,
@@ -758,6 +763,7 @@ class DefListItem(Node):
             MCode,
             MList,
             BlockQuote,
+            MBlockquote,
             DefList,
             MMystDirective,
             Unimplemented,

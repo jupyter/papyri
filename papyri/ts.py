@@ -16,12 +16,12 @@ from .myst_ast import (
     MListItem,
     MMystDirective,
     MComment,
+    MBlockquote,
 )
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
 from .take2 import (
-    BlockQuote,
     BlockVerbatim,
     DefList,
     DefListItem,
@@ -454,7 +454,7 @@ class TSVisitor:
         return [Section([], title, level=level)]
 
     def visit_block_quote(self, node, prev_end=None):
-        return [BlockQuote(self.visit(node))]
+        return [MBlockquote(self.visit(node))]
 
     def visit_paragraph(self, node, prev_end=None):
         sub = self.visit(node.with_whitespace())
