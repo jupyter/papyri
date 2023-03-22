@@ -1,7 +1,5 @@
 """
-An attempt to create AST from MyST spec. At the moment just trying to
-add Text from Myst to the generated structure in the ts.py.
-
+An attempt to create AST from MyST spec.
 """
 from typing import List, Union, Optional, Dict
 
@@ -128,7 +126,6 @@ class MListItem(Node):
             "take2.BlockQuote",
             "take2.BlockDirective",
             "take2.BlockVerbatim",
-            "take2.BlockMath",
         ]
     ]
 
@@ -201,7 +198,6 @@ StaticPhrasingContent = Union[
     take2.Verbatim,
     take2.Directive,
     take2.Link,
-    take2.Math,
     take2.SubstitutionRef,
     take2.Unimplemented,
 ]

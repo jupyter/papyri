@@ -171,16 +171,6 @@ class Leaf(Node):
     value: str
 
 
-@register(4005)
-class Math(Leaf):
-    pass
-
-
-@register(4004)
-class BlockMath(Leaf):
-    pass
-
-
 @register(4027)
 class SubstitutionDef(Node):
     name: str
@@ -291,7 +281,6 @@ class ListItem(Node):
             MBlockquote,
             BlockVerbatim,
             MMystDirective,
-            BlockMath,
             MMath,
             Unimplemented,
             Admonition,
@@ -347,7 +336,6 @@ class Section(Node):
             DefList,
             MMystDirective,
             Unimplemented,
-            BlockMath,
             MMath,
             BlockVerbatim,
             Parameters,
@@ -413,7 +401,6 @@ class Param(Node):
             DefListItem,
             DefList,
             MMystDirective,
-            BlockMath,
             MMath,
             BlockVerbatim,
             Admonition,
@@ -553,7 +540,6 @@ class BlockQuote(Node):
             Unimplemented,
             Comment,
             MComment,
-            BlockMath,
             MMath,
             MParagraph,
             MCode,
@@ -593,7 +579,6 @@ inline_nodes = tuple(
         Verbatim,
         Link,
         MLink,
-        Math,
         SubstitutionRef,
     ]
 )
@@ -614,7 +599,6 @@ class Paragraph(Node):
             Verbatim,
             Link,
             MLink,
-            Math,
             SubstitutionRef,
         ]
     ]
@@ -769,7 +753,6 @@ class DefListItem(Node):
             Unimplemented,
             Admonition,
             MAdmonition,
-            BlockMath,
             MMath,
             BlockVerbatim,
             Optional[TocTree],  # remove this, that should not be the case ?
