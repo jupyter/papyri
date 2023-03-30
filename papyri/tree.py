@@ -22,7 +22,6 @@ from .take2 import (
     RefInfo,
     SubstitutionDef,
     Token,
-    Verbatim,
 )
 from .common_ast import Node
 from .myst_ast import (
@@ -35,6 +34,7 @@ from .myst_ast import (
     MListItem,
     MMath,
     MInlineMath,
+    MInlineCode,
 )
 from .utils import full_qual
 from textwrap import indent
@@ -358,7 +358,6 @@ class TreeReplacer:
                 "SubstitutionRef",
                 "Transition",
                 "Unimplemented",
-                "Verbatim",
                 "MText",
                 "MCode",
                 "MInlineCode",
@@ -414,7 +413,7 @@ def directive_handler(domain, role):
 
 def _x_any_unimplemented_to_verbatim(domain, role, value):
     # print("To implement", domain, role)
-    return [Verbatim([value])]
+    return [MInlineCode(value)]
 
 
 for role in ("type", "expr", "member", "macro", "enumerator", "func", "data"):

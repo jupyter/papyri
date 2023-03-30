@@ -75,27 +75,6 @@ Cannonical = NewType("Cannonical", str)
 register(tuple)(4444)
 
 
-@register(4001)
-class Verbatim(Node):
-    value: List[str]
-
-    def __eq__(self, other):
-        if not type(self) == type(other):
-            return False
-
-        return self.text == other.text
-
-    def __hash__(self):
-        return hash(tuple(self.value))
-
-    @property
-    def text(self):
-        return "".join(self.value)
-
-    def __repr__(self):
-        return "<Verbatim ``" + "".join(self.value) + "``>"
-
-
 @register(4003)
 class Directive(Node):
     value: str
@@ -539,7 +518,6 @@ class Transition(Node):
 inline_nodes = tuple(
     [
         Directive,
-        Verbatim,
         Link,
         MLink,
         SubstitutionRef,
@@ -559,7 +537,6 @@ class Paragraph(Node):
             MInlineCode,
             Target,
             Directive,
-            Verbatim,
             Link,
             MLink,
             SubstitutionRef,
@@ -657,7 +634,6 @@ class FieldListItem(Node):
     name: List[
         Union[
             Paragraph,
-            Verbatim,
             MText,
             MCode,
         ]
@@ -665,7 +641,6 @@ class FieldListItem(Node):
     body: List[
         Union[
             Paragraph,
-            Verbatim,
             Admonition,
             BlockDirective,
             MMystDirective,
