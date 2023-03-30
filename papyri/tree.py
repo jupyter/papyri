@@ -12,7 +12,6 @@ from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
 
 from .take2 import (
     BlockDirective,
-    BlockVerbatim,
     Cannonical,
     Code2,
     Directive,
@@ -35,6 +34,7 @@ from .myst_ast import (
     MListItem,
     MMath,
     MInlineMath,
+    MCode,
 )
 from .utils import full_qual
 from textwrap import indent
@@ -341,7 +341,6 @@ class TreeReplacer:
                 new_nodes = method(node)
             elif name in [
                 "BlockMath",
-                "BlockVerbatim",
                 "Code",
                 "Code2",
                 "Comment",
@@ -595,7 +594,7 @@ class DirectiveVisiter(TreeReplacer):
         for k, v in options.items():
             data = data + f"    :{k}:{v}\n"
         data = data + indent(content, "    ")
-        return [BlockVerbatim(data)]
+        return [MCode(data)]
 
     def _autosummary_handler(self, argument, options: dict, content):
         # assert False
@@ -642,7 +641,7 @@ class DirectiveVisiter(TreeReplacer):
         return self._admonition_handler_x("note", argument, options, content)
 
     def _code_handler(self, argument, options, content):
-        return [BlockVerbatim(content)]
+        return [MCode(content)]
 
     def _versionchanged_handler(self, argument, options, content):
         return self._admonition_handler_x("versionchanged", argument, options, content)

@@ -124,7 +124,6 @@ class MListItem(Node):
             "take2.Paragraph",
             "take2.Admonition",
             "take2.BlockDirective",
-            "take2.BlockVerbatim",
         ]
     ]
 

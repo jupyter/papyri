@@ -269,7 +269,6 @@ class ListItem(Node):
             Target,
             DefList,
             MBlockquote,
-            BlockVerbatim,
             MMystDirective,
             MMath,
             Unimplemented,
@@ -325,7 +324,6 @@ class Section(Node):
             MMystDirective,
             Unimplemented,
             MMath,
-            BlockVerbatim,
             Parameters,
             MList,
             MBlockquote,
@@ -389,7 +387,6 @@ class Param(Node):
             DefList,
             MMystDirective,
             MMath,
-            BlockVerbatim,
             Admonition,
             MAdmonition,
             MBlockquote,
@@ -582,7 +579,6 @@ class Admonition(Node):
             Paragraph,
             MParagraph,
             MCode,
-            BlockVerbatim,
             MBlockquote,
             DefList,
             # I dont' like nested block directive/Admonitions.
@@ -629,17 +625,6 @@ class BlockDirective(Node):
     @property
     def value(self):
         return [self.name, self.argument, self.options, self.content]
-
-
-@register(4032)
-class BlockVerbatim(Node):
-    value: str
-
-    def __eq__(self, other):
-        return (type(self) == type(other)) and (self.value == other.value)
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} '{len(self.value)}'>"
 
 
 @register(4034)
@@ -715,7 +700,6 @@ class DefListItem(Node):
             Admonition,
             MAdmonition,
             MMath,
-            BlockVerbatim,
             Optional[TocTree],  # remove this, that should not be the case ?
         ]
     ]
