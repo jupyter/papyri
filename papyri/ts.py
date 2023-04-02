@@ -22,7 +22,6 @@ from .myst_ast import (
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
 from .take2 import (
-    BlockVerbatim,
     DefList,
     DefListItem,
     Directive,
@@ -385,7 +384,6 @@ class TSVisitor:
         datas = self.bytes[node.start_byte : node.end_byte].decode()
         first_offset = node.start_point[1]
         datas = " " * first_offset + datas
-        # b = BlockVerbatim(dedent(datas))
         b = MCode(dedent(datas))
         return [b]
 
@@ -481,7 +479,7 @@ class TSVisitor:
         # TODO
         return [SubstitutionRef(self.as_text(node))]
 
-    def visit_doctest_block(self, node, prev_end=None) -> List[BlockVerbatim]:
+    def visit_doctest_block(self, node, prev_end=None) -> List[MCode]:
         # TODO
         return self.visit_literal_block(node, prev_end)
 
