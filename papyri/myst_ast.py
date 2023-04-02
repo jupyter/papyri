@@ -192,7 +192,6 @@ StaticPhrasingContent = Union[
     MText,
     MInlineCode,
     MInlineMath,
-    take2.Verbatim,
     take2.Directive,
     take2.Link,
     take2.SubstitutionRef,
