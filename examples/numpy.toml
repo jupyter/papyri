@@ -43,7 +43,11 @@ submodules = [
 docs_path = '~/dev/numpy/doc/source'
 
 exec = true
-narrative_exclude = ['doc/source/reference/arrays.ndarray.rst']
+narrative_exclude = [
+   'doc/source/reference/arrays.ndarray.rst',
+   'doc/source/user/how-to-how-to.rst',
+   'doc/source/f2py/usage.rst'
+]
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
 homepage = 'https://numpy.org'

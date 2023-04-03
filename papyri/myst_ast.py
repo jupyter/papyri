@@ -229,6 +229,8 @@ FlowContent = Union[
     MMath,
     "take2.DefList",
     "take2.DefListItem",
+    "take2.FieldList",
+    MComment  # this seem not right but triggers an error with numpy narrative documentation
     # MTable,
     # MFootnoteDefinition,
 ]
