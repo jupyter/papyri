@@ -10,20 +10,27 @@
         <input type='search' placeholder='Search not functional yet.'>
     </div>
     <div class='cards'>
-        {% for module, version, logo in data %}
-            <a class="card" href="/p/{{module}}/{{version}}/api/{{module}}{{dothtml}}">
+        {% for module, versions, logo in data %}
+            <div class="card" >
+            <a href="/p/{{module}}/{{versions[0]}}/api/{{module}}{{dothtml}}">
                 <div>
                 {% if logo %}
                     <span class="helper">
                     </span>
-                    <img src="/p/{{module}}/{{version}}/img/{{logo}}" alt="Project logo"/>
+                    <img src="/p/{{module}}/{{versions[0]}}/img/{{logo}}" alt="Project logo"/>
                 {% endif %}
                 </div>
-                <div>
-                    <h4><b>{{module}}</b></h4>
-                    <p>{{version}}</p>
-                </div>
             </a>
+            <div>
+                <h4><b>{{module}}</b></h4>
+                <p>
+                {% for version in versions %}
+                    <a href='/p/{{module}}/{{version}}/api/{{module}}{{dothtml}}'>{{version}}</a>
+                    {% if not loop.last %} – {% endif %}
+                {% endfor%}
+                </p>
+            </div>
+            </div>
         {% endfor%}
         <div>
 </body>

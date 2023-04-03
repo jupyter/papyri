@@ -318,10 +318,20 @@ class HtmlRenderer:
 
     async def index(self):
         keys = self.store.glob((None, None, "meta", "aliases.cbor"))
-        data = []
+        libraries = {}
+        from packaging.version import parse
+
         for k in keys:
             meta = encoder.decode(self.store.get_meta(k))
-            data.append((k.module, k.version, meta["logo"]))
+            if k.module in libraries:
+                libraries[k.module][1].append(k.version)
+            else:
+                libraries[k.module] = (k.module, [k.version], meta["logo"])
+
+        data = [
+            (a, list(sorted(b, reverse=True, key=parse)), c)
+            for (a, b, c) in libraries.values()
+        ]
 
         return self.env.get_template("index.tpl.j2").render(data=data)
 
@@ -747,14 +757,25 @@ class HtmlRenderer:
                     else:
                         tfile.write_text(data)
 
+    async def _copy_dir(self, src_dir: Path, dest_dir: Path):
+        assert dest_dir.exists()
+        for item in src_dir.glob("*"):
+            dest_item = dest_dir / item.name
+            if item.is_file():
+                bts = item.read_bytes()
+                dest_item.write_bytes(bts)
+            else:
+                dest_item.mkdir(exist_ok=True)
+                await self._copy_dir(item, dest_item)
+
     async def copy_static(self, output_dir):
         here = Path(os.path.dirname(__file__))
         _static = here / "static"
-        for f in _static.glob("*"):
-            bytes_ = f.read_bytes()
-            assert output_dir is not None
-            (output_dir.parent / f.name).write_bytes(bytes_)
-        (output_dir.parent / "pygments.css").write_bytes(await pygment_css().get_data())
+        output_dir.mkdir(exist_ok=True)
+        static = output_dir.parent / "static"
+        static.mkdir(exist_ok=True)
+        await self._copy_dir(_static, static)
+        (static / "pygments.css").write_bytes(await pygment_css().get_data())
 
     async def copy_assets(self, config):
         """
@@ -896,7 +917,7 @@ def pygment_css() -> Response:
 
 
 def serve(*, sidebar: bool, port=1234):
-    app = QuartTrio(__name__)
+    app = QuartTrio(__name__, static_folder=None)
 
     gstore = GraphStore(ingest_dir)
     prefix = "/p/"
@@ -921,8 +942,7 @@ def serve(*, sidebar: bool, port=1234):
 
     app.route("/logo.png")(static("papyri-logo.png"))
     app.route("/favicon.ico")(static("favicon.ico"))
-    app.route("/papyri.css")(static("papyri.css"))
-    app.route("/pygments.css")(pygment_css)
+    app.route("/static/pygments.css")(pygment_css)
     app.route("/graph_canvas.js")(static("graph_canvas.js"))
     app.route("/graph_svg.js")(static("graph_svg.js"))
     # sub here is likely incorrect
@@ -942,6 +962,14 @@ def serve(*, sidebar: bool, port=1234):
     app.route(f"{prefix}/gallery/<module>")(g)
     app.route(f"{prefix}/virtual/<module>/<node>")(html_renderer.virtual)
     app.route("/")(html_renderer.index)
+
+    async def serve_static(path):
+        here = Path(os.path.dirname(__file__))
+        static = here / "static"
+        return await send_from_directory(static, path)
+
+    app.route("/static/<path:path>")(serve_static)
+
     port = int(os.environ.get("PORT", port))
     print("Seen config port ", port)
     prod = os.environ.get("PROD", None)
