@@ -291,7 +291,6 @@ class Section(Node):
             MCode,
             MText,
             Code2,
-            Code3,
             Unimplemented,
             MComment,
             Target,
@@ -415,35 +414,6 @@ class Token(Node):
 
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.link=} {self.type=} >"
-
-
-@register(4029)
-class Code3(Node):
-    """
-    Trying to think about the code entries,
-    after trying to render a few of them, I think we need to change the structure a bit.
-    Mostly I think we need to
-
-     - store each line independently,
-     - possibly each line should/may get a "prompt" indicator (which should be non-selectable in the end),
-       or should the prompt be at the code level ? with first prompt continuation prompt ?
-       Mostly this is because code might be python, or bash, or anything else.
-     - the fact that we have multiple lines, means that we can highlight some of the lines which is common  but hard in
-       code blocks.
-     - it also looks like the rendering is often hard if we have to treat new lines separately.
-     - "prompt" can also serve in the margin to show the lien numbers in a file.
-    """
-
-    status: str
-    children: List[CodeLine]
-    out: str
-
-
-@register(4044)
-class CodeLine(Node):
-    prompt: str
-    entries: List[Token]
-    highlighted: bool
 
 
 @register(4020)
