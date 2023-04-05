@@ -121,7 +121,6 @@ class MListItem(Node):
             "FlowContent",
             "PhrasingContent",
             "take2.DefList",
-            "take2.Paragraph",
             "take2.Admonition",
             "take2.BlockDirective",
         ]
