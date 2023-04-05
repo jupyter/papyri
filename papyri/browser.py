@@ -38,6 +38,7 @@ from urwid.widget import LEFT, SPACE
 
 from papyri.crosslink import RefInfo, encoder
 from papyri.config import ingest_dir
+from papyri.myst_ast import MParagraph
 
 
 class Link:
@@ -366,9 +367,7 @@ class Renderer:
         return urwid.Padding(urwid.Pile(acc), left=4)
 
     def render_Paragraph(self, paragraph):
-        from .take2 import Paragraph
-
-        if any([isinstance(x, Paragraph) for x in paragraph.children]):
+        if any([isinstance(x, MParagraph) for x in paragraph.children]):
             assert len(paragraph.children) == 1
             return self.render_Paragraph(paragraph.children[0])
 

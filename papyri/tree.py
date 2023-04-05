@@ -17,7 +17,6 @@ from .take2 import (
     Directive,
     FullQual,
     Link,
-    Paragraph,
     RefInfo,
     SubstitutionDef,
     Token,
@@ -35,6 +34,7 @@ from .myst_ast import (
     MInlineMath,
     MInlineCode,
     MCode,
+    MParagraph,
 )
 from .utils import full_qual
 from textwrap import indent
@@ -693,7 +693,7 @@ class DirectiveVisiter(TreeReplacer):
 
         acc = []
         for l in lls:
-            acc.append(MListItem(False, [Paragraph([l])]))
+            acc.append(MListItem(False, [MParagraph([l])]))
         return [MList(ordered=False, start=1, spread=False, children=acc)]
 
     def replace_MMystDirective(self, myst_directive: MMystDirective):

@@ -179,11 +179,8 @@ from .myst_ast import (
     MText,
     MList,
     MParagraph,
-    MEmphasis,
-    MInlineCode,
     MMystDirective,
     MCode,
-    MStrong,
     MLink,
     MAdmonition,
     MMath,
@@ -243,7 +240,6 @@ class RefInfo(Node):
 class ListItem(Node):
     children: List[
         Union[
-            Paragraph,
             MList,
             Target,
             DefList,
@@ -296,7 +292,6 @@ class Section(Node):
             Target,
             Fig,
             Options,
-            Paragraph,
             MParagraph,
             DefList,
             MMystDirective,
@@ -360,7 +355,6 @@ class Param(Node):
         Union[
             # Code,
             Fig,
-            Paragraph,
             DefListItem,
             DefList,
             MMystDirective,
@@ -492,38 +486,12 @@ inline_nodes = tuple(
 )
 
 
-@register(4025)
-class Paragraph(Node):
-    children: List[
-        Union[
-            MText,
-            MCode,
-            MStrong,
-            Unimplemented,
-            MEmphasis,
-            MInlineCode,
-            Target,
-            Directive,
-            Link,
-            MLink,
-            SubstitutionRef,
-        ]
-    ]
-
-    def __hash__(self):
-        return hash((tuple(self.children)))
-
-    def __eq__(self, other):
-        return (type(self) == type(other)) and (self.children == other.children)
-
-
 @register(4038)
 class Admonition(Node):
     kind: str
     title: Optional[str]
     children: List[
         Union[
-            Paragraph,
             MParagraph,
             MCode,
             MBlockquote,
@@ -588,14 +556,12 @@ class FieldList(Node):
 class FieldListItem(Node):
     name: List[
         Union[
-            Paragraph,
             MText,
             MCode,
         ]
     ]
     body: List[
         Union[
-            Paragraph,
             Admonition,
             BlockDirective,
             MMystDirective,
@@ -607,7 +573,7 @@ class FieldListItem(Node):
 
     def validate(self):
         for p in self.body:
-            assert isinstance(p, Paragraph), p
+            assert isinstance(p, MParagraph), p
         if self.name:
             assert len(self.name) == 1, (self.name, [type(n) for n in self.name])
         return super().validate()
@@ -630,11 +596,10 @@ class DefList(Node):
 
 @register(4037)
 class DefListItem(Node):
-    dt: Union[Paragraph, MParagraph]  # TODO: this is technically incorrect and should
+    dt: Union[MParagraph]  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
     dd: List[
         Union[
-            Paragraph,
             MParagraph,
             MCode,
             MList,
@@ -662,7 +627,7 @@ class DefListItem(Node):
 @register(4028)
 class SeeAlsoItem(Node):
     name: Link
-    descriptions: List[Union[Paragraph, MParagraph]]
+    descriptions: List[Union[MParagraph]]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]
 
