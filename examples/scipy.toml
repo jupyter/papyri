@@ -62,7 +62,7 @@ early_error = false
 
 [meta]
 github_slug = 'scipy/scipy'
-tag = 'v1.8.0'
+tag = 'v{{version}}'
 pypi = 'scipy'
 homepage = 'https://scipy.org/'
 docspage = 'https://docs.scipy.org/doc/scipy/'

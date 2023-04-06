@@ -85,8 +85,10 @@ li > p {
 }
 
 .cards h4,
-.cards a {
+.cards > a {
   text-decoration: none;
+}
+.cards a {
   color: var(--nc-tx-1);
 }
 
