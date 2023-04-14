@@ -518,7 +518,7 @@ def gen_main(
         temp_dir = tempfile.TemporaryDirectory()
         target_dir = Path(temp_dir.name)
 
-    g = Gen(dummy_progress=True, config=config)
+    g = Gen(dummy_progress=dummy_progress, config=config)
     g.log.info("Will write data to %s", target_dir)
     if debug:
         g.log.setLevel("DEBUG")
