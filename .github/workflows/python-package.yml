@@ -71,11 +71,11 @@ jobs:
         coverage report
         coverage xml
         ls -la
-    - name: "Upload coverage to Codecov"
-      uses: codecov/codecov-action@v2
-      with:
-        fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
+#    - name: "Upload coverage to Codecov"
+#      uses: codecov/codecov-action@v2
+#      with:
+#        fail_ci_if_error: true
+#        token: ${{ secrets.CODECOV_TOKEN }}
 
   ingest:
 
@@ -129,11 +129,11 @@ jobs:
         coverage report
         coverage xml
         ls -la
-    - name: "Upload coverage to Codecov"
-      uses: codecov/codecov-action@v2
-      with:
-        fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
+#    - name: "Upload coverage to Codecov"
+#      uses: codecov/codecov-action@v2
+#      with:
+#        fail_ci_if_error: true
+#        token: ${{ secrets.CODECOV_TOKEN }}
 
   vercel-deploy-prod:
     runs-on: ubuntu-latest
