@@ -518,7 +518,7 @@ def gen_main(
         temp_dir = tempfile.TemporaryDirectory()
         target_dir = Path(temp_dir.name)
 
-    g = Gen(dummy_progress=dummy_progress, config=config)
+    g = Gen(dummy_progress=True, config=config)
     g.log.info("Will write data to %s", target_dir)
     if debug:
         g.log.setLevel("DEBUG")
@@ -1774,7 +1774,7 @@ class Gen:
             sig: Optional[str]
             try:
                 sig = str(inspect.signature(target_item))
-                sig = qa.split(".")[-1] + sig
+                sig = qa.split(":")[-1] + sig
                 sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError):
                 sig = None
@@ -2076,13 +2076,15 @@ def find_cannonical(qa: str, aliases: List[str]):
 
     If we can't find a canonical, there are many, or are identical to the fqa, return None.
     """
-    qa_level = qa.count(".")
-    min_alias_level = min(a.count(".") for a in set(aliases))
-    if min_alias_level < qa_level:
-        shorter_candidates = [c for c in aliases if c.count(".") <= min_alias_level]
-    else:
-        shorter_candidates = [c for c in aliases if c.count(".") <= qa_level]
+    def _level(c):
+        return c.count(".") + c.count(":")
 
+    qa_level = _level(qa)
+    min_alias_level = min(_level(a) for a in set(aliases))
+    if min_alias_level < qa_level:
+        shorter_candidates = [c for c in aliases if _level(c) <= min_alias_level]
+    else:
+        shorter_candidates = [c for c in aliases if _level(c) <= qa_level]
     if (
         len(shorter_candidates) == 1
         and not is_private(shorter_candidates[0])
