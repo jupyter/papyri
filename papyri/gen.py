@@ -2076,6 +2076,7 @@ def find_cannonical(qa: str, aliases: List[str]):
 
     If we can't find a canonical, there are many, or are identical to the fqa, return None.
     """
+
     def _level(c):
         return c.count(".") + c.count(":")
 
