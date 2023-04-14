@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import time
 import typing
 from datetime import timedelta
 from textwrap import dedent
-from typing import Tuple
+from typing import Tuple, NewType
 
 from rich.progress import BarColumn, Progress, ProgressColumn, Task, TextColumn
 from rich.text import Text
 from types import ModuleType
 
-from papyri.take2 import FullQual
+FullQual = NewType("FullQual", str)
+Cannonical = NewType("Cannonical", str)
 
 
 def full_qual(obj) -> typing.Optional[FullQual]:

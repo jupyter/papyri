@@ -48,10 +48,8 @@ from .common_ast import Node
 from .errors import IncorrectInternalDocsLen, NumpydocParseError, UnseenError
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
-    Cannonical,
     Code,
     Fig,
-    FullQual,
     GenToken,
     Link,
     NumpydocExample,
@@ -67,7 +65,15 @@ from .take2 import (
 )
 from .toc import make_tree
 from .tree import DVR
-from .utils import TimeElapsedColumn, dedent_but_first, full_qual, pos_to_nl, progress
+from .utils import (
+    TimeElapsedColumn,
+    dedent_but_first,
+    full_qual,
+    pos_to_nl,
+    progress,
+    FullQual,
+    Cannonical,
+)
 from .vref import NumpyDocString
 
 # delayed import
@@ -616,6 +622,7 @@ class DFSCollector:
         for qa, item in self.obj.items():
             if (nqa := full_qual(item)) != qa:
                 print("after import qa differs : {qa} -> {nqa}")
+                assert isinstance(nqa, str)
                 if self.obj[nqa] == item:
                     print("present twice")
                     del self.obj[nqa]

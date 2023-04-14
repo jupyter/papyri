@@ -12,10 +12,8 @@ from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
 
 from .take2 import (
     BlockDirective,
-    Cannonical,
     Code2,
     Directive,
-    FullQual,
     Link,
     RefInfo,
     SubstitutionDef,
@@ -36,7 +34,7 @@ from .myst_ast import (
     MCode,
     MParagraph,
 )
-from .utils import full_qual
+from .utils import full_qual, FullQual, Cannonical
 from textwrap import indent
 from .ts import parse
 from .take2 import Section

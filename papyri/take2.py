@@ -59,7 +59,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import Any, List, NewType, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import cbor2
 from there import print
@@ -68,9 +68,6 @@ from .common_ast import Node, REV_TAG_MAP, register
 from .miniserde import get_type_hints
 
 from .utils import dedent_but_first
-
-FullQual = NewType("FullQual", str)
-Cannonical = NewType("Cannonical", str)
 
 register(tuple)(4444)
 
