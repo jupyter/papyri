@@ -59,7 +59,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 
 import cbor2
 from there import print
