@@ -236,25 +236,6 @@ class RefInfo(Node):
         return iter([self.module, self.version, self.kind, self.path])
 
 
-@register(4006)
-class ListItem(Node):
-    children: List[
-        Union[
-            MList,
-            Target,
-            DefList,
-            MBlockquote,
-            MMystDirective,
-            MMath,
-            Unimplemented,
-            Admonition,
-            MAdmonition,
-            MParagraph,
-            MCode,
-        ]
-    ]
-
-
 @register(4011)
 class Signature(Node):
     value: Optional[str]
@@ -300,7 +281,6 @@ class Section(Node):
             Parameters,
             MList,
             MBlockquote,
-            Admonition,
             MAdmonition,
             FieldList,
             Target,
@@ -359,7 +339,6 @@ class Param(Node):
             DefList,
             MMystDirective,
             MMath,
-            Admonition,
             MAdmonition,
             MBlockquote,
             MList,
@@ -486,25 +465,6 @@ inline_nodes = tuple(
 )
 
 
-@register(4038)
-class Admonition(Node):
-    kind: str
-    title: Optional[str]
-    children: List[
-        Union[
-            MParagraph,
-            MCode,
-            MBlockquote,
-            DefList,
-            # I dont' like nested block directive/Admonitions.
-            MMystDirective,
-            Admonition,
-            Unimplemented,  # skimage.util._regular_grid.regular_grid
-            MList,
-        ]
-    ]
-
-
 @register(4021)
 class TocTree(Node):
     children: List[TocTree]
@@ -562,7 +522,6 @@ class FieldListItem(Node):
     ]
     body: List[
         Union[
-            Admonition,
             BlockDirective,
             MMystDirective,
             MText,
@@ -607,7 +566,6 @@ class DefListItem(Node):
             DefList,
             MMystDirective,
             Unimplemented,
-            Admonition,
             MAdmonition,
             MMath,
             Optional[TocTree],  # remove this, that should not be the case ?
