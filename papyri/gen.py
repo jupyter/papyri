@@ -48,10 +48,8 @@ from .common_ast import Node
 from .errors import IncorrectInternalDocsLen, NumpydocParseError, UnseenError
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
-    Cannonical,
     Code,
     Fig,
-    FullQual,
     GenToken,
     Link,
     NumpydocExample,
@@ -67,7 +65,15 @@ from .take2 import (
 )
 from .toc import make_tree
 from .tree import DVR
-from .utils import TimeElapsedColumn, dedent_but_first, full_qual, pos_to_nl, progress
+from .utils import (
+    TimeElapsedColumn,
+    dedent_but_first,
+    full_qual,
+    pos_to_nl,
+    progress,
+    FullQual,
+    Cannonical,
+)
 from .vref import NumpyDocString
 
 # delayed import
@@ -616,6 +622,7 @@ class DFSCollector:
         for qa, item in self.obj.items():
             if (nqa := full_qual(item)) != qa:
                 print("after import qa differs : {qa} -> {nqa}")
+                assert isinstance(nqa, str)
                 if self.obj[nqa] == item:
                     print("present twice")
                     del self.obj[nqa]
@@ -1774,7 +1781,7 @@ class Gen:
             sig: Optional[str]
             try:
                 sig = str(inspect.signature(target_item))
-                sig = qa.split(".")[-1] + sig
+                sig = qa.split(":")[-1] + sig
                 sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError):
                 sig = None
@@ -2076,13 +2083,16 @@ def find_cannonical(qa: str, aliases: List[str]):
 
     If we can't find a canonical, there are many, or are identical to the fqa, return None.
     """
-    qa_level = qa.count(".")
-    min_alias_level = min(a.count(".") for a in set(aliases))
-    if min_alias_level < qa_level:
-        shorter_candidates = [c for c in aliases if c.count(".") <= min_alias_level]
-    else:
-        shorter_candidates = [c for c in aliases if c.count(".") <= qa_level]
 
+    def _level(c):
+        return c.count(".") + c.count(":")
+
+    qa_level = _level(qa)
+    min_alias_level = min(_level(a) for a in set(aliases))
+    if min_alias_level < qa_level:
+        shorter_candidates = [c for c in aliases if _level(c) <= min_alias_level]
+    else:
+        shorter_candidates = [c for c in aliases if _level(c) <= qa_level]
     if (
         len(shorter_candidates) == 1
         and not is_private(shorter_candidates[0])
