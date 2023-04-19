@@ -3,6 +3,13 @@
 **Papyri** is a set of tools to build, publish (future functionality - to be done), install and render
 documentation within IPython and Jupyter.
 
+---
+
+| Information | Links |
+| :---------- | :-----|
+|   Project   | [![License](https://img.shields.io/badge/License-MIT-gray.svg?colorA=2D2A56&colorB=5936D9&style=flat.svg)](https://opensource.org/license/mit/) [![Rendered documentation](https://img.shields.io/badge/%F0%9F%93%96%20Rendered%20docs-gray.svg?colorA=2D2A56&colorB=5936D9&style=flat.svg)](https://papyri.vercel.app/)  |
+|     CI      | [![Python Package](https://github.com/jupyter/papyri/actions/workflows/python-package.yml/badge.svg)](https://github.com/jupyter/papyri/actions/workflows/python-package.yml) [![Linting](https://github.com/jupyter/papyri/actions/workflows/lint.yml/badge.svg)](https://github.com/jupyter/papyri/actions/workflows/lint.yml) |
+
 Papyri allows:
 - bidirectional crosslinking across libraries, 
 - navigation, 
