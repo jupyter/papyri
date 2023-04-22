@@ -11,7 +11,6 @@ from functools import lru_cache
 from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
 
 from .take2 import (
-    BlockDirective,
     Code2,
     Directive,
     Link,
@@ -710,7 +709,7 @@ class DirectiveVisiter(TreeReplacer):
 
         return [myst_directive]
 
-    def replace_BlockDirective(self, block_directive: BlockDirective):
+    def replace_BlockDirective(self, block_directive: MMystDirective):
         assert False, "we shoudl never reach there"
 
     def _resolve(self, loc, text):
@@ -909,7 +908,7 @@ class PostDVR(DirectiveVisiter):
         print(refinfo)
         return [refinfo]
 
-    def replace_BlockDirective(self, block_directive: BlockDirective):
+    def replace_BlockDirective(self, block_directive: MMystDirective):
         assert False, "should be unreachable"
 
     def replace_MMystDirective(self, myst_directive: MMystDirective):

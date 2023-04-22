@@ -59,7 +59,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 
 import cbor2
 from there import print
@@ -471,34 +471,6 @@ class TocTree(Node):
     current: bool = False
 
 
-@register(4031)
-class BlockDirective(Node):
-    name: str
-    argument: str
-    options: List[Tuple[str]]
-    content: str
-
-    def validate(self):
-        assert False, "Unreachable"
-        assert isinstance(self.name, str)
-        assert isinstance(self.argument, str)
-        assert isinstance(self.options, list)
-        for it in self.options:
-            assert isinstance(it, tuple)
-            k, v = it
-            assert isinstance(k, str)
-            assert isinstance(v, str)
-        assert isinstance(self.content, str)
-        return super().validate()
-
-    def _post_deserialise(self):
-        self.options = [tuple(x) for x in self.options if x is not None]
-
-    @property
-    def value(self):
-        return [self.name, self.argument, self.options, self.content]
-
-
 @register(4034)
 class Options(Node):
     values: List[str]
@@ -519,7 +491,6 @@ class FieldListItem(Node):
     ]
     body: List[
         Union[
-            BlockDirective,
             MMystDirective,
             MText,
             MParagraph,
