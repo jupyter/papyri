@@ -17,7 +17,6 @@ import inspect
 import json
 import logging
 import os
-import re
 import shutil
 import site
 import sys

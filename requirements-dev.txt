@@ -11,3 +11,4 @@ pipdeptree
 black
 mypy
 flake8<6
+griffe
