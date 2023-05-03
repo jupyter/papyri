@@ -32,6 +32,7 @@ from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
 
+import griffe
 import jedi
 import toml
 from IPython.core.oinspect import find_file
@@ -45,7 +46,12 @@ from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
 from .common_ast import Node
-from .errors import IncorrectInternalDocsLen, NumpydocParseError, UnseenError
+from .errors import (
+    IncorrectInternalDocsLen,
+    NumpydocParseError,
+    UnseenError,
+    GriffeParseError,
+)
 from .miscs import BlockExecutor, DummyP
 from .take2 import (
     Code,
@@ -1780,6 +1786,34 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(name, data)
 
+    @lru_cache
+    def _get_griffe_loaded_package(self, package):
+        return griffe.load(package)
+
+    def _jsonify_griffe_object(self, obj):
+        from griffe.encoders import JSONEncoder
+
+        return json.dumps(obj, cls=JSONEncoder, indent=2)
+
+    def _get_griffe_object_for_function(self, target_item):
+        module = target_item.__module__
+        module_path = module.split(".")
+        parent_griffe = self._get_griffe_loaded_package(module_path[0])
+        current_module = parent_griffe
+        for path in module_path[1:]:
+            current_module = current_module.modules[path]
+        fullname = target_item.__qualname__.split(".")
+        try:
+            if len(fullname) == 2:
+                class_, method = fullname
+                griffe_obj = current_module.members[class_].members[method]
+            else:
+                griffe_obj = current_module.members[target_item.__name__]
+        except KeyError:
+            raise GriffeParseError
+        json_str = self._jsonify_griffe_object(griffe_obj)
+        return json_str
+
     def helper_1(
         self, *, qa: str, target_item: Any
     ) -> Tuple[Optional[str], List[Section], Optional[APIObjectInfo]]:
@@ -1800,10 +1834,11 @@ class Gen:
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
             sig: Optional[str]
             try:
-                sig = str(inspect.signature(target_item))
-                sig = qa.split(":")[-1] + sig
-                sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
-            except (ValueError, TypeError):
+                sig = self._get_griffe_object_for_function(target_item)
+                # sig = str(inspect.signature(target_item))
+                # sig = qa.split(":")[-1] + sig
+                # sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
+            except (ValueError, TypeError, GriffeParseError):
                 sig = None
             try:
                 api_object = APIObjectInfo("function", target_item.__doc__, sig)
