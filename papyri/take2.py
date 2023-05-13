@@ -264,7 +264,6 @@ class Section(Node):
             # Code,
             MCode,
             MText,
-            Code2,
             Unimplemented,
             MComment,
             Target,
@@ -359,45 +358,6 @@ class Param(Node):
         return (
             f"<{self.__class__.__name__}: {self.param=}, {self.type_=}, {self.desc=}>"
         )
-
-
-@register(4017)
-class Token(Node):
-    """
-    A single token in a code block.
-
-    Paramters
-    ---------
-    type : str, optional
-        this currently is a classname use by pygments for highlighting.
-    link : str | Link(value, reference, kind, exists)
-        this is either a string (the value to display), or a link that point to a given page.
-
-    """
-
-    link: Union[Link, str]
-    type: Optional[str]
-
-    @property
-    def children(self):
-        return [self.link, self.type]
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.link=} {self.type=} >"
-
-
-@register(4020)
-class Code2(Node):
-    entries: List[Token]
-    out: str
-    ce_status: str
-
-    @property
-    def children(self):
-        return [*self.entries, self.out, self.ce_status]
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.entries=} {self.out=} {self.ce_status=}>"
 
 
 class GenToken(Node):

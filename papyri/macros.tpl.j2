@@ -111,6 +111,8 @@
        {%- if type in ('Directive', 'Math', 'Verbatim') -%}
            {# {{unreachable(obj)}} #}
            {{obj.value}}  {# TODO : likely smth wrong with field list #}
+       {% elif type[0] == 'M' %}
+            {{ render_myst(obj) }}
        {%- elif type == 'Link' -%}
 
            {# Links have : value, reference, kind exists#}
@@ -159,7 +161,7 @@
                <li>{{render_II(item)}}</li>
                {% endfor %}
             </ol>
-        {% else %}
+            {% else %}
             <ul>
                {%- for item in obj.children %}
                <li>{{render_II(item)}}</li>
@@ -186,7 +188,7 @@
                {% endfor %}
            </dl>
 
-        {% elif type == 'FieldListItem' %}
+       {% elif type == 'FieldListItem' %}
            <ol>
                {%- for item in obj.children %}
                <li>{{render_II(item)}}</li>
@@ -198,7 +200,7 @@
        {% elif type == 'Transition' %}
          <hr/>
 
-     {% elif type == 'TocTree' %}
+       {% elif type == 'TocTree' %}
         {%if obj.children%}
             <details class='toctree' open>
             <summary><a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a></summary>
@@ -216,9 +218,7 @@
             <blockquote>
                {%- for child in obj.children %}{{render_II(child)}}{% endfor -%}
             </blockquote>
-        {% elif type[0] == 'M' %}
-            {{ render_myst(obj) }}
-        {% elif type in ['Options','Unimplemented','Comment','SubstitutionRef'] %}
+       {% elif type in ['Options','Unimplemented','Comment','SubstitutionRef'] %}
            <pre class='not-implemented'>
             {{obj}}
            </pre>

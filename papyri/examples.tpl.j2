@@ -11,17 +11,8 @@
        {%- set type = data.__class__.__name__ -%}
        {% if type == 'Fig' %}
            <div><img src="/p/{{data.value.module}}/{{data.value.version}}/img/{{data.value.path}}"/></div>
-       {% elif type == 'Code2' %}
-           {% if data.ce_status == 'syntax_error' -%}
-               <span class='warning'>This example raised an error at execution time but compiled correctly</span>
-           {%-elif data.ce_status == 'exception_in_exec' -%}
-               <span class='warning'>This example is valid syntax, but raise an exception at execution</span>
-           {%-elif data.ce_status == 'compiled' -%}
-               <span class='note'>This example is valid syntax, but we were not able to check execution</span>
-           {%-endif-%}
-       <pre class='highlight {{data.ce_status}}'>{{example(data.entries) -}}
-
-        {{- data.out}}</pre>
+       {% elif type[0] == 'M' %}
+            {{ render_myst(obj) }}
        {% else %}
            {{render_II(data)}}
        {% endif %}

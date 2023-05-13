@@ -11,12 +11,10 @@ from functools import lru_cache
 from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
 
 from .take2 import (
-    Code2,
     Directive,
     Link,
     RefInfo,
     SubstitutionDef,
-    Token,
 )
 from .common_ast import Node
 from .myst_ast import (
@@ -339,7 +337,6 @@ class TreeReplacer:
             elif name in [
                 "BlockMath",
                 "Code",
-                "Code2",
                 "Comment",
                 "MComment",
                 "Directive",
@@ -533,57 +530,9 @@ class DirectiveVisiter(TreeReplacer):
         self._tocs: Any = []
 
     def replace_Code(self, code):
-        """
-        Here we'll crawl example data and convert code entries so that each token contain a link to the object they
-        refered to.
-        """
-        # TODO: here we'll have a problem as we will love the content of entry[1]. This should really be resolved at gen
-        # time.
-        # print("CODE 1 in", self.qa)
-        new_entries = []
-        for gt in code.entries:
-            text, infer, type_ = gt.value, gt.qa, gt.pygmentclass
-            assert isinstance(text, str)
-            # TODO
-            if infer and infer.strip():
-                assert isinstance(infer, str)
-                r = self._resolve(frozenset(), infer)
-                if r.kind == "module":
-                    self._targets.add(r)
-                    new_entries.append(
-                        Token(
-                            Link(
-                                text,
-                                r,
-                                "module",
-                                True,
-                            ),
-                            type_,
-                        )
-                    )
-                    continue
-                elif r.module is None:
-                    mod = infer.split(".", maxsplit=1)[0]
-                    new_entries.append(
-                        Token(
-                            Link(
-                                text,
-                                RefInfo(mod, "*", "module", infer),
-                                "module",
-                                True,
-                            ),
-                            type_,
-                        )
-                    )
-                else:
-                    assert False
-                continue
-
-            new_entries.append(
-                Token(text, type_),
-            )
-
-        return [Code2(new_entries, code.out, code.ce_status)]
+        """Here we'll return MySt Code."""
+        code_ = ''.join([entry.value for entry in code.entries])
+        return [MCode(code_)]
 
     def _block_verbatim_helper(self, name: str, argument: str, options: dict, content):
         data = f".. {name}:: {argument}\n"
