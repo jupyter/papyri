@@ -531,7 +531,7 @@ class DirectiveVisiter(TreeReplacer):
 
     def replace_Code(self, code):
         """Here we'll return MySt Code."""
-        code_ = ''.join([entry.value for entry in code.entries])
+        code_ = "".join([entry.value for entry in code.entries])
         return [MCode(code_)]
 
     def _block_verbatim_helper(self, name: str, argument: str, options: dict, content):
