@@ -1,0 +1,13 @@
+pytest
+pytest-cov
+flit
+matplotlib
+velin>=0.0.5
+pytest-trio
+tree_sitter
+coverage
+jinja2==3.1.2
+pipdeptree
+black
+mypy
+flake8<6
