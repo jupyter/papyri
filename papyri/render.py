@@ -941,10 +941,7 @@ def serve(*, sidebar: bool, port=1234):
         return await html_renderer.gallery("*", "*")
 
     app.route("/logo.png")(static("papyri-logo.png"))
-    app.route("/favicon.ico")(static("favicon.ico"))
     app.route("/static/pygments.css")(pygment_css)
-    app.route("/graph_canvas.js")(static("graph_canvas.js"))
-    app.route("/graph_svg.js")(static("graph_svg.js"))
     # sub here is likely incorrect
     app.route(f"{prefix}<package>/<version>/img/<path:subpath>")(img)
     app.route(f"{prefix}<package>/<version>/examples/<path:subpath>")(
