@@ -158,11 +158,6 @@ class SubstitutionRef(Leaf):
     pass
 
 
-@register(4042)
-class Target(Leaf):
-    pass
-
-
 @register(4018)
 class Unimplemented(Node):
     placeholder: str
@@ -183,6 +178,7 @@ from .myst_ast import (
     MMath,
     MComment,
     MBlockquote,
+    MTarget,
 )
 
 
@@ -267,7 +263,7 @@ class Section(Node):
             Code2,
             Unimplemented,
             MComment,
-            Target,
+            MTarget,
             Fig,
             Options,
             MParagraph,
@@ -280,7 +276,7 @@ class Section(Node):
             MBlockquote,
             MAdmonition,
             FieldList,
-            Target,
+            MTarget,
             SubstitutionRef,
             SubstitutionDef,
         ]

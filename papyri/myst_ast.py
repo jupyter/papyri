@@ -185,6 +185,14 @@ class MBlockquote(Node):
     # data: Any
 
 
+@register(4061)
+class MTarget(Node):
+    type = "mystTarget"
+    label: str
+    # position: Any
+    # data: Any
+
+
 StaticPhrasingContent = Union[
     MText,
     MInlineCode,
@@ -219,7 +227,7 @@ FlowContent = Union[
     MList,
     # MHTML,
     # MComment,
-    # MTarget,
+    MTarget,
     MMystDirective,
     MAdmonition,
     # MContainer,
