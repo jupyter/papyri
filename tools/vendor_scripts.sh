@@ -13,7 +13,7 @@ curl -L -o papyri/static/new.css https://cdn.jsdelivr.net/npm/@exampledev/new.cs
 mkdir -p  papyri/static/jax/input/TeX
 
 mkdir papyri/static/extensions
-curl -L -o papyri/static/mathjax.js https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js
+curl -L -o papyri/static/MathJax.js https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js
 
 mkdir -p papyri/static/jax
 mkdir -p papyri/static/jax/extensions
