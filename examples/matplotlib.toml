@@ -95,10 +95,8 @@ exec = true
 
 [global.expected_errors]
 VisitSubstitutionDefinitionNotImplementedError = [
-    "matplotlib.markers",
     ]
 IncorrectInternalDocsLen = [
-    "matplotlib.rc",
     "matplotlib.pyplot:rc",
     "matplotlib.axes._base:_process_plot_var_args",
     "matplotlib.dates:ConciseDateFormatter",
@@ -106,12 +104,12 @@ IncorrectInternalDocsLen = [
     "matplotlib.transforms:Affine2D.__init__",
     "matplotlib.transforms:Affine2D.get_matrix",
     "matplotlib.transforms:Affine2D.set_matrix",
-    "matplotlib.ticker.LogLocator.__init__",
     "matplotlib.figure:FigureBase._process_projection_requirements",
     "matplotlib.transforms:Transform.__sub__",
     "matplotlib.patches:ConnectionStyle._Base",
     "matplotlib.tri.triinterpolate:_safe_inv22_vectorized",
-    "matplotlib.transforms.Affine2D.from_values",
+    "matplotlib.transforms:Affine2D.from_values",
+    "matplotlib.ticker:LogLocator.__init__",
     "matplotlib.backend_bases:FigureCanvasBase._switch_canvas_and_return_print_method",
     ]
 ValueError = [
@@ -123,23 +121,14 @@ ValueError = [
     "matplotlib.cm:ScalarMappable.set_clim",
     "matplotlib.patches:FancyBboxPatch.set_boxstyle",
     "matplotlib.spines:Spine.set_bounds",
-    "matplotlib.backends.backend_agg.FigureCanvasAgg.print_png",
     "matplotlib.patches:FancyArrowPatch.set_connectionstyle",
-    "matplotlib.backends.backend_svg.FigureCanvasSVG.print_svg",
     ]
 SpaceAfterBlockDirectiveError = [
-    "matplotlib.pyplot.subplot_mosaic",
-    "matplotlib.cm.unregister_cmap",
-    "matplotlib.axes._base._AxesBase.set_navigate_mode",
     "matplotlib.figure.FigureBase.subplot_mosaic",
-    "matplotlib.image.imsave",
-    "matplotlib.pyplot.imsave",
-    "matplotlib.ft2font.FT2Font"
+    "matplotlib.image:imsave",
+    "matplotlib.pyplot:imsave",
+    "matplotlib.ft2font:FT2Font"
     ]
-AssertionError = [
-    "matplotlib.ticker.ScalarFormatter.set_powerlimits",
-]
-
 [global.implied_imports]
 _api = 'matplotlib._api'
 

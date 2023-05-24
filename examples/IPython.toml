@@ -11,24 +11,24 @@ execute_exclude_patterns = [
 exclude = []
 [global.expected_errors]
 IncorrectInternalDocsLen = [
-  "IPython.core.magics.basic.BasicMagics.alias_magic",
-  "IPython.core.magics.script.ScriptMagics.shebang",
-  "IPython.core.magics.basic.BasicMagics.notebook",
-  "IPython.core.magics.display.DisplayMagics.html",
-  "IPython.core.magics.execution.ExecutionMagics.debug",
-  "IPython.core.magics.execution.ExecutionMagics.capture",
-  "IPython.core.magics.history.HistoryMagics.history",
-  "IPython.core.magics.namespace.NamespaceMagics.xdel",
-  "IPython.core.magics.osm.OSMagics.writefile",
-  "IPython.core.magics.pylab.PylabMagics.matplotlib",
-  "IPython.core.magics.pylab.PylabMagics.pylab",
-  "IPython.terminal.embed.EmbeddedMagics.kill_embedded",
+  "IPython.core.magics.basic:BasicMagics.alias_magic",
+  "IPython.core.magics.script:ScriptMagics.shebang",
+  "IPython.core.magics.basic:BasicMagics.notebook",
+  "IPython.core.magics.display:DisplayMagics.html",
+  "IPython.core.magics.execution:ExecutionMagics.debug",
+  "IPython.core.magics.execution:ExecutionMagics.capture",
+  "IPython.core.magics.history:HistoryMagics.history",
+  "IPython.core.magics.namespace:NamespaceMagics.xdel",
+  "IPython.core.magics.osm:OSMagics.writefile",
+  "IPython.core.magics.pylab:PylabMagics.matplotlib",
+  "IPython.core.magics.pylab:PylabMagics.pylab",
+  "IPython.terminal.embed:EmbeddedMagics.kill_embedded",
 ]
 
 
 ValueError = [
-   "IPython.core.magics.osm.OSMagics.env",
-   "IPython.core.magics.osm.OSMagics.set_env",
+   "IPython.core.magics.osm:OSMagics.env",
+   "IPython.core.magics.osm:OSMagics.set_env",
 ]
 
 [meta]
