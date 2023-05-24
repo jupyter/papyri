@@ -1877,6 +1877,12 @@ class Gen:
 
         collected = {k: v for k, v in collected.items() if k not in excluded}
         if limit_to:
+            non_existinsing = [k for k in limit_to if k not in collected]
+            if non_existinsing:
+                self.log.warning(
+                    "You asked to build docs only for following items, but they don't exist:\n %s",
+                    non_existinsing,
+                )
             collected = {k: v for k, v in collected.items() if k in limit_to}
             self.log.info("DEV: regenerating docs only for")
             for k, v in collected.items():
