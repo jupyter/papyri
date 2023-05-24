@@ -2041,6 +2041,8 @@ class Gen:
             except Exception as e:
                 raise type(e)(f"Error in {qa}")
             self.put(qa, doc_blob)
+            if figs:
+                self.log.debug("Found %s figures", len(figs))
             for name, data in figs:
                 self.put_raw(name, data)
         if error_collector._errors:
