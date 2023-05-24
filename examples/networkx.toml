@@ -11,34 +11,6 @@ exclude_jedi = ['networkx.algorithms.planarity.PlanarEmbedding']
 exec_failure = 'fallback'
 source = 'https://github.com/networkx/networkx'
 exclude = [ 
-            # https://github.com/stsewd/tree-sitter-rst/issues/31:
-            'networkx.algorithms.smallworld.random_reference',
-            'networkx.generators.joint_degree_seq._directed_neighbor_switch',
-            # ??
-            'networkx.algorithms.distance_measures.barycenter',
-            'networkx.generators.geometric.geographical_threshold_graph',
-             # `k`th parsing issue
-            'networkx.algorithms.operators.product.power',
-             #"ErrorHelper1-<class 'AssertionError'>"
-             "networkx.algorithms.operators.product.power",
-             "networkx.algorithms.centrality.betweenness._add_edge_keys",
-             "networkx.algorithms.community.louvain.louvain_communities",
-             # "ErrorHelper1-<class 'ValueError'>"
-             "networkx.generators.geometric.waxman_graph",
-             # "ErrorHelper1-<class 'papyri.errors.VisitCitationReferenceNotImplementedError'>"
-             "networkx.generators.atlas.graph_atlas_g",
-             "networkx.algorithms.graphical.is_graphical",
-             "networkx.algorithms.graphical.is_valid_degree_sequence_erdos_gallai",
-             "networkx.algorithms.graphical.is_valid_degree_sequence_havel_hakimi",
-             # "ErrorHelper1-<class 'papyri.errors.VisitSubstitutionDefinitionNotImplementedError'>"
-             "networkx.algorithms.approximation.vertex_cover",
-             # other
-             "networkx.readwrite.nx_shp.read_shp",
-             "networkx.algorithms.connectivity.edge_augmentation.greedy_k_edge_augmentation",
-             "networkx.algorithms.connectivity.edge_kcomponents.general_k_edge_subgraphs",
-             "networkx.generators.geometric.navigable_small_world_graph",
-             "networkx.readwrite.json_graph.node_link.node_link_graph",
-             "networkx.algorithms.minors.contraction.quotient_graph",
              ]
 logo = './nx.png'
 [meta]
@@ -51,3 +23,20 @@ docspage = 'https://networkx.org/documentation/stable/'
 nx = 'networkx'
 it = 'itertools'
 
+[global.expected_errors]
+VisitCitationReferenceNotImplementedError = [
+    "networkx.algorithms.distance_measures:barycenter",
+    "networkx.generators.atlas:graph_atlas_g",
+    "networkx.algorithms.graphical:is_graphical",
+    "networkx.algorithms.graphical:is_valid_degree_sequence_erdos_gallai",
+    "networkx.algorithms.graphical:is_valid_degree_sequence_havel_hakimi",
+]
+ValueError = [ "networkx.generators.geometric:geographical_threshold_graph",
+    "networkx.generators.geometric:navigable_small_world_graph",
+    "networkx.generators.geometric:waxman_graph",
+    "networkx.algorithms.cycles:_johnson_cycle_search",
+]
+AssertionError = [ "networkx.algorithms.minors.contraction:quotient_graph",
+    "networkx.algorithms.smallworld:random_reference",
+    "networkx.generators.joint_degree_seq:_directed_neighbor_switch",
+]

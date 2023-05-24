@@ -2,8 +2,6 @@
 module = 'distributed'
 logo = "../dask-logo.png"
 exclude = [
-    # VisitTarget not implemented
-    "distributed.comm:ucx",
     # misc
     "distributed.worker:Worker",
     "distributed.client:get_task_stream",

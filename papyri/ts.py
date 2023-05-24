@@ -433,7 +433,13 @@ class TSVisitor:
             pre_a = ""
             post_text = self.as_text(node.children[1])
             set_post_a = set(post_text)
-            assert len(set_post_a) == 1, breakpoint()
+            # this triggers sometime because tree sitter missparse a few things like.
+            #
+            # ```
+            # blah blah reference and new line with parenthesis
+            # (like a year here)
+            # ```
+            assert len(set_post_a) == 1
             post_a = next(iter(set_post_a))
 
             assert len(post_text) >= len(self.as_text(tc)), self.as_text(tc)

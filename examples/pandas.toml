@@ -91,11 +91,33 @@ exclude = [
     "pandas.core.common.pipe"
 ]
 [pandas.expected_errors]
-ValueError =[ "pandas.io.pickle.to_pickle", "pandas.core.generic.NDFrame.to_pickle",]
-IncorrectInternalDocsLen = [
-    "pandas.core.indexes.period.PeriodIndex.asof_locs",
-    "pandas.core.indexes.range.RangeIndex._extended_gcd", "pandas._testing._io.optional_args",
-    "pandas.core.missing._rolling_window", "pandas.io.html._HtmlFrameParser",
-    "pandas.io.stata._dtype_to_default_stata_fmt", "pandas.io.pytables.Selection.generate",
-    "pandas.core.internals.managers.BaseBlockManager.take",
+ValueError = [
+ "pandas.io.gbq:read_gbq",                                                                                                                            gen.py:2041
+ "pandas.io.pickle:to_pickle",
+ "pandas.core.frame:DataFrame.to_gbq",
+ "pandas.core.generic:NDFrame.to_pickle",
+]
+IncorrectInternalDocsLen = [ "pandas.core.indexes.period:PeriodIndex.asof_locs",
+ "pandas.core.indexes.range:RangeIndex._extended_gcd",
+ "pandas._testing._io:optional_args",
+ "pandas.core.missing:_rolling_window",
+ "pandas.io.html:_HtmlFrameParser",
+ "pandas.io.stata:_dtype_to_default_stata_fmt",
+ "pandas.io.pytables:Selection.generate",
+ "pandas.core.internals.managers:BaseBlockManager.take",
+]
+NumpydocParseError = [ "pandas._libs.properties:CachedProperty",
+ "pandas._config.config:CallableDynamicDoc",
+ "pandas._libs.properties:AxisProperty",
+ "pandas.core.arraylike:array_ufunc",
+ "pandas.io.pytables:Table",
+ "pandas.core.generic:NDFrame.set_axis",
+ "pandas.core.generic:NDFrame.replace",
+ "pandas.core.generic:NDFrame.isna",
+ "pandas.core.generic:NDFrame.isnull",
+ "pandas.core.generic:NDFrame.notna",
+ "pandas.core.generic:NDFrame.notnull",
+]
+AssertionError = [ "pandas.core.apply:_make_unique_kwarg_list",
+ "pandas.core.apply:relabel_result",
 ]

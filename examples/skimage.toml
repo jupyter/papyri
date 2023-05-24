@@ -39,24 +39,34 @@ exclude = [
           ]
 exclude_jedi = ['skimage.viewer.plugins.base.Plugin']
 [global.expected_errors]
-ValueError = [
-             "skimage.morphology.gray.black_tophat",
-             "skimage.morphology.extrema.h_maxima",
-             "skimage.morphology.extrema.h_minima",
-             "skimage.measure._label.label",
-             "skimage.morphology.extrema.local_maxima",
-             "skimage.morphology.extrema.local_minima",
-             "skimage.morphology._skeletonize.thin",
-             "skimage.morphology.gray.white_tophat",
-             "skimage.segmentation.morphsnakes.morphological_chan_vese",
-             "skimage.segmentation.morphsnakes.morphological_geodesic_active_contour",
-             "skimage.filters._gaussian.difference_of_gaussians",
-             "skimage.measure._find_contours.find_contours",
-             "skimage.filters.rank.generic.maximum",
-             "skimage.filters.rank.bilateral.mean_bilateral",
-             "skimage.filters.rank.generic.minimum",
-             "skimage.filters.rank.bilateral.sum_bilateral"
-            ]
-AssertionError = [
-              "skimage._shared.utils.docstring_add_deprecated"
+ValueError = [ "skimage.morphology.gray:black_tophat",
+ "skimage.morphology.extrema:h_maxima",
+ "skimage.morphology.extrema:h_minima",
+ "skimage.measure._label:label",
+ "skimage.morphology.extrema:local_maxima",
+ "skimage.morphology.extrema:local_minima",
+ "skimage.morphology._skeletonize:thin",
+ "skimage.morphology.gray:white_tophat",
+ "skimage.segmentation.morphsnakes:morphological_chan_vese",
+ "skimage.segmentation.morphsnakes:morphological_geodesic_active_contour",
+ "skimage.filters._gaussian:difference_of_gaussians",
+ "skimage.measure._find_contours:find_contours",
+ "skimage.filters.rank.generic:maximum",
+ "skimage.filters.rank.bilateral:mean_bilateral",
+ "skimage.filters.rank.generic:minimum",
+ "skimage.filters.rank.bilateral:sum_bilateral",
+]
+VisitCitationReferenceNotImplementedError = [ "skimage.morphology._skeletonize:skeletonize",
+ "skimage.morphology._skeletonize:skeletonize_3d",
+ "skimage.morphology._skeletonize_3d_cy:_compute_thin_image",
+ "skimage.morphology._skeletonize:skeletonize_2d",
+ "skimage.morphology._skeletonize_3d_cy:fill_Euler_LUT",
+]
+AssertionError = [ "skimage.color.delta_e:deltaE_cmc",
+ "skimage._shared.utils:docstring_add_deprecated",
+]
+IncorrectInternalDocsLen = [ "skimage.transform._geometric:FundamentalMatrixTransform._setup_constraint_matrix",
+ "skimage.transform._warps:_stackcopy",
+]
+NumpydocParseError = [ "skimage.measure._marching_cubes_lewiner_cy:Cell",
 ]
