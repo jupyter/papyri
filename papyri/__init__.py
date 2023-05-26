@@ -456,7 +456,6 @@ def gen(
     here = os.getcwd()
 
     with TemporaryWorkingDirectory():
-        pass
         gen_main(
             infer=infer,
             exec_=exec,

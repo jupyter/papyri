@@ -113,11 +113,7 @@ jobs:
         coverage run -a -m papyri install ~/.papyri/data/*.zip
         coverage run -a -m papyri relink
         coverage run -a -m papyri render --ascii
-
-        # coverage html
-        # papyri serve
         ls -al
-        # ls -al ~/.papyri/html/p/numpy/
 
     - name: Test with pytest
       run: |

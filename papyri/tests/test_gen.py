@@ -65,3 +65,33 @@ def test_infer():
     )
 
     assert list(res) == list(expected)
+
+
+import pytest
+from pathlib import Path
+import tempfile
+
+
+@pytest.mark.parametrize(
+    "module, submodules, objects",
+    [
+        ("numpy", ("core",), ("numpy:array", "numpy.core._multiarray_tests:npy_sinh")),
+        ("IPython", (), ("IPython:embed_kernel",)),
+    ],
+)
+def test_numpy(module, submodules, objects):
+    config = Config(exec=False, infer=False, submodules=submodules)
+    gen = Gen(dummy_progress=True, config=config)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        td = Path(tempdir)
+        gen.collect_package_metadata(
+            module,
+            relative_dir=Path("."),
+            meta={},
+        )
+        gen.collect_api_docs(module, limit_to=objects)
+        gen.partial_write(td)
+
+        for o in objects:
+            assert (td / "module" / f"{o}.json").exists()

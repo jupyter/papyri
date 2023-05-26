@@ -391,6 +391,8 @@ class Ingester:
                 doc_blob.validate()
             except Exception as e:
                 raise type(e)(f"from {qa}")
+            if ":" in qa:
+                qa, _ = qa.split(":")
             mod_root = qa.split(".")[0]
             assert mod_root == root, f"{mod_root}, {root}"
         for _, (qa, doc_blob) in self.progress(

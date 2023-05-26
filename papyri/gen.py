@@ -463,7 +463,7 @@ def gen_main(
     narrative,
     fail_early: bool,
     fail_unseen_error: bool,
-    limit_to=None,
+    limit_to: List[str],
 ) -> None:
     """
     Main entry point to generate docbundle files,
@@ -574,7 +574,7 @@ class DFSCollector:
 
     """
 
-    def __init__(self, root: "ModuleType", others: List["ModuleType"]):
+    def __init__(self, root: ModuleType, others: List[ModuleType]):
         """
         Parameters
         ----------
@@ -588,6 +588,7 @@ class DFSCollector:
             submodules by default, so we need to pass these submodules
             explicitly.
         """
+
         assert isinstance(root, ModuleType), root
         self.root = root.__name__
         assert "." not in self.root
@@ -639,6 +640,7 @@ class DFSCollector:
         Recursively visit Module, Classes, and Functions by tracking which path
         we took there.
         """
+
         try:
             qa = full_qual(obj)
         except Exception as e:
@@ -652,7 +654,18 @@ class DFSCollector:
                 # might be worth looking into like np.exp.
                 pass
             return
-        if not qa.split(".")[0] == self.root:
+
+        if ":" in qa:
+            omod, _name = qa.split(":")
+        else:
+            omod = qa
+
+        if "." in omod:
+            oroot = omod.split(".")[0]
+        else:
+            oroot = omod
+
+        if not oroot == self.root:
             return
         if obj in self.obj.values():
             return
@@ -1880,8 +1893,9 @@ class Gen:
             non_existinsing = [k for k in limit_to if k not in collected]
             if non_existinsing:
                 self.log.warning(
-                    "You asked to build docs only for following items, but they don't exist:\n %s",
+                    "You asked to build docs only for following items, but they don't exist:\n %s, existing items are %s",
                     non_existinsing,
+                    collected.keys(),
                 )
             collected = {k: v for k, v in collected.items() if k in limit_to}
             self.log.info("DEV: regenerating docs only for")
