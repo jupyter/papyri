@@ -1,6 +1,6 @@
 [global]
 module = 'distributed'
-logo = "../dask-logo.png"
+logo = "img/dask-logo.png"
 exclude = [
     # misc
     "distributed.worker:Worker",

@@ -1,6 +1,6 @@
 [global]
 module = 'dask'
-logo = "../dask-logo.png"
+logo = "img/dask-logo.png"
 submodules = ["array"]
 exclude = [ "dask.utils:Dispatch",
             # target not implemented
