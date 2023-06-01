@@ -31,7 +31,6 @@ from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
 
-import griffe
 import jedi
 import toml
 from IPython.core.oinspect import find_file
@@ -49,7 +48,6 @@ from .errors import (
     IncorrectInternalDocsLen,
     NumpydocParseError,
     UnseenError,
-    GriffeParseError,
 )
 from .miscs import BlockExecutor, DummyP
 from .signature import Signature as ObjectSignature
@@ -1806,11 +1804,10 @@ class Gen:
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
             sig: Optional[str]
             try:
-                sig = ObjectSignature(target_item)
-                sig = str(sig)
+                sig = str(ObjectSignature(target_item))
                 # sig = qa.split(":")[-1] + sig
                 # sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
-            except (ValueError, TypeError, GriffeParseError):
+            except (ValueError, TypeError):
                 sig = None
             try:
                 api_object = APIObjectInfo("function", target_item.__doc__, sig)

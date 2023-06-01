@@ -3,6 +3,7 @@ import inspect
 
 class Signature:
     """A wrapper around inspect utilities."""
+
     def __init__(self, target_item):
         """
         :param target_item: A callable
@@ -44,7 +45,8 @@ class Signature:
         """
         if self._sig:
             return sum(
-                1 for p in self.parameters.values()
+                1
+                for p in self.parameters.values()
                 if p.kind is inspect.Parameter.POSITIONAL_ONLY
             )
         else:
@@ -57,7 +59,8 @@ class Signature:
         """
         if self._sig:
             return sum(
-                1 for p in self.parameters.values()
+                1
+                for p in self.parameters.values()
                 if p.kind is inspect.Parameter.KEYWORD_ONLY
             )
         else:

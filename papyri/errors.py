@@ -36,7 +36,3 @@ class SerialisationError(Exception):
 
 class UnseenError(Exception):
     pass
-
-
-class GriffeParseError(Exception):
-    pass
