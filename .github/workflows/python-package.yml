@@ -72,7 +72,7 @@ jobs:
         coverage xml
         ls -la
     - name: "Upload coverage to Codecov"
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3.1.4
       with:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -130,7 +130,7 @@ jobs:
         coverage xml
         ls -la
     - name: "Upload coverage to Codecov"
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3.1.4
       with:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
