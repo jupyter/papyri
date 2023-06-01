@@ -52,6 +52,7 @@ from .errors import (
     GriffeParseError,
 )
 from .miscs import BlockExecutor, DummyP
+from .signature import Signature as ObjectSignature
 from .take2 import (
     Code,
     Fig,
@@ -1785,34 +1786,6 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(name, data)
 
-    @lru_cache
-    def _get_griffe_loaded_package(self, package):
-        return griffe.load(package)
-
-    def _jsonify_griffe_object(self, obj):
-        from griffe.encoders import JSONEncoder
-
-        return json.dumps(obj, cls=JSONEncoder, indent=2)
-
-    def _get_griffe_object_for_function(self, target_item):
-        module = target_item.__module__
-        module_path = module.split(".")
-        parent_griffe = self._get_griffe_loaded_package(module_path[0])
-        current_module = parent_griffe
-        for path in module_path[1:]:
-            current_module = current_module.modules[path]
-        fullname = target_item.__qualname__.split(".")
-        try:
-            if len(fullname) == 2:
-                class_, method = fullname
-                griffe_obj = current_module.members[class_].members[method]
-            else:
-                griffe_obj = current_module.members[target_item.__name__]
-        except KeyError:
-            raise GriffeParseError
-        json_str = self._jsonify_griffe_object(griffe_obj)
-        return json_str
-
     def helper_1(
         self, *, qa: str, target_item: Any
     ) -> Tuple[Optional[str], List[Section], Optional[APIObjectInfo]]:
@@ -1833,8 +1806,8 @@ class Gen:
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
             sig: Optional[str]
             try:
-                sig = self._get_griffe_object_for_function(target_item)
-                # sig = str(inspect.signature(target_item))
+                sig = ObjectSignature(target_item)
+                sig = str(sig)
                 # sig = qa.split(":")[-1] + sig
                 # sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError, GriffeParseError):
