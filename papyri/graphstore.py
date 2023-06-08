@@ -280,7 +280,6 @@ class GraphStore:
         return sql_forward_ref
 
     def get_all(self, key):
-        print("GAK", key)
         a = self._get(key)
         b = self._get_backrefs(key)
         c = self.get_forwardrefs(key)

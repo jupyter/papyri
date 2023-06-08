@@ -665,7 +665,6 @@ class HtmlRenderer:
         else:
             modroot = ref
         root = modroot.split(".")[0]
-        print("RV", root, version)
         meta = encoder.decode(self.store.get_meta(Key(root, version, None, None)))
 
         known_refs, ref_map = find_all_refs(self.store)
