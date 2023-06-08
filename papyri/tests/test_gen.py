@@ -1,6 +1,10 @@
+import tempfile
 from functools import lru_cache
+from pathlib import Path
 
-from papyri.gen import Config, Gen, NumpyDocString, BlockExecutor, APIObjectInfo
+import pytest
+
+from papyri.gen import APIObjectInfo, BlockExecutor, Config, Gen, NumpyDocString
 
 
 @lru_cache
@@ -37,7 +41,8 @@ def test_find_beyond_decorators():
 def test_infer():
     import scipy
     from scipy._lib._uarray._backend import Dispatchable
-    from papyri.gen import parse_script, Config
+
+    from papyri.gen import Config, parse_script
 
     c = Config(infer=True)
     res = parse_script(
@@ -65,11 +70,6 @@ def test_infer():
     )
 
     assert list(res) == list(expected)
-
-
-import pytest
-from pathlib import Path
-import tempfile
 
 
 @pytest.mark.parametrize(
