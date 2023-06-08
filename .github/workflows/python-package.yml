@@ -23,16 +23,16 @@ jobs:
       matrix:
         include:
           - lib: 'astropy'
-            python-version: 3.9
+            python-version: "3.10"
           - lib: 'papyri'
-            python-version: 3.9
+            python-version: "3.10"
           - lib: 'IPython'
-            python-version: 3.9
+            python-version: "3.10"
           - lib: 'numpy'
-            python-version: 3.9
+            python-version: "3.10"
             flags: '--no-narrative --no-exec'
           - lib: 'scipy'
-            python-version: 3.9
+            python-version: "3.10"
             flags: '--no-narrative --no-exec'
 
     steps:
@@ -47,7 +47,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
         flit install --symlink
-        git clone https://github.com/stsewd/tree-sitter-rst
+        git clone --depth 1 --branch 3fc88d2097bc854ab6bf70c52b3c482849cf8e8f https://github.com/stsewd/tree-sitter-rst
         papyri build-parser
     - name: dependency tree
       run: |
