@@ -638,7 +638,13 @@ class HtmlRenderer:
         )
 
     async def _route_data(self, ref, version, known_refs):
-        root = ref.split("/")[0].split(".")[0]
+        ref = ref.split("/")[0]
+        if ":" in ref:
+            modroot, _ = ref.split(":")
+        else:
+            modroot = ref
+
+        root = modroot.split(".")[0]
         key = Key(root, version, "module", ref)
         gbytes, backward, forward = self.store.get_all(key)
         x_, y_ = find_all_refs(self.store)
@@ -655,7 +661,12 @@ class HtmlRenderer:
         assert ref != ""
 
         template = self.env.get_template("html.tpl.j2")
-        root = ref.split(".")[0]
+        if ":" in ref:
+            modroot, _ = ref.split(":")
+        else:
+            modroot = ref
+        root = modroot.split(".")[0]
+        print("RV", root, version)
         meta = encoder.decode(self.store.get_meta(Key(root, version, None, None)))
 
         known_refs, ref_map = find_all_refs(self.store)

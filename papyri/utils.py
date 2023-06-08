@@ -11,6 +11,22 @@ from rich.text import Text
 from types import ModuleType
 
 FullQual = NewType("FullQual", str)
+
+
+class FullQual(str):
+    def __init__(self, qa):
+        self._qa = qa
+
+    def __str__(self):
+        return self._qa
+
+    def module(self):
+        return self._qa.split(":")
+
+    def root(self):
+        return self.module.split(".")[0]
+
+
 Cannonical = NewType("Cannonical", str)
 
 

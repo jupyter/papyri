@@ -42,6 +42,9 @@ class Path:
     def __getattr__(self, name):
         return getattr(self.path, name)
 
+    def __str__(self):
+        return f"<{type(self)} {self.path}>"
+
 
 # class Key:
 #    def __init__(self, module, version, kind, path):
@@ -72,6 +75,34 @@ class Path:
 #
 
 Key = namedtuple("Key", ["module", "version", "kind", "path"])
+
+
+# a Key name tuple with a custom __init__
+class Key(object):
+    def __init__(self, module, version, kind, path):
+        assert ":" not in module, breakpoint()
+        self.module = module
+        self.version = version
+        self.kind = kind
+        self.path = path
+
+    def _t(self):
+        return (self.module, self.version, self.kind, self.path)
+
+    def __getitem__(self, n):
+        return self._t()[n]
+
+    def __gt__(self, other):
+        return self._t() > other._t()
+
+    def __eq__(self, other):
+        return self._t() == other._t()
+
+    def __hash__(self):
+        return hash(self._t())
+
+    def __repr__(self):
+        return f"<Key {self._t()}>"
 
 
 class GraphStore:
@@ -275,6 +306,7 @@ class GraphStore:
         return sql_forward_ref
 
     def get_all(self, key):
+        print("GAK", key)
         a = self._get(key)
         b = self._get_backrefs(key)
         c = self.get_forwardrefs(key)

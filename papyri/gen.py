@@ -671,6 +671,7 @@ class DFSCollector:
             return
         if (qa in self.obj) and self.obj[qa] != obj:
             pass
+
         self.obj[qa] = obj
         self.aliases[qa].append(".".join(stack))
 
@@ -956,7 +957,7 @@ def _normalize_see_also(see_also: List[Any], qa):
                 else:
                     type_ = type_or_description
                     desc = []
-                refinfo = RefInfo(
+                refinfo = RefInfo.from_untrusted(
                     "current-module", "current-version", "to-resolve", name
                 )
                 link = Link(name, refinfo, "module", True)
@@ -1237,7 +1238,11 @@ class Gen:
                 )
                 for figname, _ in figs:
                     example_section_data.append(
-                        Fig(RefInfo(self.root, self.version, "assets", figname))
+                        Fig(
+                            RefInfo.from_untrusted(
+                                self.root, self.version, "assets", figname
+                            )
+                        )
                     )
                 all_figs.extend(figs)
 
@@ -1707,7 +1712,9 @@ class Gen:
                     + [Code(tok_entries, "", ce_status)]  # ignore: type
                     + [
                         Fig(
-                            RefInfo(self.root, self.version, "assets", name)
+                            RefInfo.from_untrusted(
+                                self.root, self.version, "assets", name
+                            )
                         )  # ignore: type
                         for name, _ in figs
                     ],  # ignore: type
@@ -1906,7 +1913,10 @@ class Gen:
         rev_aliases: Dict[Cannonical, FullQual] = {v: k for k, v in aliases.items()}
 
         known_refs = frozenset(
-            {RefInfo(root, self.version, "module", qa) for qa in collected.keys()}
+            {
+                RefInfo.from_untrusted(root, self.version, "module", qa)
+                for qa in collected.keys()
+            }
         )
 
         error_collector = ErrorCollector(self.config, self.log)
