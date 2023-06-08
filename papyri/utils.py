@@ -10,8 +10,6 @@ from rich.progress import BarColumn, Progress, ProgressColumn, Task, TextColumn
 from rich.text import Text
 from types import ModuleType
 
-FullQual = NewType("FullQual", str)
-
 
 class FullQual(str):
     def __init__(self, qa):

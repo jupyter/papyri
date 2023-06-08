@@ -74,11 +74,8 @@ class Path:
 #        return f"<Key {self._t()}>"
 #
 
-Key = namedtuple("Key", ["module", "version", "kind", "path"])
-
-
 # a Key name tuple with a custom __init__
-class Key(object):
+class Key:
     def __init__(self, module, version, kind, path):
         assert ":" not in module, breakpoint()
         self.module = module
