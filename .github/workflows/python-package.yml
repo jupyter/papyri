@@ -47,7 +47,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
         flit install --symlink
-        git clone --depth 1 --branch 3fc88d2097bc854ab6bf70c52b3c482849cf8e8f https://github.com/stsewd/tree-sitter-rst
+        git clone  https://github.com/stsewd/tree-sitter-rst
+        cd tree-sitter-rst
+        git checkout 3fc88d2097bc854ab6bf70c52b3c482849cf8e8f
+        cd - 
         papyri build-parser
     - name: dependency tree
       run: |

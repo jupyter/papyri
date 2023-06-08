@@ -1900,7 +1900,8 @@ class Gen:
             non_existinsing = [k for k in limit_to if k not in collected]
             if non_existinsing:
                 self.log.warning(
-                    "You asked to build docs only for following items, but they don't exist:\n %s, existing items are %s",
+                    "You asked to build docs only for following items,"
+                    " but they don't exist:\n %s, existing items are %s",
                     non_existinsing,
                     collected.keys(),
                 )

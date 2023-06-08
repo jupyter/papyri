@@ -1,7 +1,6 @@
 # import json
 import cbor2
 import sqlite3
-from collections import namedtuple
 from pathlib import Path as _Path
 from typing import List, Set
 
@@ -46,34 +45,6 @@ class Path:
         return f"<{type(self)} {self.path}>"
 
 
-# class Key:
-#    def __init__(self, module, version, kind, path):
-#        assert isinstance(kind, (str, type(None)))
-#        assert isinstance(path, (str, type(None)))
-#        self.module = module
-#        self.version = version
-#        self.path = path
-#        self.kind = kind
-#
-#    def _t(self):
-#        return (self.module, self.version, self.kind, self.path)
-#
-#    def __getitem__(self, n):
-#        return self._t()[n]
-#
-#    def __gt__(self, other):
-#        return self._t() > other._t()
-#
-#    def __eq__(self, other):
-#        return self._t() == other._t()
-#
-#    def __hash__(self):
-#        return hash(self._t())
-#
-#    def __repr__(self):
-#        return f"<Key {self._t()}>"
-#
-
 # a Key name tuple with a custom __init__
 class Key:
     def __init__(self, module, version, kind, path):
@@ -83,11 +54,17 @@ class Key:
         self.kind = kind
         self.path = path
 
+    def __contains__(self, other):
+        return other in self._t()
+
     def _t(self):
         return (self.module, self.version, self.kind, self.path)
 
     def __getitem__(self, n):
         return self._t()[n]
+
+    def __iter__(self):
+        return iter(self._t())
 
     def __gt__(self, other):
         return self._t() > other._t()

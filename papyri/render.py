@@ -249,7 +249,6 @@ class HtmlRenderer:
         raw_edges = []
         for k in set(all_nodes):
             name = k.path
-            assert k.path == tuple(k)[3]
             neighbors_refs = self.store.get_backref(k)
             weights[name] = len(neighbors_refs)
             orig = [x.path for x in neighbors_refs]
@@ -302,8 +301,8 @@ class HtmlRenderer:
                 uu = None
             else:
                 # TODO : be smarter when we have multiple versions. Here we try to pick the latest one.
-                latest_version = list(sorted(candidates))[-1]
-                uu = self.resolver.resolve(RefInfo(*latest_version))
+                latest_version: Key = list(sorted(candidates))[-1]
+                uu = self.resolver.resolve(RefInfo.from_untrusted(*latest_version))
 
             data["nodes"].append(
                 {
