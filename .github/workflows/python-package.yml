@@ -8,7 +8,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch: 
+  workflow_dispatch:
     inputs:
       name:
         description: 'Reason'
@@ -23,16 +23,16 @@ jobs:
       matrix:
         include:
           - lib: 'astropy'
-            python-version: 3.9
+            python-version: "3.10"
           - lib: 'papyri'
-            python-version: 3.9
+            python-version: "3.10"
           - lib: 'IPython'
-            python-version: 3.9
+            python-version: "3.10"
           - lib: 'numpy'
-            python-version: 3.9
+            python-version: "3.10"
             flags: '--no-narrative --no-exec'
           - lib: 'scipy'
-            python-version: 3.9
+            python-version: "3.10"
             flags: '--no-narrative --no-exec'
 
     steps:
@@ -47,7 +47,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
         flit install --symlink
-        git clone https://github.com/stsewd/tree-sitter-rst
+        git clone  https://github.com/stsewd/tree-sitter-rst
+        cd tree-sitter-rst
+        git checkout 3fc88d2097bc854ab6bf70c52b3c482849cf8e8f
+        cd -
         papyri build-parser
     - name: dependency tree
       run: |
@@ -98,6 +101,9 @@ jobs:
         pip install -r requirements-dev.txt
         flit install --symlink
         git clone https://github.com/stsewd/tree-sitter-rst
+        cd tree-sitter-rst
+        git checkout 3fc88d2097bc854ab6bf70c52b3c482849cf8e8f
+        cd -
         papyri build-parser
     - uses: actions/download-artifact@v3
       with:
@@ -113,11 +119,7 @@ jobs:
         coverage run -a -m papyri install ~/.papyri/data/*.zip
         coverage run -a -m papyri relink
         coverage run -a -m papyri render --ascii
-
-        # coverage html
-        # papyri serve
         ls -al
-        # ls -al ~/.papyri/html/p/numpy/
 
     - name: Test with pytest
       run: |
@@ -153,6 +155,9 @@ jobs:
         pip install -r requirements-dev.txt
         flit install --symlink
         git clone https://github.com/stsewd/tree-sitter-rst
+        cd tree-sitter-rst
+        git checkout 3fc88d2097bc854ab6bf70c52b3c482849cf8e8f
+        cd -
         papyri build-parser
     - uses: actions/download-artifact@v3
       with:

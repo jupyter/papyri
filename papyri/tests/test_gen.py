@@ -1,6 +1,10 @@
+import tempfile
 from functools import lru_cache
+from pathlib import Path
 
-from papyri.gen import Config, Gen, NumpyDocString, BlockExecutor, APIObjectInfo
+import pytest
+
+from papyri.gen import APIObjectInfo, BlockExecutor, Config, Gen, NumpyDocString
 
 
 @lru_cache
@@ -37,7 +41,8 @@ def test_find_beyond_decorators():
 def test_infer():
     import scipy
     from scipy._lib._uarray._backend import Dispatchable
-    from papyri.gen import parse_script, Config
+
+    from papyri.gen import Config, parse_script
 
     c = Config(infer=True)
     res = parse_script(
@@ -65,3 +70,28 @@ def test_infer():
     )
 
     assert list(res) == list(expected)
+
+
+@pytest.mark.parametrize(
+    "module, submodules, objects",
+    [
+        ("numpy", ("core",), ("numpy:array", "numpy.core._multiarray_tests:npy_sinh")),
+        ("IPython", (), ("IPython:embed_kernel",)),
+    ],
+)
+def test_numpy(module, submodules, objects):
+    config = Config(exec=False, infer=False, submodules=submodules)
+    gen = Gen(dummy_progress=True, config=config)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        td = Path(tempdir)
+        gen.collect_package_metadata(
+            module,
+            relative_dir=Path("."),
+            meta={},
+        )
+        gen.collect_api_docs(module, limit_to=objects)
+        gen.partial_write(td)
+
+        for o in objects:
+            assert (td / "module" / f"{o}.json").exists()

@@ -228,6 +228,11 @@ class RefInfo(Node):
         assert isinstance(self.path, str)
         return iter([self.module, self.version, self.kind, self.path])
 
+    @classmethod
+    def from_untrusted(cls, module, version, kind, path):
+        assert ":" not in module
+        return cls(module, version, kind, path)
+
 
 @register(4011)
 class Signature(Node):

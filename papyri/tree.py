@@ -779,8 +779,9 @@ class DirectiveVisiter(TreeReplacer):
             if target_qa is not None:
                 if target_qa.split(".")[0] == self.qa.split("."):
                     assert False, "local reference should have explicit versions"
+                module = target_qa.split(":")[0]
                 ri = RefInfo(
-                    module=target_qa.split(".")[0],
+                    module=module,
                     version="*",
                     kind="api",
                     path=target_qa,

@@ -2,7 +2,7 @@
 
 {% set current_type = 'Examples' %}
 
-{% from 'macros.tpl.j2' import render_II, example with context %}
+{% from 'macros.tpl.j2' import render_II, example, render_myst with context %}
 
 {%block api %}
 
@@ -12,7 +12,7 @@
        {% if type == 'Fig' %}
            <div><img src="/p/{{data.value.module}}/{{data.value.version}}/img/{{data.value.path}}"/></div>
        {% elif type[0] == 'M' %}
-            {{ render_myst(obj) }}
+            {{ render_myst(data) }}
        {% else %}
            {{render_II(data)}}
        {% endif %}

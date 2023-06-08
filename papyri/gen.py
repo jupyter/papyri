@@ -463,7 +463,7 @@ def gen_main(
     narrative,
     fail_early: bool,
     fail_unseen_error: bool,
-    limit_to=None,
+    limit_to: List[str],
 ) -> None:
     """
     Main entry point to generate docbundle files,
@@ -574,7 +574,7 @@ class DFSCollector:
 
     """
 
-    def __init__(self, root: "ModuleType", others: List["ModuleType"]):
+    def __init__(self, root: ModuleType, others: List[ModuleType]):
         """
         Parameters
         ----------
@@ -588,6 +588,7 @@ class DFSCollector:
             submodules by default, so we need to pass these submodules
             explicitly.
         """
+
         assert isinstance(root, ModuleType), root
         self.root = root.__name__
         assert "." not in self.root
@@ -639,6 +640,7 @@ class DFSCollector:
         Recursively visit Module, Classes, and Functions by tracking which path
         we took there.
         """
+
         try:
             qa = full_qual(obj)
         except Exception as e:
@@ -652,12 +654,24 @@ class DFSCollector:
                 # might be worth looking into like np.exp.
                 pass
             return
-        if not qa.split(".")[0] == self.root:
+
+        if ":" in qa:
+            omod, _name = qa.split(":")
+        else:
+            omod = qa
+
+        if "." in omod:
+            oroot = omod.split(".")[0]
+        else:
+            oroot = omod
+
+        if not oroot == self.root:
             return
         if obj in self.obj.values():
             return
         if (qa in self.obj) and self.obj[qa] != obj:
             pass
+
         self.obj[qa] = obj
         self.aliases[qa].append(".".join(stack))
 
@@ -943,7 +957,7 @@ def _normalize_see_also(see_also: List[Any], qa):
                 else:
                     type_ = type_or_description
                     desc = []
-                refinfo = RefInfo(
+                refinfo = RefInfo.from_untrusted(
                     "current-module", "current-version", "to-resolve", name
                 )
                 link = Link(name, refinfo, "module", True)
@@ -1224,7 +1238,11 @@ class Gen:
                 )
                 for figname, _ in figs:
                     example_section_data.append(
-                        Fig(RefInfo(self.root, self.version, "assets", figname))
+                        Fig(
+                            RefInfo.from_untrusted(
+                                self.root, self.version, "assets", figname
+                            )
+                        )
                     )
                 all_figs.extend(figs)
 
@@ -1694,7 +1712,9 @@ class Gen:
                     + [Code(tok_entries, "", ce_status)]  # ignore: type
                     + [
                         Fig(
-                            RefInfo(self.root, self.version, "assets", name)
+                            RefInfo.from_untrusted(
+                                self.root, self.version, "assets", name
+                            )
                         )  # ignore: type
                         for name, _ in figs
                     ],  # ignore: type
@@ -1880,8 +1900,10 @@ class Gen:
             non_existinsing = [k for k in limit_to if k not in collected]
             if non_existinsing:
                 self.log.warning(
-                    "You asked to build docs only for following items, but they don't exist:\n %s",
+                    "You asked to build docs only for following items,"
+                    " but they don't exist:\n %s, existing items are %s",
                     non_existinsing,
+                    collected.keys(),
                 )
             collected = {k: v for k, v in collected.items() if k in limit_to}
             self.log.info("DEV: regenerating docs only for")
@@ -1892,7 +1914,10 @@ class Gen:
         rev_aliases: Dict[Cannonical, FullQual] = {v: k for k, v in aliases.items()}
 
         known_refs = frozenset(
-            {RefInfo(root, self.version, "module", qa) for qa in collected.keys()}
+            {
+                RefInfo.from_untrusted(root, self.version, "module", qa)
+                for qa in collected.keys()
+            }
         )
 
         error_collector = ErrorCollector(self.config, self.log)
