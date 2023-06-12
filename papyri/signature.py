@@ -6,7 +6,13 @@ class Signature:
 
     def __init__(self, target_item):
         """
-        :param target_item: A callable
+        Initialize the class.
+
+        Parameters
+        ----------
+        target_item : callable
+            The target item to be assigned.
+
         """
         self.target_item = target_item
         self._sig = inspect.signature(target_item)
@@ -16,7 +22,7 @@ class Signature:
         return self._sig.parameters
 
     @property
-    def is_async(self):
+    def is_async_function(self):
         return inspect.iscoroutinefunction(self.target_item)
 
     @property
