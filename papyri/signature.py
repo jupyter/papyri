@@ -1,6 +1,24 @@
 import inspect
 
 
+from dataclasses import dataclass
+from typing import Optional, List, Tuple
+from .common_ast import Node
+
+
+@dataclass
+class ParameterNode(Node):
+    name: str
+    annotation: Optional[str]
+    kind: str
+    default: Optional[str]
+
+
+class SignatureNode(Node):
+    kind: str  # maybe enum, is it a function, async generator, generator, etc.
+    parameters: List[ParameterNode]  # of pairs, we don't use dict because of orderin
+
+
 class Signature:
     """A wrapper around inspect utilities."""
 
@@ -16,6 +34,32 @@ class Signature:
         """
         self.target_item = target_item
         self._sig = inspect.signature(target_item)
+
+    def to_node(self):
+        if inspect.isfunction(self.target_item):
+            kind = "function"
+        elif self.is_generator():
+            kind = "generator"
+        elif self.is_async_generator():
+            kind = "async_generator"
+        elif inspect.iscoroutinefunction(self.target_item):
+            kind = "coroutine_function"
+        else:
+            assert False, f"Unknown kind for {self.target_item}"
+        assert not inspect.iscoroutine(self.target_item)
+
+        parameters = []
+        for param in self.parameters.values():
+            parameters.append(
+                ParameterNode(
+                    param.name,
+                    None if param.annotation is inspect._empty else param.annotation,
+                    param.kind.name,
+                    None if param.default else str(param.default),
+                )
+            )
+
+        return SignatureNode(kind, parameters)
 
     @property
     def parameters(self):

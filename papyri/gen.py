@@ -863,9 +863,11 @@ class APIObjectInfo:
     kind: str
     docstring: str
     signature: Optional[Signature]
+    name: str
 
-    def __init__(self, kind, docstring, signature):
+    def __init__(self, kind, docstring, signature, name):
         self.kind = kind
+        self.name = name
         self.docstring = docstring
         self.parsed = []
         self.signature = signature
@@ -1804,7 +1806,8 @@ class Gen:
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
             sig: Optional[str]
             try:
-                sig = str(ObjectSignature(target_item))
+                sig = ObjectSignature(target_item)
+                print(sig)
                 # sig = qa.split(":")[-1] + sig
                 # sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError):
