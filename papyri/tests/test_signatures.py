@@ -2,7 +2,7 @@
 This file is meant to test the serialisation / deserialisation 
 of function signture to JSON.
 """
-from papyri.signature import Signature as SignatureObject
+from papyri.signature import Signature as SignatureObject, SignatureNode
 import json
 
 import pytest
@@ -209,4 +209,8 @@ async def async_generator_function_1(
 )
 def test_f1(func):
     so = SignatureObject(func)
-    assert json.loads(so.to_node().to_json()) == json.loads(func.__doc__)
+    node = so.to_node()
+    bytes_ = node.to_json()
+    assert json.loads(bytes_) == json.loads(func.__doc__)
+    node_back = SignatureNode.from_json(bytes_)
+    assert node_back == node

@@ -9,9 +9,18 @@ from .common_ast import Node
 @dataclass
 class ParameterNode(Node):
     name: str
+    # we likely want to make sure annotation is a strutured object in the long run
     annotation: Optional[str]
     kind: str
     default: Optional[str]
+
+    def to_parameter(self):
+        return inspect.Parameter(
+            name=self.name,
+            kind=getattr(inspect._ParameterKind, self.kind),
+            default=self.default,
+            annotation=self.annotation,
+        )
 
 
 class SignatureNode(Node):
