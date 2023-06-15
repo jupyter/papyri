@@ -1808,8 +1808,7 @@ class Gen:
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
             sig: Optional[str]
             try:
-                sig = ObjectSignature(target_item)
-                print(sig)
+                sig = str(ObjectSignature(target_item))
                 # sig = qa.split(":")[-1] + sig
                 # sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError):

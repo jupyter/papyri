@@ -238,7 +238,7 @@ class RefInfo(Node):
 
 @register(4011)
 class Signature(Node):
-    value: Optional[ObjectSignature]
+    value: Optional[str]
 
 
 @register(4012)
