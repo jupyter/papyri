@@ -7,12 +7,12 @@ import json
 
 import pytest
 
-all_funs = []
+all_funcs = []
 
 
 def add(func):
-    global all_funs
-    all_funs.append(func)
+    global all_funcs
+    all_funcs.append(func)
     return func
 
 
@@ -205,7 +205,7 @@ async def async_generator_function_1(
 
 @pytest.mark.parametrize(
     "func",
-    all_funs,
+    all_funcs,
 )
 def test_f1(func):
     so = SignatureObject(func)

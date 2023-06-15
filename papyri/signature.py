@@ -1,15 +1,14 @@
 import inspect
 
-
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from typing import Optional, List
 from .common_ast import Node
 
 
 @dataclass
 class ParameterNode(Node):
     name: str
-    # we likely want to make sure annotation is a strutured object in the long run
+    # we likely want to make sure annotation is a structured object in the long run
     annotation: Optional[str]
     kind: str
     default: Optional[str]
@@ -25,7 +24,7 @@ class ParameterNode(Node):
 
 class SignatureNode(Node):
     kind: str  # maybe enum, is it a function, async generator, generator, etc.
-    parameters: List[ParameterNode]  # of pairs, we don't use dict because of orderin
+    parameters: List[ParameterNode]  # of pairs, we don't use dict because of ordering
 
 
 class Signature:

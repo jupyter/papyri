@@ -69,6 +69,8 @@ from .miniserde import get_type_hints
 
 from .utils import dedent_but_first
 
+from .signature import Signature as ObjectSignature
+
 register(tuple)(4444)
 
 
@@ -236,7 +238,7 @@ class RefInfo(Node):
 
 @register(4011)
 class Signature(Node):
-    value: Optional[str]
+    value: Optional[ObjectSignature]
 
 
 @register(4012)
