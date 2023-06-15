@@ -1,6 +1,6 @@
 """
-This file is meant to test the serialisation / deserialisation 
-of function signture to JSON.
+This file is meant to test the serialisation / deserialization
+of function signature to JSON.
 """
 from papyri.signature import Signature as SignatureObject, SignatureNode
 import json
