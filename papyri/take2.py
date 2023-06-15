@@ -69,7 +69,6 @@ from .miniserde import get_type_hints
 
 from .utils import dedent_but_first
 
-from .signature import Signature as ObjectSignature
 
 register(tuple)(4444)
 
