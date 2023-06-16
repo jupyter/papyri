@@ -82,6 +82,8 @@ from .myst_ast import MText
 
 
 class ErrorCollector:
+    _qa: str
+
     def __init__(self, config: Config, log):
         self.config: Config = config
         self.log = log
@@ -93,7 +95,8 @@ class ErrorCollector:
         self._errors: Dict[str, Any] = {}
 
     def __call__(self, qa):
-        self._qa = qa
+        assert isinstance(qa, str), qa
+        self._qa = str(qa)
         return self
 
     def __enter__(self):
