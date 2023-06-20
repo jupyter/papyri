@@ -25,7 +25,7 @@ def test_find_beyond_decorators():
     config = Config(exec=True, infer=True)
     gen = Gen(dummy_progress=True, config=config)
 
-    api_object = APIObjectInfo("function", "", None)
+    api_object = APIObjectInfo("function", "", None, None)
     doc, figs = gen.prepare_doc_for_one_object(
         ex1,
         NumpyDocString(""),

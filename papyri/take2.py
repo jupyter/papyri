@@ -69,6 +69,7 @@ from .miniserde import get_type_hints
 
 from .utils import dedent_but_first
 
+
 register(tuple)(4444)
 
 

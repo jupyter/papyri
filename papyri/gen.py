@@ -17,7 +17,6 @@ import inspect
 import json
 import logging
 import os
-import re
 import shutil
 import site
 import sys
@@ -45,8 +44,13 @@ from there import print
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
 from .common_ast import Node
-from .errors import IncorrectInternalDocsLen, NumpydocParseError, UnseenError
+from .errors import (
+    IncorrectInternalDocsLen,
+    NumpydocParseError,
+    UnseenError,
+)
 from .miscs import BlockExecutor, DummyP
+from .signature import Signature as ObjectSignature
 from .take2 import (
     Code,
     Fig,
@@ -859,9 +863,11 @@ class APIObjectInfo:
     kind: str
     docstring: str
     signature: Optional[Signature]
+    name: str
 
-    def __init__(self, kind, docstring, signature):
+    def __init__(self, kind, docstring, signature, name):
         self.kind = kind
+        self.name = name
         self.docstring = docstring
         self.parsed = []
         self.signature = signature
@@ -1796,23 +1802,31 @@ class Gen:
         builtin_function_or_method = type(sum)
 
         if isinstance(target_item, ModuleType):
-            api_object = APIObjectInfo("module", target_item.__doc__, None)
+            api_object = APIObjectInfo(
+                "module", target_item.__doc__, None, target_item.__name__
+            )
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
             sig: Optional[str]
             try:
-                sig = str(inspect.signature(target_item))
-                sig = qa.split(":")[-1] + sig
-                sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
+                sig = str(ObjectSignature(target_item))
+                # sig = qa.split(":")[-1] + sig
+                # sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
             except (ValueError, TypeError):
                 sig = None
             try:
-                api_object = APIObjectInfo("function", target_item.__doc__, sig)
+                api_object = APIObjectInfo(
+                    "function", target_item.__doc__, sig, target_item.__name__
+                )
             except Exception as e:
                 raise type(e)(f"For object {qa!r}")
         elif isinstance(target_item, type):
-            api_object = APIObjectInfo("class", target_item.__doc__, None)
+            api_object = APIObjectInfo(
+                "class", target_item.__doc__, None, target_item.__name__
+            )
         else:
-            api_object = APIObjectInfo("other", target_item.__doc__, None)
+            api_object = APIObjectInfo(
+                "other", target_item.__doc__, None, target_item.__name__
+            )
             # print("Other", target_item)
             # assert False, type(target_item)
 
