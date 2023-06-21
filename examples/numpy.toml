@@ -25,7 +25,6 @@ submodules = [
     'ctypeslib',
     'distutils',
     'doc',
-    'dual',
     'fft',
     'lib',
     'linalg',
