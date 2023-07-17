@@ -1000,14 +1000,6 @@ class Gen:
             TimeElapsedColumn(),
         )
 
-        FORMAT = "%(message)s"
-        logging.basicConfig(
-            level="INFO",
-            format=FORMAT,
-            datefmt="[%X]",
-            handlers=[RichHandler(rich_tracebacks=True)],
-        )
-
         # TODO:
         # At some point it would be better to have that be matplotlib
         # specific and not hardcoded.
@@ -1037,7 +1029,15 @@ class Gen:
 
         # end TODO
 
+        FORMAT = "%(message)s"
         self.log = logging.getLogger("papyri")
+        self.log.setLevel("INFO")
+        formatter = logging.Formatter(FORMAT, datefmt="[%X]")
+        rich_handler = RichHandler(rich_tracebacks=True)
+        rich_handler.setLevel(logging.INFO)
+        rich_handler.setFormatter(formatter)
+        self.log.addHandler(rich_handler)
+
         self.config = config
         self.log.debug("Configuration: %s", self.config)
 
