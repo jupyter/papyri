@@ -173,7 +173,7 @@ import zipfile
 from pathlib import Path
 from typing import List, Optional
 
-import toml
+import tomli_w
 import typer
 
 from . import examples
@@ -488,7 +488,7 @@ def bootstrap(file: str):
     name = input(f"package name [{p.stem}]:")
     if not name:
         name = p.stem
-    p.write_text(toml.dumps(dict(name={"module": [name]})))
+    p.write_text(tomli_w.dumps(dict(name={"module": [name]})))
 
 
 @app.command()

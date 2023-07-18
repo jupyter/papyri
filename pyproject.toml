@@ -12,7 +12,8 @@ dynamic = ["version","description"]
 requires-python=">=3.8"
 dependencies = [
     "typer",
-    "toml",
+    "tomli",
+    "tomli_w",
     "urwid",
     "httpx",
     "jinja2<3.1",
@@ -25,16 +26,16 @@ dependencies = [
     "rich",
     "jedi",
     "typer",
-    "velin", 
+    "velin",
     "quart-trio",
     "quart<0.14",
     "toml",
     "flatlatex",
     # "tree_sitter", # tree sitter does not currently provide builds for all platform. tree-sitter-builds is an
     # alternative build that provide more wheels.
-    "tree-sitter-builds", 
+    "tree-sitter-builds",
     "tree_sitter_languages>=1.5",
-    # 
+    #
     "matplotlib",
     "cbor2",
     "minify_html",
