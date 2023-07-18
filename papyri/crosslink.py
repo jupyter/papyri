@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import builtins
 import json
 import logging
 import warnings
@@ -10,7 +9,7 @@ from typing import Dict, FrozenSet, List, Optional, Tuple, Any
 
 from rich.logging import RichHandler
 import cbor2
-from there import print
+from there import print as print_
 
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
@@ -262,7 +261,7 @@ class Ingester:
         if tocfile.exists():
             toc = json.loads((path / "toc.json").read_text())
             if not toc.keys():
-                print("No narrative.")
+                print_("No narrative.")
                 return
             titles = toc["titles"]
             tree = toc["tree"]
@@ -359,7 +358,7 @@ class Ingester:
                 rqa = normalise_ref(qa)
                 if rqa != qa:
                     # numpy weird thing
-                    print(f"skip {qa=}, {rqa=}")
+                    print_(f"skip {qa=}, {rqa=}")
                     continue
                 assert rqa == qa, f"{rqa} !+ {qa}"
             try:
@@ -407,7 +406,7 @@ class Ingester:
             # as we don't know the version number.
             # fix it at serialisation time.
             forward_refs = doc_blob.all_forward_refs()
-            # print(len(forward_refs))
+            # print_(len(forward_refs))
 
             try:
                 key = Key(mod_root, version, "module", qa)
@@ -432,10 +431,10 @@ class Ingester:
 
         rev_aliases = {Cannonical(v): FullQual(k) for k, v in aliases.items()}
 
-        builtins.print(
+        print(
             "Relinking is safe to cancel, but some back references may be broken...."
         )
-        builtins.print("Press Ctrl-C to abort...")
+        print("Press Ctrl-C to abort...")
 
         for _, key in self.progress(
             gstore.glob((None, None, "module", None)), description="Relinking..."
@@ -462,7 +461,7 @@ class Ingester:
                     rev_aliases=rev_aliases,
                 )
                 if r.kind == "module":
-                    print("unresolved ok...", r, key)
+                    print_("unresolved ok...", r, key)
                     sa.name.exists = True
                     sa.name.reference = r
 
@@ -511,7 +510,7 @@ def main(path, check, *, dummy_progress):
     path : <Insert Type here>
         <Multiline Description Here>
     """
-    builtins.print("Ingesting", path.name, "...")
+    print("Ingesting", path.name, "...")
     from time import perf_counter
 
     now = perf_counter()
@@ -521,7 +520,7 @@ def main(path, check, *, dummy_progress):
     Ingester(dp=dummy_progress).ingest(path, check)
     delta = perf_counter() - now
 
-    builtins.print(f"{path.name} Ingesting done in {delta:0.2f}s")
+    print(f"{path.name} Ingesting done in {delta:0.2f}s")
 
 
 def relink(dummy_progress):
