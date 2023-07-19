@@ -222,6 +222,7 @@ View given function docs in text with ANSI coloring
 
 """,
     pretty_exceptions_enable=False,
+    no_args_is_help=True,
 )
 
 
