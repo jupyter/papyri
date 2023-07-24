@@ -32,7 +32,11 @@ from types import FunctionType, ModuleType
 from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
 
 import jedi
-import toml
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+import tomli_w
 from IPython.core.oinspect import find_file
 from IPython.utils.path import compress_user
 from pygments import lex
@@ -443,7 +447,7 @@ def load_configuration(
     """
     conffile = Path(path).expanduser()
     if conffile.exists():
-        conf: MutableMapping[str, Any] = toml.loads(conffile.read_text())
+        conf: MutableMapping[str, Any] = tomllib.loads(conffile.read_text())
         ks = set(conf.keys()) - {"meta"}
         assert len(ks) >= 1, conf.keys()
         info = conf["global"]
@@ -2086,11 +2090,11 @@ class Gen:
                 self.put_raw(name, data)
         if error_collector._errors:
             self.log.info(
-                "ERRORS:" + toml.dumps(error_collector._errors).replace(",", ",    \n")
+                "ERRORS:" + tomli_w.dumps(error_collector._errors).replace(",", ",    \n")
             )
         if error_collector._expected_unseen:
             self.log.info(
-                "UNSEEN ERRORS:" + toml.dumps(error_collector._expected_unseen)
+                "UNSEEN ERRORS:" + tomli_w.dumps(error_collector._expected_unseen)
             )
         if failure_collection:
             self.log.info(
