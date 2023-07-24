@@ -40,7 +40,7 @@ from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
 from rich.logging import RichHandler
 from rich.progress import BarColumn, Progress, TextColumn, track
-from there import print
+from there import print as print_
 from velin.examples_section_utils import InOut, splitblank, splitcode
 
 from .common_ast import Node
@@ -265,7 +265,7 @@ def parse_script(
                 if config.jedi_failure_mode in (None, "error"):
                     raise
                 elif config.jedi_failure_mode == "log":
-                    print(
+                    print_(
                         "failed inference example will be empty ",
                         where,
                         line_n,
@@ -314,7 +314,7 @@ def _get_implied_imports(obj):
         else:
             c_o = obj.__qualname__.split(".")
             if len(c_o) > 2:
-                print(
+                print_(
                     "get implied import qualname got more than 2 parts: ",
                     obj.__qualname__,
                 )
@@ -626,13 +626,13 @@ class DFSCollector:
         """
         for qa, item in self.obj.items():
             if (nqa := full_qual(item)) != qa:
-                print("after import qa differs : {qa} -> {nqa}")
+                print_("after import qa differs : {qa} -> {nqa}")
                 assert isinstance(nqa, str)
                 if self.obj[nqa] == item:
-                    print("present twice")
+                    print_("present twice")
                     del self.obj[nqa]
                 else:
-                    print("differs: {item} != {other}")
+                    print_("differs: {item} != {other}")
 
     def items(self) -> Dict[str, Any]:
         self.scan()
@@ -692,7 +692,7 @@ class DFSCollector:
         for k in dir(mod):
             # TODO: scipy 1.8 workaround, remove.
             if not hasattr(mod, k):
-                print(f"scipy 1.8 workaround : ({mod.__name__!r},{k!r}),")
+                print_(f"scipy 1.8 workaround : ({mod.__name__!r},{k!r}),")
                 continue
             self._open_list.append((getattr(mod, k), stack + [k]))
 
@@ -726,7 +726,7 @@ class DocBlob(Node):
 
     @classmethod
     def _deserialise(cls, **kwargs):
-        # print("will deserialise", cls)
+        # print_("will deserialise", cls)
         try:
             instance = cls(**kwargs)
         except Exception as e:
@@ -1206,7 +1206,7 @@ class Gen:
 
                     except Exception:
                         did_except = True
-                        print(f"exception executing... {qa}")
+                        print_(f"exception executing... {qa}")
                         fig_managers = executor.fig_man()
                         if raise_in_fig or config.exec_failure != "fallback":
                             raise
@@ -1217,7 +1217,7 @@ class Gen:
                                     executor.get_figs(), figure_names
                                 ):
                                     figs.append((figname, fig))
-                                    print(
+                                    print_(
                                         f"Still fig manager(s) open for {qa}: {figname}"
                                     )
                                 plt.close("all")
@@ -1255,7 +1255,7 @@ class Gen:
         # TODO fix this if plt.close not called and still a ligering figure.
         fig_managers = executor.fig_man()
         if len(fig_managers) != 0:
-            print(f"Unclosed figures in {qa}!!")
+            print_(f"Unclosed figures in {qa}!!")
             plt.close("all")
 
         return processed_example_data(example_section_data), all_figs
@@ -1308,7 +1308,7 @@ class Gen:
                 p2.advance(task)
 
                 if any([str(p).endswith(k) for k in self.config.narrative_exclude]):
-                    print(f"Skipping {p} – excluded in config file")
+                    print_(f"Skipping {p} – excluded in config file")
                     continue
 
                 assert p.is_file()
@@ -1351,7 +1351,7 @@ class Gen:
                     title = titles[0]
                 title_map[key] = title
                 if "generated" not in key and title_map[key] is None:
-                    print(key, title)
+                    print_(key, title)
 
                 blbs[key] = blob
         for k, b in blbs.items():
@@ -1701,7 +1701,7 @@ class Gen:
 
                 entries: List[Any]
                 if entries_p is None:
-                    print("Issue in ", example)
+                    print_("Issue in ", example)
                     entries = [("fail", "fail")]
                 else:
                     entries = list(entries_p)
@@ -1827,7 +1827,7 @@ class Gen:
             api_object = APIObjectInfo(
                 "other", target_item.__doc__, None, target_item.__name__
             )
-            # print("Other", target_item)
+            # print_("Other", target_item)
             # assert False, type(target_item)
 
         if item_docstring is None and not isinstance(target_item, ModuleType):
@@ -2071,7 +2071,7 @@ class Gen:
             )
 
             if isinstance(doc_blob.references, str):
-                print(repr(doc_blob.references))
+                print_(repr(doc_blob.references))
             doc_blob.references = None
 
             # end processing
