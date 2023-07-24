@@ -108,7 +108,7 @@ class ErrorCollector:
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is (BaseException, KeyboardInterrupt):
+        if exc_type in (BaseException, KeyboardInterrupt):
             return
         if exc_type:
             self.errored = True
