@@ -439,7 +439,7 @@ class TSVisitor:
             # blah blah reference and new line with parenthesis
             # (like a year here)
             # ```
-            assert len(set_post_a) == 1
+            assert len(set_post_a) == 1, breakpoint()
             post_a = next(iter(set_post_a))
 
             assert len(post_text) >= len(self.as_text(tc)), self.as_text(tc)

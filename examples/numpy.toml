@@ -1,11 +1,14 @@
 [global]
 module = 'numpy'
+exclude = ['numpy.distutils.misc_util:Configuration.__init__','numpy:tensordot']
+
 execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', 'numpy.seterr', 'numpy.bincount',
 'numpy.core._multiarray_umath.bincount', 'numpy.core._multiarray_umath.datetime_as_string',
 'numpy.core._multiarray_umath.normalize_axis_index', 'numpy.core._multiarray_umath.shares_memory',
 'numpy.datetime_as_string', 'numpy.shares_memory', 'numpy.squeeze',
 'numpy.average',
 'numpy.ctypeslib', 'numpy.append', 'numpy.ma.core',
+'numpy.core.umath_tests',
 
 # try to create a pager that waits for input
 'numpy.lookfor',
@@ -16,6 +19,8 @@ execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', '
 'numpy.char.multiply',
 'numpy.polynomial.chebyshev.chebinterpolate',
 'numpy.lib.npyio._read',
+'numpy.polynomial._polybase:ABCPolyBase',
+'numpy.distutils.misc_util:Configuration.__init__'
 ]
 
 submodules = [
@@ -45,7 +50,8 @@ exec = true
 narrative_exclude = [
    'doc/source/reference/arrays.ndarray.rst',
    'doc/source/user/how-to-how-to.rst',
-   'doc/source/f2py/usage.rst'
+   'doc/source/f2py/usage.rst',
+   'doc/source/_templates/',
 ]
 exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
@@ -63,25 +69,7 @@ docspage = 'https://numpy.org/doc/1.22/'
 
 
 [global.expected_errors]
-ValueError = [
-    "numpy.core.shape_base._concatenate_shapes",
-    "numpy.rollaxis",
-    ]
-NumpydocParseError = [
-    "numpy._from_dlpack",
-    "numpy.typing._nested_sequence._NestedSequence",
-    "numpy.polynomial._polybase.ABCPolyBase",
-    ]
 VisitCitationReferenceNotImplementedError = [
     "numpy.fft",
     ]
-VisitSubstitutionDefinitionNotImplementedError = [
-    ]
-IncorrectInternalDocsLen = [
-    "numpy.tensordot",
-    "numpy.lib._datasource.DataSource._splitzipext",
-    "numpy.core._internal._view_is_safe",
-    "numpy.distutils.misc_util.Configuration.__init__",]
-AssertionError = [
-]
 

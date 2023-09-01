@@ -342,6 +342,7 @@ class Param(Node):
             MList,
             MParagraph,
             MCode,
+            SubstitutionDef,
         ]
     ]
 
@@ -498,6 +499,7 @@ class DefListItem(Node):
             Unimplemented,
             MAdmonition,
             MMath,
+            FieldList,
             Optional[TocTree],  # remove this, that should not be the case ?
         ]
     ]

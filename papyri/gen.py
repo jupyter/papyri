@@ -1311,7 +1311,7 @@ class Gen:
                 p2.update(task, description=compress_user(str(p)).ljust(7))
                 p2.advance(task)
 
-                if any([str(p).endswith(k) for k in self.config.narrative_exclude]):
+                if any([k in str(p) for k in self.config.narrative_exclude]):
                     print_(f"Skipping {p} – excluded in config file")
                     continue
 

@@ -5,31 +5,18 @@ exec_failure = "fallback"
 docs_path = "~/dev/IPython/docs/source"
 exec = true
 execute_exclude_patterns = [
-   'IPython.lib.display.Audio',
-   'IPython.core.display_functions.display'
+   'IPython.lib.display:Audio',
+   'IPython.core.display_functions:display'
 ]
 exclude = []
 [global.expected_errors]
 IncorrectInternalDocsLen = [
-  "IPython.core.magics.basic:BasicMagics.alias_magic",
-  "IPython.core.magics.script:ScriptMagics.shebang",
-  "IPython.core.magics.basic:BasicMagics.notebook",
-  "IPython.core.magics.display:DisplayMagics.html",
-  "IPython.core.magics.execution:ExecutionMagics.debug",
-  "IPython.core.magics.execution:ExecutionMagics.capture",
-  "IPython.core.magics.history:HistoryMagics.history",
   "IPython.core.magics.namespace:NamespaceMagics.xdel",
-  "IPython.core.magics.osm:OSMagics.writefile",
-  "IPython.core.magics.pylab:PylabMagics.matplotlib",
-  "IPython.core.magics.pylab:PylabMagics.pylab",
-  "IPython.terminal.embed:EmbeddedMagics.kill_embedded",
 ]
 
+[global.implied_imports]
+get_ipython = 'IPython:get_ipython'
 
-ValueError = [
-   "IPython.core.magics.osm:OSMagics.env",
-   "IPython.core.magics.osm:OSMagics.set_env",
-]
 
 [meta]
 github_slug = 'IPython/IPython'
