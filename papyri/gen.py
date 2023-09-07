@@ -32,6 +32,7 @@ from types import FunctionType, ModuleType
 from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
 
 import jedi
+
 try:
     import tomllib
 except ModuleNotFoundError:
@@ -2090,7 +2091,8 @@ class Gen:
                 self.put_raw(name, data)
         if error_collector._errors:
             self.log.info(
-                "ERRORS:" + tomli_w.dumps(error_collector._errors).replace(",", ",    \n")
+                "ERRORS:"
+                + tomli_w.dumps(error_collector._errors).replace(",", ",    \n")
             )
         if error_collector._expected_unseen:
             self.log.info(
