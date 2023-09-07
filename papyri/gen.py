@@ -606,6 +606,7 @@ class DFSCollector:
         self._open_list = [(root, [root.__name__])]
         for o in others:
             self._open_list.append((o, o.__name__.split(".")))
+        self.log = logging.getLogger("papyri")
 
     def scan(self) -> None:
         """
@@ -697,7 +698,7 @@ class DFSCollector:
         for k in dir(mod):
             # TODO: scipy 1.8 workaround, remove.
             if not hasattr(mod, k):
-                print_(f"scipy 1.8 workaround : ({mod.__name__!r},{k!r}),")
+                self.log.warning(f"Name not found in module: {mod.__name__}.{k}")
                 continue
             self._open_list.append((getattr(mod, k), stack + [k]))
 
