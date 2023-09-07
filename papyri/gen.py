@@ -2095,9 +2095,11 @@ class Gen:
                 + tomli_w.dumps(error_collector._errors).replace(",", ",    \n")
             )
         if error_collector._expected_unseen:
-            self.log.info(
-                "UNSEEN ERRORS:" + tomli_w.dumps(error_collector._expected_unseen)
-            )
+            inverted = defaultdict(lambda: [])
+            for qa, errs in error_collector._expected_unseen.items():
+                for err in errs:
+                    inverted[err].append(qa)
+            self.log.info("UNSEEN ERRORS:" + tomli_w.dumps(inverted))
         if failure_collection:
             self.log.info(
                 "The following parsing failed \n%s",
