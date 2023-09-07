@@ -431,9 +431,7 @@ class Ingester:
 
         rev_aliases = {Cannonical(v): FullQual(k) for k, v in aliases.items()}
 
-        print(
-            "Relinking is safe to cancel, but some back references may be broken...."
-        )
+        print("Relinking is safe to cancel, but some back references may be broken....")
         print("Press Ctrl-C to abort...")
 
         for _, key in self.progress(

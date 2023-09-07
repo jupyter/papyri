@@ -806,13 +806,13 @@ def _import_max(parts):
     p = parts[0]
     try:
         __import__(p)
-    except ImportError:
+    except (ImportError, RuntimeError):
         return
     for k in parts[1:]:
         p = p + "." + k
         try:
             __import__(p)
-        except ImportError:
+        except (ImportError, RuntimeError):
             return
         except Exception as e:
             raise type(e)(parts)
