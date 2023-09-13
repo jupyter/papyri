@@ -346,8 +346,14 @@ class TSVisitor:
         inner_value = text_value[1:-1]
 
         if "`" in inner_value:
-            log.info("issue with inner ` : %r", inner_value)
-            inner_value = inner_value.replace("`", "'")
+            log.info(
+                "Improper backtick found in interpreted text. "
+                "This is usually due to a missing/stray backtick, or "
+                "missing escape (`\\`) on trailing charter : %r in (%s)",
+                inner_value,
+                self.qa,
+            )
+            # inner_value = inner_value.replace("`", "'")
 
         t = Directive(
             inner_value,

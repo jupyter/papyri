@@ -5,27 +5,7 @@ exec = true
 submodules = [ "signal","misc"]
 exclude = [
     # https://github.com/stsewd/tree-sitter-rst/issues/31
-    "scipy.interpolate._fitpack_py.splprep",
-    "scipy.sparse._construct._compressed_sparse_stack",
-    "scipy.sparse._construct._stack_along_minor_axis",
-    # OTHER.
-    "scipy.interpolate._fitpack_impl.spalde",
-
-    "scipy.sparse.csgraph._traversal.breadth_first_tree",
-    "scipy.sparse.csgraph._traversal.depth_first_tree",
-
-    # Example is incorrect https://github.com/scipy/scipy/issues/15595
-    "scipy.signal._peak_finding._identify_ridge_lines",
-    "scipy.stats._continuous_distns.crystalball_gen._pdf",
-    "scipy.stats._ksstats._kolmogn_PelzGood",
-    "scipy.stats._discrete_distns.betabinom_gen",
-    "scipy.sparse.csgraph._min_spanning_tree.minimum_spanning_tree",
-    "scipy.stats._morestats.wilcoxon",
-    "scipy.stats._distn_infrastructure.rv_continuous",
-    "scipy.stats._stats_py.moment",
-    "scipy.stats._mannwhitneyu.mannwhitneyu",
-    "scipy.stats._resampling.bootstrap",
-    "scipy.sparse.linalg._expm_multiply.expm_multiply",
+    "scipy.stats._continuous_distns:crystalball_gen._pdf"
             ]
 exclude_jedi = [
     "scipy.linalg._sketches.clarkson_woodruff_transform",

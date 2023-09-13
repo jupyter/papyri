@@ -1912,7 +1912,7 @@ class Gen:
         if missing:
             self.log.warning(
                 "The following items have been excluded but were not found:\n %s",
-                json.dumps(missing, indent=2, sort_keys=True),
+                json.dumps(sorted(missing), indent=2, sort_keys=True),
             )
 
         collected = {k: v for k, v in collected.items() if k not in excluded}
