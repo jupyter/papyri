@@ -561,7 +561,7 @@ class DirectiveVisiter(TreeReplacer):
     def _admonition_handler_x(self, name, argument, options, content):
         assert not options
         if content:
-            inner = parse(content.encode())
+            inner = parse(content.encode(), self.qa)
             assert len(inner) == 1
 
             assert isinstance(inner[0], Section)

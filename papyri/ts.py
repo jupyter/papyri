@@ -188,6 +188,7 @@ class TSVisitor:
     def __init__(self, bytes, root, qa):
         self.bytes = bytes
         self.root = root
+        assert qa is not None
         self.qa = qa
         self.depth = 0
         self._section_levels = {}
@@ -353,7 +354,8 @@ class TSVisitor:
                 inner_value,
                 self.qa,
             )
-            # inner_value = inner_value.replace("`", "'")
+            log.warning("replacing ` by ' to not crash serialiser")
+            inner_value = inner_value.replace("`", "'")
 
         t = Directive(
             inner_value,

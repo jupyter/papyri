@@ -148,13 +148,13 @@ except (ImportError, OSError):
 SITE_PACKAGE = site.getsitepackages()
 
 
-def paragraph(lines: List[str]) -> Any:
+def paragraph(lines: List[str], qa) -> Any:
     """
     Leftover rst parsing,
 
     Remove at some point.
     """
-    [section] = ts.parse("\n".join(lines).encode())
+    [section] = ts.parse("\n".join(lines).encode(), qa)
     assert len(section.children) == 1
     p2 = section.children[0]
     return p2
@@ -818,14 +818,14 @@ class DocBlob(Node):
     #    self.signature = signature
 
 
-def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str):
+def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str, qa):
     assert isinstance(data, list), repr(data)
     acc = []
     for param, type_, desc in data:
         assert isinstance(desc, list)
         items = []
         if desc:
-            items = parse_rst_section("\n".join(desc))
+            items = parse_rst_section("\n".join(desc), qa)
             for l in items:
                 assert not isinstance(l, Section)
         acc.append(Param(param, type_, desc=items).validate())
@@ -871,12 +871,13 @@ class APIObjectInfo:
     signature: Optional[Signature]
     name: str
 
-    def __init__(self, kind, docstring, signature, name):
+    def __init__(self, kind, docstring, signature, name, qa):
         self.kind = kind
         self.name = name
         self.docstring = docstring
         self.parsed = []
         self.signature = signature
+        self._qa = qa
 
         if docstring is not None and kind != "module":
             # TS is going to choke on this as See Also and other
@@ -890,11 +891,11 @@ class APIObjectInfo:
                 if not ndoc[title]:
                     continue
                 if title in _numpydoc_sections_with_param:
-                    section = _numpy_data_to_section(ndoc[title], title)
+                    section = _numpy_data_to_section(ndoc[title], title, self._qa)
                     assert isinstance(section, Section)
                     self.parsed.append(section)
                 elif title in _numpydoc_sections_with_text:
-                    docs = ts.parse("\n".join(ndoc[title]).encode())
+                    docs = ts.parse("\n".join(ndoc[title]).encode(), qa)
                     if len(docs) != 1:
                         raise IncorrectInternalDocsLen("\n".join(ndoc[title]), docs)
                     section = docs[0]
@@ -911,7 +912,7 @@ class APIObjectInfo:
                 else:
                     assert False
         elif docstring and kind == "module":
-            self.parsed = ts.parse(docstring.encode())
+            self.parsed = ts.parse(docstring.encode(), qa)
         self.validate()
 
     def special(self, title):
@@ -961,11 +962,11 @@ def _normalize_see_also(see_also: List[Any], qa):
                     # we have all in a single line,
                     # and there is no description, so the type field is
                     # actually the description.
-                    desc = [paragraph([type_or_description])]
+                    desc = [paragraph([type_or_description], qa)]
                 elif raw_description:
                     assert isinstance(raw_description, list)
                     type_ = type_or_description
-                    desc = [paragraph(raw_description)]
+                    desc = [paragraph(raw_description, qa)]
                 else:
                     type_ = type_or_description
                     desc = []
@@ -1603,7 +1604,7 @@ class Gen:
                     # is empty
                     blob.content[section] = Section([], None)
                 else:
-                    tsc = ts.parse("\n".join(data).encode())
+                    tsc = ts.parse("\n".join(data).encode(), qa)
                     assert len(tsc) in (0, 1), (tsc, data)
                     if tsc:
                         tssc = tsc[0]
@@ -1640,7 +1641,7 @@ class Gen:
                 items = []
                 if desc:
                     try:
-                        items = parse_rst_section("\n".join(desc))
+                        items = parse_rst_section("\n".join(desc), qa)
                     except Exception as e:
                         raise type(e)(f"from {qa}")
                     for l in items:
@@ -1809,7 +1810,7 @@ class Gen:
 
         if isinstance(target_item, ModuleType):
             api_object = APIObjectInfo(
-                "module", target_item.__doc__, None, target_item.__name__
+                "module", target_item.__doc__, None, target_item.__name__, qa
             )
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
             sig: Optional[str]
@@ -1821,17 +1822,17 @@ class Gen:
                 sig = None
             try:
                 api_object = APIObjectInfo(
-                    "function", target_item.__doc__, sig, target_item.__name__
+                    "function", target_item.__doc__, sig, target_item.__name__, qa
                 )
             except Exception as e:
                 raise type(e)(f"For object {qa!r}")
         elif isinstance(target_item, type):
             api_object = APIObjectInfo(
-                "class", target_item.__doc__, None, target_item.__name__
+                "class", target_item.__doc__, None, target_item.__name__, qa
             )
         else:
             api_object = APIObjectInfo(
-                "other", target_item.__doc__, None, target_item.__name__
+                "other", target_item.__doc__, None, target_item.__name__, qa
             )
             # print_("Other", target_item)
             # assert False, type(target_item)
@@ -1842,7 +1843,7 @@ class Gen:
         elif item_docstring is None and isinstance(target_item, ModuleType):
             item_docstring = """This module has no documentation"""
         try:
-            sections = ts.parse(dedent_but_first(item_docstring).encode())
+            sections = ts.parse(dedent_but_first(item_docstring).encode(), qa)
         except (AssertionError, NotImplementedError) as e:
             self.log.error("TS could not parse %s, %s", repr(qa), e)
             raise type(e)(f"from {qa}") from e
@@ -2096,9 +2097,11 @@ class Gen:
                 + tomli_w.dumps(error_collector._errors).replace(",", ",    \n")
             )
         if error_collector._expected_unseen:
-            self.log.info(
-                "UNSEEN ERRORS:" + tomli_w.dumps(error_collector._expected_unseen)
-            )
+            inverted = defaultdict(lambda: [])
+            for qa, errs in error_collector._expected_unseen.items():
+                for err in errs:
+                    inverted[err].append(qa)
+            self.log.info("UNSEEN ERRORS:" + tomli_w.dumps(inverted))
         if failure_collection:
             self.log.info(
                 "The following parsing failed \n%s",

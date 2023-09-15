@@ -558,7 +558,7 @@ def get_object(qual):
     return obj
 
 
-def parse_rst_section(text):
+def parse_rst_section(text, qa):
     """
     This should at some point be completely replaced by tree sitter.
     in particular `from ts import parse`
@@ -566,7 +566,7 @@ def parse_rst_section(text):
 
     from .ts import parse
 
-    items = parse(text.encode())
+    items = parse(text.encode(), qa)
     if len(items) == 0:
         return []
     if len(items) == 1:
