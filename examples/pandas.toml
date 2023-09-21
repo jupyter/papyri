@@ -4,95 +4,10 @@ logo = 'logo_pandas.png'
 exec_failure = "fallback"
 submodules = []
 exclude = [
-    # "AssertionError"
-        "pandas._libs.properties.CachedProperty",
-        "pandas._config.config.CallableDynamicDoc",
-        "pandas._libs.index.BaseMultiIndexCodesEngine",
-        "pandas._libs.properties.AxisProperty",
-    # "ErrorHelper1-<class 'papyri.errors.SpaceAfterBlockDirectiveError'>
-        "pandas.core.algorithms.factorize",
-        "pandas.core.base.IndexOpsMixin.factorize",
-    # "ErrorNoExec-<class 'AssertionError'>
-        "pandas._libs.index.BaseMultiIndexCodesEngine",
-    # "ErrorNoExec-<class 'ValueError'>
-        "pandas.core.accessor.register_dataframe_accessor",
-        "pandas.core.accessor.register_index_accessor",
-        "pandas.core.accessor.register_series_accessor",
-        "pandas.core.accessor._register_accessor",
-        "pandas.core.arrays.base.ExtensionArray.take",
-    # "ErrorNoExec-<class 'papyri.errors.VisitTargetNotImplementedError'>
-        "pandas.plotting._core.PlotAccessor.kde",
-    # "ExecError-<class 'AssertionError'>
-        "pandas._libs.index.BaseMultiIndexCodesEngine",
-    # "ExecError-<class 'ValueError'>
-        "pandas.core.accessor.register_dataframe_accessor",
-        "pandas.core.accessor.register_index_accessor",
-        "pandas.core.accessor.register_series_accessor",
-        "pandas.core.accessor._register_accessor",
-        "pandas.core.arrays.base.ExtensionArray.take",
-    # "ExecError-<class 'papyri.errors.VisitTargetNotImplementedError'>
-        "pandas.plotting._core.PlotAccessor.kde",
-    # "NumpydocError-<class 'AssertionError'>
-        "pandas._libs.properties.CachedProperty",
-        "pandas._config.config.CallableDynamicDoc",
-        "pandas._libs.properties.AxisProperty",
-    # "NumpydocError-<class 'ValueError'>
-        "pandas.io.pytables.Table",
-    # "NumpydocError-<class 'numpydoc.docscrape.ParseError'>
-        "pandas.core.arraylike.array_ufunc",
-        "pandas.io.formats.info.BaseInfo.render",
-        "pandas.core.generic.NDFrame.set_axis",
-        "pandas.core.generic.NDFrame.replace",
-        "pandas.core.generic.NDFrame.isna",
-        "pandas.core.generic.NDFrame.isnull",
-        "pandas.core.generic.NDFrame.notna",
-        "pandas.core.generic.NDFrame.notnull",
-    # "ParseDesc-<class 'IndexError'>
-        "pandas._libs.algos.is_monotonic",
-        "pandas._libs.interval.intervals_to_interval_bounds",
-        "pandas.core.algorithms.duplicated",
-        "pandas._libs.tslibs.offsets.shift_month",
-        "pandas.core.dtypes.cast.astype_array_safe",
-        "pandas.core.window.expanding.Expanding.apply",
-        "pandas.core.window.expanding.Expanding.apply",
-        "pandas.core.window.expanding.Expanding.sum",
-        "pandas.core.window.expanding.Expanding.max",
-        "pandas.core.window.expanding.Expanding.min",
-        "pandas.core.window.expanding.Expanding.mean",
-        "pandas.core.window.expanding.Expanding.median",
-        "pandas.core.window.ewm.ExponentialMovingWindow.mean",
-        "pandas.core.window.rolling.Rolling.apply",
-        "pandas.core.window.rolling.Rolling.apply",
-        "pandas.core.window.rolling.Rolling.sum",
-        "pandas.core.window.rolling.Rolling.max",
-        "pandas.core.window.rolling.Rolling.min",
-        "pandas.core.window.rolling.Rolling.mean",
-        "pandas.core.window.rolling.Rolling.median",
-        "pandas.core.groupby.generic.DataFrameGroupBy.aggregate",
-        "pandas.core.groupby.generic.DataFrameGroupBy.transform",
-        "pandas.core.groupby.generic.SeriesGroupBy.aggregate",
-        "pandas.core.groupby.generic.SeriesGroupBy.transform",
-        "pandas.core.groupby.grouper.Grouping",
-        "pandas.core.internals.blocks.Block.astype",
-        "pandas.core.internals.blocks.Block.where",
-        "pandas.io.parsers.base_parser._get_na_values",
-        "pandas.core.reshape.melt.lreshape",
-    # "VisitTargetNotImplementedError
-        "pandas.plotting._core.PlotAccessor.kde",
-        "pandas.io.gbq.read_gbq",
-        "pandas.core.frame.DataFrame.to_gbq",
-        "pandas.core.indexes.base.Index.drop_duplicates",
-        "pandas.plotting._core.hist_frame",
-    # "ExecError-<class 'ValueError'>": [
-        "pandas._testing._io.network",
-    # "np.bool_" is seen as a reference
-        "pandas._libs.lib.is_bool_list",
-    # Imbalanced backticks
-    "pandas.core.common.pipe"
 ]
 [pandas.expected_errors]
 ValueError = [
- "pandas.io.gbq:read_gbq",                                                                                                                            gen.py:2041
+ "pandas.io.gbq:read_gbq",
  "pandas.io.pickle:to_pickle",
  "pandas.core.frame:DataFrame.to_gbq",
  "pandas.core.generic:NDFrame.to_pickle",

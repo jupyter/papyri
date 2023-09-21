@@ -124,7 +124,7 @@ class ErrorCollector:
                     del self._expected_unseen[self._qa]
             else:
                 self._errors.setdefault(ename, []).append(self._qa)
-                self.log.exception(f"Unexpected error (ctxmgr, {self._qa})")
+                self.log.exception(f"Unexpected error {self._qa}")
             if not self.config.early_error:
                 return True
         expecting = self._expected_unseen.get(self._qa, [])
@@ -1806,11 +1806,13 @@ class Gen:
             Can be any kind of object
         """
         item_docstring: str = target_item.__doc__
+        if item_docstring is not None:
+            item_docstring = dedent_but_first(item_docstring)
         builtin_function_or_method = type(sum)
 
         if isinstance(target_item, ModuleType):
             api_object = APIObjectInfo(
-                "module", target_item.__doc__, None, target_item.__name__, qa
+                "module", item_docstring, None, target_item.__name__, qa
             )
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
             sig: Optional[str]
@@ -1822,17 +1824,17 @@ class Gen:
                 sig = None
             try:
                 api_object = APIObjectInfo(
-                    "function", target_item.__doc__, sig, target_item.__name__, qa
+                    "function", item_docstring, sig, target_item.__name__, qa
                 )
             except Exception as e:
                 raise type(e)(f"For object {qa!r}")
         elif isinstance(target_item, type):
             api_object = APIObjectInfo(
-                "class", target_item.__doc__, None, target_item.__name__, qa
+                "class", item_docstring, None, target_item.__name__, qa
             )
         else:
             api_object = APIObjectInfo(
-                "other", target_item.__doc__, None, target_item.__name__, qa
+                "other", item_docstring, None, target_item.__name__, qa
             )
             # print_("Other", target_item)
             # assert False, type(target_item)
@@ -1843,7 +1845,7 @@ class Gen:
         elif item_docstring is None and isinstance(target_item, ModuleType):
             item_docstring = """This module has no documentation"""
         try:
-            sections = ts.parse(dedent_but_first(item_docstring).encode(), qa)
+            sections = ts.parse(item_docstring.encode(), qa)
         except (AssertionError, NotImplementedError) as e:
             self.log.error("TS could not parse %s, %s", repr(qa), e)
             raise type(e)(f"from {qa}") from e
