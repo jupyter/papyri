@@ -3,7 +3,7 @@ import inspect
 from dataclasses import dataclass
 from typing import Optional, List
 from .common_ast import Node
-
+import json
 
 @dataclass
 class ParameterNode(Node):
@@ -58,10 +58,17 @@ class Signature:
 
         parameters = []
         for param in self.parameters.values():
+            if param.annotation is inspect._empty:
+                annotation = None
+            elif isinstance(param.annotation, str):
+                annotation = param.annotation
+            else:
+                # TODO: Keep the original annotation object somewhere
+                annotation = inspect.formatannotation(param.annotation)
             parameters.append(
                 ParameterNode(
                     param.name,
-                    None if param.annotation is inspect._empty else param.annotation,
+                    annotation,
                     param.kind.name,
                     None if param.default else str(param.default),
                 )
@@ -91,6 +98,11 @@ class Signature:
     @property
     def annotations(self):
         return self.target_item.__annotations__
+
+    @property
+    def return_annotation(self) -> Optional[str]:
+        return_annotation = self._sig.return_annotation
+        return None if return_annotation is inspect._empty else inspect.formatannotation(return_annotation)
 
     @property
     def is_public(self) -> bool:
@@ -123,6 +135,27 @@ class Signature:
             )
         else:
             return None
+
+    def to_dict(self) -> dict:
+        """
+        Output self as JSON (Python dict), using the same format as Griffe
+        """
+        json_data =  self.to_node().to_dict()
+
+        # Use human-readable names for parameter kinds
+        for param in json_data['parameters']:
+            param['kind'] = getattr(inspect._ParameterKind, param['kind']).description
+
+
+        json_data["returns"] = self.return_annotation
+
+        return json_data
+
+    def to_json(self) -> bytes:
+        """
+        Output self as JSON, using the same format as Griffe
+        """
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True).encode()
 
     def __str__(self):
         return str(self._sig)
