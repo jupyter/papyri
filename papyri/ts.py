@@ -188,6 +188,7 @@ class TSVisitor:
     def __init__(self, bytes, root, qa):
         self.bytes = bytes
         self.root = root
+        assert qa is not None
         self.qa = qa
         self.depth = 0
         self._section_levels = {}
@@ -346,7 +347,14 @@ class TSVisitor:
         inner_value = text_value[1:-1]
 
         if "`" in inner_value:
-            log.info("issue with inner ` : %r", inner_value)
+            log.info(
+                "Improper backtick found in interpreted text. "
+                "This is usually due to a missing/stray backtick, or "
+                "missing escape (`\\`) on trailing charter : %r in (%s)",
+                inner_value,
+                self.qa,
+            )
+            log.warning("replacing ` by ' to not crash serialiser")
             inner_value = inner_value.replace("`", "'")
 
         t = Directive(
