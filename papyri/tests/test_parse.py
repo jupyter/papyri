@@ -20,12 +20,18 @@ def test_parse_space_in_directive_section():
 
     """
     )
-    pytest.raises(errors.SpaceAfterBlockDirectiveError, parse, data.encode())
+    pytest.raises(
+        errors.SpaceAfterBlockDirectiveError,
+        parse,
+        data.encode(),
+        "test_parse_space_in_directive_section",
+    )
 
 
 def test_parse_space():
     [section] = parse(
-        "Element-wise maximum of two arrays, propagating any NaNs.".encode()
+        "Element-wise maximum of two arrays, propagating any NaNs.".encode(),
+        "test_parse_space",
     )
     assert (
         section.children[0].children[0].value
@@ -34,7 +40,9 @@ def test_parse_space():
 
 
 def test_parse_reference():
-    [section] = parse("This is a `reference <to this>`_".encode())
+    [section] = parse(
+        "This is a `reference <to this>`_".encode(), "test_parse_reference"
+    )
     [paragraph] = section.children
     [text, reference] = paragraph.children
     assert reference.value == "reference <to this>"
