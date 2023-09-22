@@ -95,3 +95,16 @@ def test_numpy(module, submodules, objects):
 
         for o in objects:
             assert (td / "module" / f"{o}.json").exists()
+
+
+def test_self():
+    from papyri.gen import Gen, Config
+
+    c = Config(dry_run=True, dummy_progress=True)
+    g = Gen(False, config=c)
+    g.collect_package_metadata("papyri", ".", {})
+    g.collect_api_docs("papyri", {"papyri.examples:example1"})
+    assert g.data["papyri.examples:example1"].to_dict()["textsignature"] == {
+        "type": "TextSignature",
+        "value": "(pos, only, /, var, args, *, kwargs, also=None)",
+    }

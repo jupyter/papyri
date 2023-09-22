@@ -69,7 +69,7 @@ from .take2 import (
     RefInfo,
     Section,
     SeeAlsoItem,
-    Signature,
+    TextSignature,
     parse_rst_section,
 )
 from .toc import make_tree
@@ -536,7 +536,7 @@ def gen_main(
     g = Gen(dummy_progress=dummy_progress, config=config)
     g.log.info("Will write data to %s", target_dir)
     if debug:
-        g.log.setLevel("DEBUG")
+        g.log.setLevel(logging.DEBUG)
         g.log.debug("Log level set to debug")
 
     g.collect_package_metadata(
@@ -730,6 +730,20 @@ class DocBlob(Node):
     as well as link to external references, like images generated.
     """
 
+    __slots__ = (
+        "content",
+        "example_section_data",
+        "ordered_sections",
+        "item_file",
+        "item_line",
+        "item_type",
+        "aliases",
+        "see_also",
+        "textsignature",
+        "references",
+        "arbitrary",
+    )
+
     @classmethod
     def _deserialise(cls, **kwargs):
         # print_("will deserialise", cls)
@@ -769,7 +783,7 @@ class DocBlob(Node):
     item_type: Optional[str]
     aliases: List[str]
     see_also: List[SeeAlsoItem]  # see also data
-    signature: Signature
+    textsignature: TextSignature
     references: Optional[List[str]]
     arbitrary: List[Section]
 
@@ -784,7 +798,7 @@ class DocBlob(Node):
             "item_file",
             "item_line",
             "item_type",
-            "signature",
+            "textsignature",
             "references",
             "aliases",
             "arbitrary",
@@ -792,30 +806,9 @@ class DocBlob(Node):
 
     @classmethod
     def new(cls):
-        return cls({}, None, None, None, None, None, [], [], Signature(None), None, [])
-
-    # def __init__(
-    #    self,
-    #    content,
-    #    example_section_data,
-    #    ordered_sections,
-    #    item_file,
-    #    item_line,
-    #    item_type,
-    #    aliases,
-    #    see_also,
-    #    signature,
-    #    references,
-    #    arbitrary,
-    # ):
-    #    self.content = content
-    #    self.example_section_data = example_section_data
-    #    self.ordered_sections = ordered_sections
-    #    self.item_file = item_file
-    #    self.item_line = item_line
-    #    self.item_type = item_type
-    #    self.aliases = aliases
-    #    self.signature = signature
+        return cls(
+            {}, None, None, None, None, None, [], [], TextSignature(None), None, []
+        )
 
 
 def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str, qa):
@@ -868,14 +861,25 @@ class APIObjectInfo:
 
     kind: str
     docstring: str
-    signature: Optional[Signature]
+    signature: Optional[ObjectSignature]
     name: str
 
-    def __init__(self, kind, docstring, signature, name, qa):
+    def __repr__(self):
+        return f"<APIObject {self.kind=} {self.docstring=} self.signature={str(self.signature)} {self.name=}>"
+
+    def __init__(
+        self,
+        kind: str,
+        docstring: str,
+        signature: Optional[ObjectSignature],
+        name: str,
+        qa: str,
+    ):
+        assert isinstance(signature, (ObjectSignature, type(None)))
         self.kind = kind
         self.name = name
         self.docstring = docstring
-        self.parsed = []
+        self.parsed: List[Any] = []
         self.signature = signature
         self._qa = qa
 
@@ -1347,7 +1351,7 @@ class Gen:
                 blob.aliases = []
                 blob.example_section_data = Section([], None)
                 blob.see_also = []
-                blob.signature = Signature(None)
+                blob.textsignature = TextSignature(None)
                 blob.references = None
                 blob.validate()
                 titles = [s.title for s in blob.arbitrary if s.title]
@@ -1533,13 +1537,14 @@ class Gen:
 
         item_type = str(type(target_item))
         if blob.content["Signature"]:
-            blob.signature = Signature(blob.content.pop("Signature"))
+            blob.textsignature = TextSignature(blob.content.pop("Signature"))
         else:
             assert blob is not None
             assert api_object is not None
 
-            blob.signature = Signature(api_object.signature)
+            blob.textsignature = TextSignature(str(api_object.signature))
             del blob.content["Signature"]
+        self.log.debug("%r", blob.textsignature)
 
         if api_object.special("Examples"):
             # warnings this is true only for non-modules
@@ -1814,11 +1819,9 @@ class Gen:
                 "module", item_docstring, None, target_item.__name__, qa
             )
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
-            sig: Optional[str]
+            sig: Optional[ObjectSignature]
             try:
-                sig = str(ObjectSignature(target_item))
-                # sig = qa.split(":")[-1] + sig
-                # sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
+                sig = ObjectSignature(target_item)
             except (ValueError, TypeError):
                 sig = None
             try:
@@ -1957,6 +1960,7 @@ class Gen:
                     qa=qa,
                     target_item=target_item,
                 )
+            self.log.debug("%r", api_object)
             if ecollector.errored:
                 if ecollector._errors.keys():
                     self.log.warning(
@@ -2086,6 +2090,8 @@ class Gen:
                 doc_blob.validate()
             except Exception as e:
                 raise type(e)(f"Error in {qa}")
+            self.log.debug(doc_blob.textsignature)
+            self.log.debug(doc_blob.to_dict())
             self.put(qa, doc_blob)
             if figs:
                 self.log.debug("Found %s figures", len(figs))

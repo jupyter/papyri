@@ -236,7 +236,7 @@ class RefInfo(Node):
 
 
 @register(4011)
-class Signature(Node):
+class TextSignature(Node):
     value: Optional[str]
 
 

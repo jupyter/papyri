@@ -578,6 +578,7 @@ class HtmlRenderer:
                 qa=qa,
                 version=meta["version"],
                 module=qa.split(".")[0],
+                name=qa.split(":")[-1].split(".")[-1],
                 backrefs=backrefs,
                 parts=parts,
                 parts_links=parts_links,

@@ -22,7 +22,7 @@ from .take2 import (
     Fig,
     Section,
     SeeAlsoItem,
-    Signature,
+    TextSignature,
     encoder,
     TocTree,
 )
@@ -72,7 +72,7 @@ class IngestedBlobs(Node):
         "aliases",
         "example_section_data",
         "see_also",
-        "signature",
+        "textsignature",
         "references",
         "logo",
         "qa",
@@ -87,7 +87,7 @@ class IngestedBlobs(Node):
     aliases: List[str]
     example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
-    signature: Signature
+    textsignature: TextSignature
     references: Optional[List[str]]
     qa: str
     arbitrary: List[Section]
