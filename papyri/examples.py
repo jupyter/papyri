@@ -40,7 +40,7 @@ term 2
 """
 
 
-def example1():
+def example1(pos, only, /, var, args, *, kwargs, also=None):
     """
     first example.
 

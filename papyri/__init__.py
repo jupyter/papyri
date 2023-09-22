@@ -510,6 +510,14 @@ def render(
 
 
 @app.command()
+def drop():
+    _intro()
+    from . import crosslink as cr
+
+    cr.drop()
+
+
+@app.command()
 def ascii(name: str):
     _intro()
     import trio

@@ -1046,8 +1046,7 @@ class Gen:
         self.log = logging.getLogger("papyri")
         self.log.setLevel("INFO")
         formatter = logging.Formatter(FORMAT, datefmt="[%X]")
-        rich_handler = RichHandler(rich_tracebacks=True)
-        rich_handler.setLevel(logging.INFO)
+        rich_handler = RichHandler(rich_tracebacks=False)
         rich_handler.setFormatter(formatter)
         self.log.addHandler(rich_handler)
 
@@ -1951,8 +1950,7 @@ class Gen:
         failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
 
         for qa, target_item in collected.items():
-            # p2.update(taskp, description=qa)
-            # p2.advance(taskp)
+            self.log.debug("treating %r", qa)
 
             with error_collector(qa=qa) as ecollector:
                 item_docstring, arbitrary, api_object = self.helper_1(
