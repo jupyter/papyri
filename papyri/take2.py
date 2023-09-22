@@ -611,6 +611,6 @@ if __name__ == "__main__":
         what = "numpy"
     ex = get_object(what).__doc__
     ex = dedent_but_first(ex)
-    doc = parse_rst_section(ex)
+    doc = parse_rst_section(ex, "test")
     for b in doc:
         print(b)
