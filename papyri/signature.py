@@ -15,15 +15,17 @@ class Empty(Node):
 
 _empty = Empty()
 
+NoneType = type(None)
+
 
 @register(4030)
 @dataclass
 class ParameterNode(Node):
     name: str
     # we likely want to make sure annotation is a structured object in the long run
-    annotation: Union[str, None, Empty]
+    annotation: Union[str, NoneType, Empty]
     kind: str
-    default: Union[str, None, Empty]
+    default: Union[str, NoneType, Empty]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
