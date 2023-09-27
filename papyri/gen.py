@@ -70,7 +70,6 @@ from .take2 import (
     RefInfo,
     Section,
     SeeAlsoItem,
-    TextSignature,
     parse_rst_section,
 )
 from .toc import make_tree
