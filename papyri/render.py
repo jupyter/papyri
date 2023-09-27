@@ -663,7 +663,7 @@ class HtmlRenderer:
     async def _route(
         self,
         ref: str,
-        version: str = None,
+        version: Optional[str] = None,
     ):
         assert not ref.endswith(".html")
         assert version is not None
