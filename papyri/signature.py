@@ -98,9 +98,9 @@ class Signature:
             parameters.append(
                 ParameterNode(
                     name=param.name,
-                    annotation=_empty if param.annotation is inspect._empty else param.annotation,
+                    annotation=_empty if param.annotation is inspect._empty else str(param.annotation),
                     kind=param.kind.name,
-                    default=_empty if param.default is inspect._empty else param.default,
+                    default=_empty if param.default is inspect._empty else str(param.default),
                 )
             )
         assert isinstance(kind, str)

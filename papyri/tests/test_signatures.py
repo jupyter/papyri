@@ -18,41 +18,61 @@ def add(func):
 
 @add
 def function_1(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
-    """
-    {
+    """{
       "kind": "function",
       "parameters": [
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "POSITIONAL_ONLY",
           "name": "posonly",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "POSITIONAL_OR_KEYWORD",
           "name": "pos_or_k",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "data": "1",
+            "type": "str"
+          },
           "kind": "POSITIONAL_OR_KEYWORD",
           "name": "pos_ok_k_d",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "VAR_POSITIONAL",
           "name": "varargs",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "VAR_KEYWORD",
           "name": "varkwargs",
           "type": "ParameterNode"
@@ -64,41 +84,62 @@ def function_1(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
 
 
 @add
-def async_function_1(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
+def async_function_2(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
     """{
       "kind": "function",
       "parameters": [
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "POSITIONAL_ONLY",
           "name": "posonly",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "POSITIONAL_OR_KEYWORD",
           "name": "pos_or_k",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "data": "1",
+            "type": "str"
+          },
           "kind": "POSITIONAL_OR_KEYWORD",
           "name": "pos_ok_k_d",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "VAR_POSITIONAL",
           "name": "varargs",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "VAR_KEYWORD",
           "name": "varkwargs",
           "type": "ParameterNode"
@@ -110,41 +151,62 @@ def async_function_1(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
 
 
 @add
-def generator_function_1(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
+def generator_function_3(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
     """{
       "kind": "function",
       "parameters": [
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "POSITIONAL_ONLY",
           "name": "posonly",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "POSITIONAL_OR_KEYWORD",
           "name": "pos_or_k",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "data": "1",
+            "type": "str"
+          },
           "kind": "POSITIONAL_OR_KEYWORD",
           "name": "pos_ok_k_d",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "VAR_POSITIONAL",
           "name": "varargs",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "VAR_KEYWORD",
           "name": "varkwargs",
           "type": "ParameterNode"
@@ -156,43 +218,64 @@ def generator_function_1(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwar
 
 
 @add
-async def async_generator_function_1(
+async def async_generator_function_4(
     posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs
 ):
     """{
       "kind": "function",
       "parameters": [
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "POSITIONAL_ONLY",
           "name": "posonly",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "POSITIONAL_OR_KEYWORD",
           "name": "pos_or_k",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "data": "1",
+            "type": "str"
+          },
           "kind": "POSITIONAL_OR_KEYWORD",
           "name": "pos_ok_k_d",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "VAR_POSITIONAL",
           "name": "varargs",
           "type": "ParameterNode"
         },
         {
-          "annotation": null,
-          "default": null,
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
           "kind": "VAR_KEYWORD",
           "name": "varkwargs",
           "type": "ParameterNode"
@@ -211,6 +294,8 @@ def test_f1(func):
     so = SignatureObject(func)
     node = so.to_node()
     bytes_ = node.to_json()
-    assert json.loads(bytes_) == json.loads(func.__doc__)
+    assert json.dumps(json.loads(bytes_), indent=2) == json.dumps(
+        json.loads(func.__doc__), indent=2
+    )
     node_back = SignatureNode.from_json(bytes_)
     assert node_back == node

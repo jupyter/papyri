@@ -105,51 +105,51 @@ def test_self():
     g.collect_package_metadata("papyri", ".", {})
     g.collect_api_docs("papyri", {"papyri.examples:example1", "papyri"})
     assert g.data["papyri.examples:example1"].to_dict()["signature"] == {
+        "type": "SignatureNode",
         "kind": "function",
         "parameters": [
             {
-                "annotation": None,
-                "default": None,
-                "kind": "POSITIONAL_ONLY",
+                "type": "ParameterNode",
                 "name": "pos",
-                "type": "ParameterNode",
-            },
-            {
-                "annotation": None,
-                "default": None,
+                "annotation": {"type": "Empty"},
                 "kind": "POSITIONAL_ONLY",
+                "default": {"type": "Empty"},
+            },
+            {
+                "type": "ParameterNode",
                 "name": "only",
-                "type": "ParameterNode",
+                "annotation": {"type": "Empty"},
+                "kind": "POSITIONAL_ONLY",
+                "default": {"type": "Empty"},
             },
             {
-                "annotation": None,
-                "default": None,
-                "kind": "POSITIONAL_OR_KEYWORD",
+                "type": "ParameterNode",
                 "name": "var",
-                "type": "ParameterNode",
-            },
-            {
-                "annotation": None,
-                "default": None,
+                "annotation": {"type": "Empty"},
                 "kind": "POSITIONAL_OR_KEYWORD",
+                "default": {"type": "Empty"},
+            },
+            {
+                "type": "ParameterNode",
                 "name": "args",
-                "type": "ParameterNode",
+                "annotation": {"type": "Empty"},
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "default": {"type": "Empty"},
             },
             {
-                "annotation": None,
-                "default": None,
-                "kind": "KEYWORD_ONLY",
+                "type": "ParameterNode",
                 "name": "kwargs",
-                "type": "ParameterNode",
+                "annotation": {"type": "Empty"},
+                "kind": "KEYWORD_ONLY",
+                "default": {"type": "Empty"},
             },
             {
-                "annotation": None,
-                "default": "None",
-                "kind": "KEYWORD_ONLY",
-                "name": "also",
                 "type": "ParameterNode",
+                "name": "also",
+                "annotation": {"type": "Empty"},
+                "kind": "KEYWORD_ONLY",
+                "default": {"data": "None", "type": "str"},
             },
         ],
-        "type": "SignatureNode",
     }
     assert g.data["papyri"].to_dict()["signature"] == None
