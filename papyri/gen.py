@@ -53,9 +53,10 @@ from .errors import (
     IncorrectInternalDocsLen,
     NumpydocParseError,
     UnseenError,
+    TextSignatureParsingFailed,
 )
 from .miscs import BlockExecutor, DummyP
-from .signature import Signature as ObjectSignature
+from .signature import Signature as ObjectSignature, SignatureNode
 from .take2 import (
     Code,
     Fig,
@@ -739,7 +740,7 @@ class DocBlob(Node):
         "item_type",
         "aliases",
         "see_also",
-        "textsignature",
+        "signature",
         "references",
         "arbitrary",
     )
@@ -783,8 +784,8 @@ class DocBlob(Node):
     item_type: Optional[str]
     aliases: List[str]
     see_also: List[SeeAlsoItem]  # see also data
-    textsignature: TextSignature
-    references: Optional[List[str]]
+    signature: Optional[SignatureNode]
+    references: Optional[Section]
     arbitrary: List[Section]
 
     def __repr__(self):
@@ -798,7 +799,7 @@ class DocBlob(Node):
             "item_file",
             "item_line",
             "item_type",
-            "textsignature",
+            "signature",
             "references",
             "aliases",
             "arbitrary",
@@ -806,9 +807,7 @@ class DocBlob(Node):
 
     @classmethod
     def new(cls):
-        return cls(
-            {}, None, None, None, None, None, [], [], TextSignature(None), None, []
-        )
+        return cls({}, None, None, None, None, None, [], [], None, None, [])
 
 
 def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str, qa):
@@ -937,7 +936,7 @@ class APIObjectInfo:
             p.validate()
 
 
-def _normalize_see_also(see_also: List[Any], qa):
+def _normalize_see_also(see_also: Section, qa: str):
     """
     numpydoc is complex, the See Also fields can be quite complicated,
     so here we sort of try to normalise them.
@@ -1351,7 +1350,7 @@ class Gen:
                 blob.aliases = []
                 blob.example_section_data = Section([], None)
                 blob.see_also = []
-                blob.textsignature = TextSignature(None)
+                blob.signature = None
                 blob.references = None
                 blob.validate()
                 titles = [s.title for s in blob.arbitrary if s.title]
@@ -1423,11 +1422,13 @@ class Gen:
         """
         self.bdata[path] = data
 
-    def _transform_1(self, blob, ndoc):
+    def _transform_1(self, blob: DocBlob, ndoc) -> DocBlob:
         blob.content = {k: v for k, v in ndoc._parsed_data.items()}
+        for k, v in blob.content.items():
+            assert isinstance(v, (str, list, dict)), type(v)
         return blob
 
-    def _transform_2(self, blob, target_item, qa):
+    def _transform_2(self, blob: DocBlob, target_item, qa: str) -> DocBlob:
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
         item_file = find_file(target_item)
@@ -1496,7 +1497,7 @@ class Gen:
         qa: str,
         config: Config,
         aliases: List[str],
-        api_object,
+        api_object: APIObjectInfo,
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one python object
@@ -1529,7 +1530,7 @@ class Gen:
         collect_api_docs
         """
         assert isinstance(aliases, list)
-        blob = DocBlob.new()
+        blob: DocBlob = DocBlob.new()
 
         blob = self._transform_1(blob, ndoc)
         blob = self._transform_2(blob, target_item, qa)
@@ -1537,16 +1538,25 @@ class Gen:
 
         item_type = str(type(target_item))
         if blob.content["Signature"]:
-            blob.textsignature = TextSignature(blob.content.pop("Signature"))
+            try:
+                # the type ignore below is wrong and need to be refactored.
+                # we basically modify blob.content in place, but should not.
+                sig = ObjectSignature.from_str(blob.content.pop("Signature"))  # type: ignore
+                if sig is not None:
+                    blob.signature = sig.to_node()
+            except TextSignatureParsingFailed:
+                # this really fails often when the first line is not Signature.
+                # or when numpy has the def f(,...[a,b,c]) optional parameter.
+                pass
         else:
             assert blob is not None
             assert api_object is not None
             if api_object.signature is None:
-                blob.textsignature = TextSignature(None)
+                blob.signature = None
             else:
-                blob.textsignature = TextSignature(str(api_object.signature))
+                blob.signature = api_object.signature.to_node()
             del blob.content["Signature"]
-        self.log.debug("%r", blob.textsignature)
+        self.log.debug("SIG %r", blob.signature)
 
         if api_object.special("Examples"):
             # warnings this is true only for non-modules
@@ -1658,7 +1668,7 @@ class Gen:
             else:
                 blob.content[s] = Section([], None)
 
-        blob.see_also = _normalize_see_also(blob.content.get("See Also", None), qa)
+        blob.see_also = _normalize_see_also(blob.content.get("See Also", Section()), qa)
         del blob.content["See Also"]
         return blob, figs
 
@@ -1962,7 +1972,7 @@ class Gen:
                     qa=qa,
                     target_item=target_item,
                 )
-            self.log.debug("%r", api_object)
+            self.log.debug("APIOBJECT %r", api_object)
             if ecollector.errored:
                 if ecollector._errors.keys():
                     self.log.warning(
@@ -2092,7 +2102,7 @@ class Gen:
                 doc_blob.validate()
             except Exception as e:
                 raise type(e)(f"Error in {qa}")
-            self.log.debug(doc_blob.textsignature)
+            self.log.debug(doc_blob.signature)
             self.log.debug(doc_blob.to_dict())
             self.put(qa, doc_blob)
             if figs:

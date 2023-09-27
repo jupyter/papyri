@@ -30,13 +30,13 @@
 
 
 
-{% if doc.textsignature.value -%}
-    <code class='signature'>{{name}}{{doc.textsignature.value}}</code>
+{% if doc.signature -%}
+    <code class='signature'>{{name}}{{doc.signature}}</code>
 {%- endif -%}
 
 {%- for section in doc.content.keys() if doc.content[section] -%}
 
-    {% if (section not in ['Extended Summary','TextSignature', 'Summary']) and len(doc.content[section]) > 0 -%}
+    {% if (section not in ['Extended Summary','Signature', 'Summary']) and len(doc.content[section]) > 0 -%}
         <h3 id="section-{{section}}">{{section}}</h3>
     {% endif -%}
     {% if section in ['Extended Summary', 'Summary',  'Notes'] -%}

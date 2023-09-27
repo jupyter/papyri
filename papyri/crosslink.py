@@ -16,13 +16,13 @@ from there import print as print_
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
+from .signature import SignatureNode
 from .take2 import (
     Param,
     RefInfo,
     Fig,
     Section,
     SeeAlsoItem,
-    TextSignature,
     encoder,
     TocTree,
 )
@@ -72,7 +72,7 @@ class IngestedBlobs(Node):
         "aliases",
         "example_section_data",
         "see_also",
-        "textsignature",
+        "signature",
         "references",
         "logo",
         "qa",
@@ -87,7 +87,7 @@ class IngestedBlobs(Node):
     aliases: List[str]
     example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
-    textsignature: TextSignature
+    signature: Optional[SignatureNode]
     references: Optional[List[str]]
     qa: str
     arbitrary: List[Section]

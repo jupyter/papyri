@@ -104,11 +104,52 @@ def test_self():
     g = Gen(False, config=c)
     g.collect_package_metadata("papyri", ".", {})
     g.collect_api_docs("papyri", {"papyri.examples:example1", "papyri"})
-    assert g.data["papyri.examples:example1"].to_dict()["textsignature"] == {
-        "type": "TextSignature",
-        "value": "(pos, only, /, var, args, *, kwargs, also=None)",
+    assert g.data["papyri.examples:example1"].to_dict()["signature"] == {
+        "kind": "function",
+        "parameters": [
+            {
+                "annotation": None,
+                "default": None,
+                "kind": "POSITIONAL_ONLY",
+                "name": "pos",
+                "type": "ParameterNode",
+            },
+            {
+                "annotation": None,
+                "default": None,
+                "kind": "POSITIONAL_ONLY",
+                "name": "only",
+                "type": "ParameterNode",
+            },
+            {
+                "annotation": None,
+                "default": None,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "var",
+                "type": "ParameterNode",
+            },
+            {
+                "annotation": None,
+                "default": None,
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "name": "args",
+                "type": "ParameterNode",
+            },
+            {
+                "annotation": None,
+                "default": None,
+                "kind": "KEYWORD_ONLY",
+                "name": "kwargs",
+                "type": "ParameterNode",
+            },
+            {
+                "annotation": None,
+                "default": "None",
+                "kind": "KEYWORD_ONLY",
+                "name": "also",
+                "type": "ParameterNode",
+            },
+        ],
+        "type": "SignatureNode",
     }
-    assert g.data["papyri"].to_dict()["textsignature"] == {
-        "type": "TextSignature",
-        "value": None,
-    }
+    assert g.data["papyri"].to_dict()["signature"] == None
