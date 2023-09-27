@@ -575,7 +575,6 @@ class HtmlRenderer:
                 current_type=current_type,
                 doc=doc,
                 logo=meta.get("logo", None),
-                qa=qa,
                 version=meta["version"],
                 module=qa.split(".")[0],
                 name=qa.split(":")[-1].split(".")[-1],
@@ -655,8 +654,8 @@ class HtmlRenderer:
 
     async def _route(
         self,
-        ref,
-        version=None,
+        ref: str,
+        version: str = None,
     ):
         assert not ref.endswith(".html")
         assert version is not None
@@ -783,11 +782,12 @@ class HtmlRenderer:
     async def copy_static(self, output_dir):
         here = Path(os.path.dirname(__file__))
         _static = here / "static"
-        output_dir.mkdir(exist_ok=True)
-        static = output_dir.parent / "static"
-        static.mkdir(exist_ok=True)
-        await self._copy_dir(_static, static)
-        (static / "pygments.css").write_bytes(await pygment_css().get_data())
+        if output_dir is not None:
+            output_dir.mkdir(exist_ok=True)
+            static = output_dir.parent / "static"
+            static.mkdir(exist_ok=True)
+            await self._copy_dir(_static, static)
+            (static / "pygments.css").write_bytes(await pygment_css().get_data())
 
     async def copy_assets(self, config):
         """
@@ -1186,7 +1186,7 @@ def old_render_one(
             current_type=current_type,
             doc=doc,
             logo=meta.get("logo", None),
-            qa=qa,
+            name=qa.split(":")[-1].split(".")[-1],
             version=meta["version"],
             module=qa.split(".")[0],
             backrefs=backrefs,
