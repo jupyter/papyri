@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shutil
+
 import json
 import logging
 import warnings
@@ -493,6 +495,12 @@ class Ingester:
                 encoder.encode(s_code),
                 refs,
             )
+
+
+def drop():
+    """remove all ingested files and db"""
+    print("removing all files...")
+    shutil.rmtree(ingest_dir)
 
 
 def main(path, check, *, dummy_progress):
