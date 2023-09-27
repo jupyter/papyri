@@ -23,16 +23,16 @@ jobs:
       matrix:
         include:
           - lib: 'astropy'
-            python-version: "3.10"
+            python-version: "3.11"
           - lib: 'papyri'
-            python-version: "3.10"
+            python-version: "3.11"
           - lib: 'IPython'
-            python-version: "3.10"
+            python-version: "3.11"
           - lib: 'numpy'
-            python-version: "3.10"
+            python-version: "3.11"
             flags: '--no-narrative --no-exec'
           - lib: 'scipy'
-            python-version: "3.10"
+            python-version: "3.11"
             flags: '--no-narrative --no-exec'
 
     steps:
@@ -86,7 +86,7 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: "3.11"
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
