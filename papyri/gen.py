@@ -897,9 +897,14 @@ class APIObjectInfo:
                     assert isinstance(section, Section)
                     self.parsed.append(section)
                 elif title in _numpydoc_sections_with_text:
-                    docs = ts.parse("\n".join(ndoc[title]).encode(), qa)
+                    predoc = "\n".join(ndoc[title])
+                    docs = ts.parse(predoc.encode(), qa)
                     if len(docs) != 1:
-                        raise IncorrectInternalDocsLen("\n".join(ndoc[title]), docs)
+                        # TODO
+                        # potential reasons
+                        # Summary and Extended Summary should be parsed as one.
+                        # References with ` : ` in them fail parsing.Issue opened in Tree-sitter.
+                        raise IncorrectInternalDocsLen(predoc, docs)
                     section = docs[0]
                     assert isinstance(section, Section), section
                     self.parsed.append(section)
@@ -1971,7 +1976,7 @@ class Gen:
                     qa=qa,
                     target_item=target_item,
                 )
-            self.log.debug("APIOBJECT %r", api_object)
+                self.log.debug("APIOBJECT %r", api_object)
             if ecollector.errored:
                 if ecollector._errors.keys():
                     self.log.warning(
@@ -1980,7 +1985,6 @@ class Gen:
                 else:
                     self.log.info("only expected error with %s", qa)
                 continue
-            assert api_object is not None, ecollector.errored
 
             try:
                 if item_docstring is None:
@@ -2014,7 +2018,6 @@ class Gen:
                 ex = False
 
             # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
-            assert api_object is not None
             with error_collector(qa=qa) as c:
                 doc_blob, figs = self.prepare_doc_for_one_object(
                     target_item,
@@ -2024,6 +2027,7 @@ class Gen:
                     aliases=collector.aliases[qa],
                     api_object=api_object,
                 )
+            del api_object
             if c.errored:
                 continue
             _local_refs: List[str] = []
