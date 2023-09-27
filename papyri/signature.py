@@ -1,11 +1,19 @@
 import inspect
 
 from dataclasses import dataclass
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Dict, Union
 from .common_ast import Node, validate
 from .errors import TextSignatureParsingFailed
 
 from .common_ast import register
+
+
+@register(4031)
+class Empty(Node):
+    pass
+
+
+_empty = Empty()
 
 
 @register(4030)
@@ -13,25 +21,28 @@ from .common_ast import register
 class ParameterNode(Node):
     name: str
     # we likely want to make sure annotation is a structured object in the long run
-    annotation: Optional[str]
+    annotation: Union[str, None, Empty]
     kind: str
-    default: Optional[str]
+    default: Union[str, None, Empty]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def to_parameter(self):
+    def to_parameter(self) -> inspect.Parameter:
         return inspect.Parameter(
             name=self.name,
             kind=getattr(inspect._ParameterKind, self.kind),
-            default=self.default,
-            annotation=self.annotation,
+            default=inspect._empty if isinstance(self.default, Empty) else None,
+            annotation=inspect._empty if isinstance(self.annotation, Empty) else self.annotation,
         )
 
 @register(4029)
 class SignatureNode(Node):
     kind: str  # maybe enum, is it a function, async generator, generator, etc.
     parameters: List[ParameterNode]  # of pairs, we don't use dict because of ordering
+
+    def to_signature(self):
+        return inspect.Signature([p.to_parameter() for p in self.parameters])
 
 
 class Signature:
@@ -86,12 +97,10 @@ class Signature:
         for param in self.parameters.values():
             parameters.append(
                 ParameterNode(
-                    param.name,
-                    None
-                    if param.annotation is inspect._empty
-                    else str(param.annotation),
-                    param.kind.name,
-                    None if param.default else str(param.default),
+                    name=param.name,
+                    annotation=_empty if param.annotation is inspect._empty else param.annotation,
+                    kind=param.kind.name,
+                    default=_empty if param.default is inspect._empty else param.default,
                 )
             )
         assert isinstance(kind, str)
