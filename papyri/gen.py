@@ -1541,8 +1541,10 @@ class Gen:
         else:
             assert blob is not None
             assert api_object is not None
-
-            blob.textsignature = TextSignature(str(api_object.signature))
+            if api_object.signature is None:
+                blob.textsignature = TextSignature(None)
+            else:
+                blob.textsignature = TextSignature(str(api_object.signature))
             del blob.content["Signature"]
         self.log.debug("%r", blob.textsignature)
 

@@ -103,8 +103,12 @@ def test_self():
     c = Config(dry_run=True, dummy_progress=True)
     g = Gen(False, config=c)
     g.collect_package_metadata("papyri", ".", {})
-    g.collect_api_docs("papyri", {"papyri.examples:example1"})
+    g.collect_api_docs("papyri", {"papyri.examples:example1", "papyri"})
     assert g.data["papyri.examples:example1"].to_dict()["textsignature"] == {
         "type": "TextSignature",
         "value": "(pos, only, /, var, args, *, kwargs, also=None)",
+    }
+    assert g.data["papyri"].to_dict()["textsignature"] == {
+        "type": "TextSignature",
+        "value": None,
     }
