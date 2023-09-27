@@ -1137,7 +1137,7 @@ def old_render_one(
     *,
     current_type,
     backrefs,
-    parts=(),
+    parts: Dict[str, List[Tuple[str, str]]],
     parts_links=(),
     graph="{}",
     meta,
@@ -1258,6 +1258,7 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
 
     return old_render_one(
         store,
+        parts={},
         current_type="API",
         meta=meta,
         template=template,
