@@ -11,7 +11,7 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Set, Any, Dict, List, Callable, Tuple
+from typing import Optional, Set, Any, Dict, List, Callable, Tuple, Iterable
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
@@ -42,7 +42,7 @@ log = logging.getLogger("papyri")
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
-def minify(s):
+def minify(s: str) -> str:
     return minify_html.minify(
         s, minify_js=True, remove_processing_instructions=True, keep_closing_tags=True
     )
@@ -63,7 +63,7 @@ class CleanLoader(FileSystemLoader):
         return until_ruler(source), filename, uptodate
 
 
-def until_ruler(doc):
+def until_ruler(doc: str) -> str:
     """
     Utilities to clean jinja template;
 
@@ -98,15 +98,17 @@ def until_ruler(doc):
 # doable after purely as frontend thing.
 
 
-def compute_siblings_II(ref, family: set):
+def compute_siblings_II(
+    ref: str, family: Set[RefInfo]
+) -> Dict[str, List[Tuple[RefInfo, str]]]:
     """ """
-    from collections import defaultdict
+    assert isinstance(ref, str)
 
     module_versions = defaultdict(lambda: set())
     for f in family:
         module_versions[f.module].add(f.version)
 
-    module_versions_max = {k: max(v) for k, v in module_versions.items()}
+    module_versions_max = {k: max(v) for k, v in module_versions.items()}  # type: ignore [type-var]
 
     family = {f for f in family if f.version == module_versions_max[f.module]}
 
@@ -131,9 +133,9 @@ def compute_siblings_II(ref, family: set):
     return siblings
 
 
-def make_tree(names):
-    rd = lambda: defaultdict(rd)
-    tree = defaultdict(rd)
+def make_tree(names: Iterable[str]):
+    rd = lambda: defaultdict(rd)  # type: ignore
+    tree = defaultdict(rd)  # type: ignore
 
     for n in names:
         parts = n.split(".")
@@ -1120,7 +1122,7 @@ def old_render_one(
     store: GraphStore,
     template,
     doc: IngestedBlobs,
-    qa,
+    qa: str,
     *,
     current_type,
     backrefs,
