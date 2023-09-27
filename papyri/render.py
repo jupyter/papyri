@@ -197,6 +197,10 @@ def cs2(ref, tree, ref_map):
     return siblings
 
 
+def _uuid():
+    return uuid.uuid4().hex
+
+
 class HtmlRenderer:
     def __init__(self, store: GraphStore, *, sidebar, prefix, trailing_html):
         assert prefix.startswith("/")
@@ -220,7 +224,7 @@ class HtmlRenderer:
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = extension
-        self.env.globals["uuid"] = lambda: uuid.uuid4().hex
+        self.env.globals["uuid"] = _uuid
 
     def compute_graph(
         self, backrefs: Set[Key], refs: Set[Key], key: Key
@@ -382,7 +386,7 @@ class HtmlRenderer:
             backrefs=[[], []],
             module="*",
             doc=doc,
-            parts={"*": []},
+            parts=list({"*": []}.items()),
             version="*",
             ext="",
             current_type="",
@@ -477,7 +481,8 @@ class HtmlRenderer:
             meta=meta,
             figmap=figmap,
             module=package,
-            parts=parts,
+            parts_mods=parts.get(package, []),
+            parts=list(parts.items()),
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -503,7 +508,8 @@ class HtmlRenderer:
             logo=logo,
             meta=meta,
             module=package,
-            parts={},
+            parts=list({}.items()),
+            parts_mods=[],
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -571,15 +577,17 @@ class HtmlRenderer:
                 doc.content[k] = self.LR.visit(v)
 
             doc.arbitrary = [self.LR.visit(x) for x in doc.arbitrary]
+            module = qa.split(".")[0]
             return template.render(
                 current_type=current_type,
                 doc=doc,
                 logo=meta.get("logo", None),
                 version=meta["version"],
-                module=qa.split(".")[0],
+                module=module,
                 name=qa.split(":")[-1].split(".")[-1],
                 backrefs=backrefs,
-                parts=parts,
+                parts_mods=parts.get(module, []),
+                parts=list(parts.items()),
                 parts_links=parts_links,
                 graph=graph,
                 meta=meta,
@@ -727,6 +735,7 @@ class HtmlRenderer:
         template = self.env.get_template("html.tpl.j2")
         gfiles = list(self.store.glob((None, None, "module", None)))
         random.shuffle(gfiles)
+
         for _, key in progress(gfiles, description="Rendering API..."):
             module, version = key.module, key.version
             if config.ascii:
@@ -871,7 +880,7 @@ class HtmlRenderer:
             meta=meta,
             logo=meta["logo"],
             module=package,
-            parts=parts,
+            parts=list(parts.items()),
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -899,7 +908,8 @@ class HtmlRenderer:
             meta=meta,
             logo=logo,
             module=module,
-            parts=parts,
+            parts_mods=parts.get(module, []),
+            parts=list(parts.items()),
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -1190,7 +1200,7 @@ def old_render_one(
             version=meta["version"],
             module=qa.split(".")[0],
             backrefs=backrefs,
-            parts=parts,
+            parts=list(parts.items()),
             parts_links=parts_links,
             graph=graph,
             meta=meta,
