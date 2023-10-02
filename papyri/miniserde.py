@@ -150,6 +150,7 @@ def serialize(instance, annotation):
 
 _sentinel = object()
 
+
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
 def deserialize(type_, annotation, data):
     # assert type_ is annotation

@@ -177,6 +177,7 @@ import tomli_w
 import typer
 
 from . import examples
+
 __version__ = "0.0.8"
 
 logo = r"""

@@ -1,8 +1,8 @@
 import inspect
 
 from dataclasses import dataclass
-from typing import Optional, List, Any, Dict, Union
-from .common_ast import Node, validate
+from typing import List, Any, Dict, Union
+from .common_ast import Node
 from .errors import TextSignatureParsingFailed
 
 from .common_ast import register
@@ -35,8 +35,11 @@ class ParameterNode(Node):
             name=self.name,
             kind=getattr(inspect._ParameterKind, self.kind),
             default=inspect._empty if isinstance(self.default, Empty) else None,
-            annotation=inspect._empty if isinstance(self.annotation, Empty) else self.annotation,
+            annotation=inspect._empty
+            if isinstance(self.annotation, Empty)
+            else self.annotation,
         )
+
 
 @register(4029)
 class SignatureNode(Node):
@@ -100,9 +103,13 @@ class Signature:
             parameters.append(
                 ParameterNode(
                     name=param.name,
-                    annotation=_empty if param.annotation is inspect._empty else str(param.annotation),
+                    annotation=_empty
+                    if param.annotation is inspect._empty
+                    else str(param.annotation),
                     kind=param.kind.name,
-                    default=_empty if param.default is inspect._empty else str(param.default),
+                    default=_empty
+                    if param.default is inspect._empty
+                    else str(param.default),
                 )
             )
         assert isinstance(kind, str)

@@ -152,4 +152,4 @@ def test_self():
             },
         ],
     }
-    assert g.data["papyri"].to_dict()["signature"] == None
+    assert g.data["papyri"].to_dict()["signature"] is None
