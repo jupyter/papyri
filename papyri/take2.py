@@ -225,6 +225,10 @@ class RefInfo(Node):
     kind: str
     path: str
 
+    def __post_init__(self):
+        if self.module is not None:
+            assert "." not in self.module, self.module
+
     def __iter__(self):
         assert isinstance(self.path, str)
         return iter([self.module, self.version, self.kind, self.path])
