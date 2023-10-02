@@ -4,6 +4,7 @@ of function signature to JSON.
 """
 from papyri.signature import Signature as SignatureObject, SignatureNode
 import json
+from typing import Union, Optional
 
 import pytest
 
@@ -78,6 +79,7 @@ def function_1(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
           "type": "ParameterNode"
         }
       ],
+      "return_annotation": {"type": "Empty"},
       "type": "SignatureNode"
     }"""
     pass
@@ -145,6 +147,7 @@ def async_function_2(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
           "type": "ParameterNode"
         }
       ],
+      "return_annotation": {"type": "Empty"},
       "type": "SignatureNode"
     }"""
     pass
@@ -212,6 +215,7 @@ def generator_function_3(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwar
           "type": "ParameterNode"
         }
       ],
+      "return_annotation": {"type": "Empty"},
       "type": "SignatureNode"
     }"""
     yield
@@ -281,9 +285,52 @@ async def async_generator_function_4(
           "type": "ParameterNode"
         }
       ],
+      "return_annotation": {"type": "Empty"},
       "type": "SignatureNode"
     }"""
     yield
+
+
+@add
+def function_with_annotation5(a: int, b: Union[int, float]) -> Optional[bool]:
+    """
+    {
+      "kind": "function",
+      "parameters": [
+        {
+          "annotation": {
+            "data": "int",
+            "type": "str"
+          },
+          "default": {
+            "type": "Empty"
+          },
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "a",
+          "type": "ParameterNode"
+        },
+        {
+          "annotation": {
+            "data": "Union[int, float]",
+            "type": "str"
+          },
+          "default": {
+            "type": "Empty"
+          },
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "b",
+          "type": "ParameterNode"
+        }
+      ],
+      "return_annotation": {
+          "data": "typing.Optional[bool]",
+          "type": "str"
+      },
+      "type": "SignatureNode"
+    }
+
+    """
+    pass
 
 
 @pytest.mark.parametrize(

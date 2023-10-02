@@ -151,5 +151,6 @@ def test_self():
                 "default": {"data": "None", "type": "str"},
             },
         ],
+        "return_annotation": {"type": "Empty"},
     }
     assert g.data["papyri"].to_dict()["signature"] is None

@@ -46,6 +46,7 @@ class ParameterNode(Node):
 class SignatureNode(Node):
     kind: str  # maybe enum, is it a function, async generator, generator, etc.
     parameters: List[ParameterNode]  # of pairs, we don't use dict because of ordering
+    return_annotation: Union[Empty, str]
 
     def to_signature(self):
         return inspect.Signature([p.to_parameter() for p in self.parameters])
@@ -101,6 +102,7 @@ class Signature:
 
         parameters = []
         for param in self.parameters.values():
+            annotation: Union[Empty, str]
             if param.annotation is inspect._empty:
                 annotation = _empty
             elif isinstance(param.annotation, str):
@@ -119,7 +121,13 @@ class Signature:
                 )
             )
         assert isinstance(kind, str)
-        return SignatureNode(kind=kind, parameters=parameters)
+        return SignatureNode(
+            kind=kind,
+            parameters=parameters,
+            return_annotation=_empty
+            if self._sig.return_annotation is inspect._empty
+            else str(self._sig.return_annotation),
+        )
 
     @property
     def parameters(self):
@@ -145,10 +153,10 @@ class Signature:
         return self.target_item.__annotations__
 
     @property
-    def return_annotation(self) -> Optional[str]:
+    def return_annotation(self) -> Union[Empty, str]:
         return_annotation = self._sig.return_annotation
         return (
-            None
+            _empty
             if return_annotation is inspect._empty
             else inspect.formatannotation(return_annotation)
         )

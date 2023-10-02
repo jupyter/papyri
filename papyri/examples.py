@@ -39,8 +39,12 @@ term 2
 
 """
 
+from typing import Optional, Union
 
-def example1(pos, only, /, var, args, *, kwargs, also=None):
+
+def example1(
+    pos: int, only: None, /, var: Union[float, bool], args=1, *, kwargs, also=None
+) -> Optional[str]:
     """
     first example.
 
@@ -56,6 +60,7 @@ def example1(pos, only, /, var, args, *, kwargs, also=None):
     ... plt.show()
 
     """
+    return "ok"
 
 
 def example2():
