@@ -111,7 +111,7 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pip install scipy
+        pip install scipy dask
         pytest --cov=papyri --cov-append
         ls -al
     - name: Misc cli
