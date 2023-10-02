@@ -28,7 +28,7 @@ dependencies = [
     "typer",
     "velin",
     "quart-trio",
-    "quart<0.14",
+    "quart<0.20",
     "flatlatex",
     # "tree_sitter", # tree sitter does not currently provide builds for all platform. tree-sitter-builds is an
     # alternative build that provide more wheels.
