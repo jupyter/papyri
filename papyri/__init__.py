@@ -127,7 +127,7 @@ Here are a couple of function that are of interest to explore what papyri can do
     points via aliases; in the intro one link as a ``name <value>`` syntax which
     is also not yet recognized.
 
-`scipy.signal.filter_design.zpk2sos`:
+`scipy.signal.zpk2sos`:
     multi blocks in enumerated list
 
 `scipy.signal.filter_design.zpk2sos`:
@@ -141,7 +141,7 @@ Here are a couple of function that are of interest to explore what papyri can do
 
 `numpy.einsum`:
     one of the longest numpy docstring/document, or at least one of the longest to render, with
-    `scipy.signal.windows.windows.dpss` , `scipy.optimize._minimize.minimize` and
+    `scipy.signal.windows.dpss` , `scipy.optimize._minimize.minimize` and
     `scipy.optimize._basinhopping.basinhopping`
 
 

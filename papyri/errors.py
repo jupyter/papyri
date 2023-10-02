@@ -2,6 +2,10 @@ class IncorrectInternalDocsLen(AssertionError):
     pass
 
 
+class TextSignatureParsingFailed(ValueError):
+    pass
+
+
 class NumpydocParseError(ValueError):
     pass
 

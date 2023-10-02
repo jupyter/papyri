@@ -139,7 +139,7 @@
 {{-green("green")}} refer to items within the same document, {{blue("blue")}} external {{underline("known")}} entities, {{red("red")}} entities we were not able to find and {{yellow("yellow")}} for code, and other "raw" items, typically between double backticks.
 
 {% if doc.signature %}
-   |{{ bold(underline(doc.signature.value))}}
+    |{{bold(underline(name))}}{{bold(underline(doc.signature.to_signature()))}}
 {% endif %}
 
 {% for section in doc.content if doc.content[section] %}

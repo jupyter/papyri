@@ -65,6 +65,7 @@ pypi = 'scipy'
 homepage = 'https://scipy.org/'
 docspage = 'https://docs.scipy.org/doc/scipy/'
 [global.implied_imports]
+scipy = 'scipy'
 ua = 'scipy._lib.uarray'
 array = 'numpy:array'
 arange = 'numpy:arange'
@@ -100,6 +101,10 @@ VisitCitationReferenceNotImplementedError = [
     "scipy.optimize._nonlin:Anderson",
     "scipy.spatial._spherical_voronoi:calculate_solid_angles",
     "scipy.special._orthogonal:_pbcf",
+    "scipy.special._orthogonal",
+    "scipy.optimize._lsq.dogbox",
+    "scipy.optimize._lsq.trf",
+    "scipy.stats._levy_stable:levy_stable_gen",
 ]
 IncorrectInternalDocsLen = [
     "scipy.signal._spline:symiirorder1",
@@ -146,6 +151,8 @@ NumpydocParseError = [
     "scipy.stats._discrete_distns:betabinom_gen",
     "scipy.stats._discrete_distns:geom_gen",
     "scipy.stats._discrete_distns:planck_gen",
+    "scipy.special:btdtr",
+    "scipy.special:btdtri",
 ]
 ExampleError1 = [
     "scipy.stats._qmc:PoissonDisk",

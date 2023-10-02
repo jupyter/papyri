@@ -235,11 +235,6 @@ class RefInfo(Node):
         return cls(module, version, kind, path)
 
 
-@register(4011)
-class Signature(Node):
-    value: Optional[str]
-
-
 @register(4012)
 class NumpydocExample(Node):
     value: List[str]

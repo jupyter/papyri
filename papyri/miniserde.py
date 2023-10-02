@@ -148,6 +148,9 @@ def serialize(instance, annotation):
         ) from e
 
 
+_sentinel = object()
+
+
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
 def deserialize(type_, annotation, data):
     # assert type_ is annotation
@@ -208,8 +211,8 @@ def deserialize(type_, annotation, data):
             try:
                 real_type = real_type[0]
             except IndexError:
-                breakpoint()
-            if data.get("data"):
+                raise
+            if data.get("data", _sentinel) is not _sentinel:
                 data_ = data["data"]
             else:
                 data_ = {k: v for k, v in data.items() if k != "type"}

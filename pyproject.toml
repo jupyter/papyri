@@ -16,7 +16,7 @@ dependencies = [
     "tomli_w",
     "urwid",
     "httpx",
-    "jinja2<3.1",
+    "jinja2>=3.1.2",
     "ipython",
     "numpydoc",
     "cachetools",
@@ -27,8 +27,8 @@ dependencies = [
     "jedi",
     "typer",
     "velin",
-    "quart-trio",
-    "quart<0.14",
+    "quart-trio>=0.6.0",
+    "quart>=0.18.4",
     "flatlatex",
     # "tree_sitter", # tree sitter does not currently provide builds for all platform. tree-sitter-builds is an
     # alternative build that provide more wheels.
