@@ -154,3 +154,18 @@ def test_self():
         "return_annotation": {"data": "typing.Optional[str]", "type": "str"},
     }
     assert g.data["papyri"].to_dict()["signature"] is None
+
+
+def test_self_2():
+    from papyri.gen import Gen, Config
+
+    c = Config(dry_run=True, dummy_progress=True)
+    g = Gen(False, config=c)
+    g.collect_package_metadata("papyri", ".", {})
+    g.collect_api_docs("papyri", {"papyri"})
+    assert (
+        g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0]["dt"][
+            "children"
+        ][0]["reference"]["module"]
+        == "dask"
+    )
