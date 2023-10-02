@@ -111,21 +111,21 @@ def test_self():
             {
                 "type": "ParameterNode",
                 "name": "pos",
-                "annotation": {"type": "Empty"},
+                "annotation": {"data": "int", "type": "str"},
                 "kind": "POSITIONAL_ONLY",
                 "default": {"type": "Empty"},
             },
             {
                 "type": "ParameterNode",
                 "name": "only",
-                "annotation": {"type": "Empty"},
+                "annotation": {"data": "None", "type": "str"},
                 "kind": "POSITIONAL_ONLY",
                 "default": {"type": "Empty"},
             },
             {
                 "type": "ParameterNode",
                 "name": "var",
-                "annotation": {"type": "Empty"},
+                "annotation": {"data": "Union[float, bool]", "type": "str"},
                 "kind": "POSITIONAL_OR_KEYWORD",
                 "default": {"type": "Empty"},
             },
@@ -134,7 +134,7 @@ def test_self():
                 "name": "args",
                 "annotation": {"type": "Empty"},
                 "kind": "POSITIONAL_OR_KEYWORD",
-                "default": {"type": "Empty"},
+                "default": {"data": "1", "type": "str"},
             },
             {
                 "type": "ParameterNode",
@@ -151,6 +151,6 @@ def test_self():
                 "default": {"data": "None", "type": "str"},
             },
         ],
-        "return_annotation": {"type": "Empty"},
+        "return_annotation": {"data": "typing.Optional[str]", "type": "str"},
     }
     assert g.data["papyri"].to_dict()["signature"] is None

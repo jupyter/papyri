@@ -110,9 +110,14 @@ jobs:
         name: doc-bundles
         path: ~/.papyri/data/
 
+    - name: Test with pytest
+      run: |
+        pip install scipy
+        pytest --cov=papyri --cov-append
+        ls -al
     - name: Misc cli
       run: |
-        coverage run -m papyri --help
+        coverage run -a -m papyri --help
         ls -al
     - name: Ingest
       run: |
@@ -121,11 +126,6 @@ jobs:
         coverage run -a -m papyri render --ascii
         ls -al
 
-    - name: Test with pytest
-      run: |
-        pip install scipy
-        pytest --cov=papyri --cov-append
-        ls -al
     - name: Convert .coverage sql to xml for upload
       run: |
         coverage report
