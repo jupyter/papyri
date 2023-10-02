@@ -1,13 +1,14 @@
 import inspect
 
 from dataclasses import dataclass
-from typing import List, Any, Dict, Union, Optional
+from typing import List, Any, Dict, Union
 from .common_ast import Node
 from .errors import TextSignatureParsingFailed
 
 from .common_ast import register
 
 import json
+
 
 @register(4031)
 class Empty(Node):
