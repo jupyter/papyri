@@ -1518,7 +1518,7 @@ class Gen:
             current configuratin
         aliases : sequence
             other aliases for cuttent object.
-        api_object : <Insert Type here>
+        api_object : APIObjectInfo
             <Multiline Description Here>
 
         Returns
@@ -1815,7 +1815,7 @@ class Gen:
 
     def helper_1(
         self, *, qa: str, target_item: Any
-    ) -> Tuple[Optional[str], List[Section], Optional[APIObjectInfo]]:
+    ) -> Tuple[Optional[str], List[Section], APIObjectInfo]:
         """
         Parameters
         ----------
@@ -1967,7 +1967,7 @@ class Gen:
         # taskp = p2.add_task(description="parsing", total=len(collected))
 
         failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
-
+        api_object: APIObjectInfo
         for qa, target_item in collected.items():
             self.log.debug("treating %r", qa)
 
