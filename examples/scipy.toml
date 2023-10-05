@@ -1,6 +1,6 @@
 [global]
 module = 'scipy'
-logo = "../scipy_logo.png"
+logo = "img/scipy_logo.png"
 exec = true
 submodules = [ "signal","misc"]
 exclude = [

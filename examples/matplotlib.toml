@@ -1,6 +1,6 @@
 [global]
 module = 'matplotlib'
-logo = "../matplotlib_logo.png"
+logo = "img/matplotlib_logo.png"
 wait_for_plt_show = false
 exec_failure = "fallback"
 submodules = [ "image", "pyplot", "axes", "axes._base", "dviread", "image","figure",'colors', 'transforms']

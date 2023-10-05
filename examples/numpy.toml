@@ -28,7 +28,6 @@ submodules = [
     'compat',
     'core',
     'ctypeslib',
-    'distutils',
     'doc',
     'fft',
     'lib',
