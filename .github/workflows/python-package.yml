@@ -121,8 +121,11 @@ jobs:
     - name: Ingest
       run: |
         coverage run -a -m papyri install ~/.papyri/data/*.zip
+    - name: Relink
+      run: |
         coverage run -a -m papyri relink
-        coverage run -a -m papyri render --ascii
+    - name: Render
+        python -m papyri render --ascii
         ls -al
 
     - name: Convert .coverage sql to xml for upload
