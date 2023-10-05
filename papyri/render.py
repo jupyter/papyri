@@ -19,7 +19,11 @@ from pygments.formatters import HtmlFormatter
 from quart import send_from_directory, Response, redirect
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
-import minify_html
+
+try:
+    import minify_html
+except ModuleNotFoundError:
+    minify_html = None
 
 from . import config as default_config
 from . import take2
