@@ -10,6 +10,7 @@ likely be separated into a separate module at some point.
 
 from __future__ import annotations
 
+import doctest
 import dataclasses
 import datetime
 import importlib
@@ -30,6 +31,7 @@ from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
+import io
 
 import jedi
 
@@ -47,6 +49,7 @@ from rich.logging import RichHandler
 from rich.progress import BarColumn, Progress, TextColumn, track
 from there import print as print_
 from velin.examples_section_utils import InOut, splitblank, splitcode
+from matplotlib import _pylab_helpers
 
 from .common_ast import Node
 from .errors import (
@@ -290,10 +293,9 @@ from enum import Enum
 
 
 class ExecutionStatus(Enum):
-    none = "None"
-    compiled = "compiled"
-    syntax_error = "syntax_error"
-    exec_error = "exception_in_exec"
+    success = "success"
+    failure = "failure"
+    unexpected_exception = "unexpected_exception"
 
 
 def _execute_inout(item):
@@ -1126,12 +1128,10 @@ class Gen:
         The capturing of matplotlib figures is also limited.
         """
         assert qa is not None
-        blocks = list(map(splitcode, splitblank(example_section)))
+        example_code = '\n'.join(example_section)
         example_section_data = Section([], None)
         import matplotlib.pyplot as plt
         import numpy as np
-
-        acc = ""
 
         def _figure_names():
             """
@@ -1144,110 +1144,61 @@ class Gen:
 
         figure_names = _figure_names()
 
-        ns = {"np": np, "plt": plt, obj.__name__: obj}
-        ns.update(_get_implied_imports(obj))
+        globs = {"np": np, "plt": plt, obj.__name__: obj}
+        globs.update(_get_implied_imports(obj))
         for k, v in config.implied_imports.items():
-            ns[k] = obj_from_qualname(v)
-        executor = BlockExecutor(ns)
+            globs[k] = obj_from_qualname(v)
+
         all_figs = []
-        # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-        fig_managers = executor.fig_man()
-        assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
         wait_for_show = config.wait_for_plt_show
         if qa in config.exclude_jedi:
             config = config.replace(infer=False)
             log.debug(f"Turning off type inference for func {qa!r}")
-        chunks = (it for block in blocks for it in block)
-        with executor:
-            for item in chunks:
-                figs = []
-                if not isinstance(item, InOut):
-                    assert isinstance(item.out, list)
-                    example_section_data.append(MText("\n".join(item.out)))
-                    continue
-                script, out, ce_status = _execute_inout(item)
-                raise_in_fig = None
-                did_except = False
-                if config.exec and ce_status == ExecutionStatus.compiled.value:
-                    if not wait_for_show:
-                        # we should aways have 0 figures
-                        # unless stated otherwise
-                        assert len(fig_managers) == 0
-                    try:
-                        res = object()
-                        try:
-                            res, fig_managers, sout, serr = executor.exec(script)
-                            ce_status = "execed"
-                        except Exception:
-                            if "Traceback" not in "\n".join(out):
-                                script = script.replace("\n", "\n>>> ")
-                                script = ">>> " + script
 
-                                meta_ = obj.__code__
-                                obj_fname = meta_.co_filename
-                                obj_lineno = meta_.co_firstlineno
-                                obj_name = meta_.co_name
+        sys_stdout = sys.stdout
+        def dbg(*args):
+            for arg in args:
+                sys_stdout.write(f"{arg}\n")
+            sys_stdout.flush()
 
-                                example_section_split = "\n".join(
-                                    example_section
-                                ).split(script)
-                                err_lineno = example_section_split[0].count("\n")
-                                log.exception(
-                                    "error in execution: "
-                                    f"{obj_fname}:{obj_lineno} ({full_qual(obj)}) in {obj_name}"
-                                    f"\n-> Example section line {err_lineno}:"
-                                    f"\n\n{script}\n",
-                                )
-                            ce_status = "exception_in_exec"
-                            if config.exec_failure != "fallback":
-                                raise
-                        if fig_managers and (
-                            ("plt.show" in script) or not wait_for_show
-                        ):
-                            raise_in_fig = True
-                            for fig, figname in zip(executor.get_figs(), figure_names):
-                                figs.append((figname, fig))
-                            plt.close("all")
-                            raise_in_fig = False
+        class PapyriDocTestRunner(doctest.DocTestRunner):
+            def __init__(slf, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                slf.figs = []
+                slf.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                assert (len(slf.fig_managers)) == 0, f"init fail in {qa} {len(slf.fig_managers)}"
 
-                    except Exception:
-                        did_except = True
-                        print_(f"exception executing... {qa}")
-                        fig_managers = executor.fig_man()
-                        if raise_in_fig or config.exec_failure != "fallback":
-                            raise
-                    finally:
-                        if not wait_for_show:
-                            if fig_managers:
-                                for fig, figname in zip(
-                                    executor.get_figs(), figure_names
-                                ):
-                                    figs.append((figname, fig))
-                                    print_(
-                                        f"Still fig manager(s) open for {qa}: {figname}"
-                                    )
-                                plt.close("all")
-                            fig_managers = executor.fig_man()
-                            assert len(fig_managers) == 0, fig_managers + [
-                                did_except,
-                            ]
-                    # we've executed, we now want to compare output
-                    # in the docstring with the one we produced.
-                    if (out == repr(res)) or (res is None and out == []):
-                        pass
-                    else:
-                        pass
-                        # captured output differ TBD
-                entries = parse_script(script, ns=ns, prev=acc, config=config, where=qa)
+            def _get_tok_entries(slf, example):
+                entries = parse_script(example.source, ns=globs, prev="", config=config, where=qa)
                 if entries is None:
                     entries = [("jedi failed", "jedi failed")]
                 entries = _add_classes(entries)
                 tok_entries = [GenToken(*x) for x in entries]  # type: ignore
+                return tok_entries
 
-                acc += "\n" + script
+            def report_start(slf, out, test, example):
+                pass
+
+            def report_success(slf, out, test, example, got):
+                tok_entries = slf._get_tok_entries(example)
+
                 example_section_data.append(
-                    Code(tok_entries, "\n".join(item.out), ce_status)
+                    Code(tok_entries, got, ExecutionStatus.success)
                 )
+
+
+                slf.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+                figs = []
+                if slf.fig_managers and (
+                    ("plt.show" in example.source) or not wait_for_show
+                ):
+                    for fig, figname in zip(slf.fig_managers, figure_names):
+                        buf = io.BytesIO()
+                        fig.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
+                        buf.seek(0)
+                        figs.append((figname, buf.read()))
+                    plt.close("all")
+
                 for figname, _ in figs:
                     example_section_data.append(
                         Fig(
@@ -1256,11 +1207,31 @@ class Gen:
                             )
                         )
                     )
-                all_figs.extend(figs)
+                slf.figs.extend(figs)
+
+            def report_unexpected_exception(slf, out, test, example,
+                                            exc_info):
+                tok_entries = slf._get_tok_entries(example)
+                example_section_data.append(
+                    Code(tok_entries, exc_info, ExecutionStatus.unexpected_exception)
+                )
+
+            def report_failure(slf, out, test, example, got):
+                tok_entries = slf._get_tok_entries(example)
+                example_section_data.append(
+                    Code(tok_entries, got, ExecutionStatus.failure)
+                )
+
+        filename = obj.__code__.co_filename
+        lineno = obj.__code__.co_firstlineno
+        doctests = doctest.DocTestParser().get_doctest(example_code, globs,
+                                                     obj.__name__, filename, lineno)
+        doctest_runner = PapyriDocTestRunner()
+
+        doctest_runner.run(doctests, out=lambda s: None)
 
         # TODO fix this if plt.close not called and still a ligering figure.
-        fig_managers = executor.fig_man()
-        if len(fig_managers) != 0:
+        if len(doctest_runner.fig_managers) != 0:
             print_(f"Unclosed figures in {qa}!!")
             plt.close("all")
 
