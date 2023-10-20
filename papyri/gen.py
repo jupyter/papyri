@@ -1164,6 +1164,10 @@ class Gen:
         class PapyriDocTestRunner(doctest.DocTestRunner):
             def __init__(slf, *args, **kwargs):
                 super().__init__(*args, **kwargs)
+                import matplotlib
+
+                matplotlib.use("agg")
+
                 slf.figs = []
                 slf.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
                 assert (len(slf.fig_managers)) == 0, f"init fail in {qa} {len(slf.fig_managers)}"
