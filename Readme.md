@@ -184,7 +184,7 @@ $ papyri gen examples/scipy.toml
 This will create intermediate docs files in in `~/.papyri/data/<library name>_<library_version>`
 
 
-### installation/ingestion
+### Installation/ingestion
 
 The installation/ingestion of documentation bundles is the step that makes all
 bundles "aware" of each other, and allows crosslinking/indexing to work.
@@ -242,11 +242,17 @@ $ papyri serve-static # start a http.server with the propoer root to serve above
 $ papyri serve  # start a server that will render the pages on the fly (nice to debug or iterate on theme, rendering)
 ```
 
-### Ascii terminal rendering
+### Ascii terminal rendering (experimental)
 
 
 ```
 $ papyri ascii <fully qualified names> # try to render in the terminal.
+```
+
+For example,
+
+```
+$ papyri ascii numpy.linspace
 ```
 
 The next step uses urwid to provide a browsable interface in terminal.
