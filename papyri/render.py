@@ -23,7 +23,7 @@ from rich.logging import RichHandler
 try:
     import minify_html
 except ModuleNotFoundError:
-    minify_html = None
+    minify_html = None  # type: ignore[assignment]
 
 from . import config as default_config
 from . import take2
