@@ -1,7 +1,7 @@
 """"
 
-Examples Modules
-----------------
+Examples Modules Heading 1
+==========================
 
 This module contains examples, none of the functions, classes or other attribute
 should have any effects when called.
@@ -36,6 +36,62 @@ term 2
 
     Definition 2, paragraph 2.
 
+
+.. note::
+
+    An admonition note !
+
+This is a link to `Jupyter website <jupyter.org>`__
+
+Code (title 2)
+--------------
+
+.. code::
+
+    from package import module
+    module.call("string")
+
+Math
+----
+
+
+.. math::
+
+    \\pi = 3.14159
+
+
+"""
+
+"""
+
+term
+: definition
+
+## Math
+
+
+## Figures
+
+```{figure} https://via.placeholder.com/150
+:width: 100px
+:align: center
+
+Figure caption
+```
+
+## Tables
+
+```{list-table}
+:header-rows: 1
+:align: center
+
+* - Header 1
+  - Header 2
+* - Item 1 a
+  - Item 2 a
+* - Item 1 b
+  - Item 2 b
+```
 
 """
 
