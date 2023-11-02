@@ -125,6 +125,7 @@ jobs:
       run: |
         coverage run -a -m papyri relink
     - name: Render
+      run: |
         python -m papyri render --ascii
         ls -al
 
