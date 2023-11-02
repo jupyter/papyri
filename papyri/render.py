@@ -1,7 +1,7 @@
 import builtins
-import math
 import json
 import logging
+import math
 import operator
 import os
 import random
@@ -11,12 +11,12 @@ from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Set, Any, Dict, List, Callable, Tuple, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pygments.formatters import HtmlFormatter
-from quart import send_from_directory, Response, redirect
+from quart import Response, redirect, send_from_directory
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
 
@@ -31,10 +31,9 @@ from .config import ingest_dir
 from .crosslink import IngestedBlobs, find_all_refs
 from .graphstore import GraphStore, Key
 from .myst_ast import MLink, MText
-from .take2 import RefInfo, encoder, Section
+from .take2 import RefInfo, Section, encoder
 from .tree import TreeReplacer, TreeVisitor
-from .utils import progress, dummy_progress
-
+from .utils import dummy_progress, progress
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -212,7 +211,7 @@ class HtmlRenderer:
         self.progress = progress
         self.store = store
         self.env = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__)),
+            loader=FileSystemLoader(Path(os.path.dirname(__file__)) / "templates"),
             autoescape=select_autoescape(["html", "tpl.j2"]),
             undefined=StrictUndefined,
         )
@@ -1217,7 +1216,7 @@ def old_render_one(
 @lru_cache
 def _ascii_env():
     env = Environment(
-        loader=CleanLoader(os.path.dirname(__file__)),
+        loader=CleanLoader(Path(os.path.dirname(__file__)) / "templates"),
         lstrip_blocks=True,
         trim_blocks=True,
         undefined=StrictUndefined,
