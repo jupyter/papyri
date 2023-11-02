@@ -22,7 +22,6 @@ dependencies = [
     "cachetools",
     "pygments",
     "black",
-    "there",
     "rich",
     "jedi",
     "typer",
