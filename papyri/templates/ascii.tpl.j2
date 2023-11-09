@@ -201,20 +201,4 @@
    |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
    |{% endfor %}
 {% endif %}
-{% if backrefs[0] or backrefs[1] %}
-{{"\n"}}
-{{underline(bold("Back References"))}}
-    {% if backrefs[0] is not none %}
-    {% for r in backrefs[0] %}
-        {{r}}
-    {% endfor %}
-    {% endif%}
-    {% if backrefs[1] is not none %}
-        {% for k,v in backrefs[1].items() -%}
-            {{"\n\n    "}}{{underline(k+':')}}{{"\n        "}}
-        {%- for r in v %}
-            {{-blue(r)}}{{", "-}}
-        {%- endfor %}
-    {% endfor %}
-    {% endif%}
-{% endif %}
+
