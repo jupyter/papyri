@@ -996,6 +996,98 @@ def _normalize_see_also(see_also: Section, qa: str):
     return new_see_also
 
 
+
+class PapyriDocTestRunner(doctest.DocTestRunner):
+    def __init__(self, *args, gen, obj, qa, config, **kwargs):
+        self.gen = gen
+        self.obj = obj
+        self.qa = qa
+        self.config = config
+        self.example_section_data = Section([], None)
+        super().__init__(*args, **kwargs)
+        import matplotlib
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        matplotlib.use("agg")
+
+        self.globs = {"np": np, "plt": plt, obj.__name__: obj}
+        self.globs.update(_get_implied_imports(obj))
+        for k, v in config.implied_imports.items():
+            self.globs[k] = obj_from_qualname(v)
+
+        self.figs = []
+        self.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+        assert (len(self.fig_managers)) == 0, f"init fail in {self.qa} {len(self.fig_managers)}"
+
+    def _get_tok_entries(self, example):
+        entries = parse_script(example.source, ns=self.globs, prev="", config=self.config, where=self.qa)
+        if entries is None:
+            entries = [("jedi failed", "jedi failed")]
+        entries = _add_classes(entries)
+        tok_entries = [GenToken(*x) for x in entries]  # type: ignore
+        return tok_entries
+
+    def _figure_names(self):
+        """
+        File system can be case insensitive, we are not.
+        """
+        for i in count(0):
+            pat = f"fig-{self.qa}-{i}"
+            sha = sha256(pat.encode()).hexdigest()[:8]
+            yield f"{pat}-{sha}.png"
+
+
+    def report_start(self, out, test, example):
+        pass
+
+    def report_success(self, out, test, example, got):
+        import matplotlib.pyplot as plt
+
+        tok_entries = self._get_tok_entries(example)
+
+        self.example_section_data.append(
+            Code(tok_entries, got, ExecutionStatus.success)
+        )
+
+        figure_names = self._figure_names()
+
+        wait_for_show = self.config.wait_for_plt_show
+        self.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+        figs = []
+        if self.fig_managers and (
+            ("plt.show" in example.source) or not wait_for_show
+        ):
+            for fig, figname in zip(self.fig_managers, figure_names):
+                buf = io.BytesIO()
+                fig.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
+                buf.seek(0)
+                figs.append((figname, buf.read()))
+            plt.close("all")
+
+        for figname, _ in figs:
+            self.example_section_data.append(
+                Fig(
+                    RefInfo.from_untrusted(
+                        self.gen.root, self.gen.version, "assets", figname
+                    )
+                )
+            )
+        self.figs.extend(figs)
+
+    def report_unexpected_exception(self, out, test, example,
+                                    exc_info):
+        tok_entries = self._get_tok_entries(example)
+        self.example_section_data.append(
+            Code(tok_entries, exc_info, ExecutionStatus.unexpected_exception)
+        )
+
+    def report_failure(self, out, test, example, got):
+        tok_entries = self._get_tok_entries(example)
+        self.example_section_data.append(
+            Code(tok_entries, got, ExecutionStatus.failure)
+        )
+
 class Gen:
     """
     Core class to generate docbundles for a given library.
@@ -1138,28 +1230,10 @@ class Gen:
         """
         assert qa is not None
         example_code = '\n'.join(example_section)
-        example_section_data = Section([], None)
         import matplotlib.pyplot as plt
-        import numpy as np
 
-        def _figure_names():
-            """
-            File system can be case insensitive, we are not.
-            """
-            for i in count(0):
-                pat = f"fig-{qa}-{i}"
-                sha = sha256(pat.encode()).hexdigest()[:8]
-                yield f"{pat}-{sha}.png"
-
-        figure_names = _figure_names()
-
-        globs = {"np": np, "plt": plt, obj.__name__: obj}
-        globs.update(_get_implied_imports(obj))
-        for k, v in config.implied_imports.items():
-            globs[k] = obj_from_qualname(v)
 
         all_figs = []
-        wait_for_show = config.wait_for_plt_show
         if qa in config.exclude_jedi:
             config = config.replace(infer=False)
             log.debug(f"Turning off type inference for func {qa!r}")
@@ -1170,78 +1244,15 @@ class Gen:
                 sys_stdout.write(f"{arg}\n")
             sys_stdout.flush()
 
-        class PapyriDocTestRunner(doctest.DocTestRunner):
-            def __init__(slf, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                import matplotlib
-
-                matplotlib.use("agg")
-
-                slf.figs = []
-                slf.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                assert (len(slf.fig_managers)) == 0, f"init fail in {qa} {len(slf.fig_managers)}"
-
-            def _get_tok_entries(slf, example):
-                entries = parse_script(example.source, ns=globs, prev="", config=config, where=qa)
-                if entries is None:
-                    entries = [("jedi failed", "jedi failed")]
-                entries = _add_classes(entries)
-                tok_entries = [GenToken(*x) for x in entries]  # type: ignore
-                return tok_entries
-
-            def report_start(slf, out, test, example):
-                pass
-
-            def report_success(slf, out, test, example, got):
-                tok_entries = slf._get_tok_entries(example)
-
-                example_section_data.append(
-                    Code(tok_entries, got, ExecutionStatus.success)
-                )
-
-
-                slf.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-                figs = []
-                if slf.fig_managers and (
-                    ("plt.show" in example.source) or not wait_for_show
-                ):
-                    for fig, figname in zip(slf.fig_managers, figure_names):
-                        buf = io.BytesIO()
-                        fig.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
-                        buf.seek(0)
-                        figs.append((figname, buf.read()))
-                    plt.close("all")
-
-                for figname, _ in figs:
-                    example_section_data.append(
-                        Fig(
-                            RefInfo.from_untrusted(
-                                self.root, self.version, "assets", figname
-                            )
-                        )
-                    )
-                slf.figs.extend(figs)
-
-            def report_unexpected_exception(slf, out, test, example,
-                                            exc_info):
-                tok_entries = slf._get_tok_entries(example)
-                example_section_data.append(
-                    Code(tok_entries, exc_info, ExecutionStatus.unexpected_exception)
-                )
-
-            def report_failure(slf, out, test, example, got):
-                tok_entries = slf._get_tok_entries(example)
-                example_section_data.append(
-                    Code(tok_entries, got, ExecutionStatus.failure)
-                )
-
         filename = obj.__code__.co_filename
         lineno = obj.__code__.co_firstlineno
-        doctests = doctest.DocTestParser().get_doctest(example_code, globs,
+        doctest_runner = PapyriDocTestRunner(gen=self, obj=obj, qa=qa, config=config)
+        doctests = doctest.DocTestParser().get_doctest(example_code, doctest_runner.globs,
                                                      obj.__name__, filename, lineno)
-        doctest_runner = PapyriDocTestRunner()
 
         doctest_runner.run(doctests, out=lambda s: None)
+
+        example_section_data = doctest_runner.example_section_data
 
         # TODO fix this if plt.close not called and still a ligering figure.
         if len(doctest_runner.fig_managers) != 0:
