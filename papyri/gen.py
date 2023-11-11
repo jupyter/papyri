@@ -1242,7 +1242,10 @@ class Gen:
         except (TypeError, OSError):
             lineno = None
 
-        doctest_runner = PapyriDocTestRunner(gen=self, obj=obj, qa=qa, config=config)
+        doctest_runner = PapyriDocTestRunner(gen=self, obj=obj, qa=qa,
+                                             config=config,
+                                             # TODO: Make optionflags configurable
+                                             optionflags=doctest.ELLIPSIS)
         doctests = doctest.DocTestParser().get_doctest(example_code,
                                                        doctest_runner.globs,
                                                        obj.__name__, filename,
