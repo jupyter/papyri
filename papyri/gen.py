@@ -1244,11 +1244,20 @@ class Gen:
                 sys_stdout.write(f"{arg}\n")
             sys_stdout.flush()
 
-        filename = obj.__code__.co_filename
-        lineno = obj.__code__.co_firstlineno
+        try:
+            filename = inspect.getfile(obj)
+        except TypeError:
+            filename = None
+        try:
+            lineno = inspect.getsourcelines(obj)[1]
+        except (TypeError, OSError):
+            lineno = None
+
         doctest_runner = PapyriDocTestRunner(gen=self, obj=obj, qa=qa, config=config)
-        doctests = doctest.DocTestParser().get_doctest(example_code, doctest_runner.globs,
-                                                     obj.__name__, filename, lineno)
+        doctests = doctest.DocTestParser().get_doctest(example_code,
+                                                       doctest_runner.globs,
+                                                       obj.__name__, filename,
+                                                       lineno)
 
         doctest_runner.run(doctests, out=lambda s: None)
 
