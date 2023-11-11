@@ -1232,8 +1232,6 @@ class Gen:
         example_code = '\n'.join(example_section)
         import matplotlib.pyplot as plt
 
-
-        all_figs = []
         if qa in config.exclude_jedi:
             config = config.replace(infer=False)
             log.debug(f"Turning off type inference for func {qa!r}")
