@@ -1263,7 +1263,7 @@ class Gen:
 
         example_section_data = doctest_runner.example_section_data
 
-        # TODO fix this if plt.close not called and still a ligering figure.
+        # TODO fix this if plt.close not called and still a lingering figure.
         if len(doctest_runner.fig_managers) != 0:
             print_(f"Unclosed figures in {qa}!!")
             plt.close("all")
