@@ -517,6 +517,7 @@ def gen_main(
     if limit_to is None:
         limit_to = set()
     target_module_name, conf, meta = load_configuration(target_file)
+
     conf["early_error"] = fail_early
     conf["fail_unseen_error"] = fail_unseen_error
     config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
@@ -534,7 +535,7 @@ def gen_main(
         target_dir = Path(temp_dir.name)
 
     g = Gen(dummy_progress=dummy_progress, config=config)
-    g.log.info("Will write data to %s", target_dir)
+
     if debug:
         g.log.setLevel(logging.DEBUG)
         g.log.debug("Log level set to debug")
@@ -544,6 +545,10 @@ def gen_main(
         relative_dir=Path(target_file).parent,
         meta=meta,
     )
+
+    g.log.info("Target package is %s-%s", target_module_name, g.version)
+    g.log.info("Will write data to %s", target_dir)
+
     if examples:
         g.collect_examples_out()
     if api:
