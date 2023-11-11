@@ -156,7 +156,7 @@ def async_function_2(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
 @add
 def generator_function_3(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
     """{
-      "kind": "function",
+      "kind": "generator function",
       "parameters": [
         {
           "annotation": {
@@ -226,7 +226,7 @@ async def async_generator_function_4(
     posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs
 ):
     """{
-      "kind": "function",
+      "kind": "async_generator function",
       "parameters": [
         {
           "annotation": {
@@ -289,6 +289,76 @@ async def async_generator_function_4(
       "type": "SignatureNode"
     }"""
     yield
+
+
+@add
+async def coroutine_function_5(
+    posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs
+):
+    """{
+      "kind": "coroutine function",
+      "parameters": [
+        {
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
+          "kind": "POSITIONAL_ONLY",
+          "name": "posonly",
+          "type": "ParameterNode"
+        },
+        {
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "pos_or_k",
+          "type": "ParameterNode"
+        },
+        {
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "data": "1",
+            "type": "str"
+          },
+          "kind": "POSITIONAL_OR_KEYWORD",
+          "name": "pos_ok_k_d",
+          "type": "ParameterNode"
+        },
+        {
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
+          "kind": "VAR_POSITIONAL",
+          "name": "varargs",
+          "type": "ParameterNode"
+        },
+        {
+          "annotation": {
+            "type": "Empty"
+          },
+          "default": {
+            "type": "Empty"
+          },
+          "kind": "VAR_KEYWORD",
+          "name": "varkwargs",
+          "type": "ParameterNode"
+        }
+      ],
+      "return_annotation": {"type": "Empty"},
+      "type": "SignatureNode"
+    }"""
+    pass
 
 
 @add
