@@ -1259,7 +1259,7 @@ class Gen:
             print_(f"Unclosed figures in {qa}!!")
             plt.close("all")
 
-        return processed_example_data(example_section_data), all_figs
+        return processed_example_data(example_section_data), doctest_runner.figs
 
     def clean(self, where: Path):
         """
