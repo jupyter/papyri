@@ -124,9 +124,13 @@ jobs:
     - name: Relink
       run: |
         coverage run -a -m papyri relink
-    - name: Render
+    - name: Render ascii
       run: |
         python -m papyri render --ascii
+        ls -al
+    - name: Render html
+      run: |
+        python -m papyri render --html
         ls -al
 
     - name: Convert .coverage sql to xml for upload
