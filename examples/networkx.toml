@@ -12,7 +12,7 @@ exec_failure = 'fallback'
 source = 'https://github.com/networkx/networkx'
 exclude = [ 
              ]
-logo = './nx.png'
+logo = './img/nx.png'
 [meta]
 github_slug = 'networkx/networkx'
 tag = 'networkx-2.7.1'

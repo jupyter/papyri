@@ -10,7 +10,7 @@ exclude = [
 ]
 exec_failure = 'fallback'
 source = 'https://github.com/pydata/xarray'
-logo = './xarray.png'
+logo = './img/xarray.png'
 early_error = false
 
 [meta]
