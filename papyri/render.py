@@ -748,8 +748,6 @@ class HtmlRenderer:
         random.shuffle(gfiles)
         if config.ascii:
             env, template = _ascii_env()
-        else:
-            env, template = None, None
         for _, key in progress(gfiles, description="Rendering API..."):
             module, version = key.module, key.version
             if config.ascii:
