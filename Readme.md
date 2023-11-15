@@ -125,10 +125,7 @@ pip install -e .
 Some functionality requires ``tree_sitter_rst``. To build the TreeSitter rst parser:
 
 ```bash
-$ git clone https://github.com/stsewd/tree-sitter-rst
-$ cd tree-sitter-rst
-$ git checkout 3fc88d2097bc854ab6bf70c52b3c482849cf8e8f
-$ cd -
+$ git submodule update --init
 $ papyri build-parser
 ```
 
