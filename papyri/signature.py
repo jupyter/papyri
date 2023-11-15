@@ -87,18 +87,22 @@ class Signature:
         self._sig = inspect.signature(target_item)
 
     def to_node(self) -> SignatureNode:
-        if inspect.isbuiltin(self.target_item):
-            kind = "builtins"
-        elif inspect.isfunction(self.target_item):
+        kind = ""
+        if inspect.isfunction(self.target_item):
             kind = "function"
-        elif self.is_generator:
-            kind = "generator"
-        elif self.is_async_generator:
-            kind = "async_generator"
-        elif inspect.iscoroutinefunction(self.target_item):
-            kind = "coroutine_function"
-        else:
+        if inspect.isbuiltin(self.target_item):
+            kind = "built-in function"
+        if inspect.isgeneratorfunction(self.target_item):
+            kind = "generator function"
+        if inspect.isasyncgenfunction(self.target_item):
+            kind = "async_generator function"
+        if inspect.iscoroutinefunction(self.target_item):
+            kind = "coroutine function"
+        if kind == "":
             assert False, f"Unknown kind for {self.target_item}"
+
+        # Why do we want to make sure this is not a coroutine?
+        # What is special about a coroutine in this context?
         assert not inspect.iscoroutine(self.target_item)
 
         parameters = []
