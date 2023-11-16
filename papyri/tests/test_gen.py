@@ -162,10 +162,15 @@ def test_self_2():
     c = Config(dry_run=True, dummy_progress=True)
     g = Gen(False, config=c)
     g.collect_package_metadata("papyri", ".", {})
-    g.collect_api_docs("papyri", {"papyri"})
+    g.collect_api_docs(
+        "papyri", {"papyri", "papyri.take2:RefInfo", "papyri.take2:RefInfo.__eq__"}
+    )
     assert (
         g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0]["dt"][
             "children"
         ][0]["reference"]["module"]
         == "dask"
     )
+
+    assert g.data["papyri.take2:RefInfo"].to_dict()["item_file"] == "papyri/take2.py"
+    assert g.data["papyri.take2:RefInfo.__eq__"].to_dict()["item_file"] is None

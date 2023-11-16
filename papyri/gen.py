@@ -1441,6 +1441,9 @@ class Gen:
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
         item_file = find_file(target_item)
+        if item_file is not None and item_file.endswith("<string>"):
+            # dynamically generated object (like dataclass __eq__ method
+            item_file = None
         r = qa.split(".")[0]
         if item_file is not None:
             for s in SITE_PACKAGE + [
@@ -1449,7 +1452,6 @@ class Gen:
             ]:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
-
         blob.item_file = item_file
         if item_file is None:
             if type(target_item).__name__ in (
