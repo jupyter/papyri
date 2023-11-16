@@ -68,7 +68,7 @@ def minify(s: str) -> str:
 
 
 def unreachable(*obj):
-    return str(obj[1])
+    return str(obj)
     assert False, f"Unreachable: {obj=}"
 
 
@@ -1200,6 +1200,18 @@ def _ascii_env():
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
     env.globals["sidebar"] = False
+
+    env.globals["bold"] = lambda x: f"\x1b[1;m{x}\x1b[0;m"
+    env.globals["underline"] = lambda x: f"\x1b[4;m{x}\x1b[0;m"
+    env.globals["black"] = lambda x: f"\x1b[30;m{x}\x1b[0;m"
+    env.globals["red"] = lambda x: f"\x1b[31;m{x}\x1b[0;m"
+    env.globals["green"] = lambda x: f"\x1b[32;m{x}\x1b[0;m"
+    env.globals["yellow"] = lambda x: f"\x1b[33;m{x}\x1b[0;m"
+    env.globals["blue"] = lambda x: f"\x1b[34;m{x}\x1b[0;m"
+    env.globals["magenta"] = lambda x: f"\x1b[35;m{x}\x1b[0;m"
+    env.globals["cyan"] = lambda x: f"\x1b[36;m{x}\x1b[0;m"
+    env.globals["white"] = lambda x: f"\x1b[37;m{x}\x1b[0;m"
+
     try:
         c = converter()
 
@@ -1245,6 +1257,7 @@ async def ascii_render(name, store=None):
     key = next(iter(gstore.glob((None, None, "module", name))))
 
     env, template = _ascii_env()
+
     builtins.print(await _ascii_render(key, gstore, env=env, template=template))
 
 

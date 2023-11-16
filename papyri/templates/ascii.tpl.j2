@@ -61,41 +61,53 @@
     {% endif %}
 {% endmacro %}
 
+{% macro render_list(objs) -%}
+   |{% for item in objs -%}
+   |{{- render_II(item) -}}
+   |{% endfor -%}
+{%- endmacro %}
+
 {% macro render_II(obj) -%}
-   |{% if obj.__class__.__name__ == 'Paragraph' %}
-   |   |{{block_paragraph(obj)}}
-   |{% else %}
+   |{%- if obj.__class__.__name__ == 'Paragraph' -%}
+   |   |{{- block_paragraph(obj) -}}
+   |{%- else -%}
    |{%- set type = obj.__class__.__name__ -%}
    |   |{%- if type in ('Directive', 'Link', 'Math', 'Verbatim') -%}
    |   |   |{{unreachable()}}
-   |   |{% elif type == 'MMystDirective' %}
+   |   |{% elif type == 'MMystDirective' -%}
    |   |   |{{'\n'}}{{myst_directive(obj)}}
-   |   |{% elif type == 'Verbatim' %}
+   |   |{% elif type == 'Verbatim' -%}
    |   |   |{{obj}}
-   |   |{% elif type == 'Paragraph' %}
+   |   |{% elif type == 'Paragraph' -%}
    |   |   |{{block_paragraph(obj)}}
-   |   |{% elif type == 'BlockVerbatim' %}
+   |   |{% elif type == 'BlockVerbatim' -%}
    |   |   |{{obj.value}}
-   |   |{% elif type == 'DefList' %}
+   |   |{% elif type == 'DefList' -%}
    |   |   |    {% for item in obj.children %}
    |   |   |    {{render_II(item.dt)}}
    |   |   |        {{render_II(item.dd)}}
-   |   |   |    {%endfor %}  
+   |   |   |    {%endfor %}
    |   |{% elif type == 'DefListItem' %}
    |   |    {{-block(obj)-}}
    |   |{% elif type == 'Example' %}
    |   |   |   |{{block(obj)}}
+   |   |{% elif type == 'MLink' %}
+   |   |   |{{render_list(obj.children)}}
+   |   |{% elif type == 'MText' %}
+   |   |   |{{obj.value}}
+   |   |{% elif type == 'MParagraph'  -%}
+   |   |   |{{- render_list(obj.children) -}}
    |   |{% elif type == 'Parameters' %}
-   |   |   {% for item in obj.children %}
+   |   |   {%- for item in obj.children %}
    |   |       {{ render_II(item) }}
-   |   |   {% endfor %}
+   |   |   {%- endfor %}
    |   |{% elif type == 'Section' %}
-   |   |   {% for item in obj %}
-   |   |       {{ render_II(item) }}
-   |   |   {% endfor %}
-   |   |{% else %}
-   |   |   |Some B {{type}} Not implemented yet
-   |   |    {#{{unreachable(obj)}}#}
+   |   |   {%- for item in obj %}
+   |   |       {{- render_II(item) -}}
+   |   |   {%- endfor %}
+   |   |{%- else %}
+   |   |   |Some B {{type}} Not implemented yet:
+   |   |   |{{unreachable(obj)}}
    |   |{%- endif -%}
    |{%- endif -%}
 {%- endmacro %}
@@ -106,12 +118,12 @@
    |{% endif %}
    |{% for prg in prgs %}
    |   |   |{%- for obj in prg.children -%}
-   |   |   |    {{- render_inner(obj.__class__.__name__, obj) -}} 
+   |   |   |    {{- render_inner(obj.__class__.__name__, obj) -}}
    |   |   |{%- endfor -%}
    |{%- endfor -%}
 {%- endmacro %}
 
-        
+
 {%- macro esc(val, stuff) -%}
 [{{val}};m{{stuff}}[0;m
 {%- endmacro %}
@@ -148,10 +160,8 @@
    |{{bold(section)}}
    | 
    |{% endif %}
-   |{% if section in ['Summary', 'Extended Summary', 'Notes'] %}
-   |
+   |{%- if section in ['Summary', 'Extended Summary', 'Notes'] -%}
    |     |{{render_II(doc.content[section]) | wordwrap}}
-   |
    |{% elif section in ['Signature'] %}
    |{{unreachable()}}
    |{% elif section in ['Examples'] %}

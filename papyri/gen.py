@@ -33,10 +33,7 @@ from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequenc
 
 import jedi
 
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
+import tomllib
 import tomli_w
 from IPython.core.oinspect import find_file
 from IPython.utils.path import compress_user
@@ -1993,7 +1990,9 @@ class Gen:
                         "error with %s %s", qa, list(ecollector._errors.keys())
                     )
                 else:
-                    self.log.info("only expected error with %s", qa)
+                    self.log.info(
+                        "only expected error with %s, %s", qa, ecollector._errors.keys()
+                    )
                 continue
 
             try:
