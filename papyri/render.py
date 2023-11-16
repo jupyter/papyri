@@ -1242,7 +1242,7 @@ async def _ascii_render(key: Key, store: GraphStore, *, env, template):
 
 async def ascii_render(name, store=None):
     gstore = GraphStore(ingest_dir, {})
-    key = next(iter(gstore.glob((None, None, "module", "papyri.examples"))))
+    key = next(iter(gstore.glob((None, None, "module", name))))
 
     env, template = _ascii_env()
     builtins.print(await _ascii_render(key, gstore, env=env, template=template))
