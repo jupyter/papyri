@@ -1446,9 +1446,12 @@ class Gen:
             item_file = None
         r = qa.split(".")[0]
         if item_file is not None:
+            # TODO: find a better way to get a relative path with respect to the
+            # root of the package ?
             for s in SITE_PACKAGE + [
                 os.path.expanduser(f"~/dev/{r}/"),
                 os.path.expanduser("~"),
+                os.getcwd(),
             ]:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
