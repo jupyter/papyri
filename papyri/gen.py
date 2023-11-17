@@ -1075,8 +1075,8 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
             )
         self.figs.extend(figs)
 
-    def report_unexpected_exception(self, out, test, example,
-                                    exc_info):
+    def report_unexpected_exception(self, out, test, example, exc_info):
+        out("Unexpected exception", exc_info)
         tok_entries = self._get_tok_entries(example)
         self.example_section_data.append(
             Code(tok_entries, exc_info, ExecutionStatus.unexpected_exception)
