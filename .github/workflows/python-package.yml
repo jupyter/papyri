@@ -104,16 +104,16 @@ jobs:
         git checkout 3fc88d2097bc854ab6bf70c52b3c482849cf8e8f
         cd -
         papyri build-parser
-    - uses: actions/download-artifact@v3
-      with:
-        name: doc-bundles
-        path: ~/.papyri/data/
-
     - name: Test with pytest
       run: |
         pip install scipy dask
         pytest --cov=papyri --cov-append
         ls -al
+    - uses: actions/download-artifact@v3
+      with:
+        name: doc-bundles
+        path: ~/.papyri/data/
+
     - name: Misc cli
       run: |
         coverage run -a -m papyri --help
