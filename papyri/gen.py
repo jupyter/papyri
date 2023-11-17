@@ -1440,7 +1440,7 @@ class Gen:
     def _transform_2(self, blob: DocBlob, target_item, qa: str) -> DocBlob:
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
-        item_file = find_file(target_item)
+        item_file: Optional[str] = find_file(target_item)
         if item_file is not None and item_file.endswith("<string>"):
             # dynamically generated object (like dataclass __eq__ method
             item_file = None
