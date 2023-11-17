@@ -1251,16 +1251,28 @@ class Gen:
         except (TypeError, OSError):
             lineno = None
 
-        doctest_runner = PapyriDocTestRunner(gen=self, obj=obj, qa=qa,
-                                             config=config,
-                                             # TODO: Make optionflags configurable
-                                             optionflags=doctest.ELLIPSIS)
-        doctests = doctest.DocTestParser().get_doctest(example_code,
-                                                       doctest_runner.globs,
-                                                       obj.__name__, filename,
-                                                       lineno)
+        doctest_runner = PapyriDocTestRunner(
+            gen=self,
+            obj=obj,
+            qa=qa,
+            config=config,
+            # TODO: Make optionflags configurable
+            optionflags=doctest.ELLIPSIS,
+        )
+        doctests = doctest.DocTestParser().get_doctest(
+            example_code, doctest_runner.globs, obj.__name__, filename, lineno
+        )
 
-        doctest_runner.run(doctests, out=lambda s: None)
+
+        stdout = sys.stdout
+
+        def debugprint(*args):
+            """
+            version of print that capture current stdout to use during testing to debug
+            """
+            stdout.write(" ".join(str(x) for x in args) + "\n")
+
+        doctest_runner.run(doctests, out=debugprint)
 
         example_section_data = doctest_runner.example_section_data
 
