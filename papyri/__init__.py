@@ -1,5 +1,5 @@
 """
-Papyri – in progress
+Papyri – in progress
 
 Here are a couple of documents, or docstrings that are of interest to see how
 papyri works, generally because they crashed papyri at some point during the
@@ -560,6 +560,13 @@ def browse(qualname: str):
     from papyri.browser import main as browse
 
     browse(qualname)
+
+
+@app.command()
+def textual(qualname: str):
+    from papyri.textual import main as textual
+
+    textual(qualname)
 
 
 @app.command()

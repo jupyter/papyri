@@ -37,6 +37,8 @@ dependencies = [
     "matplotlib",
     "cbor2",
     "minify_html",
+    "textual",
+    "emoji",
 ]
 
 [project.scripts]
