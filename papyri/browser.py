@@ -1,33 +1,11 @@
-#!/usr/bin/env python
-#
-# Urwid tour.  It slices, it dices..
-#    Copyright (C) 2004-2011  Ian Ward
-#
-#    This library is free software; you can redistribute it and/or
-#    modify it under the terms of the GNU Lesser General Public
-#    License as published by the Free Software Foundation; either
-#    version 2.1 of the License, or (at your option) any later version.
-#
-#    This library is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#    Lesser General Public License for more details.
-#
-#    You should have received a copy of the GNU Lesser General Public
-#    License along with this library; if not, write to the Free Software
-#    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Urwid web site: http://excess.org/urwid/
-
 """
-Urwid tour.  Shows many of the standard widget types and features.
+papyri browser
 """
 import sys
 from typing import List
 
 import urwid
 import urwid.raw_display
-import urwid.web_display
 
 # from there import syslogprint as LOG
 from urwid import Text
@@ -575,9 +553,6 @@ def main(qualname: str):
         else:
             qualname = qualname.__module__ + "." + qualname.__qualname__
 
-    # import json
-    # data = json.loads(file_path.read_text())
-    # data
 
     def gen_content(blob, frame):
         R = Renderer(frame, walk, gen_content, stack)
@@ -726,11 +701,7 @@ def main(qualname: str):
         ("pyg-sa", "dark green", "", "bold"),  # string brefixes like b"", u"" r""
     ]
 
-    # use appropriate Screen class
-    if urwid.web_display.is_web_request():
-        screen = urwid.web_display.Screen()
-    else:
-        screen = urwid.raw_display.Screen()
+    screen = urwid.raw_display.Screen()
     found = True
 
     def unhandled(key):
@@ -751,10 +722,6 @@ def main(qualname: str):
 
 
 def setup() -> None:
-    urwid.web_display.set_preferences("Urwid Tour")
-    # try to handle short web requests quickly
-    if urwid.web_display.handle_short_request():
-        return
     import sys
 
     target: str
@@ -764,5 +731,5 @@ def setup() -> None:
     print(res)
 
 
-if "__main__" == __name__ or urwid.web_display.is_web_request():
+if "__main__" == __name__:
     setup()
