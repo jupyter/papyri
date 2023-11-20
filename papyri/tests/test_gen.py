@@ -180,8 +180,8 @@ def test_self_2():
     assert g.data["papyri.take2:RefInfo.__eq__"].to_dict()["item_file"] is None
 
 
-@pytest.mark.knownfail()
-def test_self_2():
+@pytest.mark.xfail()
+def test_self_3():
     # same as previous, but == fails on CI, to fix.
     from papyri.gen import Gen, Config
 
