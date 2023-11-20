@@ -542,6 +542,19 @@ class Renderer:
             ]
         )
 
+    def render_SignatureNode(self, sig):
+        if "Empty" in str(sig.return_annotation):
+            annotation = "None"
+        else:
+            annotation = ("signature", sig.return_annotation)
+        return [
+            ("signature", "("),
+            [("param", f"{p.name}, ") for p in sig.parameters],
+            ("signature", ")"),
+            ("signature", " -> "),
+            annotation,
+        ]
+
 
 def main(qualname: str):
     if not isinstance(qualname, str):
@@ -560,8 +573,21 @@ def main(qualname: str):
         R = Renderer(frame, walk, gen_content, stack)
         doc = []
         doc.append(blank)
-        if blob.signature.value:
-            doc.append(Text([("signature", blob.signature.value)]))
+        if blob.signature:
+            doc.append(Text(("section", "Signature")))
+            doc.append(blank)
+            doc.append(
+                Text(
+                    [
+                        ("signature", blob.signature.kind),
+                        (" "),
+                        ("bb", qualname),
+                        (" "),
+                        R.render(blob.signature),
+                    ]
+                ),
+            )
+            doc.append(blank)
 
         for k, v in blob.content.items():
             if not v.empty():
@@ -672,7 +698,7 @@ def main(qualname: str):
         ("link_selected", "black,bold", "white"),
         ("link-broken", "dark red,strikethrough", "", "bold"),
         ("type", "dark cyan", "", "bold"),
-        ("signature", "dark cyan,bold", "", "bold"),
+        ("signature", "yellow,bold", "", "bold"),
         ("param", "dark blue", "", "bold"),
         ("section", "dark magenta,bold", "", "bold"),
         ("unknown", "white", "dark red", "bold"),
