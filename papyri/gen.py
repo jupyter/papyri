@@ -45,7 +45,6 @@ from pygments.lexers import PythonLexer
 from rich.logging import RichHandler
 from rich.progress import BarColumn, Progress, TextColumn, track
 from there import print as print_
-from velin.examples_section_utils import InOut, splitblank, splitcode
 from matplotlib import _pylab_helpers
 
 from .common_ast import Node
@@ -84,10 +83,6 @@ from .utils import (
     Cannonical,
 )
 from .vref import NumpyDocString
-
-# delayed import
-
-from .myst_ast import MText
 
 
 class ErrorCollector:
@@ -996,7 +991,6 @@ def _normalize_see_also(see_also: Section, qa: str):
     return new_see_also
 
 
-
 class PapyriDocTestRunner(doctest.DocTestRunner):
     def __init__(self, *args, gen, obj, qa, config, **kwargs):
         self.gen = gen
@@ -1018,10 +1012,14 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
 
         self.figs = []
         self.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-        assert (len(self.fig_managers)) == 0, f"init fail in {self.qa} {len(self.fig_managers)}"
+        assert (
+            len(self.fig_managers)
+        ) == 0, f"init fail in {self.qa} {len(self.fig_managers)}"
 
     def _get_tok_entries(self, example):
-        entries = parse_script(example.source, ns=self.globs, prev="", config=self.config, where=self.qa)
+        entries = parse_script(
+            example.source, ns=self.globs, prev="", config=self.config, where=self.qa
+        )
         if entries is None:
             entries = [("jedi failed", "jedi failed")]
         entries = _add_classes(entries)
@@ -1036,7 +1034,6 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
             pat = f"fig-{self.qa}-{i}"
             sha = sha256(pat.encode()).hexdigest()[:8]
             yield f"{pat}-{sha}.png"
-
 
     def report_start(self, out, test, example):
         pass
@@ -1055,9 +1052,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         wait_for_show = self.config.wait_for_plt_show
         self.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         figs = []
-        if self.fig_managers and (
-            ("plt.show" in example.source) or not wait_for_show
-        ):
+        if self.fig_managers and (("plt.show" in example.source) or not wait_for_show):
             for fig, figname in zip(self.fig_managers, figure_names):
                 buf = io.BytesIO()
                 fig.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
@@ -1087,6 +1082,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         self.example_section_data.append(
             Code(tok_entries, got, ExecutionStatus.failure)
         )
+
 
 class Gen:
     """
@@ -1229,7 +1225,7 @@ class Gen:
         The capturing of matplotlib figures is also limited.
         """
         assert qa is not None
-        example_code = '\n'.join(example_section)
+        example_code = "\n".join(example_section)
         import matplotlib.pyplot as plt
 
         if qa in config.exclude_jedi:
@@ -1237,6 +1233,7 @@ class Gen:
             log.debug(f"Turning off type inference for func {qa!r}")
 
         sys_stdout = sys.stdout
+
         def dbg(*args):
             for arg in args:
                 sys_stdout.write(f"{arg}\n")
@@ -1262,7 +1259,6 @@ class Gen:
         doctests = doctest.DocTestParser().get_doctest(
             example_code, doctest_runner.globs, obj.__name__, filename, lineno
         )
-
 
         stdout = sys.stdout
 
