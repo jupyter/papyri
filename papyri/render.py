@@ -1200,6 +1200,8 @@ def _ascii_env():
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
     env.globals["sidebar"] = False
+    env.globals["str"] = str
+    env.filters["pad"] = lambda ss:'│'+'\n│'.join([x.strip() for x in ss.split('\n')])
 
     env.globals["bold"] = lambda x: f"\x1b[1;m{x}\x1b[0;m"
     env.globals["underline"] = lambda x: f"\x1b[4;m{x}\x1b[0;m"
