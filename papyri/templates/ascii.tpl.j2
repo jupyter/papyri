@@ -135,18 +135,6 @@
 [{{val}};m{{stuff}}[0;m
 {%- endmacro %}
 
-{% macro bold(stuff) -%}{{esc(1,stuff)}}{%- endmacro %}
-{% macro underline(stuff) -%}{{esc(4,stuff)}}{%- endmacro %}
-
-{% macro black(stuff) -%}{{esc(30,stuff)}}{%- endmacro %}
-{% macro red(stuff) -%}{{esc(31,stuff)}}{%- endmacro %}
-{% macro green(stuff) -%}{{esc(32,stuff)}}{%- endmacro %}
-{% macro yellow(stuff) -%}{{esc(33,stuff)}}{%- endmacro %}
-{% macro blue(stuff) -%}{{esc(34,stuff)}}{%- endmacro %}
-{% macro magenta(stuff) -%}{{esc(35,stuff)}}{%- endmacro %}
-{% macro cyan(stuff) -%}{{esc(36,stuff)}}{%- endmacro %}
-{% macro white(stuff) -%}{{esc(37,stuff)}}{%- endmacro %}
-
 {%- macro ref(r) -%}
    {%- if r.exists -%}
    {{-blue(r.name)-}}

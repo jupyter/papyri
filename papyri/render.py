@@ -9,7 +9,7 @@ import shutil
 import uuid
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
@@ -1190,7 +1190,7 @@ def old_render_one(
 
 
 @lru_cache
-def _ascii_env():
+def _ascii_env(color=True):
     env = Environment(
         loader=CleanLoader(Path(os.path.dirname(__file__)) / "templates"),
         lstrip_blocks=True,
@@ -1205,16 +1205,22 @@ def _ascii_env():
         [x.strip() for x in ss.split("\n")]
     )
 
-    env.globals["bold"] = lambda x: f"\x1b[1;m{x}\x1b[0;m"
-    env.globals["underline"] = lambda x: f"\x1b[4;m{x}\x1b[0;m"
-    env.globals["black"] = lambda x: f"\x1b[30;m{x}\x1b[0;m"
-    env.globals["red"] = lambda x: f"\x1b[31;m{x}\x1b[0;m"
-    env.globals["green"] = lambda x: f"\x1b[32;m{x}\x1b[0;m"
-    env.globals["yellow"] = lambda x: f"\x1b[33;m{x}\x1b[0;m"
-    env.globals["blue"] = lambda x: f"\x1b[34;m{x}\x1b[0;m"
-    env.globals["magenta"] = lambda x: f"\x1b[35;m{x}\x1b[0;m"
-    env.globals["cyan"] = lambda x: f"\x1b[36;m{x}\x1b[0;m"
-    env.globals["white"] = lambda x: f"\x1b[37;m{x}\x1b[0;m"
+    def esc(control, value):
+        return f"\x1b[{control};m{value}\x1b[0;m"
+
+    for control, value in [
+        ("bold", 1),
+        ("underline", 4),
+        ("black", 30),
+        ("red", 31),
+        ("green", 32),
+        ("yellow", 33),
+        ("blue", 34),
+        ("magenta", 35),
+        ("cyan", 36),
+        ("white", 37),
+    ]:
+        env.globals[control] = partial(esc, value) if color else lambda x:x
 
     try:
         c = converter()
