@@ -6,7 +6,7 @@ import pytest
 import glob
 from pathlib import Path
 import trio
-from papyri.render import _ascii_env, _ascii_render
+from papyri.render import _ascii_env, _ascii_render, GraphStore, ingest_dir
 
 HERE = Path(__file__).parent
 
@@ -39,4 +39,12 @@ def test_g(file):
 
 
 if __name__ == '__main__':
+    gstore = GraphStore(ingest_dir, {})
+    for file in expected:
+        item = file.name[:-len('.expected')]
+        key = next(iter(gstore.glob((None, None, "module", item))))
+        res = _get_result_for_name(item)
+        file.write_text(res)
+
+
 
