@@ -5,6 +5,7 @@ exec_failure = "fallback"
 submodules = []
 exclude = [
 ]
+execute_doctests = false
 [pandas.expected_errors]
 ValueError = [
  "pandas.io.gbq:read_gbq",
