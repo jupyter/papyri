@@ -24,7 +24,7 @@ def _get_result_for_name(name):
     return trio.run(part)
 
 
-@pytest.mark.postintest
+@pytest.mark.postingest
 @pytest.mark.parametrize("file", expected)
 def test_g(file):
     item = file.name[: -len(".expected")]
