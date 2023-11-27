@@ -3,14 +3,13 @@ Various ascii rendering test, where we compare the rendered version to an expect
 """
 
 import pytest
-import glob
 from pathlib import Path
 import trio
 from papyri.render import _ascii_env, _ascii_render, GraphStore, ingest_dir
 
 HERE = Path(__file__).parent
 
-expected = (HERE/'expected').glob('*')
+expected = (HERE / "expected").glob("*")
 
 
 def _get_result_for_name(name):
@@ -24,13 +23,11 @@ def _get_result_for_name(name):
 
     return trio.run(part)
 
-@pytest.mark.parametrize('file', expected)
+
+@pytest.mark.parametrize("file", expected)
 def test_g(file):
-
-    item = file.name[:-len('.expected')]
-    assert item == 'numpy:einsum'
-
-    from papyri.render import ingest_dir,GraphStore
+    item = file.name[: -len(".expected")]
+    assert item == "numpy:einsum"
 
     res = _get_result_for_name(item)
 
@@ -38,13 +35,10 @@ def test_g(file):
     assert expected == res
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gstore = GraphStore(ingest_dir, {})
     for file in expected:
-        item = file.name[:-len('.expected')]
+        item = file.name[: -len(".expected")]
         key = next(iter(gstore.glob((None, None, "module", item))))
         res = _get_result_for_name(item)
         file.write_text(res)
-
-
-

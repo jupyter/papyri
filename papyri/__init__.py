@@ -518,8 +518,8 @@ def drop():
 
 
 @app.command()
-def ascii(name: str, color:bool=True):
-    #_intro()
+def ascii(name: str, color: bool = True):
+    # _intro()
     import trio
 
     from .render import ascii_render

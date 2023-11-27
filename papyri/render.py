@@ -1220,7 +1220,7 @@ def _ascii_env(color=True):
         ("cyan", 36),
         ("white", 37),
     ]:
-        env.globals[control] = partial(esc, value) if color else lambda x:x
+        env.globals[control] = partial(esc, value) if color else lambda x: x
 
     try:
         c = converter()
