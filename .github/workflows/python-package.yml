@@ -107,7 +107,7 @@ jobs:
     - name: Test with pytest
       run: |
         pip install scipy dask
-        pytest --cov=papyri --cov-append
+        pytest --cov=papyri --cov-append -m "not postingest"
         ls -al
     - uses: actions/download-artifact@v3
       with:
@@ -121,6 +121,9 @@ jobs:
     - name: Ingest
       run: |
         coverage run -a -m papyri install ~/.papyri/data/*.zip
+    - name: Test with pytest postintest
+      run: |
+        pytest -m "postingest"
     - name: Relink
       run: |
         coverage run -a -m papyri relink
