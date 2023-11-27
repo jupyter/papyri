@@ -47,6 +47,9 @@ class Link:
         self.text = text
         self.cb = cb
 
+    def selectable(self):
+        return True
+
 
 class TextWithLink(urwid.Text):
     # _selectable = True
@@ -292,7 +295,7 @@ class Renderer:
             c = converter()
 
             return ("math", c.convert(cont))
-        return ("directive", f"{d.domain}:{d.role}:`{cont}`")
+        return Text(("directive", f"{d.domain}:{d.role}:`{cont}`"))
 
     def render_Example(self, ex):
         acc = []
@@ -307,7 +310,7 @@ class Renderer:
 
     def render_Link(self, link):
         if link.reference.kind == "local":
-            return ("local", link.value)
+            return Text(("local", link.value))
         return Link("link", link.value, lambda: self.cb(link.reference))
 
     def render_BlockQuote(self, quote):
@@ -315,7 +318,7 @@ class Renderer:
             urwid.Pile([self.render(c) for c in quote.children]), left=4, right=4
         )
 
-    def render_Admonition(self, adm):
+    def render_MAdmonition(self, adm):
         kind = adm.kind
         title = (f"{kind} : {adm.title}",)
         if kind == "versionchanged":
@@ -331,6 +334,13 @@ class Renderer:
                 title_align="left",
             ),
         )
+
+    def render_MText(self, text):
+        return urwid.Text(text.value)
+
+    def render_MParagraph(self, paragraph):
+        stuff = [self.render(c) for c in paragraph.children]
+        return urwid.Pile(stuff)
 
     def render_BlockMath(self, math):
         from flatlatex import converter

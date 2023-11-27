@@ -9,7 +9,7 @@ import shutil
 import uuid
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
@@ -68,7 +68,7 @@ def minify(s: str) -> str:
 
 
 def unreachable(*obj):
-    return str(obj[1])
+    return str(obj)
     assert False, f"Unreachable: {obj=}"
 
 
@@ -1190,7 +1190,7 @@ def old_render_one(
 
 
 @lru_cache
-def _ascii_env():
+def _ascii_env(color=True):
     env = Environment(
         loader=CleanLoader(Path(os.path.dirname(__file__)) / "templates"),
         lstrip_blocks=True,
@@ -1200,6 +1200,28 @@ def _ascii_env():
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
     env.globals["sidebar"] = False
+    env.globals["str"] = str
+    env.filters["pad"] = lambda ss: "│" + "\n│".join(
+        [x.strip() for x in ss.split("\n")]
+    )
+
+    def esc(control, value):
+        return f"\x1b[{control};m{value}\x1b[0;m"
+
+    for control, value in [
+        ("bold", 1),
+        ("underline", 4),
+        ("black", 30),
+        ("red", 31),
+        ("green", 32),
+        ("yellow", 33),
+        ("blue", 34),
+        ("magenta", 35),
+        ("cyan", 36),
+        ("white", 37),
+    ]:
+        env.globals[control] = partial(esc, value) if color else lambda x: x
+
     try:
         c = converter()
 
@@ -1240,11 +1262,12 @@ async def _ascii_render(key: Key, store: GraphStore, *, env, template):
     )
 
 
-async def ascii_render(name, store=None):
+async def ascii_render(name, store=None, color=True):
     gstore = GraphStore(ingest_dir, {})
     key = next(iter(gstore.glob((None, None, "module", name))))
 
-    env, template = _ascii_env()
+    env, template = _ascii_env(color=color)
+
     builtins.print(await _ascii_render(key, gstore, env=env, template=template))
 
 

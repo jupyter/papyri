@@ -518,13 +518,16 @@ def drop():
 
 
 @app.command()
-def ascii(name: str):
-    _intro()
+def ascii(name: str, color: bool = True):
+    # _intro()
     import trio
 
     from .render import ascii_render
 
-    trio.run(ascii_render, name)
+    async def _():
+        await ascii_render(name, color=color)
+
+    trio.run(_)
 
 
 @app.command()
