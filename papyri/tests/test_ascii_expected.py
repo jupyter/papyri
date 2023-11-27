@@ -4,8 +4,7 @@ Various ascii rendering test, where we compare the rendered version to an expect
 
 import pytest
 from pathlib import Path
-import trio
-from papyri.render import _ascii_env, _ascii_render, GraphStore, ingest_dir
+from papyri.render import GraphStore, ingest_dir, _rich_ascii
 
 HERE = Path(__file__).parent
 
@@ -16,12 +15,7 @@ def _get_result_for_name(name):
     gstore = GraphStore(ingest_dir, {})
     key = next(iter(gstore.glob((None, None, "module", name))))
 
-    env, template = _ascii_env(color=False)
-
-    async def part():
-        return await _ascii_render(key, gstore, env=env, template=template)
-
-    return trio.run(part)
+    return _rich_ascii(key, gstore)
 
 
 @pytest.mark.postingest

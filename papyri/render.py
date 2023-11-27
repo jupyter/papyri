@@ -1,6 +1,5 @@
-import builtins
-import json
 import logging
+import json
 import math
 import operator
 import os
@@ -9,11 +8,9 @@ import shutil
 import uuid
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
-from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
-from flatlatex import converter
 from jinja2 import (
     Environment,
     FileSystemLoader,
@@ -102,32 +99,6 @@ def unimplemented(*obj):
 def unreachable(*obj):
     # return str(obj)
     assert False, f"Unreachable: {obj=}"
-
-
-class CleanLoader(FileSystemLoader):
-    """
-    A loader for ascii/ansi that remove all leading spaces and pipes  until the last pipe.
-    """
-
-    def get_source(self, *args, **kwargs):
-        (source, filename, uptodate) = super().get_source(*args, **kwargs)
-        return until_ruler(source), filename, uptodate
-
-
-def until_ruler(doc: str) -> str:
-    """
-    Utilities to clean jinja template;
-
-    Remove all ``|`` and `` `` until the last leading ``|``
-
-    """
-    lines = doc.split("\n")
-    new = []
-    for l in lines:
-        while len(l.lstrip()) >= 1 and l.lstrip()[0] == "|":
-            l = l.lstrip()[1:]
-        new.append(l)
-    return "\n".join(new)
 
 
 # here we compute the siblings at each level; as well as one level down
@@ -823,16 +794,10 @@ class HtmlRenderer:
         template = self.env.get_template("html.tpl.j2")
         gfiles = list(self.store.glob((None, None, "module", None)))
         random.shuffle(gfiles)
-        if config.ascii:
-            env, ascii_template = _ascii_env()
-        else:
-            env, ascii_template = None, None
         for _, key in progress(gfiles, description="Rendering API..."):
             module, version = key.module, key.version
             if config.ascii:
-                await _ascii_render(
-                    key, store=self.store, env=env, template=ascii_template
-                )
+                _rich_ascii(key, store=self.store)
             if config.html:
                 doc_blob, qa, siblings, parts_links, backward, forward = await loc(
                     key,
@@ -1229,7 +1194,8 @@ class LinkReifier(TreeReplacer):
         if link.reference.kind == "local":
             return [
                 MLink(
-                    children=[MText(link.value + "1217")],
+                    # TODO: what do we do for reference in same document
+                    children=[MText(link.value)],
                     url=f"#{link.reference.path}",
                     title=str(link.reference),
                 )
@@ -1248,9 +1214,8 @@ class LinkReifier(TreeReplacer):
                 return [
                     MUnimpl(
                         [
-                            MText(
-                                link.value + f"(1227, {link}?)",
-                            )
+                            # TODO new non-existing text category ?
+                            MText(link.value)
                         ]
                     )
                 ]
@@ -1345,130 +1310,155 @@ def old_render_one(
         raise ValueError("qa=", qa) from e
 
 
-@lru_cache
-def _ascii_env(color=True):
-    env = Environment(
-        loader=CleanLoader(Path(os.path.dirname(__file__)) / "templates"),
-        lstrip_blocks=True,
-        trim_blocks=True,
-        undefined=StrictUndefined,
-    )
-    env.globals["len"] = len
-    env.globals["unreachable"] = unreachable
-    env.globals["sidebar"] = False
-    env.globals["str"] = str
-    env.filters["pad"] = lambda ss: "│" + "\n│".join(
-        [x.strip() for x in ss.split("\n")]
-    )
+def _rich_render(key: Key, store: GraphStore) -> List[Any]:
+    from .rich_render import RichVisitor
 
-    def esc(control, value):
-        return f"\x1b[{control};m{value}\x1b[0;m"
+    doc = encoder.decode(store.get(key))
+    resolver = Resolver(store, prefix="/p/", extension="")
+    LR = LinkReifier(resolver=resolver)
+    RV = RichVisitor()
+    to_del = []
 
-    for control, value in [
-        ("bold", 1),
-        ("underline", 4),
-        ("black", 30),
-        ("red", 31),
-        ("green", 32),
-        ("yellow", 33),
-        ("blue", 34),
-        ("magenta", 35),
-        ("cyan", 36),
-        ("white", 37),
-    ]:
-        env.globals[control] = partial(esc, value) if color else lambda x: x
+    for k, v in doc.content.items():
+        if v.children:
+            ct = MRoot([MHeading(depth=1, children=[MText(k)]), *v.children])
+            doc.content[k] = RV.visit(LR.visit(ct))
+        else:
+            to_del.append(k)
+    for k in to_del:
+        del doc.content[k]
+    name = key.path.split(":")[-1].split(".")[-1]
+    if doc.signature:
+        myst_acc = [name + str(doc.signature.to_signature())]
+    else:
+        myst_acc = []
+
+    myst_acc += [RV.visit(LR.visit(x)) for x in doc.arbitrary] + [
+        doc.content[k] for k in doc.content
+    ]
+    if doc.see_also:
+        myst_acc.append(
+            RV.visit(
+                MRoot(
+                    [
+                        MHeading(
+                            children=[MText("See Also")],
+                            depth=1,
+                        )
+                    ]
+                    + [DefList([LR.visit(s) for s in doc.see_also])]
+                )
+            )
+        )
+    return myst_acc
+
+
+from rich.theme import Theme
+
+THEME = Theme(
+    {
+        "m.inline_code": "bold blue",
+        "unimp": "red",
+        "m.directive": "cyan",
+        "param": "green",
+        "param_type": "yellow",
+        "math": "green",
+    }
+)
+
+
+async def rich_render(
+    name: str, width: Optional[int] = None, color: bool = True
+) -> None:
+    store = GraphStore(ingest_dir, {})
+    key = next(iter(store.glob((None, None, "module", name))))
+
+    from rich.console import Console
+
+    console = Console(
+        theme=THEME,
+        width=width,
+        no_color=not color,
+        color_system="256" if color else "auto",
+    )
+    try:
+        for it in _rich_render(key, store):
+            console.print(it)
+    except Exception as e:
+        e.add_note(f"rendering {key=}")
+        raise
+
+
+def _rich_ascii(key: Key, store=None):
+    if store is None:
+        store = GraphStore(ingest_dir, {})
+
+    from rich.console import Console
+
+    from io import StringIO
+
+    buf = StringIO()
+
+    console = Console(
+        theme=THEME,
+        record=True,
+        file=buf,
+        no_color=True,
+        width=80,
+    )
 
     try:
-        c = converter()
+        for it in _rich_render(key, store):
+            console.print(it)
+    except Exception as e:
+        e.add_note(f"rendering {key=}")
+        raise
 
-        def math(s):
-            assert isinstance(s, list)
-            for x in s:
-                assert isinstance(x, str)
-            res = [c.convert(_) for _ in s]
-            return res
-
-        env.globals["math"] = math
-    except ImportError:
-
-        def math(s):
-            return s + "($pip install flatlatex for unicode math)"
-
-        env.globals["math"] = math
-
-    template = env.get_template("ascii.tpl.j2")
-    return env, template
-
-
-async def _ascii_render(key: Key, store: GraphStore, *, env, template):
-    assert store is not None
-    assert isinstance(store, GraphStore)
-    ref = key.path
-
-    doc_blob = encoder.decode(store.get(key))
-    meta = encoder.decode(store.get_meta(key))
-
-    return old_render_one(
-        store,
-        current_type="API",
-        meta=meta,
-        template=template,
-        doc=doc_blob,
-        qa=ref,
-    )
-
-
-async def ascii_render(name, store=None, color=True):
-    gstore = GraphStore(ingest_dir, {})
-    key = next(iter(gstore.glob((None, None, "module", name))))
-
-    env, template = _ascii_env(color=color)
-
-    builtins.print(await _ascii_render(key, gstore, env=env, template=template))
+    lines = console.export_text().splitlines()
+    return "\n".join(l.rstrip() for l in lines)
 
 
 async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
     """
     return data for rendering in the templates
+      Parameters
+      ----------
+      document: Store
+          Path the document we need to read and prepare for rendering
+      store: Store
 
-    Parameters
-    ----------
-    document: Store
-        Path the document we need to read and prepare for rendering
-    store: Store
+          Store into which the document is stored (abstraciton layer over local
+          filesystem or a remote store like github, thoug right now only local
+          file system works)
+      tree:
+          tree of object we know about; this will be useful to compute siblings
+          for the navigation menu at the top that allow to either drill down the
+          hierarchy.
+      known_refs: List[RefInfo]
+          list of all the reference info for targets, so that we can resolve links
+          later on; this is here for now, but shoudl be moved to ingestion at some
+          point.
+      ref_map: ??
+          helper to compute the siblings for agiven hierarchy,
 
-        Store into which the document is stored (abstraciton layer over local
-        filesystem or a remote store like github, thoug right now only local
-        file system works)
-    tree:
-        tree of object we know about; this will be useful to compute siblings
-        for the navigation menu at the top that allow to either drill down the
-        hierarchy.
-    known_refs: List[RefInfo]
-        list of all the reference info for targets, so that we can resolve links
-        later on; this is here for now, but shoudl be moved to ingestion at some
-        point.
-    ref_map: ??
-        helper to compute the siblings for agiven hierarchy,
-
-    Returns
-    -------
-    doc_blob: IngestedBlobs
-        document that will be rendered
-    qa: str
-        fully qualified name of the object we will render
-    siblings:
-        information to render the navigation dropdown at the top.
-    parts_links:
-        information to render breadcrumbs with links to parents.
+      Returns
+      -------
+      doc_blob: IngestedBlobs
+          document that will be rendered
+      qa: str
+          fully qualified name of the object we will render
+      siblings:
+          information to render the navigation dropdown at the top.
+      parts_links:
+          information to render breadcrumbs with links to parents.
 
 
-    Notes
-    -----
+      Notes
+      -----
 
-    Note that most of the current logic assume we only have the documentation
-    for a single version of a package; when we have multiple version some of
-    these heuristics break down.
+      Note that most of the current logic assume we only have the documentation
+      for a single version of a package; when we have multiple version some of
+      these heuristics break down.
 
     """
     try:

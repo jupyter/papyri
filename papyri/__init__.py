@@ -215,9 +215,11 @@ To start a server that generate html on the fly
 
     $ papyri serve
 
-View given function docs in text with ANSI coloring
+View given function docs in text with ANSI coloring, using ``rich``
 
-    $ papyri ascii numpy.linspace
+    $ papyri rich numpy:einsum
+
+This supports the `--width=<int>` and `--color|--no-color` flags.
 
 
 """,
@@ -518,16 +520,12 @@ def drop():
 
 
 @app.command()
-def ascii(name: str, color: bool = True):
-    # _intro()
+def rich(name: str, *, width: Optional[int] = None, color: bool = True):
     import trio
 
-    from .render import ascii_render
+    from .render import rich_render
 
-    async def _():
-        await ascii_render(name, color=color)
-
-    trio.run(_)
+    trio.run(rich_render, name, width)
 
 
 @app.command()
