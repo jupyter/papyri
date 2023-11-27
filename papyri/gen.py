@@ -425,6 +425,7 @@ class Config:
     expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
     early_error: bool = True
     fail_unseen_error: bool = False
+    execute_doctests: bool = True
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -1071,7 +1072,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         self.figs.extend(figs)
 
     def report_unexpected_exception(self, out, test, example, exc_info):
-        out("Unexpected exception", exc_info)
+        out(f"Unexpected exception after running example in `{self.qa}`", exc_info)
         tok_entries = self._get_tok_entries(example)
         self.example_section_data.append(
             Code(tok_entries, exc_info, ExecutionStatus.unexpected_exception)
@@ -1268,7 +1269,8 @@ class Gen:
             """
             stdout.write(" ".join(str(x) for x in args) + "\n")
 
-        doctest_runner.run(doctests, out=debugprint)
+        if config.execute_doctests:
+            doctest_runner.run(doctests, out=debugprint)
 
         example_section_data = doctest_runner.example_section_data
 
