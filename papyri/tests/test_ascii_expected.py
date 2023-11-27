@@ -39,4 +39,5 @@ if __name__ == "__main__":
         item = file.name[: -len(".expected")]
         key = next(iter(gstore.glob((None, None, "module", item))))
         res = _get_result_for_name(item)
+        print('regen', key)
         file.write_text(res)
