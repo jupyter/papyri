@@ -27,8 +27,6 @@ def _get_result_for_name(name):
 @pytest.mark.parametrize("file", expected)
 def test_g(file):
     item = file.name[: -len(".expected")]
-    assert item == "numpy:einsum"
-
     res = _get_result_for_name(item)
 
     expected = file.read_text()
