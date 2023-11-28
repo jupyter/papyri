@@ -133,6 +133,20 @@ $ papyri build-parser
 
 Note that papyri still uses a custom parser which will be removed in the future to rely mostly on TreeSitter.
 
+### Testing
+
+Install extra development dependencies by running:
+
+```bash
+$ pip install -r requirements-dev.txt
+```
+
+Run tests using
+
+```bash
+$ pytest
+```
+
 ## Usage
 
 In the end there should be roughly 3 steps,
