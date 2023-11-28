@@ -79,6 +79,10 @@ class Directive(Node):
     domain: Optional[str]
     role: Optional[str]
 
+    def __init__(self, value, domain, role):
+        assert "\n" not in value
+        super().__init__(value, domain, role)
+
     def __hash__(self):
         return hash((tuple(self.value), self.domain, self.role))
 
