@@ -317,7 +317,9 @@ class TSVisitor:
             # we should likely have a way to handle that.
             _text = full_text
         else:
-            _text, trailing = self.as_text(node)[1:].rsplit("`", maxsplit=1)
+            _text, trailing = (
+                self.as_text(node)[1:].replace("\n", " ").rsplit("`", maxsplit=1)
+            )
             assert trailing in ("_", "__")
         return [Directive(_text, None, None)]
 
@@ -350,7 +352,7 @@ class TSVisitor:
         assert text_value.startswith("`")
         assert text_value.endswith("`")
 
-        inner_value = text_value[1:-1]
+        inner_value = text_value[1:-1].replace("\n", " ")
 
         if "`" in inner_value:
             log.info(
