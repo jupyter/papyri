@@ -1,8 +1,6 @@
 """
 papyri textual
 """
-import sys
-from typing import List
 from pathlib import Path
 
 from textual.app import App, ComposeResult, RenderResult
@@ -10,13 +8,11 @@ from textual import events
 from textual.binding import Binding
 from textual.containers import VerticalScroll, Container
 from textual.widgets import Header, Footer, Label, Static
-from textual.widget import Widget
 
 from emoji import emojize
 
-from papyri.crosslink import RefInfo, encoder
+from papyri.crosslink import encoder
 from papyri.config import ingest_dir
-from papyri.myst_ast import MParagraph
 
 
 class Signature(Label):
@@ -90,7 +86,7 @@ class PapyriApp(App):
             signature = self.blob.signature
         else:
             signature = None
-        #content = str(self.blob.content)
+        # content = str(self.blob.content)
 
         yield Container(
             Header(),
@@ -148,6 +144,7 @@ def setup() -> None:
     target = sys.argv[1]
     assert isinstance(target, str)
     res = main(target)
+    print(res)
 
 
 if "__main__" == __name__:
