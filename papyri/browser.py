@@ -310,7 +310,7 @@ class Renderer:
 
     def render_Link(self, link):
         if link.reference.kind == "local":
-            return Text(("local", link.value))
+            return Text(link.value)
         return Link("link", link.value, lambda: self.cb(link.reference))
 
     def render_BlockQuote(self, quote):
@@ -320,7 +320,10 @@ class Renderer:
 
     def render_MAdmonition(self, adm):
         kind = adm.kind
-        title = (f"{kind} : {adm.title}",)
+        if hasattr(adm, "title"):
+            title = (f"{kind} : {adm.title}",)
+        else:
+            title = (f"{kind.capitalize()}")
         if kind == "versionchanged":
             title = "Changed in Version " + adm.title
         if kind == "versionadded":
@@ -538,7 +541,6 @@ class Renderer:
                 Text(
                     [
                         ("param", param.param),
-                        # ("param", param.param),
                         " : ",
                         ("type", param.type_),
                     ]
