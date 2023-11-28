@@ -553,7 +553,6 @@ def main(qualname: str):
         else:
             qualname = qualname.__module__ + "." + qualname.__qualname__
 
-
     def gen_content(blob, frame):
         R = Renderer(frame, walk, gen_content, stack)
         doc = []
