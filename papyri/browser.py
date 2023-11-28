@@ -288,8 +288,8 @@ class Renderer:
 
     def render_Link(self, link):
         if link.reference.kind == "local":
-            return Text(link.value)
-        return Link("link", link.value, lambda: self.cb(link.reference))
+            return Text(("local", link.value))
+        return TextWithLink("link", link.value, lambda: self.cb(link.reference))
 
     def render_BlockQuote(self, quote):
         return urwid.Padding(
