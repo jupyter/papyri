@@ -323,7 +323,7 @@ class Renderer:
         if hasattr(adm, "title"):
             title = (f"{kind} : {adm.title}",)
         else:
-            title = (f"{kind.capitalize()}")
+            title = f"{kind.capitalize()}"
         if kind == "versionchanged":
             title = "Changed in Version " + adm.title
         if kind == "versionadded":
