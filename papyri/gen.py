@@ -1467,7 +1467,7 @@ class Gen:
                     repr(type(target_item).__name__),
                 )
             else:
-                self.log.warn(
+                self.log.warning(
                     "Could not find source file for %s (%s) [%s], will not be able to link to it.",
                     repr(qa),
                     target_item,
