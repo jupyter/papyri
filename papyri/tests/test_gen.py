@@ -75,7 +75,15 @@ def test_infer():
 @pytest.mark.parametrize(
     "module, submodules, objects",
     [
-        ("numpy", ("core",), ("numpy:array", "numpy.core._multiarray_tests:npy_sinh")),
+        (
+            "numpy",
+            ("core",),
+            (
+                "numpy:array",
+                "numpy.core._multiarray_tests:npy_sinh",
+                "numpy:histogram2d",
+            ),
+        ),
         ("IPython", (), ("IPython:embed_kernel",)),
     ],
 )
@@ -97,6 +105,31 @@ def test_numpy(module, submodules, objects):
             assert (td / "module" / f"{o}.json").exists()
 
 
+@pytest.mark.parametrize(
+    "module, submodules, objects",
+    [
+        (
+            "numpy",
+            ("core",),
+            ("numpy:histogram2d",),
+        ),
+    ],
+)
+def test_numpy_2(module, submodules, objects):
+    config = Config(exec=False, infer=False, submodules=submodules)
+    gen = Gen(dummy_progress=True, config=config)
+
+    gen.collect_package_metadata(
+        module,
+        relative_dir=Path("."),
+        meta={},
+    )
+    gen.collect_api_docs(module, limit_to=objects)
+    assert tuple(gen.data.keys()) == objects
+    for o in objects:
+        assert gen.data[o].signature is not None
+
+
 def test_self():
     from papyri.gen import Gen, Config
 
@@ -105,8 +138,8 @@ def test_self():
     g.collect_package_metadata("papyri", ".", {})
     g.collect_api_docs("papyri", {"papyri.examples:example1", "papyri"})
     assert g.data["papyri.examples:example1"].to_dict()["signature"] == {
-        "type": "SignatureNode",
-        "kind": "function",
+        "type": "signature",
+        "kind": "coroutine function",
         "parameters": [
             {
                 "type": "ParameterNode",
@@ -138,7 +171,7 @@ def test_self():
             },
             {
                 "type": "ParameterNode",
-                "name": "kwargs",
+                "name": "kwarg",
                 "annotation": {"type": "Empty"},
                 "kind": "KEYWORD_ONLY",
                 "default": {"type": "Empty"},
@@ -150,8 +183,16 @@ def test_self():
                 "kind": "KEYWORD_ONLY",
                 "default": {"data": "None", "type": "str"},
             },
+            {
+                "annotation": {"type": "Empty"},
+                "default": {"type": "Empty"},
+                "kind": "VAR_KEYWORD",
+                "name": "kwargs",
+                "type": "ParameterNode",
+            },
         ],
         "return_annotation": {"data": "typing.Optional[str]", "type": "str"},
+        "target_name": "example1",
     }
     assert g.data["papyri"].to_dict()["signature"] is None
 

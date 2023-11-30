@@ -19,7 +19,6 @@ from .myst_ast import (
     MBlockquote,
 )
 
-allowed_adorn = "=-`:.'\"~^_*+#<>"
 
 from .take2 import (
     DefList,
@@ -31,7 +30,7 @@ from .take2 import (
     Section,
     SubstitutionDef,
     SubstitutionRef,
-    Transition,
+    MThematicBreak,
     Unimplemented,
     compress_word,
     inline_nodes,
@@ -43,6 +42,7 @@ from .errors import (
     # VisitSubstitutionDefinitionNotImplementedError,
 )
 
+allowed_adorn = "=-`:.'\"~^_*+#<>"
 pth = str(Path(__file__).parent / "rst.so")
 
 # replace by tree-sitter-languages once it works See https://github.com/grantjenks/py-tree-sitter-languages/issues/15
@@ -298,7 +298,7 @@ class TSVisitor:
         return []
 
     def visit_transition(self, node, prev_end=None):
-        return [Transition()]
+        return [MThematicBreak()]
 
     def visit_reference(self, node, prev_end=None):
         """
@@ -376,7 +376,9 @@ class TSVisitor:
         return self.visit_text(node)
 
     def visit_text(self, node, prev_end=None):
-        t = MText(self.bytes[node.start_byte : node.end_byte].decode())
+        text = self.bytes[node.start_byte : node.end_byte].decode()
+        assert not text.startswith(":func:"), breakpoint()
+        t = MText(text)
         t.start_byte = node.start_byte
         t.end_byte = node.end_byte
         return [t]
@@ -671,8 +673,8 @@ class TSVisitor:
         assert directive.type == "directive"
         return [
             SubstitutionDef(
-                self.bytes[sub.start_byte : sub.end_byte].decode(),
-                self.visit_directive(directive)[0],
+                value=self.bytes[sub.start_byte : sub.end_byte].decode(),
+                children=self.visit_directive(directive),
             )
         ]
 

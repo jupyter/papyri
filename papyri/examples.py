@@ -4,14 +4,30 @@ Examples Modules Heading 1
 ==========================
 
 This module contains examples, none of the functions, classes or other attribute
-should have any effects when called.
+should have any effects when called. Paragraphs should be able to contain plain
+`links <https://github.com/jupyter/papyri>`__, or link via directives: :any:`papyri`
 
+Heading 2
+---------
+
+Heading 3
+~~~~~~~~~
+
+heading 4
+.........
+
+
+FieldList
+---------
 
 :fieldlistitem:
     at least that the name tree sitter rst give it.
 :another: is a another fieldlistItem in this field list
     and it's description
 
+
+Enumeration and unordered lists
+-------------------------------
 
 Enumeration list.
 
@@ -26,6 +42,9 @@ Unordered list
 - item 3
 
 
+Definition Lists
+----------------
+
 Definition list (not sure about the difference with field lists...)
 
 term 1
@@ -36,6 +55,9 @@ term 2
 
     Definition 2, paragraph 2.
 
+
+Admonitions
+-----------
 
 .. note::
 
@@ -59,47 +81,47 @@ Math
 
     \\pi = 3.14159
 
+Literal Blocks (verbatim)
+-------------------------
 
-"""
+::
 
-"""
-
-term
-: definition
-
-## Math
+    This should be a verb-
+    -batim block
 
 
-## Figures
+This is a Transition:
 
-```{figure} https://via.placeholder.com/150
-:width: 100px
-:align: center
+-----
 
-Figure caption
-```
+This is q block quote, to do, we know that Attributions are not supported right now.
 
-## Tables
+    "We have weaponed the Tab Key"
 
-```{list-table}
-:header-rows: 1
-:align: center
 
-* - Header 1
-  - Header 2
-* - Item 1 a
-  - Item 2 a
-* - Item 1 b
-  - Item 2 b
-```
+
+Substitutions
+~~~~~~~~~~~~~
+
+In this paragraph: |SubstitutionRef| Should b replaced...
+
+.. |SubstitutionDef| replace:: ASUBSTITUTIONDEF
 
 """
 
 from typing import Optional, Union
 
 
-def example1(
-    pos: int, only: None, /, var: Union[float, bool], args=1, *, kwargs, also=None
+async def example1(
+    pos: int,
+    only: None,
+    /,
+    var: Union[float, bool],
+    args=1,
+    *,
+    kwarg,
+    also=None,
+    **kwargs,
 ) -> Optional[str]:
     """
     first example.

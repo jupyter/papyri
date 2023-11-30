@@ -80,7 +80,7 @@ class Directive(Node):
     role: Optional[str]
 
     def __init__(self, value, domain, role):
-        assert "\n" not in value
+        assert "\n" not in value, f"Directive should not contain newline {value}"
         super().__init__(value, domain, role)
 
     def __hash__(self):
@@ -107,7 +107,10 @@ class Directive(Node):
         return prefix
 
     def __repr__(self):
-        return f"<Directive {self.prefix}`{self.value}`>"
+        return f"<Directive {self.prefix}`{self.value}` `{self.to_dict()}`>"
+
+    def __str__(self):
+        assert False
 
 
 @register(4002)
@@ -131,6 +134,8 @@ class Link(Node):
     directive from it.
     - A Link might get several token for multiline; I'm not sure about that either, and wether the inner text should be
       a block or not.
+
+    - In general link won't end up in the final Json that is rendered as they will need to be resolved at runtime ?
     """
 
     value: str
@@ -154,13 +159,23 @@ class Leaf(Node):
 
 @register(4027)
 class SubstitutionDef(Node):
-    name: str
-    directive: MMystDirective
+    value: str
+    children: List[MMystDirective]
+
+    def __init__(self, value, children):
+        self.value = value
+        assert isinstance(children, list)
+        self.children = children
+        pass
 
 
 @register(4041)
 class SubstitutionRef(Leaf):
-    pass
+    """
+    This will be in the for |XXX|, and need to be replaced.
+    """
+
+    value: str
 
 
 @register(4018)
@@ -184,7 +199,16 @@ from .myst_ast import (
     MComment,
     MBlockquote,
     MTarget,
+    MThematicBreak,
 )
+
+
+@register(4017)
+class MUnimpl(Node):
+    children: List[Union[MText]]
+
+    def __repr__(self):
+        return f"<MUnimpl {self.children}>"
 
 
 class IntermediateNode(Node):
@@ -265,28 +289,27 @@ class NumpydocSignature(Node):
 class Section(Node):
     children: List[
         Union[
-            Transition,
             # Code,
-            MCode,
-            MText,
-            Unimplemented,
-            MComment,
-            MTarget,
-            Fig,
-            Options,
-            MParagraph,
             DefList,
-            MMystDirective,
-            Unimplemented,
-            MMath,
-            Parameters,
-            MList,
-            MBlockquote,
-            MAdmonition,
             FieldList,
+            Fig,
+            MAdmonition,
+            MBlockquote,
+            MCode,
+            MComment,
+            MList,
+            MMath,
+            MMystDirective,
+            MParagraph,
             MTarget,
-            SubstitutionRef,
+            MText,
+            MThematicBreak,
+            Options,
+            Parameters,
             SubstitutionDef,
+            SubstitutionRef,
+            Unimplemented,
+            MUnimpl,
         ]
     ]
     # might need to be more complicated like verbatim.
@@ -413,11 +436,6 @@ def compress_word(stream) -> List[Any]:
     return acc
 
 
-@register(4019)
-class Transition(Node):
-    pass
-
-
 inline_nodes = tuple(
     [
         Directive,
@@ -489,7 +507,12 @@ class DefList(Node):
 
 @register(4037)
 class DefListItem(Node):
-    dt: Union[MParagraph]  # TODO: this is technically incorrect and should
+    dt: Union[
+        MParagraph,
+        MText,
+        MLink,
+        MUnimpl,
+    ]  # TODO: this is technically incorrect and should
     # be a single term, (word, directive or link is my guess).
     dd: List[
         Union[
@@ -500,6 +523,7 @@ class DefListItem(Node):
             DefList,
             MMystDirective,
             Unimplemented,
+            MUnimpl,
             MAdmonition,
             MMath,
             FieldList,
@@ -520,6 +544,8 @@ class DefListItem(Node):
 @register(4028)
 class SeeAlsoItem(Node):
     name: Link
+
+    # TODO: Chck why we hav a Union Here, and if we have only Paragraphs, remove the union.
     descriptions: List[Union[MParagraph]]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]

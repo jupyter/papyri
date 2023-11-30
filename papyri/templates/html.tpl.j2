@@ -1,150 +1,33 @@
 {%- extends "skeleton.tpl.j2" %}
 
-{%- block plus %}
-    {%- for section in doc.content.keys() if doc.content[section] and len(doc.content[section]) -%}
-        {%- if section not in ['Extended Summary','Signature', 'Summary'] -%}
-        <a href="#section-{{section}}">{{section}}</a>
-        {%-  endif -%}
-    {%-  endfor -%}
-    {%- if backrefs[0] or backrefs[1] -%}
-        <a href="#section-backrefs">BackRef</a>
-    {%  endif %}
-{%- endblock %}
-
 {%block api %}
+<div class='article'>
 
 
-{% from 'macros.tpl.j2' import render_inner, block_paragraph, render_paragraph, lines, block, myst_directive, example, render_myst, render_II with context %}
+{% from 'macros.tpl.j2' import render_paragraph, example, render_myst, render_II with context %}
 {% from 'graph.tpl.j2' import d3script with context%}
 
 
 
+{{render_myst(myst_root)}}
 
-{% macro ref(r) -%}
-    {% if r.exists %}
-                <a href="{{r.ref}}{{dothtml}}" class='exists'>{{r.name}}</a>
-    {% else %}
-                <b class='missing'>{{r.name}}</b>
-    {% endif %}
-{%- endmacro -%}
-
-
-
-{% if doc.signature -%}
-    <code class='signature'>{{name}}{{doc.signature.to_signature()}}</code>
-{%- endif -%}
-
-{%- for section in doc.content.keys() if doc.content[section] -%}
-
-    {% if (section not in ['Extended Summary','Signature', 'Summary']) and len(doc.content[section]) > 0 -%}
-        <h3 id="section-{{section}}">{{section}}</h3>
-    {% endif -%}
-    {% if section in ['Extended Summary', 'Summary',  'Notes'] -%}
-        <!-- rendering {{section}} -->
-        {{render_II(doc.content[section])}}
-    {%- elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes', 'Other Parameters', 'Warns'] and len(doc.content[section]) > 0  -%}
-       <dl>
-           {% for ps in doc.content[section] -%}
-               {% for p in ps.children -%}
-               {% if p[0] -%}
-                   <dt><a id="{{p[0]}}">{{p[0]}}</a> : {{p[1]}}</dt>
-               {% else -%}
-                   <dt>{{p[1]}}</dt>
-               {% endif -%}
-
-               <dd>
-                    {% for item in p[2] -%}
-                        {{render_II(item)}}
-                    {% endfor -%}
-               </dd>
-              {% endfor -%}
-           {% endfor -%}
-       </dl>
-
-   {% else -%}
-       {% if doc.content[section] == True -%}
-        <pre>
-       {{doc.content[section]}}
-       </pre>
-       {% endif -%}
-   {% endif -%}
-{% endfor%}
-{% if doc.see_also -%}
-    <h3> See Also</h3>
-    {% for sa in doc.see_also -%}
-        <dl>
-            <dt>{{render_II(sa.name)}}</dt>
-            <!-- This See also will be incorrect as the SeeAlsoItems are improperly deserialised. -->
-            <dd>{{render_paragraph(sa.descriptions)}}</dd>
-        </dl>
-    {% endfor -%}
-{% endif -%}
-
-{% for s in doc.arbitrary -%}
-    {% if s.title -%}
-        <h{{s.level+1}}>{{s.title}}</h{{s.level+1}}>
-    {% endif -%}
-
-{{render_II(s)}}
-{% endfor -%}
-{% if doc.example_section_data -%}
-    <h3 id="section-Examples">Examples</h3>
-        {% for data in doc.example_section_data -%}
-            {%- set type = data.__class__.__name__ -%}
-            {% if type=='Text' %}
-                {{render_paragraph(data)}}
-            {% elif type == 'Fig' %}
-                <div><img src="/p/{{data.value.module}}/{{data.value.version}}/img/{{data.value.path}}"/></div>
-            {% elif type[0] == 'M' %}
-                {{ render_myst(data) }}
-            {% elif type == 'Code2' %}
-                {% if data.ce_status == 'syntax_error' -%}
-                    <span class='warning'>This example does not not appear to be valid Python Syntax</span>
-                {%-elif data.ce_status == 'exception_in_exec' -%}
-                    <span class='error'>This example is valid syntax, but raise an exception at execution</span>
-                {%-elif data.ce_status == 'compiled' -%}
-                    <span class='note'>This example is valid syntax, but we were not able to check execution</span>
-                {%-endif-%}
-            <pre class='highlight {{data.ce_status}}'>{{example(data.entries) -}}
-             {{- data.out -}}
-            </pre>
-            {% else %}
-                {{render_II(data)}}
-            {% endif %}
-            
-         {% endfor %}
-         See :
-     {% endif %}
-    
 
 {% if backrefs[0] or backrefs[1] %}
     <h3 id='section-backrefs'>Back References</h3>
     <p>The following pages refer to to this document either explicitly or contain code examples using this.</p>
 
-    {% if backrefs[0] is not none %}
-    {% for r in backrefs[0] %}
-        {{ render_inner('RefInfo', r) }}
-    {% endfor %}
-    {% endif%}
+
     {% if backrefs[1] is not none %}
         {% for k,v in backrefs[1].items() %}
         <h4>{{k}}</h4>
-        {% if len(v) < 10 %}
+        <details>
+            <summary>{{v | length}} Elements</summary>
             <dl>
-            {%- for r in v -%}
-                <dd>{{- render_inner('RefInfo', r) -}}</dd>
-            {%- endfor -%}
+            {% for r in v %}
+                <dd>{{ render_II(r) -}}</dd>
+            {% endfor %}
             </dl>
-        {% else %}
-            <details>
-                <summary>{{v | length}} Elements</summary>
-                <dl>
-                {% for r in v %}
-                    <dd>{{ render_inner('RefInfo', r) -}}</dd>
-                {% endfor %}
-                </dl>
-            </details>
-        {% endif %}
+        </details>
     {% endfor %}
     {% endif%}
 {% endif %}
@@ -179,6 +62,7 @@ Commit: <br/>
 {% if graph is defined %}
     {{d3script(graph)}}
 {% endif %}
+</div>
 {% endblock %}
 
 

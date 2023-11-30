@@ -14,7 +14,13 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from flatlatex import converter
-from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
+from jinja2 import (
+    Environment,
+    FileSystemLoader,
+    StrictUndefined,
+    select_autoescape,
+    Template,
+)
 from pygments.formatters import HtmlFormatter
 from quart import Response, redirect, send_from_directory
 from quart_trio import QuartTrio
@@ -30,8 +36,25 @@ from . import take2
 from .config import ingest_dir
 from .crosslink import IngestedBlobs, find_all_refs
 from .graphstore import GraphStore, Key
-from .myst_ast import MLink, MText
-from .take2 import RefInfo, Section, encoder
+from .myst_ast import (
+    MLink,
+    MText,
+    MHeading,
+    MParagraph,
+    MRoot,
+    MImage,
+)
+from .take2 import (
+    RefInfo,
+    Section,
+    encoder,
+    Link,
+    SeeAlsoItem,
+    DefList,
+    DefListItem,
+    Fig,
+    MUnimpl,
+)
 from .tree import TreeReplacer, TreeVisitor
 from .utils import dummy_progress, progress
 
@@ -45,7 +68,9 @@ log = logging.getLogger("papyri")
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
-def group_backrefs(backrefs: List[RefInfo]) -> Dict[str, List[RefInfo]]:
+def group_backrefs(
+    backrefs: List[RefInfo], LR: "LinkReifier"
+) -> Dict[str, List[MLink]]:
     """
     Take a list of backreferences and group them by the module they are comming from
     """
@@ -57,7 +82,9 @@ def group_backrefs(backrefs: List[RefInfo]) -> Dict[str, List[RefInfo]]:
             mod, _ = ref.path.split(".", maxsplit=1)
         else:
             mod = ref.path
-        group[mod].append(ref)
+        [link] = LR.replace_RefInfo(ref)
+        assert isinstance(link, MLink), link
+        group[mod].append(link)
     return group
 
 
@@ -67,8 +94,13 @@ def minify(s: str) -> str:
     )
 
 
-def unreachable(*obj):
+def unimplemented(*obj):
+    print("Unimplemtned:", str(obj))
     return str(obj)
+
+
+def unreachable(*obj):
+    # return str(obj)
     assert False, f"Unreachable: {obj=}"
 
 
@@ -238,8 +270,10 @@ class HtmlRenderer:
         extension = ".html" if trailing_html else ""
         self.resolver = Resolver(store, prefix, extension)
         self.LR = LinkReifier(resolver=self.resolver)
+        assert hasattr(self.LR, "_replacements"), self.LR
         self.env.globals["len"] = len
         self.env.globals["url"] = self.resolver.resolve
+        self.env.globals["unimplemented"] = unimplemented
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = extension
@@ -402,6 +436,7 @@ class HtmlRenderer:
         doc.arbitrary = acc
         return self.env.get_template("html.tpl.j2").render(
             graph=None,
+            # TODO: next 2
             backrefs=[[], []],
             module="*",
             doc=doc,
@@ -434,6 +469,9 @@ class HtmlRenderer:
                 ).write_text(data)
 
     async def gallery(self, package, version, ext=""):
+        # TODO FIX
+        if ":" in package:
+            package, _ = package.split(":")
         if package == version == "*":
             package = version = None
 
@@ -509,7 +547,7 @@ class HtmlRenderer:
 
     async def _get_toc_for(self, package, version):
         keys = self.store.glob((package, version, "meta", "toc.cbor"))
-        assert len(keys) == 1
+        assert len(keys) == 1, (keys, package, version)
         data = self.store.get(keys[0])
         return encoder.decode(data)
 
@@ -537,16 +575,16 @@ class HtmlRenderer:
 
     def render_one(
         self,
-        template,
+        template: Template,
         doc: IngestedBlobs,
-        qa,
+        qa: str,
         *,
-        current_type,
-        backrefs,
-        parts=(),
+        current_type: str,
+        backrefs: List[RefInfo],
+        parts: Dict[str, List[Tuple[RefInfo, str]]] = dict(),
         parts_links=(),
-        graph="{}",
-        meta,
+        graph: str = "{}",
+        meta: dict,
         toctrees,
     ):
         """
@@ -555,14 +593,14 @@ class HtmlRenderer:
         Parameters
         ----------
         template
-            a Jinja@ template object used to render.
+            a Jinja template object used to render.
         doc : DocBlob
             a Doc object with the informations for current obj
         qa : str
             fully qualified name for current object
         backrefs : list of str
             backreferences of document pointing to this.
-        parts : Dict[str, list[(str, str)]
+        parts : Dict[str, list[Tuple[str, str]]
             used for navigation and for parts of the breakcrumbs to have navigation to siblings.
             This is not directly related to current object.
         parts_links : <Insert Type here>
@@ -573,30 +611,68 @@ class HtmlRenderer:
             <Multiline Description Here>
 
         """
+        assert template is not None
 
         assert isinstance(meta, dict)
         # TODO : move this to ingest likely.
         # Here if we have too many references we group them on where they come from.
         assert not hasattr(doc, "logo")
-        if len(backrefs) > 30:
-            backrefs = (None, group_backrefs(backrefs))
-        else:
-            backrefs = (backrefs, None)
+
+        backrefs_ = (None, group_backrefs(backrefs, self.LR))
 
         try:
+            to_suppress = []
+            myst_acc: List[Any] = []
+            if doc.signature:
+                myst_acc.append(doc.signature)
+                del doc.signature
             for k, v in doc.content.items():
-                doc.content[k] = self.LR.visit(v)
+                assert isinstance(v, Section)
+                ct: List[Any]
+                if v.children:
+                    if k in ("Extended Summary", "Summary"):
+                        ct = []
+                    else:
+                        ct = [MHeading(depth=1, children=[MText(k)])]
+                    ct.extend(v.children)
+                    myst_acc.extend(ct)
+                else:
+                    to_suppress.append(k)
+            for k in to_suppress:
+                del doc.content[k]
 
             doc.arbitrary = [self.LR.visit(x) for x in doc.arbitrary]
+            for a in doc.arbitrary:
+                myst_acc.extend(a.children)
+            if doc.see_also:
+                myst_acc.extend(
+                    [
+                        MHeading(
+                            children=[MText("See Also")],
+                            depth=1,
+                        )
+                    ]
+                    + [DefList([self.LR.visit(s) for s in doc.see_also])]
+                )
+            if doc.example_section_data:
+                ct = [MHeading(depth=1, children=[MText("Examples")])]
+                ct.extend([self.LR.visit(x) for x in doc.example_section_data])
+                ct = [MParagraph([x]) if isinstance(x, MText) else x for x in ct]
+                myst_acc.extend(ct)
+
+            del doc.arbitrary
+            del doc.see_also
             module = qa.split(".")[0]
             return template.render(
                 current_type=current_type,
                 doc=doc,
+                myst_root=MRoot(myst_acc),
                 logo=meta.get("logo", None),
                 version=meta["version"],
                 module=module,
                 name=qa.split(":")[-1].split(".")[-1],
-                backrefs=backrefs,
+                # TODO: next 1
+                backrefs=backrefs_,
                 parts_mods=parts.get(module, []),
                 parts=list(parts.items()),
                 parts_links=parts_links,
@@ -605,7 +681,8 @@ class HtmlRenderer:
                 toctrees=toctrees,
             )
         except Exception as e:
-            raise ValueError("qa=", qa) from e
+            e.add_note(f"Rendering with QA={qa}")
+            raise
 
     async def _serve_narrative(self, package: str, version: str, ref: str):
         """
@@ -747,11 +824,15 @@ class HtmlRenderer:
         gfiles = list(self.store.glob((None, None, "module", None)))
         random.shuffle(gfiles)
         if config.ascii:
-            env, template = _ascii_env()
+            env, ascii_template = _ascii_env()
+        else:
+            env, ascii_template = None, None
         for _, key in progress(gfiles, description="Rendering API..."):
             module, version = key.module, key.version
             if config.ascii:
-                await _ascii_render(key, store=self.store, env=env, template=template)
+                await _ascii_render(
+                    key, store=self.store, env=env, template=ascii_template
+                )
             if config.html:
                 doc_blob, qa, siblings, parts_links, backward, forward = await loc(
                     key,
@@ -950,6 +1031,23 @@ def pygment_css() -> Response:
     return Response(CSS_DATA, mimetype="text/css")
 
 
+async def serve_app(subpath):
+    print("subpath...", subpath)
+    import glob
+
+    here = Path(os.path.dirname(__file__))
+    if "main" in subpath:
+        ext = subpath.split(".")[-1]
+
+        res = glob.glob(glob.glob(f"{here}/app/static/{ext}/main.*.{ext}")[0])
+        new = "/".join(res[0].split("/")[-2:])
+        print("Did you mean ", subpath, new)
+        subpath = new
+
+    static = here / "app" / "static"
+    return await send_from_directory(static, subpath)
+
+
 def serve(*, sidebar: bool, port=1234):
     app = QuartTrio(__name__, static_folder=None)
 
@@ -976,6 +1074,7 @@ def serve(*, sidebar: bool, port=1234):
 
     app.route("/logo.png")(static("papyri-logo.png"))
     app.route("/static/pygments.css")(pygment_css)
+    app.route("/app/<path:subpath>")(serve_app)
     # sub here is likely incorrect
     app.route(f"{prefix}<package>/<version>/img/<path:subpath>")(img)
     app.route(f"{prefix}<package>/<version>/examples/<path:subpath>")(
@@ -1118,8 +1217,9 @@ class Resolver:
 class LinkReifier(TreeReplacer):
     def __init__(self, resolver):
         self.resolver = resolver
+        super().__init__()
 
-    def replace_Link(self, link):
+    def replace_Link(self, link: Link):
         """
         By default our links resolution is delayed,
         Here we resolve them.
@@ -1129,7 +1229,7 @@ class LinkReifier(TreeReplacer):
         if link.reference.kind == "local":
             return [
                 MLink(
-                    children=[MText(link.value)],
+                    children=[MText(link.value + "1217")],
                     url=f"#{link.reference.path}",
                     title=str(link.reference),
                 )
@@ -1137,9 +1237,62 @@ class LinkReifier(TreeReplacer):
         else:
             exists, turl = self.resolver.exists_resolve(link.reference)
             if exists:
-                return [MLink(children=[MText(link.value)], url=turl, title="")]
+                return [
+                    MLink(
+                        children=[MText(link.value)],
+                        url=turl,
+                        title="",
+                    )
+                ]
             else:
-                return [MText(link.value + "(?)")]
+                return [
+                    MUnimpl(
+                        [
+                            MText(
+                                link.value + f"(1227, {link}?)",
+                            )
+                        ]
+                    )
+                ]
+
+    def replace_Fig(self, data: Fig):
+        # exists, url = self.resolver.exists_resolve(fig.value)
+        url = f"/p/{data.value.module}/{data.value.version}/img/{data.value.path}"
+        return [MImage(url, alt="")]
+
+    def replace_Section(self, section: Section) -> List[MRoot]:
+        ch = [self.visit(c) for c in section.children]
+        if section.title is not None and section.title.lower() not in (
+            "extended summary",
+            "summary",
+        ):
+            h = [MHeading(depth=section.level, children=[MText(section.title)])]
+        else:
+            h = []
+        return [MRoot(h + ch)]
+
+    def replace_SeeAlsoItem(self, see_also: SeeAlsoItem) -> List[DefListItem]:
+        name = see_also.name
+        descriptions = see_also.descriptions
+
+        name = self.visit(name)
+        descriptions = [self.visit(d) for d in descriptions]
+
+        # TODO: this is type incorrect for now. Fix later
+        return [DefListItem(dt=name, dd=descriptions)]
+
+    def replace_RefInfo(self, refinfo: RefInfo) -> List[Any]:
+        """
+        By default our links resolution is delayed,
+        Here we resolve them.
+
+        Some of this resolution should be moved to earlier.
+        """
+        exists, turl = self.resolver.exists_resolve(refinfo)
+        if exists:
+            return [MLink(children=[MText(refinfo.path)], url=turl, title=refinfo.path)]
+        else:
+            return [MText(refinfo.path + "(?)")]
 
 
 def old_render_one(
@@ -1162,7 +1315,6 @@ def old_render_one(
         a Doc object with the informations for current obj
     qa : str
         fully qualified name for current object
-
     """
 
     assert isinstance(meta, dict)
@@ -1174,9 +1326,13 @@ def old_render_one(
         resolver = Resolver(store, prefix="/p/", extension="")
         LR = LinkReifier(resolver=resolver)
         for k, v in doc.content.items():
-            doc.content[k] = LR.visit(v)
+            assert isinstance(v, Section)
+            ct = MRoot([MHeading(depth=1, children=[MText(k)]), *v.children])
+            doc.content[k] = ct  # type: ignore
 
         doc.arbitrary = [LR.visit(x) for x in doc.arbitrary]
+        # TODO: this is wrong for now
+        doc.see_also = DefList([LR.visit(s) for s in doc.see_also])  # type:ignore
         return template.render(
             current_type=current_type,
             doc=doc,
@@ -1315,10 +1471,14 @@ async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):
     these heuristics break down.
 
     """
-    assert isinstance(document, Key), type(document)
-    qa = document.path
-    bytes_, backward, forward = store.get_all(document)
-    doc_blob: IngestedBlobs = encoder.decode(bytes_)
+    try:
+        assert isinstance(document, Key), type(document)
+        qa = document.path
+        bytes_, backward, forward = store.get_all(document)
+        doc_blob: IngestedBlobs = encoder.decode(bytes_)
+    except Exception as e:
+        e.add_note(f"Reading {document.path}")
+        raise
 
     siblings = cs2(qa, tree, ref_map)
 
@@ -1394,13 +1554,6 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool, minify: b
     html_renderer = HtmlRenderer(
         gstore, sidebar=config.html_sidebar, prefix=prefix, trailing_html=True
     )
-    await html_renderer._write_gallery(config)
-
-    await html_renderer._write_example_files(config)
-    await html_renderer._write_index(html_dir_)
-    await html_renderer.copy_assets(config)
-    await html_renderer.copy_static(config.output_dir)
-    await html_renderer._write_narrative_files(config)
 
     await html_renderer._write_api_file(
         tree,
@@ -1409,3 +1562,10 @@ async def main(ascii: bool, html, dry_run, sidebar: bool, graph: bool, minify: b
         config,
         graph,
     )
+    await html_renderer._write_gallery(config)
+
+    await html_renderer._write_example_files(config)
+    await html_renderer._write_index(html_dir_)
+    await html_renderer.copy_assets(config)
+    await html_renderer.copy_static(config.output_dir)
+    await html_renderer._write_narrative_files(config)

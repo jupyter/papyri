@@ -246,7 +246,8 @@ class Ingester:
                     version=None,
                 )
             except Exception as e:
-                raise type(e)(f"at path: {document}")
+                e.add_note(f"at path: {document}")
+                raise
             ref = document.name
 
             module, version = path.name.split("_")

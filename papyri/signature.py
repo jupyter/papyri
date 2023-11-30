@@ -48,6 +48,8 @@ class SignatureNode(Node):
     kind: str  # maybe enum, is it a function, async generator, generator, etc.
     parameters: List[ParameterNode]  # of pairs, we don't use dict because of ordering
     return_annotation: Union[Empty, str]
+    target_name: str
+    type = "signature"
 
     def to_signature(self):
         return inspect.Signature([p.to_parameter() for p in self.parameters])
@@ -99,7 +101,9 @@ class Signature:
         if inspect.iscoroutinefunction(self.target_item):
             kind = "coroutine function"
         if kind == "":
-            assert False, f"Unknown kind for {self.target_item}"
+            kind = "function"
+            # TODO: fix this, things like numpy's histogram2d's are weird
+            # assert False, f"Unknown kind for {self.target_item}"
 
         # Why do we want to make sure this is not a coroutine?
         # What is special about a coroutine in this context?
@@ -132,6 +136,7 @@ class Signature:
             return_annotation=_empty
             if self._sig.return_annotation is inspect._empty
             else str(self._sig.return_annotation),
+            target_name=self.target_item.__name__,
         )
 
     @property

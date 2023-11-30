@@ -28,7 +28,7 @@ class Node(Base):
         for attr, val in zip(tt, args):
             setattr(self, attr, val)
         for k, v in kwargs.items():
-            assert k in tt
+            assert k in tt, f"{k} not in {tt}"
             setattr(self, k, v)
         if hasattr(self, "_post_deserialise"):
             self._post_deserialise()

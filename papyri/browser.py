@@ -350,13 +350,6 @@ class Renderer:
             ]
         )
 
-    def render_Verbatim(self, verb):
-        return ("verbatim", verb.value)
-
-    def render_BlockVerbatim(self, verb):
-        acc = [Text(("verbatim", verb.value))]
-        return urwid.Padding(urwid.Pile(acc), left=4)
-
     def render_Paragraph(self, paragraph):
         if any([isinstance(x, MParagraph) for x in paragraph.children]):
             assert len(paragraph.children) == 1

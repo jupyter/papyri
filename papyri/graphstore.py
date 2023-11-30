@@ -48,7 +48,7 @@ class Path:
 # a Key name tuple with a custom __init__
 class Key:
     def __init__(self, module, version, kind, path):
-        assert ":" not in module, breakpoint()
+        assert ":" not in module
         self.module = module
         self.version = version
         self.kind = kind
