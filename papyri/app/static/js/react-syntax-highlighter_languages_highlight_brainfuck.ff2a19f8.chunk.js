@@ -1,0 +1,2 @@
+(self.webpackChunkpapyri_frontend=self.webpackChunkpapyri_frontend||[]).push([[5536],{9532:e=>{e.exports=function(e){const n={className:"literal",begin:/[+-]/,relevance:0};return{name:"Brainfuck",aliases:["bf"],contains:[e.COMMENT("[^\\[\\]\\.,\\+\\-<> \r\n]","[\\[\\]\\.,\\+\\-<> \r\n]",{returnEnd:!0,relevance:0}),{className:"title",begin:"[\\[\\]]",relevance:0},{className:"string",begin:"[\\.,]",relevance:0},{begin:/(?:\+\+|--)/,contains:[n]},n]}}}}]);
+//# sourceMappingURL=react-syntax-highlighter_languages_highlight_brainfuck.ff2a19f8.chunk.js.map

@@ -65,18 +65,31 @@
    |   |   |    |{{'\n'}}
    |   |{%- elif type == 'Directive' -%}
    |   |   |{{blue(':'+str(obj.domain)+':'+str(obj.role)+':`'+obj.value+'`')}}
+   |   |{% elif type == 'MRoot' %}
+   |   |{% for child in obj.children %}
+   |   |   |{{ render_II(child)}}
+   |   |{% endfor %}
    |   |{%- elif type == 'MMystDirective' -%}
    |   |   |{{'\n'}}{{myst_directive(obj)}}
    |   |{%- elif type == 'Verbatim' -%}
    |   |   |{{obj}}
    |   |{%- elif type == 'Paragraph' -%}
-   |   |   |{{block_paragraph(obj)}}
+   |   |   |{{block_paragraph(obj)}}{{'\n'}}
    |   |{%- elif type == 'BlockVerbatim' -%}
    |   |   |{{obj.value}}
+   |   |{%- elif type == 'MList' -%}
+   |   |   |{{- render_list(obj.children) -}}{{'\n'}}
+   |   |{%- elif type == 'MListItem' %}
+   |   |   |  - {{- render_list(obj.children) -}}{{'\n'}}
+   |   |{%- elif type == 'FieldList' -%}
+   |   |   |{{render_list(obj.children)}}
+   |   |{%- elif type == 'FieldListItem' %}
+   |   |   |{{render_list(obj.name)}}
+   |   |   |    {{render_list(obj.body)}}
    |   |{%- elif type == 'DefList' -%}
    |   |   |    {% for item in obj.children %}
    |   |   |    {{render_II(item.dt)}}
-   |   |   |        {{render_II(item.dd)}}
+   |   |   |        {{render_list(item.dd)}}
    |   |   |    {%endfor %}
    |   |{%- elif type == 'DefListItem' %}
    |   |    {{-block(obj)-}}
@@ -84,12 +97,22 @@
    |   |   |   |{{block(obj)}}
    |   |{%- elif type == 'MLink' %}
    |   |   |{{render_list(obj.children)}}
+   |   |{%- elif type == 'MEmphasis' -%}
+   |   |   |{{bold(render_list(obj.children))}}
+   |   |{%- elif type == 'MStrong' -%}
+   |   |   |{{bold(render_list(obj.children))}}
+   |   |{%- elif type == 'MInlineMath' -%}
+   |   |   |${{bold(obj.value)}}$
    |   |{%- elif type == 'MInlineCode' -%}
    |   |   |{{bold(obj.value)}}
    |   |{%- elif type == 'MText' -%}
    |   |   |{{obj.value}}
-   |   |{%- elif type == 'MParagraph'  -%}
+   |   |{%- elif type == 'Param'  -%}
+   |   |   |{{obj.param}} : {{render_list(obj.desc)}}
+   |   |{%- elif type in ('MParagraph','MBlockquote')  -%}
    |   |   |{{- render_list(obj.children) -}}
+   |   |{% elif type == 'MCode' %}
+   |   |   | {{obj.value|indent(8)}}
    |   |{% elif type == 'Parameters' %}
    |   |   {%- for item in obj.children %}
    |   |       {{ render_II(item) }}
@@ -108,13 +131,28 @@
    |   |   |{% else %}
    |   |   |    {{-unreachable(obj)}}
    |   |   |{% endif %}
-   |   |{% elif type == 'Math' %}
+   |   |{% elif type in ('MHeading','MParagraph') %}
+   |   |   {%- for item in obj.children %}
+   |   |       {{- render_II(item) -}}
+   |   |   {%- endfor %}
+   |   |{% elif type == 'MMath' %}
    |   |    ${{obj.value}}$
    |   |{% elif type == 'Verbatim' %}
    |   |    {{-yellow(obj.text)-}}
+   |   |{% elif type == 'SubstitutionDef' %}
+   |   |   SubstituionRefNotImpl
+   |   |{% elif type == 'SubstitutionRef' %}
+   |   |   SubstituionRefNotImpl
+   |   |{% elif type == 'MComment' %}
+   |   |{% elif type == 'Unimplemented' %}
+   |   |   Unimplemented
+   |   |{% elif type == 'MUnimpl' %}
+   |   |   |{%- for item in obj.children %}
+   |   |   |{{- render_II(item) -}}
+   |   |   |{%- endfor %}
    |   |{%- else %}
    |   |   |Some B {{type}} Not implemented yet:
-   |   |   |{{unreachable(obj)}}
+   |   |   |{{unreachable(obj, type)}}
    |   |{%- endif -%}
    |{%- endif -%}
 {%- endmacro %}
@@ -148,11 +186,6 @@
 {% endif %}
 
 {% for section in doc.content if doc.content[section] %}
-   |{% if section not in ['Extended Summary','Signature', 'Summary'] and len(doc.content[section]) > 0 %}
-   | 
-   |{{bold(section)}}
-   | 
-   |{% endif %}
    |{%- if section in ['Summary', 'Extended Summary', 'Notes'] -%}
    |     |{{render_II(doc.content[section]) | wordwrap| trim}}
    |{% elif section in ['Signature'] %}
@@ -175,21 +208,7 @@
    |   |{{"        "}}
    |{% elif section in ['Parameters', 'Returns', 'Raises', 'Yields', 'Attributes',  'Warns', 'Other Parameters']  %}
    |   |{% if doc.content[section] %}
-   |   |{% for ps in doc.content[section] %}
-   |   |   |{% for p in ps.children %}
-   |   |   |   |{% if p.__class__.__name__ != 'Param' %}
-   |   |   |   |    {{unreachable()}}
-   |   |   |   |{% endif %}
-   |   |   |   |{% if p[0] %}
-   |   |   |   |    {{bold(green(p[0]))}} : {{cyan(p[1])}}
-   |   |   |   |{% else %}
-   |   |   |   |    {{green(p[1])}}
-   |   |   |   |{% endif %}
-   |   |   |   |   {% for item in p[2] %}
-   |   |   |   |        {{render_II(item)| wordwrap |trim| indent(width=8)}}
-   |   |   |   |   {% endfor -%}
-   |   |   |{%- endfor -%}
-   |   |{%- endfor -%}
+   |   |   |{{render_II(doc.content[section])| wordwrap |trim| indent(width=8)}}
    |   |{%- endif -%}
    |{% else %}
    |    {% if doc.content[section] %}
@@ -199,9 +218,6 @@
 {% endfor%}
 {% if doc.see_also %}
    |{{bold("See Also")}}
-   |{% for sa in doc.see_also %}
-   |     {{bold(render_II(sa.name))}}
-   |        {{render_paragraph(sa.descriptions) | wordwrap |trim| indent(width=8)}}
-   |{% endfor %}
+   |   |{{bold(render_II(doc.see_also))}}
 {% endif %}
 

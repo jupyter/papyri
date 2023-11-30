@@ -23,7 +23,10 @@ exclude = [
     "scipy.sparse.linalg._expm_multiply:expm_multiply",
 
     # contain ascii diagram
-    "scipy.stats._continuous_distns:crystalball_gen._pdf"
+    "scipy.stats._continuous_distns:crystalball_gen._pdf",
+    
+    # assert len(tsc) in (0, 1), (tsc, data)
+    "scipy.io.matlab._mio5"
             ]
 exclude_jedi = [
     "scipy.linalg._sketches.clarkson_woodruff_transform",

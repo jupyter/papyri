@@ -29,7 +29,16 @@ from hashlib import sha256
 from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    List,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 import jedi
 
@@ -1172,6 +1181,7 @@ class Gen:
                 figs = []
                 if not isinstance(item, InOut):
                     assert isinstance(item.out, list)
+                    # TODO: this is false for example and need to be parsed as RST
                     example_section_data.append(MText("\n".join(item.out)))
                     continue
                 script, out, ce_status = _execute_inout(item)
@@ -1841,7 +1851,9 @@ class Gen:
             api_object = APIObjectInfo(
                 "module", item_docstring, None, target_item.__name__, qa
             )
-        elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
+        elif isinstance(
+            target_item, (FunctionType, builtin_function_or_method)
+        ) or callable(target_item):
             sig: Optional[ObjectSignature]
             try:
                 sig = ObjectSignature(target_item)

@@ -6,6 +6,7 @@ from typing import List, Union, Optional, Dict
 from .common_ast import Node, register
 
 from . import take2
+from . import signature
 
 
 # Prefixed with "M" as Text exists in take2.py as well
@@ -15,6 +16,12 @@ class MText(Node):
     value: str
     # position: Any
     # data: Any
+
+    def __init__(self, value):
+        assert isinstance(value, str)
+        # assert not value.startswith(":func:")
+        self.value = value
+        super().__init__()
 
 
 @register(4047)
@@ -92,7 +99,7 @@ class MInlineCode(Node):
 @register(4045)
 class MParagraph(Node):
     type = "paragraph"
-    children: List["PhrasingContent"]
+    children: List[Union["PhrasingContent", "take2.MUnimpl"]]
     # position: Any
     # data: Any
 
@@ -193,6 +200,40 @@ class MTarget(Node):
     # data: Any
 
 
+@register(4062)
+class MImage(Node):
+    type = "image"
+    url: str
+    alt: str
+
+
+@register(4019)
+class MThematicBreak(Node):
+    type = "thematicBreak"
+
+
+@register(4020)
+class MHeading(Node):
+    type = "heading"
+    depth: int
+    children: List["PhrasingContent"]
+
+
+@register(4001)
+class MRoot(Node):
+    type = "root"
+    children: List[
+        Union[
+            "FlowContent",
+            "take2.Parameters",
+            "take2.Unimplemented",
+            "take2.SubstitutionDef",
+            "signature.SignatureNode",
+            MImage,
+        ]
+    ]
+
+
 StaticPhrasingContent = Union[
     MText,
     MInlineCode,
@@ -221,8 +262,8 @@ FlowContent = Union[
     MCode,
     MParagraph,
     # MDefinition,
-    # MHeading,
-    # MThematicBreak,
+    MHeading,
+    MThematicBreak,
     MBlockquote,
     MList,
     # MHTML,

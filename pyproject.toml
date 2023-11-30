@@ -9,10 +9,9 @@ classifiers = ["License :: OSI Approved :: MIT License"]
 readme = "Readme.md"
 license = {file = "LICENSE"}
 dynamic = ["version","description"]
-requires-python=">=3.10"
+requires-python=">=3.11"
 dependencies = [
     "typer",
-    "tomli;python_version>='3.11'",
     "tomli_w",
     "urwid",
     "httpx",
@@ -52,5 +51,5 @@ filterwarnings = "ignore:The module numpy.dual.*:DeprecationWarning"
 Home = "https://github.com/Carreau/papyri"
 
 [tool.mypy]
-python_version = '3.10'
+python_version = '3.11'
 ignore_missing_imports = true

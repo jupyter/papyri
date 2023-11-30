@@ -80,7 +80,8 @@ def function_1(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
         }
       ],
       "return_annotation": {"type": "Empty"},
-      "type": "SignatureNode"
+      "target_name": "function_1",
+      "type": "signature"
     }"""
     pass
 
@@ -148,7 +149,8 @@ def async_function_2(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwargs):
         }
       ],
       "return_annotation": {"type": "Empty"},
-      "type": "SignatureNode"
+      "target_name": "async_function_2",
+      "type": "signature"
     }"""
     pass
 
@@ -216,7 +218,8 @@ def generator_function_3(posonly, /, pos_or_k, pos_ok_k_d=1, *varargs, **varkwar
         }
       ],
       "return_annotation": {"type": "Empty"},
-      "type": "SignatureNode"
+      "target_name": "generator_function_3",
+      "type": "signature"
     }"""
     yield
 
@@ -286,7 +289,8 @@ async def async_generator_function_4(
         }
       ],
       "return_annotation": {"type": "Empty"},
-      "type": "SignatureNode"
+      "target_name": "async_generator_function_4",
+      "type": "signature"
     }"""
     yield
 
@@ -356,7 +360,8 @@ async def coroutine_function_5(
         }
       ],
       "return_annotation": {"type": "Empty"},
-      "type": "SignatureNode"
+      "target_name": "coroutine_function_5",
+      "type": "signature"
     }"""
     pass
 
@@ -396,7 +401,8 @@ def function_with_annotation5(a: int, b: Union[int, float]) -> Optional[bool]:
           "data": "typing.Optional[bool]",
           "type": "str"
       },
-      "type": "SignatureNode"
+      "target_name":"function_with_annotation5",
+      "type": "signature"
     }
 
     """
