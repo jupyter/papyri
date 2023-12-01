@@ -30,8 +30,8 @@
 
 
 
-{% if doc.signature.value -%}
-    <code class='signature'>{{doc.signature.value}}</code>
+{% if doc.signature -%}
+    <code class='signature'>{{name}}{{doc.signature.to_signature()}}</code>
 {%- endif -%}
 
 {%- for section in doc.content.keys() if doc.content[section] -%}

@@ -1,15 +1,29 @@
 [global]
+
 module = 'numpy'
-exclude = ['numpy.distutils.misc_util:Configuration.__init__','numpy:tensordot']
 
-execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', 'numpy.seterr', 'numpy.bincount',
-'numpy.core._multiarray_umath.bincount', 'numpy.core._multiarray_umath.datetime_as_string',
-'numpy.core._multiarray_umath.normalize_axis_index', 'numpy.core._multiarray_umath.shares_memory',
-'numpy.datetime_as_string', 'numpy.shares_memory', 'numpy.squeeze',
+exclude = [
+'numpy:tensordot',
+]
+
+execute_exclude_patterns = [
+'numpy._',
+'numpy.testing._priv',
+'numpy.errstate',
+'numpy.seterr',
+'numpy.bincount',
+'numpy.core._multiarray_umath.bincount',
+'numpy.core._multiarray_umath.datetime_as_string',
+'numpy.core._multiarray_umath.normalize_axis_index',
+'numpy.core._multiarray_umath.shares_memory',
+'numpy.datetime_as_string',
+'numpy.shares_memory',
+'numpy.squeeze',
 'numpy.average',
-'numpy.ctypeslib', 'numpy.append', 'numpy.ma.core',
+'numpy.ctypeslib',
+'numpy.append',
+'numpy.ma.core',
 'numpy.core.umath_tests',
-
 # try to create a pager that waits for input
 'numpy.lookfor',
 # write directly to stdout
@@ -20,7 +34,7 @@ execute_exclude_patterns = ['numpy._','numpy.testing._priv', 'numpy.errstate', '
 'numpy.polynomial.chebyshev.chebinterpolate',
 'numpy.lib.npyio._read',
 'numpy.polynomial._polybase:ABCPolyBase',
-'numpy.distutils.misc_util:Configuration.__init__'
+'numpy.distutils.misc_util:Configuration.__init__',
 ]
 
 submodules = [
@@ -28,7 +42,6 @@ submodules = [
     'compat',
     'core',
     'ctypeslib',
-    'distutils',
     'doc',
     'fft',
     'lib',
@@ -57,7 +70,7 @@ exec_failure = 'fallback'
 source = 'https://github.com/numpy/numpy'
 homepage = 'https://numpy.org'
 docs = 'https://numpy.org/doc/stable/'
-logo = './numpy_logo.png'
+logo = './img/numpy_logo.png'
 early_error = false
 
 [meta]
@@ -65,11 +78,9 @@ github_slug = 'numpy/numpy'
 tag = 'v{version}'
 pypi = 'numpy'
 homepage = 'https://numpy.org/'
-docspage = 'https://numpy.org/doc/1.22/'
+docspage = 'https://numpy.org/doc/1.26/'
 
 
 [global.expected_errors]
-VisitCitationReferenceNotImplementedError = [
-    "numpy.fft",
-    ]
+VisitCitationReferenceNotImplementedError = ["numpy.fft"]
 

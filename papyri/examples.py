@@ -1,7 +1,7 @@
 """"
 
-Examples Modules
-----------------
+Examples Modules Heading 1
+==========================
 
 This module contains examples, none of the functions, classes or other attribute
 should have any effects when called.
@@ -37,25 +37,86 @@ term 2
     Definition 2, paragraph 2.
 
 
+.. note::
+
+    An admonition note !
+
+This is a link to `Jupyter website <jupyter.org>`__
+
+Code (title 2)
+--------------
+
+.. code::
+
+    from package import module
+    module.call("string")
+
+Math
+----
+
+
+.. math::
+
+    \\pi = 3.14159
+
+
 """
 
+"""
 
-def example1(pos, only, /, var, args, *, kwargs, also=None):
+term
+: definition
+
+## Math
+
+
+## Figures
+
+```{figure} https://via.placeholder.com/150
+:width: 100px
+:align: center
+
+Figure caption
+```
+
+## Tables
+
+```{list-table}
+:header-rows: 1
+:align: center
+
+* - Header 1
+  - Header 2
+* - Item 1 a
+  - Item 2 a
+* - Item 1 b
+  - Item 2 b
+```
+
+"""
+
+from typing import Optional, Union
+
+
+def example1(
+    pos: int, only: None, /, var: Union[float, bool], args=1, *, kwargs, also=None
+) -> Optional[str]:
     """
     first example.
 
     Examples
     --------
     >>> import matplotlib.pyplot as plt
-    ... fig, ax = plt.subplots()
-    ... ax.plot(range(10))
+    >>> fig, ax = plt.subplots()
+    >>> ax.plot(range(10))
 
     And now
 
     >>> ax.plot(range(5, 15))
-    ... plt.show()
+    >>> plt.show()
 
     """
+    return "ok"
 
 
 def example2():
@@ -63,24 +124,24 @@ def example2():
     Examples
     --------
     >>> import numpy as np
-    ... import matplotlib.pyplot as plt
-    ... from scipy.interpolate import UnivariateSpline
+    >>> import matplotlib.pyplot as plt
+    >>> from scipy.interpolate import UnivariateSpline
 
     >>> x = np.linspace(-3, 3, 50)
-    ... y = np.exp(-(x ** 2)) + 0.1 * np.random.randn(50)
-    ... plt.plot(x, y, "ro", ms=5)
+    >>> y = np.exp(-(x ** 2)) + 0.1 * np.random.randn(50)
+    >>> plt.plot(x, y, "ro", ms=5)
 
     Use the default value for the smoothing parameter:
 
     >>> spl = UnivariateSpline(x, y)
-    ... xs = np.linspace(-3, 3, 1000)
-    ... plt.plot(xs, spl(xs), "g", lw=3)
+    >>> xs = np.linspace(-3, 3, 1000)
+    >>> plt.plot(xs, spl(xs), "g", lw=3)
 
     Manually change the amount of smoothing:
 
     >>> spl.set_smoothing_factor(0.5)
-    ... plt.plot(xs, spl(xs), "b", lw=3)
-    ... plt.show()
+    >>> plt.plot(xs, spl(xs), "b", lw=3)
+    >>> plt.show()
 
     """
     pass

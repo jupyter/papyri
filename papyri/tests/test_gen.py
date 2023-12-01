@@ -95,3 +95,99 @@ def test_numpy(module, submodules, objects):
 
         for o in objects:
             assert (td / "module" / f"{o}.json").exists()
+
+
+def test_self():
+    from papyri.gen import Gen, Config
+
+    c = Config(dry_run=True, dummy_progress=True)
+    g = Gen(False, config=c)
+    g.collect_package_metadata("papyri", ".", {})
+    g.collect_api_docs("papyri", {"papyri.examples:example1", "papyri"})
+    assert g.data["papyri.examples:example1"].to_dict()["signature"] == {
+        "type": "SignatureNode",
+        "kind": "function",
+        "parameters": [
+            {
+                "type": "ParameterNode",
+                "name": "pos",
+                "annotation": {"data": "int", "type": "str"},
+                "kind": "POSITIONAL_ONLY",
+                "default": {"type": "Empty"},
+            },
+            {
+                "type": "ParameterNode",
+                "name": "only",
+                "annotation": {"data": "None", "type": "str"},
+                "kind": "POSITIONAL_ONLY",
+                "default": {"type": "Empty"},
+            },
+            {
+                "type": "ParameterNode",
+                "name": "var",
+                "annotation": {"data": "Union[float, bool]", "type": "str"},
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "default": {"type": "Empty"},
+            },
+            {
+                "type": "ParameterNode",
+                "name": "args",
+                "annotation": {"type": "Empty"},
+                "kind": "POSITIONAL_OR_KEYWORD",
+                "default": {"data": "1", "type": "str"},
+            },
+            {
+                "type": "ParameterNode",
+                "name": "kwargs",
+                "annotation": {"type": "Empty"},
+                "kind": "KEYWORD_ONLY",
+                "default": {"type": "Empty"},
+            },
+            {
+                "type": "ParameterNode",
+                "name": "also",
+                "annotation": {"type": "Empty"},
+                "kind": "KEYWORD_ONLY",
+                "default": {"data": "None", "type": "str"},
+            },
+        ],
+        "return_annotation": {"data": "typing.Optional[str]", "type": "str"},
+    }
+    assert g.data["papyri"].to_dict()["signature"] is None
+
+
+def test_self_2():
+    from papyri.gen import Gen, Config
+
+    c = Config(dry_run=True, dummy_progress=True)
+    g = Gen(False, config=c)
+    g.collect_package_metadata("papyri", ".", {})
+    g.collect_api_docs(
+        "papyri", {"papyri", "papyri.take2:RefInfo", "papyri.take2:RefInfo.__eq__"}
+    )
+    assert (
+        g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0]["dt"][
+            "children"
+        ][0]["reference"]["module"]
+        == "dask"
+    )
+
+    assert (
+        g.data["papyri.take2:RefInfo"]
+        .to_dict()["item_file"]
+        .endswith("papyri/take2.py")
+    )
+    assert g.data["papyri.take2:RefInfo.__eq__"].to_dict()["item_file"] is None
+
+
+@pytest.mark.xfail()
+def test_self_3():
+    # same as previous, but == fails on CI, to fix.
+    from papyri.gen import Gen, Config
+
+    c = Config(dry_run=True, dummy_progress=True)
+    g = Gen(False, config=c)
+    g.collect_package_metadata("papyri", ".", {})
+    g.collect_api_docs("papyri", {"papyri", "papyri.take2:RefInfo"})
+
+    assert g.data["papyri.take2:RefInfo"].to_dict()["item_file"] == ("papyri/take2.py")

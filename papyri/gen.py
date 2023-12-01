@@ -35,10 +35,7 @@ import io
 
 import jedi
 
-try:
-    import tomllib
-except ModuleNotFoundError:
-    import tomli as tomllib
+import tomllib
 import tomli_w
 from IPython.core.oinspect import find_file
 from IPython.utils.path import compress_user
@@ -48,7 +45,6 @@ from pygments.lexers import PythonLexer
 from rich.logging import RichHandler
 from rich.progress import BarColumn, Progress, TextColumn, track
 from there import print as print_
-from velin.examples_section_utils import InOut, splitblank, splitcode
 from matplotlib import _pylab_helpers
 
 from .common_ast import Node
@@ -56,9 +52,10 @@ from .errors import (
     IncorrectInternalDocsLen,
     NumpydocParseError,
     UnseenError,
+    TextSignatureParsingFailed,
 )
 from .miscs import BlockExecutor, DummyP
-from .signature import Signature as ObjectSignature
+from .signature import Signature as ObjectSignature, SignatureNode
 from .take2 import (
     Code,
     Fig,
@@ -72,7 +69,6 @@ from .take2 import (
     RefInfo,
     Section,
     SeeAlsoItem,
-    Signature,
     parse_rst_section,
 )
 from .toc import make_tree
@@ -88,10 +84,7 @@ from .utils import (
 )
 from .vref import NumpyDocString
 
-# delayed import
-
 from .myst_ast import MText
-
 
 class ErrorCollector:
     def __init__(self, config: Config, log):
@@ -433,6 +426,7 @@ class Config:
     expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
     early_error: bool = True
     fail_unseen_error: bool = False
+    execute_doctests: bool = True
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -519,6 +513,7 @@ def gen_main(
     if limit_to is None:
         limit_to = set()
     target_module_name, conf, meta = load_configuration(target_file)
+
     conf["early_error"] = fail_early
     conf["fail_unseen_error"] = fail_unseen_error
     config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
@@ -536,9 +531,9 @@ def gen_main(
         target_dir = Path(temp_dir.name)
 
     g = Gen(dummy_progress=dummy_progress, config=config)
-    g.log.info("Will write data to %s", target_dir)
+
     if debug:
-        g.log.setLevel("DEBUG")
+        g.log.setLevel(logging.DEBUG)
         g.log.debug("Log level set to debug")
 
     g.collect_package_metadata(
@@ -546,6 +541,10 @@ def gen_main(
         relative_dir=Path(target_file).parent,
         meta=meta,
     )
+
+    g.log.info("Target package is %s-%s", target_module_name, g.version)
+    g.log.info("Will write data to %s", target_dir)
+
     if examples:
         g.collect_examples_out()
     if api:
@@ -732,6 +731,20 @@ class DocBlob(Node):
     as well as link to external references, like images generated.
     """
 
+    __slots__ = (
+        "content",
+        "example_section_data",
+        "ordered_sections",
+        "item_file",
+        "item_line",
+        "item_type",
+        "aliases",
+        "see_also",
+        "signature",
+        "references",
+        "arbitrary",
+    )
+
     @classmethod
     def _deserialise(cls, **kwargs):
         # print_("will deserialise", cls)
@@ -771,8 +784,8 @@ class DocBlob(Node):
     item_type: Optional[str]
     aliases: List[str]
     see_also: List[SeeAlsoItem]  # see also data
-    signature: Signature
-    references: Optional[List[str]]
+    signature: Optional[SignatureNode]
+    references: Optional[Section]
     arbitrary: List[Section]
 
     def __repr__(self):
@@ -794,30 +807,7 @@ class DocBlob(Node):
 
     @classmethod
     def new(cls):
-        return cls({}, None, None, None, None, None, [], [], Signature(None), None, [])
-
-    # def __init__(
-    #    self,
-    #    content,
-    #    example_section_data,
-    #    ordered_sections,
-    #    item_file,
-    #    item_line,
-    #    item_type,
-    #    aliases,
-    #    see_also,
-    #    signature,
-    #    references,
-    #    arbitrary,
-    # ):
-    #    self.content = content
-    #    self.example_section_data = example_section_data
-    #    self.ordered_sections = ordered_sections
-    #    self.item_file = item_file
-    #    self.item_line = item_line
-    #    self.item_type = item_type
-    #    self.aliases = aliases
-    #    self.signature = signature
+        return cls({}, None, None, None, None, None, [], [], None, None, [])
 
 
 def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str, qa):
@@ -870,14 +860,25 @@ class APIObjectInfo:
 
     kind: str
     docstring: str
-    signature: Optional[Signature]
+    signature: Optional[ObjectSignature]
     name: str
 
-    def __init__(self, kind, docstring, signature, name, qa):
+    def __repr__(self):
+        return f"<APIObject {self.kind=} {self.docstring=} self.signature={str(self.signature)} {self.name=}>"
+
+    def __init__(
+        self,
+        kind: str,
+        docstring: str,
+        signature: Optional[ObjectSignature],
+        name: str,
+        qa: str,
+    ):
+        assert isinstance(signature, (ObjectSignature, type(None)))
         self.kind = kind
         self.name = name
         self.docstring = docstring
-        self.parsed = []
+        self.parsed: List[Any] = []
         self.signature = signature
         self._qa = qa
 
@@ -897,9 +898,14 @@ class APIObjectInfo:
                     assert isinstance(section, Section)
                     self.parsed.append(section)
                 elif title in _numpydoc_sections_with_text:
-                    docs = ts.parse("\n".join(ndoc[title]).encode(), qa)
+                    predoc = "\n".join(ndoc[title])
+                    docs = ts.parse(predoc.encode(), qa)
                     if len(docs) != 1:
-                        raise IncorrectInternalDocsLen("\n".join(ndoc[title]), docs)
+                        # TODO
+                        # potential reasons
+                        # Summary and Extended Summary should be parsed as one.
+                        # References with ` : ` in them fail parsing.Issue opened in Tree-sitter.
+                        raise IncorrectInternalDocsLen(predoc, docs)
                     section = docs[0]
                     assert isinstance(section, Section), section
                     self.parsed.append(section)
@@ -935,7 +941,7 @@ class APIObjectInfo:
             p.validate()
 
 
-def _normalize_see_also(see_also: List[Any], qa):
+def _normalize_see_also(see_also: Section, qa: str):
     """
     numpydoc is complex, the See Also fields can be quite complicated,
     so here we sort of try to normalise them.
@@ -987,7 +993,6 @@ def _normalize_see_also(see_also: List[Any], qa):
     return new_see_also
 
 
-
 class PapyriDocTestRunner(doctest.DocTestRunner):
     def __init__(self, *args, gen, obj, qa, config, **kwargs):
         self.gen = gen
@@ -1009,10 +1014,14 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
 
         self.figs = []
         self.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-        assert (len(self.fig_managers)) == 0, f"init fail in {self.qa} {len(self.fig_managers)}"
+        assert (
+            len(self.fig_managers)
+        ) == 0, f"init fail in {self.qa} {len(self.fig_managers)}"
 
     def _get_tok_entries(self, example):
-        entries = parse_script(example.source, ns=self.globs, prev="", config=self.config, where=self.qa)
+        entries = parse_script(
+            example.source, ns=self.globs, prev="", config=self.config, where=self.qa
+        )
         if entries is None:
             entries = [("jedi failed", "jedi failed")]
         entries = _add_classes(entries)
@@ -1027,7 +1036,6 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
             pat = f"fig-{self.qa}-{i}"
             sha = sha256(pat.encode()).hexdigest()[:8]
             yield f"{pat}-{sha}.png"
-
 
     def report_start(self, out, test, example):
         pass
@@ -1046,9 +1054,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         wait_for_show = self.config.wait_for_plt_show
         self.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         figs = []
-        if self.fig_managers and (
-            ("plt.show" in example.source) or not wait_for_show
-        ):
+        if self.fig_managers and (("plt.show" in example.source) or not wait_for_show):
             for fig, figname in zip(self.fig_managers, figure_names):
                 buf = io.BytesIO()
                 fig.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
@@ -1066,8 +1072,8 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
             )
         self.figs.extend(figs)
 
-    def report_unexpected_exception(self, out, test, example,
-                                    exc_info):
+    def report_unexpected_exception(self, out, test, example, exc_info):
+        out(f"Unexpected exception after running example in `{self.qa}`", exc_info)
         tok_entries = self._get_tok_entries(example)
         self.example_section_data.append(
             Code(tok_entries, exc_info, ExecutionStatus.unexpected_exception)
@@ -1078,6 +1084,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         self.example_section_data.append(
             Code(tok_entries, got, ExecutionStatus.failure)
         )
+
 
 class Gen:
     """
@@ -1248,6 +1255,11 @@ class Gen:
                                              # TODO: Make optionflags configurable
                                              optionflags=doctest.ELLIPSIS)
         example_section_data = Section([], None)
+        def debugprint(*args):
+            """
+            version of print that capture current stdout to use during testing to debug
+            """
+            sys_stdout.write(" ".join(str(x) for x in args) + "\n")
 
         for block in blocks:
             doctests = doctest.DocTestParser().get_doctest(block,
@@ -1255,7 +1267,7 @@ class Gen:
                                                            obj.__name__, filename,
                                                            lineno)
             if doctests.examples:
-                doctest_runner.run(doctests, out=lambda s: None)
+                doctest_runner.run(doctests, out=debugprint)
                 example_section_data.extend(doctest_runner.example_section_data)
             else:
                 example_section_data.append(MText(block))
@@ -1347,7 +1359,7 @@ class Gen:
                 blob.aliases = []
                 blob.example_section_data = Section([], None)
                 blob.see_also = []
-                blob.signature = Signature(None)
+                blob.signature = None
                 blob.references = None
                 blob.validate()
                 titles = [s.title for s in blob.arbitrary if s.title]
@@ -1419,23 +1431,30 @@ class Gen:
         """
         self.bdata[path] = data
 
-    def _transform_1(self, blob, ndoc):
+    def _transform_1(self, blob: DocBlob, ndoc) -> DocBlob:
         blob.content = {k: v for k, v in ndoc._parsed_data.items()}
+        for k, v in blob.content.items():
+            assert isinstance(v, (str, list, dict)), type(v)
         return blob
 
-    def _transform_2(self, blob, target_item, qa):
+    def _transform_2(self, blob: DocBlob, target_item, qa: str) -> DocBlob:
         # try to find relative path WRT site package.
         # will not work for dev install. Maybe an option to set the root location ?
-        item_file = find_file(target_item)
+        item_file: Optional[str] = find_file(target_item)
+        if item_file is not None and item_file.endswith("<string>"):
+            # dynamically generated object (like dataclass __eq__ method
+            item_file = None
         r = qa.split(".")[0]
         if item_file is not None:
+            # TODO: find a better way to get a relative path with respect to the
+            # root of the package ?
             for s in SITE_PACKAGE + [
                 os.path.expanduser(f"~/dev/{r}/"),
                 os.path.expanduser("~"),
+                os.getcwd(),
             ]:
                 if item_file.startswith(s):
                     item_file = item_file[len(s) :]
-
         blob.item_file = item_file
         if item_file is None:
             if type(target_item).__name__ in (
@@ -1492,7 +1511,7 @@ class Gen:
         qa: str,
         config: Config,
         aliases: List[str],
-        api_object,
+        api_object: APIObjectInfo,
     ) -> Tuple[DocBlob, List]:
         """
         Get documentation information for one python object
@@ -1509,7 +1528,7 @@ class Gen:
             current configuratin
         aliases : sequence
             other aliases for cuttent object.
-        api_object : <Insert Type here>
+        api_object : APIObjectInfo
             <Multiline Description Here>
 
         Returns
@@ -1525,7 +1544,7 @@ class Gen:
         collect_api_docs
         """
         assert isinstance(aliases, list)
-        blob = DocBlob.new()
+        blob: DocBlob = DocBlob.new()
 
         blob = self._transform_1(blob, ndoc)
         blob = self._transform_2(blob, target_item, qa)
@@ -1533,13 +1552,25 @@ class Gen:
 
         item_type = str(type(target_item))
         if blob.content["Signature"]:
-            blob.signature = Signature(blob.content.pop("Signature"))
+            try:
+                # the type ignore below is wrong and need to be refactored.
+                # we basically modify blob.content in place, but should not.
+                sig = ObjectSignature.from_str(blob.content.pop("Signature"))  # type: ignore
+                if sig is not None:
+                    blob.signature = sig.to_node()
+            except TextSignatureParsingFailed:
+                # this really fails often when the first line is not Signature.
+                # or when numpy has the def f(,...[a,b,c]) optional parameter.
+                pass
         else:
             assert blob is not None
             assert api_object is not None
-
-            blob.signature = Signature(api_object.signature)
+            if api_object.signature is None:
+                blob.signature = None
+            else:
+                blob.signature = api_object.signature.to_node()
             del blob.content["Signature"]
+        self.log.debug("SIG %r", blob.signature)
 
         if api_object.special("Examples"):
             # warnings this is true only for non-modules
@@ -1651,7 +1682,7 @@ class Gen:
             else:
                 blob.content[s] = Section([], None)
 
-        blob.see_also = _normalize_see_also(blob.content.get("See Also", None), qa)
+        blob.see_also = _normalize_see_also(blob.content.get("See Also", Section()), qa)
         del blob.content["See Also"]
         return blob, figs
 
@@ -1794,7 +1825,7 @@ class Gen:
 
     def helper_1(
         self, *, qa: str, target_item: Any
-    ) -> Tuple[Optional[str], List[Section], Optional[APIObjectInfo]]:
+    ) -> Tuple[Optional[str], List[Section], APIObjectInfo]:
         """
         Parameters
         ----------
@@ -1814,11 +1845,9 @@ class Gen:
                 "module", item_docstring, None, target_item.__name__, qa
             )
         elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
-            sig: Optional[str]
+            sig: Optional[ObjectSignature]
             try:
-                sig = str(ObjectSignature(target_item))
-                # sig = qa.split(":")[-1] + sig
-                # sig = re.sub("at 0x[0-9a-f]+", "at 0x0000000", sig)
+                sig = ObjectSignature(target_item)
             except (ValueError, TypeError):
                 sig = None
             try:
@@ -1948,7 +1977,7 @@ class Gen:
         # taskp = p2.add_task(description="parsing", total=len(collected))
 
         failure_collection: Dict[str, List[str]] = defaultdict(lambda: [])
-
+        api_object: APIObjectInfo
         for qa, target_item in collected.items():
             self.log.debug("treating %r", qa)
 
@@ -1957,15 +1986,17 @@ class Gen:
                     qa=qa,
                     target_item=target_item,
                 )
+                self.log.debug("APIOBJECT %r", api_object)
             if ecollector.errored:
                 if ecollector._errors.keys():
                     self.log.warning(
                         "error with %s %s", qa, list(ecollector._errors.keys())
                     )
                 else:
-                    self.log.info("only expected error with %s", qa)
+                    self.log.info(
+                        "only expected error with %s, %s", qa, ecollector._errors.keys()
+                    )
                 continue
-            assert api_object is not None, ecollector.errored
 
             try:
                 if item_docstring is None:
@@ -1999,7 +2030,6 @@ class Gen:
                 ex = False
 
             # TODO: ndoc-placeholder : make sure ndoc placeholder handled here.
-            assert api_object is not None
             with error_collector(qa=qa) as c:
                 doc_blob, figs = self.prepare_doc_for_one_object(
                     target_item,
@@ -2009,6 +2039,7 @@ class Gen:
                     aliases=collector.aliases[qa],
                     api_object=api_object,
                 )
+            del api_object
             if c.errored:
                 continue
             _local_refs: List[str] = []
@@ -2086,6 +2117,8 @@ class Gen:
                 doc_blob.validate()
             except Exception as e:
                 raise type(e)(f"Error in {qa}")
+            self.log.debug(doc_blob.signature)
+            self.log.debug(doc_blob.to_dict())
             self.put(qa, doc_blob)
             if figs:
                 self.log.debug("Found %s figures", len(figs))

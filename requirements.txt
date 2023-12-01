@@ -1,6 +1,6 @@
 asks
 cachetools
-click<8
+click<9
 flit
 jedi
 matplotlib
@@ -12,4 +12,3 @@ rich
 there
 tree_sitter
 typer
-velin

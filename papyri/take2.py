@@ -225,6 +225,10 @@ class RefInfo(Node):
     kind: str
     path: str
 
+    def __post_init__(self):
+        if self.module is not None:
+            assert "." not in self.module, self.module
+
     def __iter__(self):
         assert isinstance(self.path, str)
         return iter([self.module, self.version, self.kind, self.path])
@@ -233,11 +237,6 @@ class RefInfo(Node):
     def from_untrusted(cls, module, version, kind, path):
         assert ":" not in module
         return cls(module, version, kind, path)
-
-
-@register(4011)
-class Signature(Node):
-    value: Optional[str]
 
 
 @register(4012)

@@ -16,13 +16,13 @@ from there import print as print_
 from .config import ingest_dir
 from .gen import DocBlob, normalise_ref
 from .graphstore import GraphStore, Key
+from .signature import SignatureNode
 from .take2 import (
     Param,
     RefInfo,
     Fig,
     Section,
     SeeAlsoItem,
-    Signature,
     encoder,
     TocTree,
 )
@@ -87,7 +87,7 @@ class IngestedBlobs(Node):
     aliases: List[str]
     example_section_data: Section
     see_also: List[SeeAlsoItem]  # see also data
-    signature: Signature
+    signature: Optional[SignatureNode]
     references: Optional[List[str]]
     qa: str
     arbitrary: List[Section]
@@ -429,7 +429,7 @@ class Ingester:
         known_refs, _ = find_all_refs(gstore)
         aliases: Dict[str, str] = {}
         for key in gstore.glob((None, None, "meta", "aliases.cbor")):
-            aliases.update(cbor2.loads(gstore.get(key)))
+            aliases.update(cbor2.loads(gstore.get(key)))  # type: ignore [call-overload]
 
         rev_aliases = {Cannonical(v): FullQual(k) for k, v in aliases.items()}
 

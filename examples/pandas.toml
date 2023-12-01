@@ -1,10 +1,11 @@
 [global]
 module = 'pandas'
-logo = 'logo_pandas.png'
+logo = 'img/logo_pandas.png'
 exec_failure = "fallback"
 submodules = []
 exclude = [
 ]
+execute_doctests = false
 [pandas.expected_errors]
 ValueError = [
  "pandas.io.gbq:read_gbq",

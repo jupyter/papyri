@@ -1,7 +1,7 @@
 import builtins
-import math
 import json
 import logging
+import math
 import operator
 import os
 import random
@@ -9,17 +9,21 @@ import shutil
 import uuid
 from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
-from typing import Optional, Set, Any, Dict, List, Callable, Tuple, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from flatlatex import converter
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from pygments.formatters import HtmlFormatter
-from quart import send_from_directory, Response, redirect
+from quart import Response, redirect, send_from_directory
 from quart_trio import QuartTrio
 from rich.logging import RichHandler
-import minify_html
+
+try:
+    import minify_html
+except ModuleNotFoundError:
+    minify_html = None  # type: ignore[assignment]
 
 from . import config as default_config
 from . import take2
@@ -27,10 +31,9 @@ from .config import ingest_dir
 from .crosslink import IngestedBlobs, find_all_refs
 from .graphstore import GraphStore, Key
 from .myst_ast import MLink, MText
-from .take2 import RefInfo, encoder, Section
+from .take2 import RefInfo, Section, encoder
 from .tree import TreeReplacer, TreeVisitor
-from .utils import progress, dummy_progress
-
+from .utils import dummy_progress, progress
 
 FORMAT = "%(message)s"
 logging.basicConfig(
@@ -42,6 +45,22 @@ log = logging.getLogger("papyri")
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
+def group_backrefs(backrefs: List[RefInfo]) -> Dict[str, List[RefInfo]]:
+    """
+    Take a list of backreferences and group them by the module they are comming from
+    """
+
+    group = defaultdict(lambda: [])
+    for ref in backrefs:
+        assert isinstance(ref, RefInfo)
+        if "." in ref.path:
+            mod, _ = ref.path.split(".", maxsplit=1)
+        else:
+            mod = ref.path
+        group[mod].append(ref)
+    return group
+
+
 def minify(s: str) -> str:
     return minify_html.minify(
         s, minify_js=True, remove_processing_instructions=True, keep_closing_tags=True
@@ -49,7 +68,7 @@ def minify(s: str) -> str:
 
 
 def unreachable(*obj):
-    return str(obj[1])
+    return str(obj)
     assert False, f"Unreachable: {obj=}"
 
 
@@ -197,6 +216,10 @@ def cs2(ref, tree, ref_map):
     return siblings
 
 
+def _uuid():
+    return uuid.uuid4().hex
+
+
 class HtmlRenderer:
     def __init__(self, store: GraphStore, *, sidebar, prefix, trailing_html):
         assert prefix.startswith("/")
@@ -204,7 +227,7 @@ class HtmlRenderer:
         self.progress = progress
         self.store = store
         self.env = Environment(
-            loader=FileSystemLoader(os.path.dirname(__file__)),
+            loader=FileSystemLoader(Path(os.path.dirname(__file__)) / "templates"),
             autoescape=select_autoescape(["html", "tpl.j2"]),
             undefined=StrictUndefined,
         )
@@ -220,7 +243,7 @@ class HtmlRenderer:
         self.env.globals["unreachable"] = unreachable
         self.env.globals["sidebar"] = sidebar
         self.env.globals["dothtml"] = extension
-        self.env.globals["uuid"] = lambda: uuid.uuid4().hex
+        self.env.globals["uuid"] = _uuid
 
     def compute_graph(
         self, backrefs: Set[Key], refs: Set[Key], key: Key
@@ -382,7 +405,7 @@ class HtmlRenderer:
             backrefs=[[], []],
             module="*",
             doc=doc,
-            parts={"*": []},
+            parts=list({"*": []}.items()),
             version="*",
             ext="",
             current_type="",
@@ -477,7 +500,8 @@ class HtmlRenderer:
             meta=meta,
             figmap=figmap,
             module=package,
-            parts=parts,
+            parts_mods=parts.get(package, []),
+            parts=list(parts.items()),
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -503,7 +527,8 @@ class HtmlRenderer:
             logo=logo,
             meta=meta,
             module=package,
-            parts={},
+            parts=list({}.items()),
+            parts_mods=[],
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -554,15 +579,7 @@ class HtmlRenderer:
         # Here if we have too many references we group them on where they come from.
         assert not hasattr(doc, "logo")
         if len(backrefs) > 30:
-            b2 = defaultdict(lambda: [])
-            for ref in backrefs:
-                assert isinstance(ref, RefInfo)
-                if "." in ref.path:
-                    mod, _ = ref.path.split(".", maxsplit=1)
-                else:
-                    mod = ref.path
-                b2[mod].append(ref)
-            backrefs = (None, b2)
+            backrefs = (None, group_backrefs(backrefs))
         else:
             backrefs = (backrefs, None)
 
@@ -571,15 +588,17 @@ class HtmlRenderer:
                 doc.content[k] = self.LR.visit(v)
 
             doc.arbitrary = [self.LR.visit(x) for x in doc.arbitrary]
+            module = qa.split(".")[0]
             return template.render(
                 current_type=current_type,
                 doc=doc,
                 logo=meta.get("logo", None),
-                qa=qa,
                 version=meta["version"],
-                module=qa.split(".")[0],
+                module=module,
+                name=qa.split(":")[-1].split(".")[-1],
                 backrefs=backrefs,
-                parts=parts,
+                parts_mods=parts.get(module, []),
+                parts=list(parts.items()),
                 parts_links=parts_links,
                 graph=graph,
                 meta=meta,
@@ -654,8 +673,8 @@ class HtmlRenderer:
 
     async def _route(
         self,
-        ref,
-        version=None,
+        ref: str,
+        version: Optional[str] = None,
     ):
         assert not ref.endswith(".html")
         assert version is not None
@@ -727,10 +746,12 @@ class HtmlRenderer:
         template = self.env.get_template("html.tpl.j2")
         gfiles = list(self.store.glob((None, None, "module", None)))
         random.shuffle(gfiles)
+        if config.ascii:
+            env, template = _ascii_env()
         for _, key in progress(gfiles, description="Rendering API..."):
             module, version = key.module, key.version
             if config.ascii:
-                await _ascii_render(key, store=self.store)
+                await _ascii_render(key, store=self.store, env=env, template=template)
             if config.html:
                 doc_blob, qa, siblings, parts_links, backward, forward = await loc(
                     key,
@@ -782,11 +803,12 @@ class HtmlRenderer:
     async def copy_static(self, output_dir):
         here = Path(os.path.dirname(__file__))
         _static = here / "static"
-        output_dir.mkdir(exist_ok=True)
-        static = output_dir.parent / "static"
-        static.mkdir(exist_ok=True)
-        await self._copy_dir(_static, static)
-        (static / "pygments.css").write_bytes(await pygment_css().get_data())
+        if output_dir is not None:
+            output_dir.mkdir(exist_ok=True)
+            static = output_dir.parent / "static"
+            static.mkdir(exist_ok=True)
+            await self._copy_dir(_static, static)
+            (static / "pygments.css").write_bytes(await pygment_css().get_data())
 
     async def copy_assets(self, config):
         """
@@ -870,7 +892,7 @@ class HtmlRenderer:
             meta=meta,
             logo=meta["logo"],
             module=package,
-            parts=parts,
+            parts=list(parts.items()),
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -898,7 +920,8 @@ class HtmlRenderer:
             meta=meta,
             logo=logo,
             module=module,
-            parts=parts,
+            parts_mods=parts.get(module, []),
+            parts=list(parts.items()),
             version=version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
@@ -1021,9 +1044,10 @@ class Resolver:
             for (package, version, _, _) in self.store.glob((None, "*", "meta", None))
         }:
             if p in self.version:
+                pass
                 # todo, likely parse version here if possible.
-                maxv = max(v, self.version[p])
-                print("multiple version for package", p, "Trying most recent", maxv)
+                # maxv = max(v, self.version[p])
+                # print("multiple version for package", p, "Trying most recent", maxv)
             self.version[p] = v
 
     def exists_resolve(self, info) -> Tuple[bool, Optional[str]]:
@@ -1125,12 +1149,7 @@ def old_render_one(
     qa: str,
     *,
     current_type,
-    backrefs,
-    parts=(),
-    parts_links=(),
-    graph="{}",
     meta,
-    toctrees,
 ):
     """
     Return the rendering of one document
@@ -1138,22 +1157,11 @@ def old_render_one(
     Parameters
     ----------
     template
-        a Jinja@ template object used to render.
+        a Jinja template object used to render.
     doc : DocBlob
         a Doc object with the informations for current obj
     qa : str
         fully qualified name for current object
-    backrefs : list of str
-        backreferences of document pointing to this.
-    parts : Dict[str, list[(str, str)]
-        used for navigation and for parts of the breakcrumbs to have navigation to siblings.
-        This is not directly related to current object.
-    parts_links : <Insert Type here>
-        <Multiline Description Here>
-    graph : <Insert Type here>
-        <Multiline Description Here>
-    logo : <Insert Type here>
-        <Multiline Description Here>
 
     """
 
@@ -1161,18 +1169,6 @@ def old_render_one(
     # TODO : move this to ingest likely.
     # Here if we have too many references we group them on where they come from.
     assert not hasattr(doc, "logo")
-    if len(backrefs) > 30:
-        b2 = defaultdict(lambda: [])
-        for ref in backrefs:
-            assert isinstance(ref, RefInfo)
-            if "." in ref.path:
-                mod, _ = ref.path.split(".", maxsplit=1)
-            else:
-                mod = ref.path
-            b2[mod].append(ref)
-        backrefs = (None, b2)
-    else:
-        backrefs = (backrefs, None)
 
     try:
         resolver = Resolver(store, prefix="/p/", extension="")
@@ -1184,25 +1180,19 @@ def old_render_one(
         return template.render(
             current_type=current_type,
             doc=doc,
-            logo=meta.get("logo", None),
-            qa=qa,
+            name=qa.split(":")[-1].split(".")[-1],
             version=meta["version"],
             module=qa.split(".")[0],
-            backrefs=backrefs,
-            parts=parts,
-            parts_links=parts_links,
-            graph=graph,
             meta=meta,
-            toctrees=toctrees,
         )
     except Exception as e:
         raise ValueError("qa=", qa) from e
 
 
 @lru_cache
-def _ascii_env():
+def _ascii_env(color=True):
     env = Environment(
-        loader=CleanLoader(os.path.dirname(__file__)),
+        loader=CleanLoader(Path(os.path.dirname(__file__)) / "templates"),
         lstrip_blocks=True,
         trim_blocks=True,
         undefined=StrictUndefined,
@@ -1210,6 +1200,28 @@ def _ascii_env():
     env.globals["len"] = len
     env.globals["unreachable"] = unreachable
     env.globals["sidebar"] = False
+    env.globals["str"] = str
+    env.filters["pad"] = lambda ss: "│" + "\n│".join(
+        [x.strip() for x in ss.split("\n")]
+    )
+
+    def esc(control, value):
+        return f"\x1b[{control};m{value}\x1b[0;m"
+
+    for control, value in [
+        ("bold", 1),
+        ("underline", 4),
+        ("black", 30),
+        ("red", 31),
+        ("green", 32),
+        ("yellow", 33),
+        ("blue", 34),
+        ("magenta", 35),
+        ("cyan", 36),
+        ("white", 37),
+    ]:
+        env.globals[control] = partial(esc, value) if color else lambda x: x
+
     try:
         c = converter()
 
@@ -1232,18 +1244,13 @@ def _ascii_env():
     return env, template
 
 
-async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=None):
+async def _ascii_render(key: Key, store: GraphStore, *, env, template):
     assert store is not None
     assert isinstance(store, GraphStore)
     ref = key.path
 
-    env, template = _ascii_env()
-
     doc_blob = encoder.decode(store.get(key))
     meta = encoder.decode(store.get_meta(key))
-
-    # exercise the reprs
-    assert str(doc_blob)
 
     return old_render_one(
         store,
@@ -1252,17 +1259,16 @@ async def _ascii_render(key: Key, store: GraphStore, known_refs=None, template=N
         template=template,
         doc=doc_blob,
         qa=ref,
-        backrefs=[],
-        graph="{}",
-        toctrees=[],
     )
 
 
-async def ascii_render(name, store=None):
+async def ascii_render(name, store=None, color=True):
     gstore = GraphStore(ingest_dir, {})
-    key = next(iter(gstore.glob((None, None, "module", "papyri.examples"))))
+    key = next(iter(gstore.glob((None, None, "module", name))))
 
-    builtins.print(await _ascii_render(key, gstore))
+    env, template = _ascii_env(color=color)
+
+    builtins.print(await _ascii_render(key, gstore, env=env, template=template))
 
 
 async def loc(document: Key, *, store: GraphStore, tree, known_refs, ref_map):

@@ -46,7 +46,13 @@ from .errors import (
 pth = str(Path(__file__).parent / "rst.so")
 
 # replace by tree-sitter-languages once it works See https://github.com/grantjenks/py-tree-sitter-languages/issues/15
-RST = Language(pth, "rst")
+try:
+    RST = Language(pth, "rst")
+except OSError as e:
+    raise OSError(
+        "tree-sitter-rst not found, rst parsing will not work. Please run `papyri build-parser`"
+    ) from e
+
 parser = Parser()
 parser.set_language(RST)
 log = logging.getLogger("papyri")

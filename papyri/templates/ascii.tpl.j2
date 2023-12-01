@@ -24,30 +24,9 @@
 {%- endif -%}
 {%- endmacro %}
 {#--#}
-{% macro render_inner(type, obj) -%}
-   |{%- if type == 'Directive' -%}
-   |   |:{{blue(obj.domain)}}:{{blue(obj.role)}}:`{{blue(obj.value)}}`
-   |{%- elif type == 'Link' %}
-   |   |{% if obj.kind=='local' %}
-   |   |    {{-green(obj.value)-}}
-   |   |{% elif obj.kind=='exists' %}
-   |   |    {{-blue(obj.value)-}}
-   |   |{% elif obj.kind=='missing' %}
-   |   |    {{-unreachable(obj)}}
-   |   |{% else %}
-   |   |{% endif %}
-   |{% elif type == 'Math' %}
-   |    ${{obj.value}}$
-   |{% elif type == 'Verbatim' %}
-   |    {{-yellow(obj.text)-}}
-   |{% else %}
-   |   |Some A {{type}}
-   |{%- endif -%}
-{%- endmacro %}
-
 {% macro block_paragraph(pgr) -%}
    |{%- for c in pgr.children -%}
-   |    |{{-render_inner(c.__class__.__name__, c)-}}
+   |    |{{-render_II(c) | trim-}}
    |{%- endfor -%}
 {% endmacro %}
 
@@ -61,41 +40,81 @@
     {% endif %}
 {% endmacro %}
 
+{% macro render_list(objs) -%}
+   |{% for item in objs -%}
+   |{{- render_II(item) -}}
+   |{% endfor -%}
+{%- endmacro %}
+
 {% macro render_II(obj) -%}
-   |{% if obj.__class__.__name__ == 'Paragraph' %}
-   |   |{{block_paragraph(obj)}}
-   |{% else %}
+   |{%- if obj.__class__.__name__ == 'Paragraph' -%}
+   |   |{{- block_paragraph(obj) -}}
+   |{%- else -%}
    |{%- set type = obj.__class__.__name__ -%}
-   |   |{%- if type in ('Directive', 'Link', 'Math', 'Verbatim') -%}
-   |   |   |{{unreachable()}}
-   |   |{% elif type == 'MMystDirective' %}
+   |   |{%- if type in ('Math', 'Verbatim') -%}
+   |   |   |{{unreachable(obj)}}
+   |   |{%- elif type == 'MAdmonitionTitle' -%}
+   |   |   |    ..
+   |   |   |    {%- for item in obj.children %}
+   |   |   |    |  {{render_II(item)|trim}}
+   |   |   |    {%- endfor %}{{'::\n\n'}}
+   |   |{%- elif type == 'MAdmonition' -%}{{'\n'}}
+   |   |   |    {% for item in obj.children %}
+   |   |   |    |{{render_II(item)|wordwrap|pad}}
+   |   |   |    {%endfor %}
+   |   |   |    |{{'\n'}}
+   |   |{%- elif type == 'Directive' -%}
+   |   |   |{{blue(':'+str(obj.domain)+':'+str(obj.role)+':`'+obj.value+'`')}}
+   |   |{%- elif type == 'MMystDirective' -%}
    |   |   |{{'\n'}}{{myst_directive(obj)}}
-   |   |{% elif type == 'Verbatim' %}
+   |   |{%- elif type == 'Verbatim' -%}
    |   |   |{{obj}}
-   |   |{% elif type == 'Paragraph' %}
+   |   |{%- elif type == 'Paragraph' -%}
    |   |   |{{block_paragraph(obj)}}
-   |   |{% elif type == 'BlockVerbatim' %}
+   |   |{%- elif type == 'BlockVerbatim' -%}
    |   |   |{{obj.value}}
-   |   |{% elif type == 'DefList' %}
+   |   |{%- elif type == 'DefList' -%}
    |   |   |    {% for item in obj.children %}
    |   |   |    {{render_II(item.dt)}}
    |   |   |        {{render_II(item.dd)}}
-   |   |   |    {%endfor %}  
-   |   |{% elif type == 'DefListItem' %}
+   |   |   |    {%endfor %}
+   |   |{%- elif type == 'DefListItem' %}
    |   |    {{-block(obj)-}}
-   |   |{% elif type == 'Example' %}
+   |   |{%- elif type == 'Example' %}
    |   |   |   |{{block(obj)}}
+   |   |{%- elif type == 'MLink' %}
+   |   |   |{{render_list(obj.children)}}
+   |   |{%- elif type == 'MInlineCode' -%}
+   |   |   |{{bold(obj.value)}}
+   |   |{%- elif type == 'MText' -%}
+   |   |   |{{obj.value}}
+   |   |{%- elif type == 'MParagraph'  -%}
+   |   |   |{{- render_list(obj.children) -}}
    |   |{% elif type == 'Parameters' %}
-   |   |   {% for item in obj.children %}
+   |   |   {%- for item in obj.children %}
    |   |       {{ render_II(item) }}
-   |   |   {% endfor %}
-   |   |{% elif type == 'Section' %}
-   |   |   {% for item in obj %}
-   |   |       {{ render_II(item) }}
-   |   |   {% endfor %}
-   |   |{% else %}
-   |   |   |Some B {{type}} Not implemented yet
-   |   |    {#{{unreachable(obj)}}#}
+   |   |   {%- endfor %}
+   |   |{%- elif type == 'Section' %}
+   |   |   {%- for item in obj %}
+   |   |       {{- render_II(item) -}}
+   |   |   {%- endfor %}
+   |   |{%- elif type == 'Directive' -%}
+   |   |   |:{{blue(obj.domain)}}:{{blue(obj.role)}}:`{{blue(obj.value)}}`
+   |   |{%- elif type == 'Link' %}
+   |   |   |{% if obj.kind=='local' %}
+   |   |   |    {{-green(obj.value)-}}
+   |   |   |{% elif obj.exists %}
+   |   |   |    {{-blue(obj.value)-}}
+   |   |   |{% else %}
+   |   |   |    {{-unreachable(obj)}}
+   |   |   |{% endif %}
+   |   |{% elif type == 'Math' %}
+   |   |    ${{obj.value}}$
+   |   |{% elif type == 'Verbatim' %}
+   |   |    {{-yellow(obj.text)-}}
+   |   |{%- else %}
+   |   |   |Some B {{type}} Not implemented yet:
+   |   |   |{{unreachable(obj)}}
    |   |{%- endif -%}
    |{%- endif -%}
 {%- endmacro %}
@@ -106,27 +125,15 @@
    |{% endif %}
    |{% for prg in prgs %}
    |   |   |{%- for obj in prg.children -%}
-   |   |   |    {{- render_inner(obj.__class__.__name__, obj) -}} 
+   |   |   |    {{- render_II(obj) -}}
    |   |   |{%- endfor -%}
    |{%- endfor -%}
 {%- endmacro %}
 
-        
+
 {%- macro esc(val, stuff) -%}
 [{{val}};m{{stuff}}[0;m
 {%- endmacro %}
-
-{% macro bold(stuff) -%}{{esc(1,stuff)}}{%- endmacro %}
-{% macro underline(stuff) -%}{{esc(4,stuff)}}{%- endmacro %}
-
-{% macro black(stuff) -%}{{esc(30,stuff)}}{%- endmacro %}
-{% macro red(stuff) -%}{{esc(31,stuff)}}{%- endmacro %}
-{% macro green(stuff) -%}{{esc(32,stuff)}}{%- endmacro %}
-{% macro yellow(stuff) -%}{{esc(33,stuff)}}{%- endmacro %}
-{% macro blue(stuff) -%}{{esc(34,stuff)}}{%- endmacro %}
-{% macro magenta(stuff) -%}{{esc(35,stuff)}}{%- endmacro %}
-{% macro cyan(stuff) -%}{{esc(36,stuff)}}{%- endmacro %}
-{% macro white(stuff) -%}{{esc(37,stuff)}}{%- endmacro %}
 
 {%- macro ref(r) -%}
    {%- if r.exists -%}
@@ -136,10 +143,8 @@
    {%- endif -%}
 {% endmacro -%}
 
-{{-green("green")}} refer to items within the same document, {{blue("blue")}} external {{underline("known")}} entities, {{red("red")}} entities we were not able to find and {{yellow("yellow")}} for code, and other "raw" items, typically between double backticks.
-
 {% if doc.signature %}
-   |{{ bold(underline(doc.signature.value))}}
+    |{{bold(underline(name))}}{{bold(underline(doc.signature.to_signature()))}}
 {% endif %}
 
 {% for section in doc.content if doc.content[section] %}
@@ -148,10 +153,8 @@
    |{{bold(section)}}
    | 
    |{% endif %}
-   |{% if section in ['Summary', 'Extended Summary', 'Notes'] %}
-   |
-   |     |{{render_II(doc.content[section]) | wordwrap}}
-   |
+   |{%- if section in ['Summary', 'Extended Summary', 'Notes'] -%}
+   |     |{{render_II(doc.content[section]) | wordwrap| trim}}
    |{% elif section in ['Signature'] %}
    |{{unreachable()}}
    |{% elif section in ['Examples'] %}
@@ -183,7 +186,7 @@
    |   |   |   |    {{green(p[1])}}
    |   |   |   |{% endif %}
    |   |   |   |   {% for item in p[2] %}
-   |   |   |   |       {{render_II(item)| wordwrap | indent(width=8)}}
+   |   |   |   |        {{render_II(item)| wordwrap |trim| indent(width=8)}}
    |   |   |   |   {% endfor -%}
    |   |   |{%- endfor -%}
    |   |{%- endfor -%}
@@ -197,24 +200,8 @@
 {% if doc.see_also %}
    |{{bold("See Also")}}
    |{% for sa in doc.see_also %}
-   |     {{bold(render_inner(sa.name.__class__.__name__, sa.name))}}
-   |         {{render_paragraph(sa.descriptions) | wordwrap | indent(width=8)}}
+   |     {{bold(render_II(sa.name))}}
+   |        {{render_paragraph(sa.descriptions) | wordwrap |trim| indent(width=8)}}
    |{% endfor %}
 {% endif %}
-{% if backrefs[0] or backrefs[1] %}
-{{"\n"}}
-{{underline(bold("Back References"))}}
-    {% if backrefs[0] is not none %}
-    {% for r in backrefs[0] %}
-        {{r}}
-    {% endfor %}
-    {% endif%}
-    {% if backrefs[1] is not none %}
-        {% for k,v in backrefs[1].items() -%}
-            {{"\n\n    "}}{{underline(k+':')}}{{"\n        "}}
-        {%- for r in v %}
-            {{-blue(r)}}{{", "-}}
-        {%- endfor %}
-    {% endfor %}
-    {% endif%}
-{% endif %}
+

@@ -47,6 +47,9 @@ class Link:
         self.text = text
         self.cb = cb
 
+    def selectable(self):
+        return True
+
 
 class TextWithLink(urwid.Text):
     # _selectable = True
@@ -292,7 +295,7 @@ class Renderer:
             c = converter()
 
             return ("math", c.convert(cont))
-        return ("directive", f"{d.domain}:{d.role}:`{cont}`")
+        return Text(("directive", f"{d.domain}:{d.role}:`{cont}`"))
 
     def render_Example(self, ex):
         acc = []
@@ -307,7 +310,7 @@ class Renderer:
 
     def render_Link(self, link):
         if link.reference.kind == "local":
-            return ("local", link.value)
+            return Text(("local", link.value))
         return Link("link", link.value, lambda: self.cb(link.reference))
 
     def render_BlockQuote(self, quote):
@@ -315,7 +318,7 @@ class Renderer:
             urwid.Pile([self.render(c) for c in quote.children]), left=4, right=4
         )
 
-    def render_Admonition(self, adm):
+    def render_MAdmonition(self, adm):
         kind = adm.kind
         title = (f"{kind} : {adm.title}",)
         if kind == "versionchanged":
@@ -331,6 +334,13 @@ class Renderer:
                 title_align="left",
             ),
         )
+
+    def render_MText(self, text):
+        return urwid.Text(text.value)
+
+    def render_MParagraph(self, paragraph):
+        stuff = [self.render(c) for c in paragraph.children]
+        return urwid.Pile(stuff)
 
     def render_BlockMath(self, math):
         from flatlatex import converter
@@ -542,6 +552,19 @@ class Renderer:
             ]
         )
 
+    def render_SignatureNode(self, sig):
+        if "Empty" in str(sig.return_annotation):
+            annotation = "None"
+        else:
+            annotation = ("signature", sig.return_annotation)
+        return [
+            ("signature", "("),
+            [("param", f"{p.name}, ") for p in sig.parameters],
+            ("signature", ")"),
+            ("signature", " -> "),
+            annotation,
+        ]
+
 
 def main(qualname: str):
     if not isinstance(qualname, str):
@@ -560,8 +583,21 @@ def main(qualname: str):
         R = Renderer(frame, walk, gen_content, stack)
         doc = []
         doc.append(blank)
-        if blob.signature.value:
-            doc.append(Text([("signature", blob.signature.value)]))
+        if blob.signature:
+            doc.append(Text(("section", "Signature")))
+            doc.append(blank)
+            doc.append(
+                Text(
+                    [
+                        ("signature", blob.signature.kind),
+                        (" "),
+                        ("bb", qualname),
+                        (" "),
+                        R.render(blob.signature),
+                    ]
+                ),
+            )
+            doc.append(blank)
 
         for k, v in blob.content.items():
             if not v.empty():
@@ -672,7 +708,7 @@ def main(qualname: str):
         ("link_selected", "black,bold", "white"),
         ("link-broken", "dark red,strikethrough", "", "bold"),
         ("type", "dark cyan", "", "bold"),
-        ("signature", "dark cyan,bold", "", "bold"),
+        ("signature", "yellow,bold", "", "bold"),
         ("param", "dark blue", "", "bold"),
         ("section", "dark magenta,bold", "", "bold"),
         ("unknown", "white", "dark red", "bold"),
