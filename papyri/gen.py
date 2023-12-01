@@ -1013,10 +1013,6 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
             self.globs[k] = obj_from_qualname(v)
 
         self.figs = []
-        self.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-        assert (
-            len(self.fig_managers)
-        ) == 0, f"init fail in {self.qa} {len(self.fig_managers)}"
 
     def _get_tok_entries(self, example):
         entries = parse_script(
@@ -1052,10 +1048,10 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         figure_names = self._figure_names()
 
         wait_for_show = self.config.wait_for_plt_show
-        self.fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         figs = []
-        if self.fig_managers and (("plt.show" in example.source) or not wait_for_show):
-            for fig, figname in zip(self.fig_managers, figure_names):
+        if fig_managers and (("plt.show" in example.source) or not wait_for_show):
+            for fig, figname in zip(fig_managers, figure_names):
                 buf = io.BytesIO()
                 fig.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
                 buf.seek(0)
@@ -1070,7 +1066,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
                     )
                 )
             )
-        self.figs.extend(figs)
+        figs.extend(figs)
 
     def report_unexpected_exception(self, out, test, example, exc_info):
         out(f"Unexpected exception after running example in `{self.qa}`", exc_info)
@@ -1272,7 +1268,8 @@ class Gen:
             else:
                 example_section_data.append(MText(block))
         # TODO fix this if plt.close not called and still a lingering figure.
-        if len(doctest_runner.fig_managers) != 0:
+        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+        if len(fig_managers) != 0:
             print_(f"Unclosed figures in {qa}!!")
             plt.close("all")
 
