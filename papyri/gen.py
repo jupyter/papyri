@@ -1221,6 +1221,7 @@ class Gen:
         """
         assert qa is not None
         example_code = '\n'.join(example_section)
+        blocks = example_code.split("\n\n")
         import matplotlib.pyplot as plt
 
         if qa in config.exclude_jedi:
@@ -1246,15 +1247,18 @@ class Gen:
                                              config=config,
                                              # TODO: Make optionflags configurable
                                              optionflags=doctest.ELLIPSIS)
-        doctests = doctest.DocTestParser().get_doctest(example_code,
-                                                       doctest_runner.globs,
-                                                       obj.__name__, filename,
-                                                       lineno)
+        example_section_data = Section([], None)
 
-        doctest_runner.run(doctests, out=lambda s: None)
-
-        example_section_data = doctest_runner.example_section_data
-
+        for block in blocks:
+            doctests = doctest.DocTestParser().get_doctest(block,
+                                                           doctest_runner.globs,
+                                                           obj.__name__, filename,
+                                                           lineno)
+            if doctests.examples:
+                doctest_runner.run(doctests, out=lambda s: None)
+                example_section_data.extend(doctest_runner.example_section_data)
+            else:
+                example_section_data.append(MText(block))
         # TODO fix this if plt.close not called and still a lingering figure.
         if len(doctest_runner.fig_managers) != 0:
             print_(f"Unclosed figures in {qa}!!")
