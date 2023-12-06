@@ -471,7 +471,7 @@ def gen_main(
     debug,
     *,
     dummy_progress: bool,
-    dry_run=bool,
+    dry_run: bool,
     api: bool,
     examples: bool,
     fail,
