@@ -457,7 +457,7 @@ def load_configuration(
         root = info.pop("module")
         return root, info, conf.get("meta", {})
     else:
-        sys.exit(f"{conffile!r} does not exists.")
+        sys.exit(f"{conffile!r} does not exist.")
 
 
 def gen_main(
@@ -477,9 +477,9 @@ def gen_main(
     limit_to: List[str],
 ) -> None:
     """
-    Main entry point to generate docbundle files,
+    Main entry point to generate DocBundle files.
 
-    This will take care of reading  single configuration file with the option
+    This will take care of reading single configuration files with the options
     for the library you want to build the docs for, scrape API, narrative and
     examples, and put it into a doc bundle for later consumption.
 
@@ -779,11 +779,14 @@ class _OrderedDictProxy:
 
 class DocBlob(Node):
     """
-    An object containing information about the documentation of an arbitrary object.
+    An object containing information about the documentation of an arbitrary
+    object.
 
-    Instead of docblob begin a NumpyDocString, I'm thinking of them having a numpydocstring.
-    This helps with arbitraty documents (module, examples files) that cannot be parsed by Numpydoc,
-    as well as link to external references, like images generated.
+    Instead of DocBlob being a NumpyDocString, I'm thinking of them having a
+    NumpyDocString. This helps with arbitrary documents (module, examples files)
+    that cannot be parsed by Numpydoc, as well as links to external references,
+    like images generated.
+
     """
 
     __slots__ = (
@@ -918,12 +921,10 @@ _numpydoc_sections_with_text = {
 
 class APIObjectInfo:
     """
-    Info about an API object
-    This object can be many things:
+    Describes the object's type and other relevant information
 
-    Module, Class, method, function.
+    This object can be many things, such as a Module, Class, method, function.
 
-    I'll see how I handle that later.
     """
 
     kind: str
@@ -1063,7 +1064,7 @@ def _normalize_see_also(see_also: Section, qa: str):
 
 class Gen:
     """
-    Core class to generate docbundles for a given library.
+    Core class to generate a DocBundle for a given library.
 
     This is responsible for finding all objects, extracting the doc, parsing it,
     and saving that into the right folder.
@@ -1142,9 +1143,9 @@ class Gen:
         """Extract example section data from a NumpyDocString
 
         One of the section in numpydoc is "examples" that usually consist of number
-        if paragraph, interleaved with examples starting with >>> and ...,
+        of paragraphs, interleaved with examples starting with >>> and ...,
 
-        This attempt to parse this into structured data, with text, input and output
+        This attempts to parse this into structured data, with text, input and output
         as well as to infer the types of each token in the input examples.
 
         This is currently relatively limited as the inference does not work across
@@ -1385,7 +1386,6 @@ class Gen:
         blbs = {}
         with self.progress() as p2:
             task = p2.add_task("Parsing narative", total=len(files))
-
             for p in files:
                 p2.update(task, description=compress_user(str(p)).ljust(7))
                 p2.advance(task)
@@ -1455,7 +1455,7 @@ class Gen:
 
     def write_api(self, where: Path):
         """
-        write the API section of the docbundles.
+        Write the API section of the DocBundle.
         """
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
@@ -1466,7 +1466,7 @@ class Gen:
 
     def write(self, where: Path):
         """
-        Write a docbundle folder.
+        Write a DocBundle folder.
         """
         self.write_api(where)
         self.write_narrative(where)
@@ -1495,6 +1495,10 @@ class Gen:
         self.bdata[path] = data
 
     def _transform_1(self, blob: DocBlob, ndoc) -> DocBlob:
+        """
+        Populates DocBlob content field from numpydoc parsed docstring.
+
+        """
         for k, v in ndoc._parsed_data.items():
             blob.content[k] = v
         for k, v in blob.content.items():
@@ -1502,7 +1506,10 @@ class Gen:
         return blob
 
     def _transform_2(self, blob: DocBlob, target_item, qa: str) -> DocBlob:
-        # try to find relative path WRT site package.
+        """
+        Try to find relative path WRT site package and populate item_file field
+        for DocBlob.
+        """
         # will not work for dev install. Maybe an option to set the root location ?
         item_file: Optional[str] = find_file(target_item)
         if item_file is not None and item_file.endswith("<string>"):
@@ -1546,6 +1553,10 @@ class Gen:
         return blob
 
     def _transform_3(self, blob, target_item):
+        """
+        Try to find source line number for target object and populate item_line
+        field for DocBlob.
+        """
         item_line = None
         try:
             item_line = inspect.getsourcelines(target_item)[1]
@@ -1595,13 +1606,13 @@ class Gen:
         aliases : sequence
             other aliases for cuttent object.
         api_object : APIObjectInfo
-            <Multiline Description Here>
+            Describes the object's type and other relevant information
 
         Returns
         -------
         Tuple of two items,
-        ndoc:
-            DocBundle with info for current object.
+        blob:
+            DocBlob with info for current object.
         figs:
             dict mapping figure names to figure data.
 
@@ -1908,17 +1919,32 @@ class Gen:
                 for name, data in figs:
                     self.put_raw(name, data)
 
-    def helper_1(
+    def extract_docstring(
         self, *, qa: str, target_item: Any
     ) -> Tuple[Optional[str], List[Section], APIObjectInfo]:
         """
+        Extract docstring from an object.
+
+        Detects whether an object includes a docstring and parses the object's
+        type.
+
         Parameters
         ----------
         qa : str
-            fully qualified name of the object we are extracting the
-            documentation from .
+            Fully qualified name of the object we are extracting the
+            documentation from
         target_item : Any
-            Can be any kind of object
+            Object we wish inspect. Can be any kind of object.
+
+        Returns
+        -------
+        item_docstring : str
+            The unprocessed object's docstring
+        sections : list of Section
+            A list of serialized sections of the docstring
+        api_object : APIObjectInfo
+            Describes the object's type and other relevant information
+
         """
         item_docstring: str = target_item.__doc__
         if item_docstring is not None:
@@ -1999,12 +2025,12 @@ class Gen:
 
     def collect_api_docs(self, root: str, limit_to: List[str]) -> None:
         """
-        Crawl one module and stores resulting docbundle in self.store.
+        Crawl one module and stores resulting DocBundle in json files.
 
         Parameters
         ----------
         root : str
-            module name to generate docbundle for.
+            Module name to generate DocBundle for.
         limit_to : list of string
             For partial documentation building and testing purposes
             we may want to generate documentation for only a single item.
@@ -2072,7 +2098,7 @@ class Gen:
             self.log.debug("treating %r", qa)
 
             with error_collector(qa=qa) as ecollector:
-                item_docstring, arbitrary, api_object = self.helper_1(
+                item_docstring, arbitrary, api_object = self.extract_docstring(
                     qa=qa,
                     target_item=target_item,
                 )
@@ -2097,7 +2123,7 @@ class Gen:
                     ndoc = NumpyDocString(dedent_but_first("No Docstrings"))
                 else:
                     ndoc = NumpyDocString(dedent_but_first(item_docstring))
-                    # note currentlu in ndoc we use:
+                    # note currently in ndoc we use:
                     # _parsed_data
                     # direct access to  ["See Also"], and [""]
                     # and :
@@ -2228,7 +2254,6 @@ class Gen:
                 "The following parsing failed \n%s",
                 json.dumps(failure_collection, indent=2, sort_keys=True),
             )
-
         self._meta.update(
             {
                 "aliases": aliases,

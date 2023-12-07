@@ -549,8 +549,8 @@ class DirectiveVisiter(TreeReplacer):
     def _math_handler(self, argument, options, content):
         if argument and content:
             log.info(
-                "For consistency please use the math directive"
-                " with all the equation in the content of the directive in %r",
+                "For consistency, please use the math directive"
+                " with all the equations in the content of the directive in %r",
                 self.qa,
             )
             content = argument + content

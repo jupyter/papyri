@@ -246,7 +246,7 @@ def ingest(
     dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
 ):
     """
-    Given paths to a docbundle folder, ingest it into the known libraries.
+    Given paths to a DocBundle folder, ingest it into the known libraries.
 
     Parameters
     ----------
@@ -280,7 +280,7 @@ def install(
     relink: bool = False,
 ):
     """
-    WIP, download and install a remote docbundle
+    WIP. Download and install a remote DocBundle
     """
 
     from io import BytesIO
@@ -296,7 +296,7 @@ def install(
 
     async def get(name, version, results, progress):
         """
-        Utility to download a single docbundle and
+        Utility to download a single DocBundle and
         put it into result.
 
         """
@@ -333,7 +333,7 @@ def install(
 
     async def trio_main():
         """
-        Main trio routine to download docbundles concurently.
+        Main trio routine to download DocBundles concurently.
 
         """
         results = {}
