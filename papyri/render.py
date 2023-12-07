@@ -1379,7 +1379,7 @@ async def rich_render(
         theme=THEME,
         width=width,
         no_color=not color,
-        color_system="256" if color else "auto",
+        color_system="256" if color else None,
     )
     try:
         for it in _rich_render(key, store):

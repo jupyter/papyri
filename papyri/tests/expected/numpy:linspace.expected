@@ -1,6 +1,6 @@
 linspace(start, stop, num=None, endpoint=None, retstep=None, dtype=None,
 axis=None)
-Extended Summary
+## Extended Summary
 
 Returns num evenly spaced samples, calculated over the interval [`start`, stop
 ].
@@ -23,7 +23,7 @@ The endpoint of the interval can optionally be excluded.
 │ stop, num).astype(int)                                                       │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-Parameters
+## Parameters
 
 start : array_like
   The starting value of the sequence.
@@ -60,7 +60,7 @@ axis : int, optional
   ╭────────────────────────────────────────────────────────────────────────────╮
   │ {'type': 'admonitionTitle', 'children': [{'type': 'text', 'value': 'versio │
   ╰────────────────────────────────────────────────────────────────────────────╯
-Returns
+## Returns
 
 samples : ndarray
   There are num equally spaced samples in the closed interval [start, stop] or
@@ -72,11 +72,11 @@ step : float, optional
 
   Size of spacing between samples.
 
-Summary
+## Summary
 
 Return evenly spaced numbers over a specified interval.
 
-See Also
+## See Also
 
   arange  Similar to `linspace`, but uses a step size (instead of the number of
     samples).

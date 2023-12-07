@@ -141,7 +141,7 @@ Here are a couple of function that are of interest to explore what papyri can do
 
 `numpy.einsum`:
     one of the longest numpy docstring/document, or at least one of the longest to render, with
-    `scipy.signal.windows.dpss` , `scipy.optimize._minimize.minimize` and
+    `scipy.signal.windows.dpss`, `scipy.optimize._minimize.minimize` and
     `scipy.optimize._basinhopping.basinhopping`
 
 
@@ -525,7 +525,7 @@ def rich(name: str, *, width: Optional[int] = None, color: bool = True):
 
     from .render import rich_render
 
-    trio.run(rich_render, name, width)
+    trio.run(rich_render, name, width, color)
 
 
 @app.command()
