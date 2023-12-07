@@ -94,26 +94,30 @@ examples_exclude = [
 exec = true
 
 [global.expected_errors]
-VisitSubstitutionDefinitionNotImplementedError = [
-    ]
 IncorrectInternalDocsLen = [
-    "matplotlib.pyplot:rc",
     "matplotlib.dates:ConciseDateFormatter",
     "matplotlib.font_manager:win32FontDirectory",
-    "matplotlib.transforms:Transform.__sub__",
     "matplotlib.patches:ConnectionStyle._Base",
+    "matplotlib.pyplot:rc",
+    "matplotlib.ticker:LogLocator",
     "matplotlib.ticker:LogLocator.__init__",
+    "matplotlib.transforms:Transform.__sub__",
+    "matplotlib.tri._triinterpolate:_safe_inv22_vectorized",
+    "matplotlib:rc",
     ]
-ValueError = [
-    "matplotlib.image:thumbnail",
-    "matplotlib.artist:Artist.set_sketch_params",
+WrongTypeAtField = [
     "matplotlib.artist:Artist.set_agg_filter",
+    "matplotlib.artist:Artist.set_sketch_params",
+    "matplotlib.axes._base:_AxesBase.set_prop_cycle",
+    "matplotlib.axes._base:_AxesBase.set_xbound",
     "matplotlib.axes._base:_AxesBase.set_xlim",
+    "matplotlib.axes._base:_AxesBase.set_ybound",
     "matplotlib.axes._base:_AxesBase.set_ylim",
     "matplotlib.cm:ScalarMappable.set_clim",
+    "matplotlib.image:thumbnail",
+    "matplotlib.patches:FancyArrowPatch.set_connectionstyle",
     "matplotlib.patches:FancyBboxPatch.set_boxstyle",
     "matplotlib.spines:Spine.set_bounds",
-    "matplotlib.patches:FancyArrowPatch.set_connectionstyle",
     ]
 [global.implied_imports]
 _api = 'matplotlib._api'

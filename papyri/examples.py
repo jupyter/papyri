@@ -127,6 +127,26 @@ In this paragraph: |SubstitutionRef| Should be replaced...
 
 .. |SubstitutionDef| replace:: ASUBSTITUTIONDEF
 
+
+
+Quotes
+------
+
+Quotes are not implemented yet in the parser, this section below will appear
+empty
+
+----
+
+|    That which is static and repetitive is boring. That which is dynamic
+|    and random is confusing. In between lies art.
+|    --- *John A. Locke*
+
+|    Science is a differential equation. Religion is a boundary condition.
+|    --- *Alan Turing*
+
+----
+
+
 """
 
 from typing import Optional, Union

@@ -124,10 +124,14 @@ def _invalidate(obj, depth=0):
     # return outcome,s
 
 
-def validate(obj):
+class WrongTypeAtField(ValueError):
+    pass
+
+
+def validate(obj: Any) -> None:
     res = _invalidate(obj)
     if res:
-        raise ValueError(f"Wrong type at field :: {res}")
+        raise WrongTypeAtField(f"Wrong type at field :: {res}")
 
 
 def not_type_check(item, annotation):

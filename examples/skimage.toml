@@ -2,71 +2,17 @@
 module = 'skimage'
 logo = "img/skimage-logo.png"
 exec_failure = "fallback"
-submodules = [ "morphology", "color", "data", "draw", "exposure", "io", "graph", "segmentation", "transform", "util", "viewer",]
+submodules = [ "morphology", "color", "data", "draw", "exposure", "io", "graph", "segmentation", "transform", "util"]
 exclude = [
-            # https://github.com/stsewd/tree-sitter-rst/issues/31
-            'skimage.color.delta_e.deltaE_cmc',
-            # ?
-
-            'skimage.transform.radon_transform.iradon',
-           'skimage.morphology._skeletonize.skeletonize_3d',
-           'skimage.morphology._skeletonize_3d_cy',
-           'skimage.util.dtype._convert',
-           'skimage.util.dtype.convert',
-            # VisitCitationReferenceNotImplementedError": [
-           "skimage.morphology._skeletonize.skeletonize",
-           "skimage.morphology._skeletonize_3d_cy._compute_thin_image",
-           "skimage.morphology._skeletonize_3d_cy._compute_thin_image",
-           "skimage.morphology._skeletonize.skeletonize_2d",
-           "skimage.morphology._skeletonize.skeletonize_2d",
-           "skimage.morphology._skeletonize_3d_cy.fill_Euler_LUT",
-           "skimage.morphology._skeletonize_3d_cy.fill_Euler_LUT",
-            # serialisation Errors
-           "skimage.segmentation.slic_superpixels.slic",
-           "skimage.color.delta_e.get_dH2",
-           "skimage.color.delta_e.get_dH2",
-           # "NumpydocError-<class 'ValueError'>"
-           "skimage.measure._marching_cubes_lewiner_cy.Cell",
-           # "ParseDesc-<class 'AssertionError'>"
-           "skimage.metrics.simple_metrics.normalized_root_mse",
-           # "ParseDesc-<class 'IndexError'>"
-           "skimage.draw.draw.circle_perimeter",
-           "skimage.feature.corner.corner_peaks",
-           "skimage.feature.peak.peak_local_max",
-           "skimage.draw._draw._circle_perimeter",
-           "skimage.transform._geometric.FundamentalMatrixTransform._setup_constraint_matrix",
-                        "skimage.transform._warps._stackcopy"
           ]
 exclude_jedi = ['skimage.viewer.plugins.base.Plugin']
 [global.expected_errors]
-ValueError = [ "skimage.morphology.gray:black_tophat",
- "skimage.morphology.extrema:h_maxima",
- "skimage.morphology.extrema:h_minima",
- "skimage.measure._label:label",
- "skimage.morphology.extrema:local_maxima",
- "skimage.morphology.extrema:local_minima",
- "skimage.morphology._skeletonize:thin",
- "skimage.morphology.gray:white_tophat",
- "skimage.segmentation.morphsnakes:morphological_chan_vese",
- "skimage.segmentation.morphsnakes:morphological_geodesic_active_contour",
- "skimage.filters._gaussian:difference_of_gaussians",
- "skimage.measure._find_contours:find_contours",
- "skimage.filters.rank.generic:maximum",
- "skimage.filters.rank.bilateral:mean_bilateral",
- "skimage.filters.rank.generic:minimum",
- "skimage.filters.rank.bilateral:sum_bilateral",
+WrongTypeAtField = [
+    "skimage.morphology._skeletonize:medial_axis",
 ]
-VisitCitationReferenceNotImplementedError = [ "skimage.morphology._skeletonize:skeletonize",
- "skimage.morphology._skeletonize:skeletonize_3d",
- "skimage.morphology._skeletonize_3d_cy:_compute_thin_image",
- "skimage.morphology._skeletonize:skeletonize_2d",
- "skimage.morphology._skeletonize_3d_cy:fill_Euler_LUT",
-]
-AssertionError = [ "skimage.color.delta_e:deltaE_cmc",
- "skimage._shared.utils:docstring_add_deprecated",
-]
-IncorrectInternalDocsLen = [ "skimage.transform._geometric:FundamentalMatrixTransform._setup_constraint_matrix",
- "skimage.transform._warps:_stackcopy",
-]
-NumpydocParseError = [ "skimage.measure._marching_cubes_lewiner_cy:Cell",
+VisitCitationReferenceNotImplementedError = [
+    "skimage.morphology._skeletonize:skeletonize",
+    "skimage.morphology._skeletonize:skeletonize_3d",
+    "skimage.morphology._skeletonize:skeletonize_2d",
+    "skimage.morphology._skeletonize_3d_cy",
 ]

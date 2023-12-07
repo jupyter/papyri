@@ -121,7 +121,7 @@ class DelayedResolver:
         if (target in self._targets) and (target in self._references):
             for link in self._references[target]:
                 link.reference = self._targets[target]
-                print("Updating link to point to", self._targets[target], link)
+                # print("Updating link to point to", self._targets[target], link)
             self._references[target] = []
 
 
@@ -834,6 +834,8 @@ class DVR(DirectiveVisiter):
     def visit_Section(self, sec):
         if sec.target:
             # print("Section has target:", sec.target)
+            # TODO: This is wrong, we should likely change this to the current module that get visited.
+            # it likely only affects narative
             RESOLVER.add_target(
                 RefInfo("papyri", "0.0.8", "docs", sec.target), sec.target
             )

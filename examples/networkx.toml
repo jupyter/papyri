@@ -31,8 +31,11 @@ VisitCitationReferenceNotImplementedError = [
     "networkx.algorithms.graphical:is_valid_degree_sequence_erdos_gallai",
     "networkx.algorithms.graphical:is_valid_degree_sequence_havel_hakimi",
 ]
-ValueError = [ "networkx.generators.geometric:geographical_threshold_graph",
-    "networkx.generators.geometric:navigable_small_world_graph",
+WrongTypeAtField = [
+    "networkx.generators.geometric:geographical_threshold_graph",
     "networkx.generators.geometric:waxman_graph",
     "networkx.algorithms.cycles:_johnson_cycle_search",
+]
+IncorrectInternalDocsLen = [
+    "networkx.algorithms.community.louvain:louvain_communities",
 ]

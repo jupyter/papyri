@@ -368,12 +368,12 @@ class HtmlRenderer:
         if html_dir:
             (html_dir / "index.html").write_text(await self.index())
 
-    async def virtual(self, module, node):
+    async def virtual(self, module, node_name: str):
         if module == "*":
             module = None
         items = list(self.store.glob((module, None, None, None)))
 
-        visitor = TreeVisitor([getattr(take2, node)])
+        visitor = TreeVisitor([getattr(take2, node_name)])
         acc = []
         for it in items:
             if it.kind in ("assets", "examples", "meta"):
@@ -400,10 +400,9 @@ class HtmlRenderer:
         doc = IngestedBlobs.new()
 
         class S:
-            pass
+            value = None
 
         doc.signature = S()
-        doc.signature.value = None
         doc.arbitrary = acc
         return self.env.get_template("html.tpl.j2").render(
             graph=None,

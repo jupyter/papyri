@@ -171,7 +171,7 @@ import io
 import sys
 import zipfile
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Annotated
 
 import tomli_w
 import typer
@@ -417,9 +417,21 @@ def relink(
     cr.relink(dummy_progress=dummy_progress)
 
 
+def find_toml():
+    from glob import glob
+
+    return glob("**/*.toml", recursive=True)
+
+
 @app.command()
 def gen(
-    file: str,
+    file: Annotated[
+        str,
+        typer.Argument(
+            help="toml configuration file",
+            autocompletion=find_toml,
+        ),
+    ],
     infer: Optional[bool] = typer.Option(
         True, help="Whether to run type inference on code examples."
     ),
@@ -485,6 +497,9 @@ def pack():
 
 @app.command()
 def bootstrap(file: str):
+    """
+    create a basic toml configuration file (draft)
+    """
     p = Path(file)
     if p.exists():
         sys.exit(f"{p} already exists")
@@ -513,6 +528,9 @@ def render(
 
 @app.command()
 def drop():
+    """
+    Drop the full local database.
+    """
     _intro()
     from . import crosslink as cr
 
@@ -555,6 +573,9 @@ def serve_static():
 
 @app.command()
 def browse(qualname: str):
+    """
+    browse documentation using URWID (deprecated)
+    """
     from papyri.browser import main as browse
 
     browse(qualname)
@@ -562,6 +583,9 @@ def browse(qualname: str):
 
 @app.command()
 def textual(qualname: str):
+    """
+    browse documentation using textual (in-progress)
+    """
     from papyri.textual import main as textual
 
     textual(qualname)
@@ -569,6 +593,13 @@ def textual(qualname: str):
 
 @app.command()
 def build_parser():
+    """
+    Build the rst parser from the submodule. (development)
+
+    This is a warkaround from the fact that the parser published wheels do not
+    work on all platofrms
+
+    """
     from tree_sitter import Language
 
     pth = Path(__file__).parent / "rst.so"
@@ -588,6 +619,67 @@ def build_parser():
     )
 
     Language(spth, "rst")
+
+
+def complete_nodename():
+    from . import take2, myst_ast, common_ast
+
+    return dir(take2) + dir(common_ast) + dir(myst_ast)
+
+
+@app.command()
+def find(
+    node_name: Annotated[
+        str,
+        typer.Argument(
+            help="Name of the node to search",
+            autocompletion=complete_nodename,
+        ),
+    ],
+):
+    """
+    Find all documents with a given type of AST node.
+
+    Mostly used to debug rendering. One ca find all document with say equations:
+
+    $ papyri find MMath
+
+
+    """
+    from papyri.render import GraphStore, ingest_dir
+    from . import take2
+    from .tree import TreeVisitor
+    from .take2 import encoder
+    from . import myst_ast, common_ast
+    from .crosslink import IngestedBlobs
+
+    store = GraphStore(ingest_dir, {})
+
+    items = list(store.glob((None, None, None, None)))
+
+    node_type = getattr(
+        take2,
+        node_name,
+        getattr(common_ast, node_name, getattr(myst_ast, node_name, None)),
+    )
+
+    if node_type is None:
+        sys.exit("no such node type")
+
+    visitor = TreeVisitor([node_type])
+    for it in items:
+        if it.kind in ("assets", "examples", "meta"):
+            continue
+        data = store.get(it)
+        obj = encoder.decode(data)
+        if not isinstance(obj, IngestedBlobs):
+            print("SKIP", it)
+            continue
+        for a in obj.arbitrary + list(obj.content.values()):
+            res = visitor.generic_visit(a)
+            if res:
+                print(it)
+                print(res[node_type])
 
 
 @app.command()
