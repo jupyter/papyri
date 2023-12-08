@@ -97,15 +97,21 @@ from .myst_ast import MText
 
 
 class ErrorCollector:
+    _expected_unseen: Dict[str, Any]
+    errored: bool
+    _unexpected_errors: Dict[str, Any]
+    _expected_errors: Dict[str, Any]
+
     def __init__(self, config: Config, log):
         self.config: Config = config
         self.log = log
 
-        self._expected_unseen: Dict[str, Any] = {}
+        self._expected_unseen = {}
         for err, names in self.config.expected_errors.items():
             for name in names:
                 self._expected_unseen.setdefault(name, []).append(err)
-        self._errors: Dict[str, Any] = {}
+        self._unexpected_errors = {}
+        self._expected_errors = {}
 
     def __call__(self, qa):
         self._qa = qa
@@ -114,9 +120,6 @@ class ErrorCollector:
     def __enter__(self):
         self.errored = False
         return self
-
-    def raise_if_unseen_errors(self):
-        pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type in (BaseException, KeyboardInterrupt):
@@ -128,8 +131,9 @@ class ErrorCollector:
                 self._expected_unseen[self._qa].remove(ename)
                 if not self._expected_unseen[self._qa]:
                     del self._expected_unseen[self._qa]
+                self._expected_errors.setdefault(ename, []).append(self._qa)
             else:
-                self._errors.setdefault(ename, []).append(self._qa)
+                self._unexpected_errors.setdefault(ename, []).append(self._qa)
                 self.log.exception(f"Unexpected error {self._qa}")
             if not self.config.early_error:
                 return True
@@ -1477,12 +1481,14 @@ class Gen:
                     repr(type(target_item).__name__),
                 )
             else:
-                self.log.warning(
-                    "Could not find source file for %s (%s) [%s], will not be able to link to it.",
-                    repr(qa),
-                    target_item,
-                    type(target_item).__name__,
-                )
+                rqan = str(qa).split(".")[-1]
+                if not (rqan.startswith("__") and rqan.endswith("__")):
+                    self.log.warning(
+                        "Could not find source file for %s (%s) [%s], will not be able to link to it.",
+                        repr(qa) + ":" + rqan,
+                        target_item,
+                        type(target_item).__name__,
+                    )
 
         return blob
 
@@ -1864,7 +1870,8 @@ class Gen:
                     "function", item_docstring, sig, target_item.__name__, qa
                 )
             except Exception as e:
-                raise type(e)(f"For object {qa!r}")
+                e.add_note(f"For object {qa!r}")
+                raise
         elif isinstance(target_item, type):
             api_object = APIObjectInfo(
                 "class", item_docstring, None, target_item.__name__, qa
@@ -1916,7 +1923,7 @@ class Gen:
         self._meta.update({"logo": logo, "module": root, "version": self.version})
         self._meta.update(meta)
 
-    def collect_api_docs(self, root: str, limit_to: List[str]):
+    def collect_api_docs(self, root: str, limit_to: List[str]) -> None:
         """
         Crawl one module and stores resulting docbundle in self.store.
 
@@ -1997,13 +2004,17 @@ class Gen:
                 )
                 self.log.debug("APIOBJECT %r", api_object)
             if ecollector.errored:
-                if ecollector._errors.keys():
+                if ecollector._unexpected_errors.keys():
                     self.log.warning(
-                        "error with %s %s", qa, list(ecollector._errors.keys())
+                        "error with %s %s",
+                        qa,
+                        list(ecollector._unexpected_errors.keys()),
                     )
                 else:
                     self.log.info(
-                        "only expected error with %s, %s", qa, ecollector._errors.keys()
+                        "only expected error with %s, %s",
+                        qa,
+                        list(ecollector._expected_errors.keys()),
                     )
                 continue
 
@@ -2133,10 +2144,12 @@ class Gen:
                 self.log.debug("Found %s figures", len(figs))
             for name, data in figs:
                 self.put_raw(name, data)
-        if error_collector._errors:
+        if error_collector._unexpected_errors:
             self.log.info(
                 "ERRORS:"
-                + tomli_w.dumps(error_collector._errors).replace(",", ",    \n")
+                + tomli_w.dumps(error_collector._unexpected_errors).replace(
+                    ",", ",    \n"
+                )
             )
         if error_collector._expected_unseen:
             inverted = defaultdict(lambda: [])

@@ -1,6 +1,6 @@
 einsum(subscripts, *operands, out=None, dtype=None, order=None, casting=None,
 optimize=None)
-Extended Summary
+## Extended Summary
 
 Using the Einstein summation convention, many common multi-dimensional, linear
 algebraic array operations can be represented in a simple fashion. In implicit
@@ -13,7 +13,7 @@ operations, by disabling, or forcing summation over specified subscript labels.
 
 See the notes and examples for clarification.
 
-Notes
+## Notes
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ {'type': 'admonitionTitle', 'children': [{'type': 'text', 'value': 'versiona │
@@ -115,7 +115,7 @@ and reuse that path by supplying it as an argument. An example is given below.
 
 See numpy.einsum_path for more details.
 
-Parameters
+## Parameters
 
 subscripts : str
   Specifies the subscripts for summation as comma separated list of subscript
@@ -164,16 +164,16 @@ optimize : {False, True, 'greedy', 'optimal'}, optional
   an explicit contraction list from the np.einsum_path function. See
   np.einsum_path for more details. Defaults to False.
 
-Returns
+## Returns
 
 output : ndarray
   The calculation based on the Einstein summation convention.
 
-Summary
+## Summary
 
 Evaluates the Einstein summation convention on the operands.
 
-See Also
+## See Also
 
   doteinops  similar verbose interface is provided by `einops
     <https://github.com/arogozhnikov/einops>` package to cover additional

@@ -2,6 +2,7 @@
 Attempt to render using the rich protocol.
 """
 
+from .myst_ast import MThematicBreak, MHeading
 from dataclasses import dataclass
 from rich.segment import Segment
 from typing import Any, Optional
@@ -9,6 +10,7 @@ from rich.console import Console, ConsoleOptions, RenderResult, Group
 from rich.panel import Panel, Box
 from rich.padding import Padding
 from rich import print
+import rich
 import json
 
 
@@ -198,8 +200,8 @@ class RichVisitor:
             acc.append(Panel(Group(*rd)))
         return acc
 
-    def visit_MHeading(self, node):
-        cs = self.generic_visit(node.children)
+    def visit_MHeading(self, node: MHeading):
+        cs = [RToken("#" * (node.depth + 1) + " ")] + self.generic_visit(node.children)
         return [RTokenList(cs) + RTokenList.from_str("\n\n")]
 
     def visit_Param(self, node):
@@ -213,7 +215,16 @@ class RichVisitor:
         return [RTokenList(cs), pad(Group(*sub))]
 
     def visit_MMath(self, node):
-        return self.visit_unknown(node)
+        # maybe look like:
+        # from sympy.parsing.latex import parse_latex
+        # from sympy import pretty
+        # pretty(parse_latex(...))
+        from flatlatex import converter
+
+        flat = converter().convert(node.value)
+
+        formula = RToken(flat, style="math")
+        return [Padding(formula, (1, 1, 1, 1))]
 
     def visit_MInlineMath(self, node):
         from flatlatex import converter
@@ -266,8 +277,8 @@ class RichVisitor:
 
         return self.visit_unknown(node)
 
-    def visit_MThematicBreak(self, node):
-        return self.visit_unknown(node)
+    def visit_MThematicBreak(self, node: MThematicBreak):
+        return [rich.rule.Rule()]
 
     def visit_MUnimpl(self, node):
         return self.generic_visit(node.children)

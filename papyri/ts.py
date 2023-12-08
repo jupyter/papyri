@@ -334,6 +334,7 @@ class TSVisitor:
             role_value = role_value[1:-1]
             domain = None
             if ":" in role_value:
+                # TODO: error for pandas.io.orc:read_orc
                 domain, role_value = role_value.split(":")
                 assert ":" not in role_value
                 assert ":" not in domain
@@ -459,7 +460,7 @@ class TSVisitor:
             # ```
             assert len(set_post_a) == 1, breakpoint()
             post_a = next(iter(set_post_a))
-
+            # TODO: fails with pandas.compat._constants
             assert len(post_text) >= len(self.as_text(tc)), self.as_text(tc)
 
         assert post_a in allowed_adorn
@@ -497,6 +498,8 @@ class TSVisitor:
 
     def visit_line_block(self, node, prev_end=None):
         # TODO
+        # e.g: numpy/doc/source/user/c-info.how-to-extend.rst
+        print("Skipping node", self.as_text(node))
         return []
 
     def visit_substitution_reference(self, node, prev_end=None):
@@ -518,8 +521,10 @@ class TSVisitor:
             # we likely have an option list
             for list_item in node.children:
                 assert list_item.type == "field"
-                _, name, _ = list_item.children
+                col1, name, col2 = list_item.children
                 # TODO, assert _ and _ are `:`
+                assert self.as_text(col1) == ":", col1
+                assert self.as_text(col2) == ":", col2
                 acc.append(self.as_text(name))
             return []
             return [Options(acc)]
@@ -561,8 +566,14 @@ class TSVisitor:
     #    assert False
     #    return []
 
+    def visit_attribution(self, node, prev_end):
+        # TODO:
+        print("attribution not implemented")
+        return [Unimplemented("inline_target", self.as_text(node))]
+
     def visit_inline_target(self, node, prev_end):
-        # NotImplemented
+        # TODO:
+        print("inline_target not implemented")
         return [Unimplemented("inline_target", self.as_text(node))]
 
     def visit_directive(self, node, prev_end=None):

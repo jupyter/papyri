@@ -1,6 +1,3 @@
-asks
-cachetools
-click<9
 emoji
 flit
 jedi

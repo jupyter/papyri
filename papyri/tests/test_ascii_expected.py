@@ -31,6 +31,7 @@ def test_g(file):
 if __name__ == "__main__":
     gstore = GraphStore(ingest_dir, {})
     for file in expected:
+        assert file.name.endswith(".expected")
         item = file.name[: -len(".expected")]
         key = next(iter(gstore.glob((None, None, "module", item))))
         res = _get_result_for_name(item)

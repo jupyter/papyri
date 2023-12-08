@@ -20,6 +20,11 @@ heading 4
 FieldList
 ---------
 
+In my understnading FieldList should in general not happen in the final
+Documents, they are supposed to be processed by the software reading them, and
+typically appear at the beginning of directive.
+
+
 :fieldlistitem:
     at least that the name tree sitter rst give it.
 :another: is a another fieldlistItem in this field list
@@ -45,7 +50,6 @@ Unordered list
 Definition Lists
 ----------------
 
-Definition list (not sure about the difference with field lists...)
 
 term 1
     Definition 1.
@@ -76,10 +80,26 @@ Code (title 2)
 Math
 ----
 
+Math shoudl both work as standalone formulas that takes a block:
+
 
 .. math::
 
     \\pi = 3.14159
+
+More complex formula:
+
+.. math::
+
+    \\int_0^\\infty f(\\delta v) \\partial v
+
+.. math::
+
+    \\nabla^2X = \\vec {rot} (\\vec {rot}(X)) = \\vec{grad}(div(X))  - \\Delta X
+
+
+But should be also available in inline context, for example we know that
+:math:`\\pi^2 \\simeq 10`, and that :math:`1+1=10` when counting in binary.
 
 Literal Blocks (verbatim)
 -------------------------
@@ -103,9 +123,29 @@ This is q block quote, to do, we know that Attributions are not supported right 
 Substitutions
 ~~~~~~~~~~~~~
 
-In this paragraph: |SubstitutionRef| Should b replaced...
+In this paragraph: |SubstitutionRef| Should be replaced...
 
 .. |SubstitutionDef| replace:: ASUBSTITUTIONDEF
+
+
+
+Quotes
+------
+
+Quotes are not implemented yet in the parser, this section below will appear
+empty
+
+----
+
+|    That which is static and repetitive is boring. That which is dynamic
+|    and random is confusing. In between lies art.
+|    --- *John A. Locke*
+
+|    Science is a differential equation. Religion is a boundary condition.
+|    --- *Alan Turing*
+
+----
+
 
 """
 
