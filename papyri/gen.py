@@ -1913,7 +1913,8 @@ class Gen:
         else:
             logo = None
         module = __import__(root)
-        self.version = module.__version__
+        # TODO: xarray does not have __version__ anymore, find another logic
+        self.version = getattr(module, "__version__", "??")
 
         try:
             meta["tag"] = meta["tag"].format(version=self.version)
