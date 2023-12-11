@@ -121,12 +121,10 @@ class Signature:
             if param.annotation is inspect._empty:
                 annotation = _empty
             elif isinstance(param.annotation, str):
-                annotation = param.annotation
+                annotation = clean_hexaddress(param.annotation)
             else:
                 # TODO: Keep the original annotation object somewhere
-                annotation = clean_hexaddress(
-                    inspect.formatannotation(param.annotation)
-                )
+                annotation = inspect.formatannotation(param.annotation)
             parameters.append(
                 ParameterNode(
                     name=param.name,

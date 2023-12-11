@@ -270,3 +270,7 @@ def example_3():
         This directive will be turned into a warning admonition.
 
     """
+
+
+def annotation_with_hex_addresses(x: "<foo 0x123>" = lambda x: x):
+    pass
