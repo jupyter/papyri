@@ -139,7 +139,7 @@ def not_type_check(item, annotation):
         if isinstance(item, annotation):
             return None
         else:
-            return f"expecting {annotation} got {type(item)}"
+            return f"expecting {annotation} got {type(item)} : {item!r}"
     elif annotation.__origin__ is dict:
         if not isinstance(item, dict):
             return f"got  {type(item)}, Yexpecting list"
