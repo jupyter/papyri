@@ -270,3 +270,10 @@ def example_3():
         This directive will be turned into a warning admonition.
 
     """
+
+
+foo = object()
+
+
+def annotation_with_hex_addresses(x: foo = lambda x: x):  # type:ignore [valid-type]
+    pass

@@ -1,4 +1,5 @@
 import inspect
+import re
 
 from dataclasses import dataclass
 from typing import List, Any, Dict, Union
@@ -36,7 +37,7 @@ class ParameterNode(Node):
         return inspect.Parameter(
             name=self.name,
             kind=getattr(inspect._ParameterKind, self.kind),
-            default=inspect._empty if isinstance(self.default, Empty) else None,
+            default=inspect._empty if isinstance(self.default, Empty) else self.default,
             annotation=inspect._empty
             if isinstance(self.annotation, Empty)
             else self.annotation,
@@ -53,6 +54,11 @@ class SignatureNode(Node):
 
     def to_signature(self):
         return inspect.Signature([p.to_parameter() for p in self.parameters])
+
+
+def clean_hexaddress(s):
+    new = re.sub("0x[0-9a-f]+", "0x0000", s)
+    return new
 
 
 class Signature:
@@ -118,7 +124,9 @@ class Signature:
                 annotation = param.annotation
             else:
                 # TODO: Keep the original annotation object somewhere
-                annotation = inspect.formatannotation(param.annotation)
+                annotation = clean_hexaddress(
+                    inspect.formatannotation(param.annotation)
+                )
             parameters.append(
                 ParameterNode(
                     name=param.name,
@@ -126,7 +134,7 @@ class Signature:
                     kind=param.kind.name,
                     default=_empty
                     if param.default is inspect._empty
-                    else str(param.default),
+                    else clean_hexaddress(str(param.default)),
                 )
             )
         assert isinstance(kind, str)
