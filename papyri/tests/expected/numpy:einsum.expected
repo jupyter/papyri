@@ -1,5 +1,5 @@
-einsum(subscripts, *operands, out=None, dtype=None, order=None, casting=None,
-optimize=None)
+einsum(subscripts, *operands, out='None', dtype='None', order='K',
+casting='safe', optimize='False')
 ## Extended Summary
 
 Using the Einstein summation convention, many common multi-dimensional, linear

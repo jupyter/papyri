@@ -37,7 +37,7 @@ class ParameterNode(Node):
         return inspect.Parameter(
             name=self.name,
             kind=getattr(inspect._ParameterKind, self.kind),
-            default=inspect._empty if isinstance(self.default, Empty) else None,
+            default=inspect._empty if isinstance(self.default, Empty) else self.default,
             annotation=inspect._empty
             if isinstance(self.annotation, Empty)
             else self.annotation,
@@ -121,10 +121,12 @@ class Signature:
             if param.annotation is inspect._empty:
                 annotation = _empty
             elif isinstance(param.annotation, str):
-                annotation = clean_hexaddress(param.annotation)
+                annotation = param.annotation
             else:
                 # TODO: Keep the original annotation object somewhere
-                annotation = inspect.formatannotation(param.annotation)
+                annotation = clean_hexaddress(
+                    inspect.formatannotation(param.annotation)
+                )
             parameters.append(
                 ParameterNode(
                     name=param.name,

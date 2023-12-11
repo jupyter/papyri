@@ -272,5 +272,8 @@ def example_3():
     """
 
 
-def annotation_with_hex_addresses(x: "<foo 0x123>" = lambda x: x):
+foo = object()
+
+
+def annotation_with_hex_addresses(x: foo = lambda x: x):  # type:ignore [valid-type]
     pass

@@ -1,5 +1,5 @@
-linspace(start, stop, num=None, endpoint=None, retstep=None, dtype=None,
-axis=None)
+linspace(start, stop, num='50', endpoint='True', retstep='False', dtype='None',
+axis='0')
 ## Extended Summary
 
 Returns num evenly spaced samples, calculated over the interval [`start`, stop
