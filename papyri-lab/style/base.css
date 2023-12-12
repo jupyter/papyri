@@ -1,0 +1,21 @@
+/*
+    See the JupyterLab Developer Guide for useful CSS Patterns:
+
+    https://jupyterlab.readthedocs.io/en/stable/developer/css.html
+*/
+@import 'app.css';
+
+div#papyri-browser {
+  overflow: scroll;
+  padding: 15px;
+}
+
+code {
+  color: #db2777;
+  font-weight: 400;
+  font-size: 0.875em;
+}
+
+.not-implemented {
+  border: 1px solid orange;
+}

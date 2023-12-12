@@ -3,7 +3,7 @@
 # https://flake8.readthedocs.io/en/latest/user/configuration.html
 # https://flake8.readthedocs.io/en/latest/user/error-codes.html
 # https://pycodestyle.pycqa.org/en/latest/intro.html#error-codes
-exclude = __init__.py,versioneer.py
+exclude = node_modules,jupyter_server_test_config.py
 ignore =
     # bug bear assert False
     B011,
@@ -30,5 +30,6 @@ ignore =
     # redefinition of unused 'loop' from line 10
     F811,
 max-line-length = 120
+max-complexity = 50
 
 

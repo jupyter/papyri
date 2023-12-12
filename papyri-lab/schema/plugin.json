@@ -1,0 +1,8 @@
+{
+  "jupyter.lab.shortcuts": [],
+  "title": "papyri-lab",
+  "description": "papyri-lab settings.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

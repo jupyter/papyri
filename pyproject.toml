@@ -42,7 +42,7 @@ dependencies = [
 papyri = "papyri:app"
 
 [tool.pytest.ini_options]
-addopts = "--durations=10"
+addopts = "--durations=10 --ignore=papyri-lab"
 filterwarnings = "ignore:The module numpy.dual.*:DeprecationWarning"
 
 [project.urls]

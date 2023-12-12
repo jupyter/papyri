@@ -176,7 +176,7 @@ from typing import List, Optional, Annotated
 import tomli_w
 import typer
 
-from . import examples
+from . import examples  # noqa
 
 __version__ = "0.0.8"
 

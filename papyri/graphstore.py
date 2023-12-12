@@ -4,6 +4,10 @@ import sqlite3
 from pathlib import Path as _Path
 from typing import List, Set
 
+# we try to expanduser as early as possible to prevent
+# jupyter_pytest monkeypatch  of setenv_HOME
+GLOBAL_PATH = _Path("~/.papyri/ingest/papyri.db").expanduser()
+
 
 class Path:
     """just a path wrapper that has a conveninent `.read_json` and `.write_json` method"""
@@ -123,10 +127,11 @@ class GraphStore:
     def __init__(self, root: _Path, link_finder=None):
         # for now we are going to try to do in-memory operation, just to
         # see how we can handle that with SQL, and move to on-disk later.
-        p = _Path("~/.papyri/ingest/papyri.db")
-        p = p.expanduser()
+        p = GLOBAL_PATH
+        print("connecting to database ", p)
         if not p.exists():
-            self.conn = sqlite3.connect(str(p))
+            print("Does not exists, creating: ", p)
+            self.conn = sqlite3.connect(p)
             self.conn.execute("PRAGMA foreign_keys = 1")
 
             print("Creating documents table")

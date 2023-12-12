@@ -357,8 +357,14 @@ class HtmlRenderer:
             else:
                 libraries[k.module] = (k.module, [k.version], meta["logo"])
 
+        def p(v):
+            if v == "??":
+                return parse("0.0.0")
+            else:
+                return parse(v)
+
         data = [
-            (a, list(sorted(b, reverse=True, key=parse)), c)
+            (a, list(sorted(b, reverse=True, key=p)), c)
             for (a, b, c) in libraries.values()
         ]
 
@@ -543,6 +549,50 @@ class HtmlRenderer:
             toctrees=toctrees,
         )
 
+    def _myst_root(self, doc: IngestedBlobs) -> MRoot:
+        to_suppress = []
+        myst_acc: List[Any] = []
+        if doc.signature:
+            myst_acc.append(doc.signature)
+            del doc.signature
+        for k, v in doc.content.items():
+            assert isinstance(v, Section)
+            ct: List[Any]
+            if v.children:
+                if k in ("Extended Summary", "Summary"):
+                    ct = []
+                else:
+                    ct = [MHeading(depth=1, children=[MText(k)])]
+                ct.extend(v.children)
+                myst_acc.extend(ct)
+            else:
+                to_suppress.append(k)
+        for k in to_suppress:
+            del doc.content[k]
+
+        doc.arbitrary = [self.LR.visit(x) for x in doc.arbitrary]
+        for a in doc.arbitrary:
+            myst_acc.extend(a.children)
+        if doc.see_also:
+            myst_acc.extend(
+                [
+                    MHeading(
+                        children=[MText("See Also")],
+                        depth=1,
+                    )
+                ]
+                + [DefList([self.LR.visit(s) for s in doc.see_also])]
+            )
+        if doc.example_section_data:
+            ct = [MHeading(depth=1, children=[MText("Examples")])]
+            ct.extend([self.LR.visit(x) for x in doc.example_section_data])
+            ct = [MParagraph([x]) if isinstance(x, MText) else x for x in ct]
+            myst_acc.extend(ct)
+
+        del doc.arbitrary
+        del doc.see_also
+        return MRoot(myst_acc)
+
     def render_one(
         self,
         template: Template,
@@ -590,53 +640,13 @@ class HtmlRenderer:
 
         backrefs_ = (None, group_backrefs(backrefs, self.LR))
 
+        root = self._myst_root(doc)
         try:
-            to_suppress = []
-            myst_acc: List[Any] = []
-            if doc.signature:
-                myst_acc.append(doc.signature)
-                del doc.signature
-            for k, v in doc.content.items():
-                assert isinstance(v, Section)
-                ct: List[Any]
-                if v.children:
-                    if k in ("Extended Summary", "Summary"):
-                        ct = []
-                    else:
-                        ct = [MHeading(depth=1, children=[MText(k)])]
-                    ct.extend(v.children)
-                    myst_acc.extend(ct)
-                else:
-                    to_suppress.append(k)
-            for k in to_suppress:
-                del doc.content[k]
-
-            doc.arbitrary = [self.LR.visit(x) for x in doc.arbitrary]
-            for a in doc.arbitrary:
-                myst_acc.extend(a.children)
-            if doc.see_also:
-                myst_acc.extend(
-                    [
-                        MHeading(
-                            children=[MText("See Also")],
-                            depth=1,
-                        )
-                    ]
-                    + [DefList([self.LR.visit(s) for s in doc.see_also])]
-                )
-            if doc.example_section_data:
-                ct = [MHeading(depth=1, children=[MText("Examples")])]
-                ct.extend([self.LR.visit(x) for x in doc.example_section_data])
-                ct = [MParagraph([x]) if isinstance(x, MText) else x for x in ct]
-                myst_acc.extend(ct)
-
-            del doc.arbitrary
-            del doc.see_also
             module = qa.split(".")[0]
             return template.render(
                 current_type=current_type,
                 doc=doc,
-                myst_root=MRoot(myst_acc),
+                myst_root=root,
                 logo=meta.get("logo", None),
                 version=meta["version"],
                 module=module,
