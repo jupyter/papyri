@@ -1332,9 +1332,9 @@ def _rich_render(key: Key, store: GraphStore) -> List[Any]:
     else:
         myst_acc = []
 
-    myst_acc += [RV.visit(LR.visit(x)) for x in doc.arbitrary] + [
-        doc.content[k] for k in doc.content
-    ]
+    myst_acc += [RV.visit(LR.visit(x)) for x in doc.arbitrary]
+    myst_acc += [doc.content[k] for k in doc.content]
+
     if doc.see_also:
         myst_acc.append(
             RV.visit(

@@ -14,7 +14,7 @@ import cbor2
 from there import print as print_
 
 from .config import ingest_dir
-from .gen import DocBlob, normalise_ref
+from .gen import DocBlob, normalise_ref, _OrderedDictProxy
 from .graphstore import GraphStore, Key
 from .signature import SignatureNode
 from .take2 import (
@@ -64,8 +64,8 @@ def find_all_refs(
 @dataclass
 class IngestedBlobs(Node):
     __slots__ = (
-        "content",
-        "ordered_sections",
+        "_content",
+        "_ordered_sections",
         "item_file",
         "item_line",
         "item_type",
@@ -79,8 +79,8 @@ class IngestedBlobs(Node):
         "arbitrary",
     )
 
-    content: Dict[str, Section]
-    ordered_sections: List[str]
+    _content: Dict[str, Section]
+    _ordered_sections: List[str]
     item_file: Optional[str]
     item_line: Optional[int]
     item_type: Optional[str]
@@ -94,9 +94,21 @@ class IngestedBlobs(Node):
 
     __isfrozen = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._dp = _OrderedDictProxy(self._ordered_sections, self._content)
+
+    @property
+    def ordered_sections(self):
+        return tuple(self._ordered_sections)
+
+    @property
+    def content(self):
+        return self._dp
+
     @classmethod
     def new(cls):
-        return cls({}, None, None, None, None, [], None, None, None, None, None, None)
+        return cls({}, [], None, None, None, [], None, None, None, None, None, None)
 
     def __setattr__(self, key, value):
         if self.__isfrozen and not hasattr(self, key):
@@ -349,7 +361,11 @@ class Ingester:
 
         self._ingest_examples(path, gstore, known_refs, aliases, version, root)
         self._ingest_assets(path, root, version, aliases, gstore)
-        self._ingest_narrative(path, gstore)
+        try:
+            self._ingest_narrative(path, gstore)
+        except Exception as e:
+            e.add_note(f"at {path}")
+            raise
 
         for _, f1 in self.progress(
             (path / "module").glob("*"),
