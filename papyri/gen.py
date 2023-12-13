@@ -1385,7 +1385,8 @@ class Gen:
         title_map = {}
         blbs = {}
         with self.progress() as p2:
-            task = p2.add_task("Parsing narative", total=len(files))
+            task = p2.add_task("Parsing narrative", total=len(files))
+
             for p in files:
                 p2.update(task, description=compress_user(str(p)).ljust(7))
                 p2.advance(task)
@@ -1983,9 +1984,9 @@ class Gen:
 
         if item_docstring is None and not isinstance(target_item, ModuleType):
             return None, [], api_object
-
         elif item_docstring is None and isinstance(target_item, ModuleType):
             item_docstring = """This module has no documentation"""
+
         try:
             sections = ts.parse(item_docstring.encode(), qa)
         except (AssertionError, NotImplementedError) as e:
@@ -2063,6 +2064,7 @@ class Gen:
             )
 
         collected = {k: v for k, v in collected.items() if k not in excluded}
+
         if limit_to:
             non_existinsing = [k for k in limit_to if k not in collected]
             if non_existinsing:
@@ -2076,6 +2078,7 @@ class Gen:
             self.log.info("DEV: regenerating docs only for")
             for k, v in collected.items():
                 self.log.info(f"    {k}:{v}")
+
         aliases: Dict[FullQual, Cannonical]
         aliases, not_found = collector.compute_aliases()
         rev_aliases: Dict[Cannonical, FullQual] = {v: k for k, v in aliases.items()}
