@@ -20,7 +20,7 @@ heading 4
 FieldList
 ---------
 
-In my understnading FieldList should in general not happen in the final
+In my understanding FieldList should in general not happen in the final
 Documents, they are supposed to be processed by the software reading them, and
 typically appear at the beginning of directive.
 
@@ -80,7 +80,7 @@ Code (title 2)
 Math
 ----
 
-Math shoudl both work as standalone formulas that takes a block:
+Math should both work as standalone formulas that takes a block:
 
 
 .. math::
@@ -146,6 +146,15 @@ empty
 
 ----
 
+
+Various test cases
+==================
+
+This paragraph should
+contain a literal with a new line ``here->|
+|<``, in the final output it should render properly
+without the line break,
+but a space.
 
 """
 
