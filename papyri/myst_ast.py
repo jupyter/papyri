@@ -73,6 +73,10 @@ class MInlineCode(Node):
     # position: Any
     # data: Any
 
+    def __init__(self, value):
+        super().__init__(value)
+        assert "\n" not in value
+
 
 # class LinkReference:
 #     type = 'linkReference'

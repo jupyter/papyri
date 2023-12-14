@@ -395,7 +395,8 @@ class TSVisitor:
 
     def visit_literal(self, node, prev_end=None):
         text = self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()
-        t = MInlineCode(text)
+        assert "\n\n" not in text
+        t = MInlineCode(text.replace("\n", " "))
         # print(' '*self.depth*4, t)
         return [t]
 
