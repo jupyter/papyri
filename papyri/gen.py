@@ -21,6 +21,7 @@ import shutil
 import site
 import sys
 import tempfile
+import tomllib
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
@@ -29,23 +30,13 @@ from hashlib import sha256
 from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import (
-    Any,
-    Dict,
-    FrozenSet,
-    List,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
 
 import jedi
-
-import tomllib
 import tomli_w
 from IPython.core.oinspect import find_file
 from IPython.utils.path import compress_user
+from packaging.version import parse
 from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -58,11 +49,12 @@ from .common_ast import Node
 from .errors import (
     IncorrectInternalDocsLen,
     NumpydocParseError,
-    UnseenError,
     TextSignatureParsingFailed,
+    UnseenError,
 )
 from .miscs import BlockExecutor, DummyP
-from .signature import Signature as ObjectSignature, SignatureNode
+from .signature import Signature as ObjectSignature
+from .signature import SignatureNode
 from .take2 import (
     Code,
     Fig,
@@ -81,19 +73,19 @@ from .take2 import (
 from .toc import make_tree
 from .tree import DVR
 from .utils import (
+    Cannonical,
+    FullQual,
     TimeElapsedColumn,
     dedent_but_first,
     full_qual,
     pos_to_nl,
     progress,
-    FullQual,
-    Cannonical,
 )
 from .vref import NumpyDocString
 
 # delayed import
-
-from .myst_ast import MText
+if True:
+    from .myst_ast import MText
 
 
 class ErrorCollector:
@@ -1994,7 +1986,8 @@ class Gen:
             logo = None
         module = __import__(root)
         # TODO: xarray does not have __version__ anymore, find another logic
-        self.version = getattr(module, "__version__", "??")
+        self.version = getattr(module, "__version__", "0.0.0")
+        assert parse(self.version)
 
         try:
             meta["tag"] = meta["tag"].format(version=self.version)
