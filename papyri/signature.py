@@ -1,4 +1,5 @@
 import inspect
+import re
 
 from dataclasses import dataclass
 from typing import List, Any, Dict, Union
@@ -36,7 +37,7 @@ class ParameterNode(Node):
         return inspect.Parameter(
             name=self.name,
             kind=getattr(inspect._ParameterKind, self.kind),
-            default=inspect._empty if isinstance(self.default, Empty) else None,
+            default=inspect._empty if isinstance(self.default, Empty) else self.default,
             annotation=inspect._empty
             if isinstance(self.annotation, Empty)
             else self.annotation,
@@ -48,9 +49,16 @@ class SignatureNode(Node):
     kind: str  # maybe enum, is it a function, async generator, generator, etc.
     parameters: List[ParameterNode]  # of pairs, we don't use dict because of ordering
     return_annotation: Union[Empty, str]
+    target_name: str
+    type = "signature"
 
     def to_signature(self):
         return inspect.Signature([p.to_parameter() for p in self.parameters])
+
+
+def clean_hexaddress(s):
+    new = re.sub("0x[0-9a-f]+", "0x0000", s)
+    return new
 
 
 class Signature:
@@ -99,7 +107,9 @@ class Signature:
         if inspect.iscoroutinefunction(self.target_item):
             kind = "coroutine function"
         if kind == "":
-            assert False, f"Unknown kind for {self.target_item}"
+            kind = "function"
+            # TODO: fix this, things like numpy's histogram2d's are weird
+            # assert False, f"Unknown kind for {self.target_item}"
 
         # Why do we want to make sure this is not a coroutine?
         # What is special about a coroutine in this context?
@@ -114,7 +124,9 @@ class Signature:
                 annotation = param.annotation
             else:
                 # TODO: Keep the original annotation object somewhere
-                annotation = inspect.formatannotation(param.annotation)
+                annotation = clean_hexaddress(
+                    inspect.formatannotation(param.annotation)
+                )
             parameters.append(
                 ParameterNode(
                     name=param.name,
@@ -122,7 +134,7 @@ class Signature:
                     kind=param.kind.name,
                     default=_empty
                     if param.default is inspect._empty
-                    else str(param.default),
+                    else clean_hexaddress(str(param.default)),
                 )
             )
         assert isinstance(kind, str)
@@ -132,6 +144,7 @@ class Signature:
             return_annotation=_empty
             if self._sig.return_annotation is inspect._empty
             else str(self._sig.return_annotation),
+            target_name=self.target_item.__name__,
         )
 
     @property

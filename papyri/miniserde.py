@@ -153,90 +153,111 @@ _sentinel = object()
 
 # type_ and annotation are _likely_ duplicate here as an annotation is likely a type, or  a List, Union, ....)
 def deserialize(type_, annotation, data):
-    # assert type_ is annotation
-    # assert annotation != {}
-    # assert annotation is not dict
-    # assert annotation is not None, "None is handled by nullable types"
-    if annotation is str:
-        # assert isinstance(data, str)
-        return data
-    if annotation is int:
-        # assert isinstance(data, int)
-        return data
-    if annotation is bool:
-        # assert isinstance(data, bool)
-        return data
-    orig = getattr(annotation, "__origin__", None)
-    if data is None:
-        return None
-    if orig:
-        if orig is tuple:
-            # assert isinstance(data, list)
-            inner_annotation = annotation.__args__
-            # assert len(inner_annotation) == 1, inner_annotation
-            return tuple(
-                deserialize(inner_annotation[0], inner_annotation[0], x) for x in data
-            )
-        elif orig is list:
-            # assert isinstance(data, list)
-            inner_annotation = annotation.__args__
-            # assert len(inner_annotation) == 1, inner_annotation
-            return [
-                deserialize(inner_annotation[0], inner_annotation[0], x) for x in data
-            ]
-        elif orig is dict:
-            # assert isinstance(data, dict)
-            _, value_annotation = annotation.__args__
-            return {
-                k: deserialize(value_annotation, value_annotation, x)
-                for k, x in data.items()
-            }
-        elif orig is Union:
-            inner_annotation = annotation.__args__
-            if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
-                # assert inner_annotation[0] is not None
-                if data is None:
-                    return None
+    try:
+        # assert type_ is annotation
+        # assert annotation != {}
+        # assert annotation is not dict
+        # assert annotation is not None, "None is handled by nullable types"
+        if annotation is str:
+            # assert isinstance(data, str)
+            return data
+        if annotation is int:
+            # assert isinstance(data, int)
+            return data
+        if annotation is bool:
+            # assert isinstance(data, bool)
+            return data
+        orig = getattr(annotation, "__origin__", None)
+        if data is None:
+            return None
+        if orig:
+            if orig is tuple:
+                # assert isinstance(data, list)
+                inner_annotation = annotation.__args__
+                # assert len(inner_annotation) == 1, inner_annotation
+                return tuple(
+                    deserialize(inner_annotation[0], inner_annotation[0], x)
+                    for x in data
+                )
+            elif orig is list:
+                # assert isinstance(data, list)
+                inner_annotation = annotation.__args__
+                # assert len(inner_annotation) == 1, inner_annotation
+                return [
+                    deserialize(inner_annotation[0], inner_annotation[0], x)
+                    for x in data
+                ]
+            elif orig is dict:
+                # assert isinstance(data, dict)
+                _, value_annotation = annotation.__args__
+                return {
+                    k: deserialize(value_annotation, value_annotation, x)
+                    for k, x in data.items()
+                }
+            elif orig is Union:
+                inner_annotation = annotation.__args__
+                if len(inner_annotation) == 2 and inner_annotation[1] == type(None):
+                    # assert inner_annotation[0] is not None
+                    if data is None:
+                        return None
+                    else:
+                        return deserialize(
+                            inner_annotation[0], inner_annotation[0], data
+                        )
+                real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
+                if len(real_type) == 0:
+                    myst_type = f"M{data['type'][0].upper()}{data['type'][1:]}"
+                    if data["type"] == "mystComment":
+                        myst_type = "MComment"
+                    elif data["type"] == "mystTarget":
+                        myst_type = "MTarget"
+                    elif data["type"] == "Transition":
+                        myst_type = "thematicBreak"
+                    real_type = [
+                        t
+                        for t in inner_annotation
+                        if (t.__name__ == myst_type)
+                        or (getattr(t, "type", None) == myst_type)
+                    ]
+                # assert len(real_type) == 1, real_type
+                try:
+                    assert len(real_type) == 1, real_type
+                    real_type = real_type[0]
+                except (IndexError, AssertionError) as e:
+                    e.add_note(
+                        f"""Index error as filters annotations are wrong myst_type={myst_type}, {data['type']=},
+                        accepted:{inner_annotation}
+                        `t.type`?={[getattr(t,"type", None) for t in inner_annotation]}"""
+                    )
+                    raise
+                if data.get("data", _sentinel) is not _sentinel:
+                    data_ = data["data"]
                 else:
-                    return deserialize(inner_annotation[0], inner_annotation[0], data)
-            real_type = [t for t in inner_annotation if t.__name__ == data["type"]]
-            if len(real_type) == 0:
-                myst_type = f"M{data['type'][0].upper()}{data['type'][1:]}"
-                if data["type"] == "mystComment":
-                    myst_type = "MComment"
-                elif data["type"] == "mystTarget":
-                    myst_type = "MTarget"
-                real_type = [t for t in inner_annotation if t.__name__ == myst_type]
-            # assert len(real_type) == 1, real_type
-            try:
-                real_type = real_type[0]
-            except IndexError:
-                raise
-            if data.get("data", _sentinel) is not _sentinel:
-                data_ = data["data"]
+                    data_ = {k: v for k, v in data.items() if k != "type"}
+                return deserialize(real_type, real_type, data_)
             else:
-                data_ = {k: v for k, v in data.items() if k != "type"}
-            return deserialize(real_type, real_type, data_)
-        else:
-            assert False
-    elif (type(annotation) is type) and annotation.__module__ not in (
-        "builtins",
-        "typing",
-    ):
-        loc = {}
-        new_ann = get_type_hints(annotation).items()
-        # assert new_ann
-        for k, v in new_ann:
-            # assert k in data.keys(), f"{k} not int {data.keys()}"
-            # if data[k] != 0:
-            #     assert data[k] != {}, f"{data}, {k}"
-            intermediate = deserialize(v, v, data[k])
-            # assert intermediate != {}, f"{v}, {data}, {k}"
-            loc[k] = intermediate
-        if hasattr(annotation, "_deserialise"):
-            return annotation._deserialise(**loc)
-        else:
-            return annotation(**loc)
+                assert False
+        elif (type(annotation) is type) and annotation.__module__ not in (
+            "builtins",
+            "typing",
+        ):
+            loc = {}
+            new_ann = get_type_hints(annotation).items()
+            # assert new_ann
+            for k, v in new_ann:
+                # assert k in data.keys(), f"{k} not int {data.keys()}"
+                # if data[k] != 0:
+                #     assert data[k] != {}, f"{data}, {k}"
+                intermediate = deserialize(v, v, data[k])
+                # assert intermediate != {}, f"{v}, {data}, {k}"
+                loc[k] = intermediate
+            if hasattr(annotation, "_deserialise"):
+                return annotation._deserialise(**loc)
+            else:
+                return annotation(**loc)
 
-    else:
-        assert False, f"{annotation!r}, {data}"
+        else:
+            assert False, f"{annotation!r}, {data}"
+    except Exception as e:
+        e.add_note(f"Deserializing {type_}, {annotation}")
+        raise

@@ -11,16 +11,7 @@ body {
 }
 
 .not-implemented {
-  border-color: orange;
-}
-
-p {
-  text-align: justify;
-}
-
-li > p {
-  margin-top: 0;
-  margin-bottom: 0;
+  border: 1px solid orange;
 }
 
 .external:after {
@@ -145,33 +136,6 @@ li > p {
   font-weight: 600;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: #4e4e4e;
-  font-weight: 400;
-  margin-bottom: 1rem;
-  border-bottom: none;
-}
-
-h1,
-h2 {
-  border-bottom: 1px solid var(--nc-bg-3);
-}
-
-pre {
-  border-radius: 2px;
-  padding: 0.6rem;
-  border-left: 2px solid #aaa;
-}
-
-dt {
-  font-weight: 400;
-}
-
 header {
   box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
   padding-top: 0rem;
@@ -179,14 +143,15 @@ header {
   z-index: 2;
   padding-left: 0;
   position: fixed;
-  top: 30px;
   left: 0;
   width: 100%;
   height: 42px;
   backdrop-filter: blur(5px);
   background-color: rgba(255, 255, 255, 0.15);
 }
-
+.article {
+  padding-top: 30px;
+}
 dd::before {
   content: "";
 }
@@ -203,16 +168,6 @@ nav {
   display: inline-block;
   padding: 10px;
   padding-left: 1rem;
-}
-
-dd {
-  margin-left: 1rem;
-  border-left: solid #ddd;
-  padding-left: 1rem;
-}
-
-summary > h2 {
-  display: inline;
 }
 
 strong {
@@ -318,36 +273,6 @@ img {
   max-width: 40%;
 }
 
-pre.highlight.execed,
-.admonition {
-  border-left: 3px solid #0070f3;
-}
-
-.admonition {
-  padding-left: 1em;
-}
-
-.admonition > div {
-  background-color: rgba(0, 123, 255, 0.1);
-  position: relative;
-  margin: 0 -1rem;
-  padding: 0.4rem 0.1rem 0.4rem 1.5rem;
-  font-weight: bold;
-  text-transform: capitalize;
-}
-
-.note {
-  color: #7d77d2;
-}
-
-.warning {
-  color: #af7b1a;
-}
-
-.error {
-  color: #f44336;
-}
-
 pre.highlight.compiled {
   border-left: 3px solid #7d77d2;
 }
@@ -434,9 +359,6 @@ details.toctree {
 
 code.verbatim {
   border-color: #005a81;
-}
-code {
-  padding: 2px 4px;
 }
 
 blockquote {

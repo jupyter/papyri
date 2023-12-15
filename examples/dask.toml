@@ -3,6 +3,8 @@ module = 'dask'
 logo = "img/dask-logo.png"
 submodules = ["array"]
 exclude = [ "dask.utils:Dispatch",
+            # numpydoc parse error
+            'dask.typing:_NoDefault',
             # target not implemented
             'dask.highlevelgraph:HighLevelGraph.visualize',
             'dask.array.overlap:map_overlap',

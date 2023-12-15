@@ -1,85 +1,20 @@
-{% macro render_inner(type_, obj) -%}
-    {% if type_[0] == 'M' %}
-         {{ render_myst(obj) }}
-    {%- elif type_ == 'Directive' -%}
-         <code class='not-implemented'>:{{obj.domain}}:{{obj.role}}:`{{obj.value}}`</code>
-    {%- elif type_ == 'Link' -%}
-    <!--link-->
-        {# Links have : value, reference, kind exists#}
-        {%- if obj.reference.kind=='local' -%}
-            <code><a href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
-        {%- elif obj.kind in ('api', 'exists', 'module', 'assets') -%}
-        <code><a href="{{url(obj.reference)}}" class='exists'>{{obj.value}}</a></code>
-        {% else %}
-            <!--link ur {{obj}}-->
-            {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
-        {%- endif -%}
-    {%- elif type_ == 'RefInfo' -%}
-        {# Links have : value, reference, kind exists#}
-        {%- if obj.kind=='local' -%}
-            <code><a link href="#{{obj.path}}" class='{{obj.kind}}'>{{obj.path}}</a></code>
-        {%- elif obj.kind in ('api', 'exists', 'module','assets', 'examples') -%}
-            <code><a link href="{{url(obj)}}" class='exists'>{{obj.path}}</a></code>
-        {%- else %}
-            {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
-        {%- endif -%}
-    {%- elif type_ == 'Math' -%}
-        <span class="tex2jax_process">${{obj.value}}$</span>
-    {%- elif type_ == 'Verbatim' -%}
-        <code class='verbatim'>{{obj.text}}</code>
-    {%- elif type_ in ['SubstitutionRef','Unimplemented'] %}
-        <pre class='not-implemented'>{{obj}}</pre>
-    {%- else %}
-        <code>|{{type_}}| not implemeted yet</code>
-        <pre class='not-implemented unreachable'>{{-unreachable(obj, type_)-}}</pre>
-    {%- endif -%}
-{%- endmacro %}
-
-{% macro block_paragraph(prg) -%}
-    <p>
-        {%- for obj in prg.children -%}
-            {{- render_inner(obj.__class__.__name__, obj) -}}
-        {%- endfor -%}
-    </p>
-{% endmacro %}
-
 
 {% macro render_paragraph(prgs) -%}
     {% for prg in prgs %}
-        {{block_paragraph(prg)}}
+        {{ render_myst(prg) }}
     {%- endfor %}
 {%- endmacro %}
 
 {% macro render_myst(obj) -%}
     {% set astJson = obj.to_dict() %}
     {% set key = uuid() %}
-    <div id="{{ key }}"></div>
+    <div style='border: solid thin cyan' id="{{ key }}"></div>
     <script>
-        function init() {
-            const myst = new MyST();
-            const html = myst.renderMdast({{ astJson|tojson }});
-            document.getElementById("{{ key }}").innerHTML = html;
-        }
-        init();
+      render("{{ key }}", {"type": "root", "children":[{{ astJson|tojson(indent=2) }}]})
     </script>
 {%- endmacro %}
 
 
-{%- macro lines(self) -%}{%- for x in self %}
-{{x.text}}
-{%- endfor -%}
-{%- endmacro %}
-
-
-{% macro block(self) -%}
-{{-lines(self.lines)}}
-{%- if self.wh -%}
-{{lines(self.wh)}}
-{%- endif -%}
-{%- if self.ind -%}
-    {{-lines(self.ind)-}}
-{%- endif -%}
-{%- endmacro %}
 
 {% macro myst_directive(dve) -%}
     <pre class='not-implemented'>
@@ -91,87 +26,22 @@
     </pre>
 {% endmacro %}
 
-{% macro block_admonition(adm) -%}
-<div class='admonition'>
-    <div>{{adm.kind}} {{adm.title}}</div>
-    {% for it in adm.children %}
-        {{render_II(it)}}
-    {% endfor %}
-</div>
-{% endmacro %}
-
 
 {% macro render_II(obj) -%}
 
-    {%- if obj.__class__.__name__ == 'Paragraph' -%}
-        {{-block_paragraph(obj)-}}
-    {%- else -%}
-      
     {%- set type = obj.__class__.__name__ -%}
-       {%- if type in ('Directive', 'Math', 'Verbatim') -%}
-           {# {{unreachable(obj)}} #}
-           {{obj.value}}  {# TODO : likely smth wrong with field list #}
-       {% elif type[0] == 'M' %}
+       {% if type[0] == 'M' %}
             {{ render_myst(obj) }}
-       {%- elif type == 'Link' -%}
-
-           {# Links have : value, reference, kind exists#}
-           {%- if obj.reference.kind=='local' -%}
-               <code><a href="#{{obj.reference.path}}" class='{{obj.kind}}'>{{obj.value}}</a></code>
-           {%- elif obj.kind in ('api', 'exists', 'module', 'assets') -%}
-               <code><a href="{{url(obj.reference)}}" class='exists'>{{obj.value}}</a></code>
-           {% else %}
-               {{unreachable(type_, obj.__class__.__name__, obj.__dict__)}}
-           {%- endif -%}
        {%- elif type == 'MMystDirective' -%}
+           {{ unreachable()}}
            {{myst_directive(obj)}}
-       {% elif type == 'Admonition' %}
-            {{block_admonition(obj)}}
-       {% elif type == 'Paragraph' %}
-        {{block_paragraph(obj)}}
-       {%- elif type == 'BlockVerbatim' -%}
-            <pre>
-           {{- obj.value -}}
-           </pre>
        {%- elif type == 'DefList' -%}
-          <!-- deflist -->
-           <dl>
-               {% for item in obj.children %}
-               <dt>{{render_II(item.dt)}}</dt>
-               <dd>{%- for it in item.dd -%}
-                       {{-render_II(it)-}}
-                  {%- endfor -%}
-               </dd>
-               {%endfor %}
-           </dl>
-       {% elif type == 'DefListItem' %}
-           <pre>
-           {{-block(obj)-}}
-           </pre>
-       {% elif type == 'Example' %}
-           <pre>{{block(obj)-}}</pre>
-       {% elif type == 'Section' %}
+          {{ render_myst(obj) }}
+      {% elif type == 'Section' %}
+          {{unreachable(obj)}}
            {% for item in obj %}
                {{ render_II(item) }}
            {% endfor %}
-        {% elif type == 'List' %}
-            {% if obj.ordered %}
-            <ol>
-               {%- for item in obj.children %}
-               <li>{{render_II(item)}}</li>
-               {% endfor %}
-            </ol>
-            {% else %}
-            <ul>
-               {%- for item in obj.children %}
-               <li>{{render_II(item)}}</li>
-               {% endfor %}
-            </ul>
-            {% endif %}
-       {% elif type == 'ListItem' %}
-               {%- for item in obj.children %}
-               {{render_II(item)}}
-               {% endfor %}
        {% elif type == 'FieldList' %}
            <dl> 
              {%- for item in obj.children %}
@@ -187,48 +57,36 @@
                </dd>
                {% endfor %}
            </dl>
-
-       {% elif type == 'FieldListItem' %}
-           <ol>
-               {%- for item in obj.children %}
-               <li>{{render_II(item)}}</li>
-               {% endfor %}
-           </ol>
-
-       {% elif type == 'BlockMath' %}
-        <span class="tex2jax_process">$${{obj.value}}$$</span>
-       {% elif type == 'Transition' %}
-         <hr/>
-
-       {% elif type == 'TocTree' %}
-        {%if obj.children%}
-            <details class='toctree' open>
-            <summary><a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a></summary>
-              <ul>
-               {% for c in obj.children %}
-                   <li>{{render_II(c)}}</li>
-               {% endfor %}
-              </ul>
-            </details>
-        {% else %}
-            <a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a>
-        {%endif%}
-         
-       {% elif type == 'BlockQuote' %}
-            <blockquote>
-               {%- for child in obj.children %}{{render_II(child)}}{% endfor -%}
-            </blockquote>
        {% elif type in ['Options','Unimplemented','Comment','SubstitutionRef'] %}
            <pre class='not-implemented'>
             {{obj}}
            </pre>
-       {% else %}
-           <code class='not-implemented'>Type {{type}} (A) Not implemented yet</code>
-           <pre class='not-implemented'>
-           {{-unreachable(type, obj)-}}
-           </pre>
+        {%- elif type == 'Directive' -%}
+             <!-- In theory we should never get Raw directive in final output --!>
+             {{ render_myst(obj) }}
+        {%- elif type in ('Math', 'Verbatim', 'MText','MEmphasis','MInlineCode', 'MLink') -%}
+            {{ render_myst(obj) }}
+       {% elif type == 'TocTree' %}
+            {{ unreachable()}}
+            {%if obj.children%}
+                <details class='toctree' open>
+                <summary><a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a></summary>
+                  <ul>
+                   {% for c in obj.children %}
+                       <li>{{render_II(c)}}</li>
+                   {% endfor %}
+                  </ul>
+                </details>
+            {% else %}
+                <a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a>
+            {%endif%}
+         
+        {%- elif type in ['SubstitutionRef','Unimplemented','SubstitutionDef'] %}
+            {{unimplemented(type, obj.__class__.__name__, obj.__dict__)}}
+            <pre class='not-implemented'>{{obj}}</pre>
+        {%- else %}
+            {{unreachable(type, obj.__class__.__name__, obj.__dict__)}}
        {%- endif -%}
-    {%- endif %}
 {%- endmacro %}
 
 

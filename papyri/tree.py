@@ -121,7 +121,7 @@ class DelayedResolver:
         if (target in self._targets) and (target in self._references):
             for link in self._references[target]:
                 link.reference = self._targets[target]
-                print("Updating link to point to", self._targets[target], link)
+                # print("Updating link to point to", self._targets[target], link)
             self._references[target] = []
 
 
@@ -260,7 +260,8 @@ class TreeVisitor:
         self.find = find
 
     def generic_visit(self, node):
-        from .take2 import Options, Transition
+        from .take2 import Options
+        from .myst_ast import MThematicBreak
 
         name = node.__class__.__name__
         if method := getattr(self, "visit_" + name, None):
@@ -296,13 +297,10 @@ class TreeVisitor:
             if type(node) not in self.skipped:
                 self.skipped.add(type(node))
             return {}
-        elif isinstance(node, (RefInfo, Options, Transition, SubstitutionDef)):
+        elif isinstance(node, (RefInfo, Options, MThematicBreak, SubstitutionDef)):
             return {}
         else:
             raise ValueError(f"{node.__class__} has no children, no values {node}")
-
-
-from there import print
 
 
 class TreeReplacer:
@@ -312,15 +310,18 @@ class TreeReplacer:
     define replace_XXX(xxx) that return a list of new nodes, and call visit(and the root tree)
     """
 
+    _replacements: Counter
+
     def __init__(self):
         self._replacements = Counter()
 
     def visit(self, node):
         self._replacements = Counter()
         self._cr = 0
-        assert not isinstance(node, list)
+        assert not isinstance(node, list), node
+        assert node is not None
         res = self.generic_visit(node)
-        assert len(res) == 1
+        assert len(res) == 1, res
         return res[0]
 
     def generic_visit(self, node) -> List[Node]:
@@ -335,7 +336,6 @@ class TreeReplacer:
                 self._replacements.update([name])
                 new_nodes = method(node)
             elif name in [
-                "BlockMath",
                 "Code",
                 "Comment",
                 "MComment",
@@ -347,9 +347,9 @@ class TreeReplacer:
                 "MMath",
                 "MInlineMath",
                 "Options",
-                "SeeAlsoItems",
+                "SeeAlsoItem",
                 "SubstitutionRef",
-                "Transition",
+                "MThematicBreak",
                 "Unimplemented",
                 "MText",
                 "MCode",
@@ -381,7 +381,8 @@ class TreeReplacer:
             assert isinstance(new_nodes, list)
             return new_nodes
         except Exception as e:
-            raise type(e)(f"{node=}")
+            e.add_note(f"visiting {node=}")
+            raise
 
 
 # misc thoughts:
@@ -638,8 +639,8 @@ class DirectiveVisiter(TreeReplacer):
         self._tocs.append(toc)
 
         acc = []
-        for l in lls:
-            acc.append(MListItem(False, [MParagraph([l])]))
+        for line in lls:
+            acc.append(MListItem(False, [MParagraph([line])]))
         return [MList(ordered=False, start=1, spread=False, children=acc)]
 
     def replace_MMystDirective(self, myst_directive: MMystDirective):
@@ -833,6 +834,8 @@ class DVR(DirectiveVisiter):
     def visit_Section(self, sec):
         if sec.target:
             # print("Section has target:", sec.target)
+            # TODO: This is wrong, we should likely change this to the current module that get visited.
+            # it likely only affects narative
             RESOLVER.add_target(
                 RefInfo("papyri", "0.0.8", "docs", sec.target), sec.target
             )

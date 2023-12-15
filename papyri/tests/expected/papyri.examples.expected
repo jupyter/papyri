@@ -1,0 +1,180 @@
+"
+
+# Examples Modules Heading 1
+
+This module contains examples, none of the functions, classes or other
+attribute should have any effects when called. Paragraphs should be able to
+contain plain links, or link via directives: papyri
+
+## Heading 2
+
+### Heading 3
+
+#### heading 4
+
+## FieldList
+
+In my understanding FieldList should in general not happen in the final
+Documents, they are supposed to be processed by the software reading them, and
+typically appear at the beginning of directive.
+
+{
+  "type": "FieldList",
+  "children": [
+    {
+      "type": "FieldListItem",
+      "name": [
+        {
+          "type": "text",
+          "value": "fieldlistitem"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "at least that the name tree sitter rst give it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "FieldListItem",
+      "name": [
+        {
+          "type": "text",
+          "value": "another"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "text",
+              "value": "is a another fieldlistItem in this field list     and it
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}## Enumeration and unordered lists
+
+Enumeration list.
+
+  - item 1
+
+  - item 2
+
+  - item 3
+
+Unordered list
+
+  - item 1
+
+  - item 2
+
+  - item 3
+
+## Definition Lists
+
+  term 1
+
+    Definition 1.
+
+  term 2
+
+    Definition 2, paragraph 1.
+
+    Definition 2, paragraph 2.
+
+## Admonitions
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ {'type': 'admonitionTitle', 'children': [{'type': 'text', 'value': 'note '}] │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ An admonition note !                                                         │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+This is a link to `Jupyter website <jupyter.org>`
+
+## Code (title 2)
+
+  ╭─────────────────────────────────── Code ───────────────────────────────────╮
+  │ from package import module                                                 │
+  │ module.call("string")                                                      │
+  ╰────────────────────────────────────────────────────────────────────────────╯
+## Math
+
+Math should both work as standalone formulas that takes a block:
+
+
+ π=3.14159
+
+More complex formula:
+
+
+ (∫₀)^∞f(δv)∂v
+
+
+ ∇²X=vec(rot)(vec(rot)(X))=vec(grad)(div(X))-ΔX
+
+But should be also available in inline context, for example we know that π²≃10,
+and that 1+1=10 when counting in binary.
+
+## Literal Blocks (verbatim)
+
+  ╭─────────────────────────────────── Code ───────────────────────────────────╮
+  │ This should be a verb-                                                     │
+  │ -batim block                                                               │
+  ╰────────────────────────────────────────────────────────────────────────────╯
+This is a Transition:
+
+────────────────────────────────────────────────────────────────────────────────
+This is q block quote, to do, we know that Attributions are not supported right
+now.
+
+  "We have weaponed the Tab Key"
+
+### Substitutions
+
+In this paragraph:
+{
+  "type": "SubstitutionRef",
+  "value": "|SubstitutionRef|"
+} Should be
+replaced...
+
+{
+  "type": "SubstitutionDef",
+  "value": "|SubstitutionDef|",
+  "children": [
+    {
+      "type": "mystDirective",
+      "name": "replace",
+      "args": "ASUBSTITUTIONDEF",
+      "options": {},
+      "value": "",
+      "children": []
+    }
+  ]
+}## Quotes
+
+Quotes are not implemented yet in the parser, this section below will appear
+empty
+
+────────────────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────────────
+# Various test cases
+
+This paragraph should contain a literal with a new line here->| |<, in the
+final output it should render properly without the line break, but a space.
+
+## Summary
+
+To remove in the future –– papyri.examples

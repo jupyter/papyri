@@ -4,7 +4,25 @@ Examples Modules Heading 1
 ==========================
 
 This module contains examples, none of the functions, classes or other attribute
-should have any effects when called.
+should have any effects when called. Paragraphs should be able to contain plain
+`links <https://github.com/jupyter/papyri>`__, or link via directives: :any:`papyri`
+
+Heading 2
+---------
+
+Heading 3
+~~~~~~~~~
+
+heading 4
+.........
+
+
+FieldList
+---------
+
+In my understanding FieldList should in general not happen in the final
+Documents, they are supposed to be processed by the software reading them, and
+typically appear at the beginning of directive.
 
 
 :fieldlistitem:
@@ -12,6 +30,9 @@ should have any effects when called.
 :another: is a another fieldlistItem in this field list
     and it's description
 
+
+Enumeration and unordered lists
+-------------------------------
 
 Enumeration list.
 
@@ -26,7 +47,9 @@ Unordered list
 - item 3
 
 
-Definition list (not sure about the difference with field lists...)
+Definition Lists
+----------------
+
 
 term 1
     Definition 1.
@@ -36,6 +59,9 @@ term 2
 
     Definition 2, paragraph 2.
 
+
+Admonitions
+-----------
 
 .. note::
 
@@ -54,52 +80,97 @@ Code (title 2)
 Math
 ----
 
+Math should both work as standalone formulas that takes a block:
+
 
 .. math::
 
     \\pi = 3.14159
 
+More complex formula:
 
-"""
+.. math::
 
-"""
+    \\int_0^\\infty f(\\delta v) \\partial v
 
-term
-: definition
+.. math::
 
-## Math
+    \\nabla^2X = \\vec {rot} (\\vec {rot}(X)) = \\vec{grad}(div(X))  - \\Delta X
 
 
-## Figures
+But should be also available in inline context, for example we know that
+:math:`\\pi^2 \\simeq 10`, and that :math:`1+1=10` when counting in binary.
 
-```{figure} https://via.placeholder.com/150
-:width: 100px
-:align: center
+Literal Blocks (verbatim)
+-------------------------
 
-Figure caption
-```
+::
 
-## Tables
+    This should be a verb-
+    -batim block
 
-```{list-table}
-:header-rows: 1
-:align: center
 
-* - Header 1
-  - Header 2
-* - Item 1 a
-  - Item 2 a
-* - Item 1 b
-  - Item 2 b
-```
+This is a Transition:
+
+-----
+
+This is q block quote, to do, we know that Attributions are not supported right now.
+
+    "We have weaponed the Tab Key"
+
+
+
+Substitutions
+~~~~~~~~~~~~~
+
+In this paragraph: |SubstitutionRef| Should be replaced...
+
+.. |SubstitutionDef| replace:: ASUBSTITUTIONDEF
+
+
+
+Quotes
+------
+
+Quotes are not implemented yet in the parser, this section below will appear
+empty
+
+----
+
+|    That which is static and repetitive is boring. That which is dynamic
+|    and random is confusing. In between lies art.
+|    --- *John A. Locke*
+
+|    Science is a differential equation. Religion is a boundary condition.
+|    --- *Alan Turing*
+
+----
+
+
+Various test cases
+==================
+
+This paragraph should
+contain a literal with a new line ``here->|
+|<``, in the final output it should render properly
+without the line break,
+but a space.
 
 """
 
 from typing import Optional, Union
 
 
-def example1(
-    pos: int, only: None, /, var: Union[float, bool], args=1, *, kwargs, also=None
+async def example1(
+    pos: int,
+    only: None,
+    /,
+    var: Union[float, bool],
+    args=1,
+    *,
+    kwarg,
+    also=None,
+    **kwargs,
 ) -> Optional[str]:
     """
     first example.
@@ -208,3 +279,10 @@ def example_3():
         This directive will be turned into a warning admonition.
 
     """
+
+
+foo = object()
+
+
+def annotation_with_hex_addresses(x: foo = lambda x: x):  # type:ignore [valid-type]
+    pass

@@ -9,26 +9,23 @@ classifiers = ["License :: OSI Approved :: MIT License"]
 readme = "Readme.md"
 license = {file = "LICENSE"}
 dynamic = ["version","description"]
-requires-python=">=3.10"
+requires-python=">=3.11"
 dependencies = [
-    "typer",
-    "tomli;python_version>='3.11'",
-    "tomli_w",
-    "urwid",
-    "httpx",
-    "jinja2>=3.1.2",
-    "ipython",
-    "numpydoc",
-    "cachetools",
-    "pygments",
     "black",
-    "rich",
+    "flatlatex",
+    "httpx",
+    "ipython",
     "jedi",
-    "typer",
-    "velin",
+    "jinja2>=3.1.2",
+    "numpydoc",
+    "pygments",
     "quart-trio>=0.6.0",
     "quart>=0.18.4",
-    "flatlatex",
+    "rich",
+    "tomli_w",
+    "typer>=0.9",
+    "urwid",
+    "velin",
     # "tree_sitter", # tree sitter does not currently provide builds for all platform. tree-sitter-builds is an
     # alternative build that provide more wheels.
     "tree-sitter-builds",
@@ -37,6 +34,8 @@ dependencies = [
     "matplotlib",
     "cbor2",
     "minify_html",
+    "textual",
+    "emoji",
 ]
 
 [project.scripts]
@@ -47,8 +46,8 @@ addopts = "--durations=10"
 filterwarnings = "ignore:The module numpy.dual.*:DeprecationWarning"
 
 [project.urls]
-Home = "https://github.com/Carreau/papyri"
+Home = "https://github.com/Jupyter/papyri"
 
 [tool.mypy]
-python_version = '3.10'
+python_version = '3.11'
 ignore_missing_imports = true

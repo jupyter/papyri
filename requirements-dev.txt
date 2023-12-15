@@ -10,3 +10,4 @@ pipdeptree
 black
 mypy
 flake8<7
+scipy

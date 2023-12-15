@@ -11,4 +11,8 @@ build
 test.dat
 test.npy
 test.out
+node_modules
+*.js.map
 
+papyri/app/asset-manifest.json
+papyri/app/index.html

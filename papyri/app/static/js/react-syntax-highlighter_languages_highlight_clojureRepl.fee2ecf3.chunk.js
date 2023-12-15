@@ -1,0 +1,2 @@
+(self.webpackChunkpapyri_frontend=self.webpackChunkpapyri_frontend||[]).push([[3610],{7217:e=>{e.exports=function(e){return{name:"Clojure REPL",contains:[{className:"meta",begin:/^([\w.-]+|\s*#_)?=>/,starts:{end:/$/,subLanguage:"clojure"}}]}}}}]);
+//# sourceMappingURL=react-syntax-highlighter_languages_highlight_clojureRepl.fee2ecf3.chunk.js.map

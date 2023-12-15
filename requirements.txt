@@ -1,6 +1,4 @@
-asks
-cachetools
-click<9
+emoji
 flit
 jedi
 matplotlib
@@ -9,6 +7,7 @@ pygments
 quart-trio
 requests
 rich
+textual
 there
 tree_sitter
 typer

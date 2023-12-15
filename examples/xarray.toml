@@ -31,5 +31,3 @@ AssertionError = [
     "xarray.core.dataarray:DataArray.convert_calendar",
     "xarray.core.dataset:Dataset.convert_calendar",
 ]
-
-IncorrectInternalDocsLen = [ "xarray.core.utils:is_remote_uri" ]

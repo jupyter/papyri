@@ -22,6 +22,7 @@ import shutil
 import site
 import sys
 import tempfile
+import tomllib
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
@@ -34,11 +35,10 @@ from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequenc
 import io
 
 import jedi
-
-import tomllib
 import tomli_w
 from IPython.core.oinspect import find_file
 from IPython.utils.path import compress_user
+from packaging.version import parse
 from pygments import lex
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -51,11 +51,12 @@ from .common_ast import Node
 from .errors import (
     IncorrectInternalDocsLen,
     NumpydocParseError,
-    UnseenError,
     TextSignatureParsingFailed,
+    UnseenError,
 )
 from .miscs import BlockExecutor, DummyP
-from .signature import Signature as ObjectSignature, SignatureNode
+from .signature import Signature as ObjectSignature
+from .signature import SignatureNode
 from .take2 import (
     Code,
     Fig,
@@ -74,28 +75,36 @@ from .take2 import (
 from .toc import make_tree
 from .tree import DVR
 from .utils import (
+    Cannonical,
+    FullQual,
     TimeElapsedColumn,
     dedent_but_first,
     full_qual,
     pos_to_nl,
     progress,
-    FullQual,
-    Cannonical,
 )
 from .vref import NumpyDocString
 
-from .myst_ast import MText
+# delayed import
+if True:
+    from .myst_ast import MText
 
 class ErrorCollector:
+    _expected_unseen: Dict[str, Any]
+    errored: bool
+    _unexpected_errors: Dict[str, Any]
+    _expected_errors: Dict[str, Any]
+
     def __init__(self, config: Config, log):
         self.config: Config = config
         self.log = log
 
-        self._expected_unseen: Dict[str, Any] = {}
+        self._expected_unseen = {}
         for err, names in self.config.expected_errors.items():
             for name in names:
                 self._expected_unseen.setdefault(name, []).append(err)
-        self._errors: Dict[str, Any] = {}
+        self._unexpected_errors = {}
+        self._expected_errors = {}
 
     def __call__(self, qa):
         self._qa = qa
@@ -104,9 +113,6 @@ class ErrorCollector:
     def __enter__(self):
         self.errored = False
         return self
-
-    def raise_if_unseen_errors(self):
-        pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type in (BaseException, KeyboardInterrupt):
@@ -118,8 +124,9 @@ class ErrorCollector:
                 self._expected_unseen[self._qa].remove(ename)
                 if not self._expected_unseen[self._qa]:
                     del self._expected_unseen[self._qa]
+                self._expected_errors.setdefault(ename, []).append(self._qa)
             else:
-                self._errors.setdefault(ename, []).append(self._qa)
+                self._unexpected_errors.setdefault(ename, []).append(self._qa)
                 self.log.exception(f"Unexpected error {self._qa}")
             if not self.config.early_error:
                 return True
@@ -461,7 +468,7 @@ def gen_main(
     debug,
     *,
     dummy_progress: bool,
-    dry_run=bool,
+    dry_run: bool,
     api: bool,
     examples: bool,
     fail,
@@ -722,6 +729,55 @@ class DFSCollector:
         return aliases, not_found
 
 
+class _OrderedDictProxy:
+    """
+    a dict like class proxy for DocBlob to keep the order of sections in DocBlob.
+
+    We Can't use an ordered Dict because of serialisation/deserialisation that
+    would/might loose order
+    """
+
+    orderring: list[str]
+    mapping: dict[str, Any]
+
+    def __init__(self, ordering: list[str], mapping: dict[str, Any]):
+        self.ordering = ordering
+        self.mapping = mapping
+        assert isinstance(ordering, list), ordering
+        assert isinstance(mapping, dict), mapping
+        assert set(self.mapping.keys()) == set(self.ordering)
+
+    def __getitem__(self, key: str):
+        return self.mapping[key]
+
+    def __contains__(self, key: str):
+        return key in self.mapping
+
+    def __setitem__(self, key: str, value: Any):
+        if key not in self.ordering:
+            self.ordering.append(key)
+        self.mapping[key] = value
+
+    def __delitem__(self, key: str):
+        self.ordering.remove(key)
+        del self.mapping[key]
+
+    def __iter__(self):
+        return iter(self.ordering)
+
+    def keys(self) -> tuple[str, ...]:
+        return tuple(self.ordering)
+
+    def get(self, key: str, default=None, /):
+        return self.mapping.get(key, default)
+
+    def items(self):
+        return [(k, self.mapping[k]) for k in self.ordering]
+
+    def values(self):
+        return [self.mapping[k] for k in self.ordering]
+
+
 class DocBlob(Node):
     """
     An object containing information about the documentation of an arbitrary object.
@@ -732,9 +788,9 @@ class DocBlob(Node):
     """
 
     __slots__ = (
-        "content",
+        "_content",
         "example_section_data",
-        "ordered_sections",
+        "_ordered_sections",
         "item_file",
         "item_line",
         "item_type",
@@ -743,6 +799,7 @@ class DocBlob(Node):
         "signature",
         "references",
         "arbitrary",
+        "_dp",
     )
 
     @classmethod
@@ -755,6 +812,19 @@ class DocBlob(Node):
         for k, v in kwargs.items():
             setattr(instance, k, v)
         return instance
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert not isinstance(self._content, str)
+        self._dp = _OrderedDictProxy(self._ordered_sections, self._content)
+
+    @property
+    def ordered_sections(self):
+        return tuple(self._ordered_sections)
+
+    @property
+    def content(self):
+        return self._dp
 
     sections = [
         "Signature",
@@ -776,16 +846,16 @@ class DocBlob(Node):
         "Examples",
     ]  # List of sections in order
 
-    content: Dict[str, Section]
+    _content: Dict[str, Section]
     example_section_data: Section
-    ordered_sections: List[str]
+    _ordered_sections: Optional[List[str]]
     item_file: Optional[str]
     item_line: Optional[int]
     item_type: Optional[str]
     aliases: List[str]
     see_also: List[SeeAlsoItem]  # see also data
     signature: Optional[SignatureNode]
-    references: Optional[Section]
+    references: Optional[List[str]]
     arbitrary: List[Section]
 
     def __repr__(self):
@@ -793,21 +863,20 @@ class DocBlob(Node):
 
     def slots(self):
         return [
-            "content",
+            "_content",
             "example_section_data",
-            "ordered_sections",
+            "_ordered_sections",
             "item_file",
             "item_line",
             "item_type",
             "signature",
-            "references",
             "aliases",
             "arbitrary",
         ]
 
     @classmethod
     def new(cls):
-        return cls({}, None, None, None, None, None, [], [], None, None, [])
+        return cls({}, None, [], None, None, None, [], [], None, None, [])
 
 
 def _numpy_data_to_section(data: List[Tuple[str, str, List[str]]], title: str, qa):
@@ -1349,7 +1418,6 @@ class Gen:
                 # if dv._tocs:
                 trees[key] = dv._tocs
 
-                blob.ordered_sections = []
                 blob.item_file = None
                 blob.item_line = None
                 blob.item_type = None
@@ -1357,7 +1425,6 @@ class Gen:
                 blob.example_section_data = Section([], None)
                 blob.see_also = []
                 blob.signature = None
-                blob.references = None
                 blob.validate()
                 titles = [s.title for s in blob.arbitrary if s.title]
                 if not titles:
@@ -1429,7 +1496,8 @@ class Gen:
         self.bdata[path] = data
 
     def _transform_1(self, blob: DocBlob, ndoc) -> DocBlob:
-        blob.content = {k: v for k, v in ndoc._parsed_data.items()}
+        for k, v in ndoc._parsed_data.items():
+            blob.content[k] = v
         for k, v in blob.content.items():
             assert isinstance(v, (str, list, dict)), type(v)
         return blob
@@ -1467,12 +1535,14 @@ class Gen:
                     repr(type(target_item).__name__),
                 )
             else:
-                self.log.warn(
-                    "Could not find source file for %s (%s) [%s], will not be able to link to it.",
-                    repr(qa),
-                    target_item,
-                    type(target_item).__name__,
-                )
+                rqan = str(qa).split(".")[-1]
+                if not (rqan.startswith("__") and rqan.endswith("__")):
+                    self.log.warning(
+                        "Could not find source file for %s (%s) [%s], will not be able to link to it.",
+                        repr(qa) + ":" + rqan,
+                        target_item,
+                        type(target_item).__name__,
+                    )
 
         return blob
 
@@ -1546,13 +1616,22 @@ class Gen:
         blob = self._transform_1(blob, ndoc)
         blob = self._transform_2(blob, target_item, qa)
         blob = self._transform_3(blob, target_item)
+        assert set(blob.content.keys()) == set(blob.ordered_sections), (
+            set(blob.content.keys()) - set(blob.ordered_sections),
+            set(blob.ordered_sections) - set(blob.content.keys()),
+        )
 
         item_type = str(type(target_item))
         if blob.content["Signature"]:
             try:
                 # the type ignore below is wrong and need to be refactored.
                 # we basically modify blob.content in place, but should not.
-                sig = ObjectSignature.from_str(blob.content.pop("Signature"))  # type: ignore
+                if "Signature" in blob.content:
+                    ss = blob.content["Signature"]
+                    del blob.content["Signature"]
+                else:
+                    ss = None
+                sig = ObjectSignature.from_str(ss)  # type: ignore
                 if sig is not None:
                     blob.signature = sig.to_node()
             except TextSignatureParsingFailed:
@@ -1609,18 +1688,23 @@ class Gen:
 
         blob.example_section_data = example_section_data
 
-        blob.ordered_sections = ndoc.ordered_sections
         blob.item_type = item_type
-
-        blob.references = blob.content.pop("References")
 
         del blob.content["Examples"]
         del blob.content["index"]
 
-        if blob.references == "":
-            # TODO:fix
+        ref = blob.content["References"]
+        if ref == "":
             blob.references = None
+        else:
+            blob.references = ref
+        del blob.content["References"]
+
         blob.aliases = aliases
+        assert set(blob.content.keys()) == set(blob.ordered_sections), (
+            set(blob.content.keys()),
+            set(blob.ordered_sections),
+        )
         for section in ["Extended Summary", "Summary", "Notes", "Warnings"]:
             try:
                 data = blob.content.get(section, None)
@@ -1681,6 +1765,11 @@ class Gen:
 
         blob.see_also = _normalize_see_also(blob.content.get("See Also", Section()), qa)
         del blob.content["See Also"]
+
+        assert set(blob.content.keys()) == set(blob.ordered_sections), (
+            set(blob.content.keys()),
+            set(blob.ordered_sections),
+        )
         return blob, figs
 
     def collect_examples(self, folder: Path, config):
@@ -1841,7 +1930,9 @@ class Gen:
             api_object = APIObjectInfo(
                 "module", item_docstring, None, target_item.__name__, qa
             )
-        elif isinstance(target_item, (FunctionType, builtin_function_or_method)):
+        elif isinstance(
+            target_item, (FunctionType, builtin_function_or_method)
+        ) or callable(target_item):
             sig: Optional[ObjectSignature]
             try:
                 sig = ObjectSignature(target_item)
@@ -1852,7 +1943,8 @@ class Gen:
                     "function", item_docstring, sig, target_item.__name__, qa
                 )
             except Exception as e:
-                raise type(e)(f"For object {qa!r}")
+                e.add_note(f"For object {qa!r}")
+                raise
         elif isinstance(target_item, type):
             api_object = APIObjectInfo(
                 "class", item_docstring, None, target_item.__name__, qa
@@ -1894,7 +1986,9 @@ class Gen:
         else:
             logo = None
         module = __import__(root)
-        self.version = module.__version__
+        # TODO: xarray does not have __version__ anymore, find another logic
+        self.version = getattr(module, "__version__", "0.0.0")
+        assert parse(self.version)
 
         try:
             meta["tag"] = meta["tag"].format(version=self.version)
@@ -1904,7 +1998,7 @@ class Gen:
         self._meta.update({"logo": logo, "module": root, "version": self.version})
         self._meta.update(meta)
 
-    def collect_api_docs(self, root: str, limit_to: List[str]):
+    def collect_api_docs(self, root: str, limit_to: List[str]) -> None:
         """
         Crawl one module and stores resulting docbundle in self.store.
 
@@ -1985,13 +2079,17 @@ class Gen:
                 )
                 self.log.debug("APIOBJECT %r", api_object)
             if ecollector.errored:
-                if ecollector._errors.keys():
+                if ecollector._unexpected_errors.keys():
                     self.log.warning(
-                        "error with %s %s", qa, list(ecollector._errors.keys())
+                        "error with %s %s",
+                        qa,
+                        list(ecollector._unexpected_errors.keys()),
                     )
                 else:
                     self.log.info(
-                        "only expected error with %s, %s", qa, ecollector._errors.keys()
+                        "only expected error with %s, %s",
+                        qa,
+                        list(ecollector._expected_errors.keys()),
                     )
                 continue
 
@@ -2099,21 +2197,13 @@ class Gen:
                             imp,
                         )
 
-            # eg, dask: str, dask.array.gufunc.apply_gufun: List[str]
-            assert isinstance(doc_blob.references, (list, str, type(None))), (
-                repr(doc_blob.references),
-                qa,
-            )
-
-            if isinstance(doc_blob.references, str):
-                print_(repr(doc_blob.references))
-            doc_blob.references = None
-
             # end processing
+            assert not isinstance(doc_blob._content, str), doc_blob._content
             try:
                 doc_blob.validate()
             except Exception as e:
-                raise type(e)(f"Error in {qa}")
+                e.add_note(f"Error in {qa}")
+                raise
             self.log.debug(doc_blob.signature)
             self.log.debug(doc_blob.to_dict())
             self.put(qa, doc_blob)
@@ -2121,10 +2211,12 @@ class Gen:
                 self.log.debug("Found %s figures", len(figs))
             for name, data in figs:
                 self.put_raw(name, data)
-        if error_collector._errors:
+        if error_collector._unexpected_errors:
             self.log.info(
                 "ERRORS:"
-                + tomli_w.dumps(error_collector._errors).replace(",", ",    \n")
+                + tomli_w.dumps(error_collector._unexpected_errors).replace(
+                    ",", ",    \n"
+                )
             )
         if error_collector._expected_unseen:
             inverted = defaultdict(lambda: [])

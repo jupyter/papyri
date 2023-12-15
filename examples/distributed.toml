@@ -13,9 +13,16 @@ exclude = [
     "distributed.protocol.core:dumps",
     "distributed.diagnostics.progress:MultiProgress",
     "distributed.diagnostics.progress:Progress",
-    "distributed.shuffle._shuffle:ShuffleId",
     "distributed.shuffle._disk:DiskShardsBuffer",
     "distributed.shuffle._comms:CommShardsBuffer",
 ] #docs_path = "~/dev/dask/docs/source"
 exec_failure = 'fallback'
 execute_doctests = false
+
+[global.expected_errors]
+NumpydocParseError = [
+   "distributed.client:default_client",
+   "distributed.utils:offload",
+   "distributed.metrics:ContextMeter",
+   "distributed.utils:run_in_executor_with_context",
+]

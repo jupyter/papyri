@@ -28,7 +28,7 @@ class Node(Base):
         for attr, val in zip(tt, args):
             setattr(self, attr, val)
         for k, v in kwargs.items():
-            assert k in tt
+            assert k in tt, f"{k} not in {tt}"
             setattr(self, k, v)
         if hasattr(self, "_post_deserialise"):
             self._post_deserialise()
@@ -124,10 +124,14 @@ def _invalidate(obj, depth=0):
     # return outcome,s
 
 
-def validate(obj):
+class WrongTypeAtField(ValueError):
+    pass
+
+
+def validate(obj: Any) -> None:
     res = _invalidate(obj)
     if res:
-        raise ValueError(f"Wrong type at field :: {res}")
+        raise WrongTypeAtField(f"Wrong type at field :: {res}")
 
 
 def not_type_check(item, annotation):
@@ -135,7 +139,7 @@ def not_type_check(item, annotation):
         if isinstance(item, annotation):
             return None
         else:
-            return f"expecting {annotation} got {type(item)}"
+            return f"expecting {annotation} got {type(item)} : {item!r}"
     elif annotation.__origin__ is dict:
         if not isinstance(item, dict):
             return f"got  {type(item)}, Yexpecting list"

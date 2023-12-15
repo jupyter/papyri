@@ -1,5 +1,5 @@
 """
-Papyri – in progress
+Papyri – in progress
 
 Here are a couple of documents, or docstrings that are of interest to see how
 papyri works, generally because they crashed papyri at some point during the
@@ -19,8 +19,8 @@ Installation
 dev install
 -----------
 
-You may need to get a modified version of numpydoc depending on the stage of development.
-
+You may need to get a modified version of numpydoc depending on the stage of
+development::
 
     git clone https://github.com/jupyter/papyri
     cd papyri
@@ -28,8 +28,8 @@ You may need to get a modified version of numpydoc depending on the stage of dev
 
 Build the TreeSitter rst parser:
 
-Some functionality require ``tree_sitter_rst``, see run ``papyri build-parser``, and CI config file on how to build the tree-sitter
-shared object locally::
+Some functionality require ``tree_sitter_rst``, see run ``papyri build-parser``,
+and CI config file on how to build the tree-sitter shared object locally::
 
     git clone https://github.com/stsewd/tree-sitter-rst
     papyri build-parser
@@ -39,8 +39,8 @@ Usage
 -----
 
 There are mostly 3 stages to run papyri, so far you need to do the 3 steps/roles
-on your local machine, but it will not be necessary once papyri is production ready.
-The three stages are:
+on your local machine, but it will not be necessary once papyri is production
+ready. The three stages are:
 
 - As a library maintainer, generate and publish papyri IRD file.
 - As a system operator, install IRD files on your system
@@ -141,7 +141,7 @@ Here are a couple of function that are of interest to explore what papyri can do
 
 `numpy.einsum`:
     one of the longest numpy docstring/document, or at least one of the longest to render, with
-    `scipy.signal.windows.dpss` , `scipy.optimize._minimize.minimize` and
+    `scipy.signal.windows.dpss`, `scipy.optimize._minimize.minimize` and
     `scipy.optimize._basinhopping.basinhopping`
 
 
@@ -171,7 +171,7 @@ import io
 import sys
 import zipfile
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Annotated
 
 import tomli_w
 import typer
@@ -215,9 +215,11 @@ To start a server that generate html on the fly
 
     $ papyri serve
 
-View given function docs in text with ANSI coloring
+View given function docs in text with ANSI coloring, using ``rich``
 
-    $ papyri ascii numpy.linspace
+    $ papyri rich numpy:einsum
+
+This supports the `--width=<int>` and `--color|--no-color` flags.
 
 
 """,
@@ -415,9 +417,21 @@ def relink(
     cr.relink(dummy_progress=dummy_progress)
 
 
+def find_toml():
+    from glob import glob
+
+    return glob("**/*.toml", recursive=True)
+
+
 @app.command()
 def gen(
-    file: str,
+    file: Annotated[
+        str,
+        typer.Argument(
+            help="toml configuration file",
+            autocompletion=find_toml,
+        ),
+    ],
     infer: Optional[bool] = typer.Option(
         True, help="Whether to run type inference on code examples."
     ),
@@ -483,6 +497,9 @@ def pack():
 
 @app.command()
 def bootstrap(file: str):
+    """
+    create a basic toml configuration file (draft)
+    """
     p = Path(file)
     if p.exists():
         sys.exit(f"{p} already exists")
@@ -511,6 +528,9 @@ def render(
 
 @app.command()
 def drop():
+    """
+    Drop the full local database.
+    """
     _intro()
     from . import crosslink as cr
 
@@ -518,16 +538,12 @@ def drop():
 
 
 @app.command()
-def ascii(name: str, color: bool = True):
-    # _intro()
+def rich(name: str, *, width: Optional[int] = None, color: bool = True):
     import trio
 
-    from .render import ascii_render
+    from .render import rich_render
 
-    async def _():
-        await ascii_render(name, color=color)
-
-    trio.run(_)
+    trio.run(rich_render, name, width, color)
 
 
 @app.command()
@@ -557,13 +573,33 @@ def serve_static():
 
 @app.command()
 def browse(qualname: str):
+    """
+    browse documentation using URWID (deprecated)
+    """
     from papyri.browser import main as browse
 
     browse(qualname)
 
 
 @app.command()
+def textual(qualname: str):
+    """
+    browse documentation using textual (in-progress)
+    """
+    from papyri.textual import main as textual
+
+    textual(qualname)
+
+
+@app.command()
 def build_parser():
+    """
+    Build the rst parser from the submodule. (development)
+
+    This is a warkaround from the fact that the parser published wheels do not
+    work on all platofrms
+
+    """
     from tree_sitter import Language
 
     pth = Path(__file__).parent / "rst.so"
@@ -583,6 +619,67 @@ def build_parser():
     )
 
     Language(spth, "rst")
+
+
+def complete_nodename():
+    from . import take2, myst_ast, common_ast
+
+    return dir(take2) + dir(common_ast) + dir(myst_ast)
+
+
+@app.command()
+def find(
+    node_name: Annotated[
+        str,
+        typer.Argument(
+            help="Name of the node to search",
+            autocompletion=complete_nodename,
+        ),
+    ],
+):
+    """
+    Find all documents with a given type of AST node.
+
+    Mostly used to debug rendering. One ca find all document with say equations:
+
+    $ papyri find MMath
+
+
+    """
+    from papyri.render import GraphStore, ingest_dir
+    from . import take2
+    from .tree import TreeVisitor
+    from .take2 import encoder
+    from . import myst_ast, common_ast
+    from .crosslink import IngestedBlobs
+
+    store = GraphStore(ingest_dir, {})
+
+    items = list(store.glob((None, None, None, None)))
+
+    node_type = getattr(
+        take2,
+        node_name,
+        getattr(common_ast, node_name, getattr(myst_ast, node_name, None)),
+    )
+
+    if node_type is None:
+        sys.exit("no such node type")
+
+    visitor = TreeVisitor([node_type])
+    for it in items:
+        if it.kind in ("assets", "examples", "meta"):
+            continue
+        data = store.get(it)
+        obj = encoder.decode(data)
+        if not isinstance(obj, IngestedBlobs):
+            print("SKIP", it)
+            continue
+        for a in obj.arbitrary + list(obj.content.values()):
+            res = visitor.generic_visit(a)
+            if res:
+                print(it)
+                print(res[node_type])
 
 
 @app.command()

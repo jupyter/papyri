@@ -32,7 +32,7 @@ def test_capture_correct():
     with ec("TestItem"):
         DoesValueError()
 
-    assert ec._errors == {"ValueError": ["TestItem"]}
+    assert ec._unexpected_errors == {"ValueError": ["TestItem"]}
 
 
 def test_pass_no_collect():

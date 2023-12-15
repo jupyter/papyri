@@ -13,16 +13,6 @@ exclude = []
 IncorrectInternalDocsLen = [
     "IPython.core.magics.namespace:NamespaceMagics.xdel",
 ]
-TextSignatureParsingFailed = [
-    "IPython.core.guarded_eval:SelectivePolicy",
-    "IPython.core.oinspect:OInfo",
-    "IPython.terminal.shortcuts:RuntimeBinding",
-    "IPython.terminal.shortcuts:BaseBinding",
-    "IPython.terminal.shortcuts:Binding",
-    "IPython.utils.timing:clock2",
-    "IPython.utils.timing:timings",
-    "IPython.utils.timing:timings_out",
-]
 [global.implied_imports]
 get_ipython = 'IPython:get_ipython'
 
