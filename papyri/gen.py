@@ -1331,7 +1331,7 @@ class Gen:
                                                            doctest_runner.globs,
                                                            obj.__name__, filename,
                                                            lineno)
-            if doctests.examples:
+            if config.exec and doctests.examples:
                 doctest_runner.run(doctests, out=debugprint)
                 example_section_data.extend(doctest_runner.example_section_data)
             else:
