@@ -89,6 +89,7 @@ from .vref import NumpyDocString
 if True:
     from .myst_ast import MText
 
+
 class ErrorCollector:
     _expected_unseen: Dict[str, Any]
     errored: bool
@@ -1292,7 +1293,7 @@ class Gen:
         The capturing of matplotlib figures is also limited.
         """
         assert qa is not None
-        example_code = '\n'.join(example_section)
+        example_code = "\n".join(example_section)
         blocks = example_code.split("\n\n")
         import matplotlib.pyplot as plt
 
@@ -1301,6 +1302,7 @@ class Gen:
             log.debug(f"Turning off type inference for func {qa!r}")
 
         sys_stdout = sys.stdout
+
         def dbg(*args):
             for arg in args:
                 sys_stdout.write(f"{arg}\n")
@@ -1315,11 +1317,16 @@ class Gen:
         except (TypeError, OSError):
             lineno = None
 
-        doctest_runner = PapyriDocTestRunner(gen=self, obj=obj, qa=qa,
-                                             config=config,
-                                             # TODO: Make optionflags configurable
-                                             optionflags=doctest.ELLIPSIS)
+        doctest_runner = PapyriDocTestRunner(
+            gen=self,
+            obj=obj,
+            qa=qa,
+            config=config,
+            # TODO: Make optionflags configurable
+            optionflags=doctest.ELLIPSIS,
+        )
         example_section_data = Section([], None)
+
         def debugprint(*args):
             """
             version of print that capture current stdout to use during testing to debug
@@ -1327,10 +1334,9 @@ class Gen:
             sys_stdout.write(" ".join(str(x) for x in args) + "\n")
 
         for block in blocks:
-            doctests = doctest.DocTestParser().get_doctest(block,
-                                                           doctest_runner.globs,
-                                                           obj.__name__, filename,
-                                                           lineno)
+            doctests = doctest.DocTestParser().get_doctest(
+                block, doctest_runner.globs, obj.__name__, filename, lineno
+            )
             if config.exec and doctests.examples:
                 doctest_runner.run(doctests, out=debugprint)
                 example_section_data.extend(doctest_runner.example_section_data)
