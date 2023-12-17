@@ -19,11 +19,16 @@ const PapyriComponent = (): JSX.Element => {
   // the current query
   const [possibilities, setPossibilities] = useState([]);
   const [root, setRoot] = useState({});
+  const [what, setWhat] = useState('');
 
   // callback when typing in the input field.
   const onChange = async (event: any) => {
+    setWhat(event.target.value);
+    search(event.target.value);
+  }
+  const search = async (query:string) => {
     const res = await requestAPI<any>('get-example', {
-      body: event.target.value,
+      body: query,
       method: 'post'
     });
     // response has body (MyST–json if the query has an exact match)
@@ -37,12 +42,23 @@ const PapyriComponent = (): JSX.Element => {
     }
   };
 
+  const onClick = (value:string) => {
+      setWhat(value);
+      try {
+        search(value);
+      } catch (e) {
+          console.error(e)
+
+    }
+      return false
+  }
+
   return (
     <React.StrictMode>
-      <input onChange={onChange} />
+      <input onChange={onChange} value={what}/>
       <ul>
         {possibilities.map(e => {
-          return <li>{e}</li>;
+          return <li><a href={e} onClick={() => onClick(e)}>{e}</a></li>;
         })}
       </ul>
       <ThemeProvider renderers={RENDERERS}>

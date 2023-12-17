@@ -391,7 +391,8 @@ class Ingester:
                 )
                 assert hasattr(nvisited_items[qa], "arbitrary")
             except Exception as e:
-                raise RuntimeError(f"error Reading to {f1}") from e
+                e.add_note(f"error Reading to {f1}")
+                raise
 
         # known_refs_II = frozenset(nvisited_items.keys())
 

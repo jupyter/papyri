@@ -19,3 +19,7 @@ code {
 .not-implemented {
   border: 1px solid orange;
 }
+
+div#papyri-browser   a:hover {
+    text-decoration: underline;
+}

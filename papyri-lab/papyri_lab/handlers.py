@@ -32,7 +32,7 @@ class RouteHandler(APIHandler):
         self.finish(
             json.dumps(
                 {
-                    "data": [c.path for c in candidates[:10]],
+                    "data": [c.path for c in candidates[:50]],
                     "body": body,
                 }
             )
