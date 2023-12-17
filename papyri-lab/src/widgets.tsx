@@ -25,8 +25,8 @@ const PapyriComponent = (): JSX.Element => {
   const onChange = async (event: any) => {
     setWhat(event.target.value);
     search(event.target.value);
-  }
-  const search = async (query:string) => {
+  };
+  const search = async (query: string) => {
     const res = await requestAPI<any>('get-example', {
       body: query,
       method: 'post'
@@ -42,23 +42,28 @@ const PapyriComponent = (): JSX.Element => {
     }
   };
 
-  const onClick = (value:string) => {
-      setWhat(value);
-      try {
-        search(value);
-      } catch (e) {
-          console.error(e)
-
+  const onClick = (value: string) => {
+    setWhat(value);
+    try {
+      search(value);
+    } catch (e) {
+      console.error(e);
     }
-      return false
-  }
+    return false;
+  };
 
   return (
     <React.StrictMode>
-      <input onChange={onChange} value={what}/>
+      <input onChange={onChange} value={what} />
       <ul>
         {possibilities.map(e => {
-          return <li><a href={e} onClick={() => onClick(e)}>{e}</a></li>;
+          return (
+            <li>
+              <a href={e} onClick={() => onClick(e)}>
+                {e}
+              </a>
+            </li>
+          );
         })}
       </ul>
       <ThemeProvider renderers={RENDERERS}>
