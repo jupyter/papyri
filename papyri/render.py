@@ -1269,56 +1269,6 @@ class LinkReifier(TreeReplacer):
             return [MText(refinfo.path + "(?)")]
 
 
-def old_render_one(
-    store: GraphStore,
-    template,
-    doc: IngestedBlobs,
-    qa: str,
-    *,
-    current_type,
-    meta,
-):
-    """
-    Return the rendering of one document
-
-    Parameters
-    ----------
-    template
-        a Jinja template object used to render.
-    doc : DocBlob
-        a Doc object with the informations for current obj
-    qa : str
-        fully qualified name for current object
-    """
-
-    assert isinstance(meta, dict)
-    # TODO : move this to ingest likely.
-    # Here if we have too many references we group them on where they come from.
-    assert not hasattr(doc, "logo")
-
-    try:
-        resolver = Resolver(store, prefix="/p/", extension="")
-        LR = LinkReifier(resolver=resolver)
-        for k, v in doc.content.items():
-            assert isinstance(v, Section)
-            ct = MRoot([MHeading(depth=1, children=[MText(k)]), *v.children])
-            doc.content[k] = ct  # type: ignore
-
-        doc.arbitrary = [LR.visit(x) for x in doc.arbitrary]
-        # TODO: this is wrong for now
-        doc.see_also = DefList([LR.visit(s) for s in doc.see_also])  # type:ignore
-        return template.render(
-            current_type=current_type,
-            doc=doc,
-            name=qa.split(":")[-1].split(".")[-1],
-            version=meta["version"],
-            module=qa.split(".")[0],
-            meta=meta,
-        )
-    except Exception as e:
-        raise ValueError("qa=", qa) from e
-
-
 def _rich_render(key: Key, store: GraphStore) -> List[Any]:
     from .rich_render import RichVisitor
 
