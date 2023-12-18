@@ -73,14 +73,21 @@ def test_parse_directive_body():
     assert items1[0].name == "directive"
     assert items1[0].args == "Directive title"
     assert items1[0].options == dict()
-    assert items1[0].value == "This directive declares a title and content in a block separated from\nthe definition by an empty new line."
+    assert (
+        items1[0].value
+        == "This directive declares a title and content in a block separated from\nthe definition by an empty new line."
+    )
     assert items1[0].children == []
 
     assert items2[0].name == "directive"
     assert items2[0].args == "Directive title"
     assert items2[0].options == dict()
-    assert items2[0].value == "This directive declares a title and content not separated by an empty\nnewline."
+    assert (
+        items2[0].value
+        == "This directive declares a title and content not separated by an empty\nnewline."
+    )
     assert items2[0].children == []
+
 
 def test_parse_warning_directive():
     data = dedent(
@@ -104,6 +111,7 @@ def test_parse_warning_directive():
     assert items[0].options == dict()
     assert items[0].value == "Title The warning directive does not admit a title."
     assert items[0].children == []
+
 
 def test_parse_space():
     [section] = parse(
