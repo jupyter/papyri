@@ -104,7 +104,7 @@ class MInlineCode(Node):
 @register(4045)
 class MParagraph(Node):
     type = "paragraph"
-    children: List[Union["PhrasingContent", "take2.MUnimpl"]]
+    children: List[Union["PhrasingContent", "take2.MUnimpl", "MImage"]]
     # position: Any
     # data: Any
 
@@ -266,6 +266,18 @@ class MRoot(Node):
             MImage,
         ]
     ]
+
+
+class ReplaceNode(Node):
+    # We may want to return links too.
+    type = "replace"
+    value: str
+    text: str
+    # children: Union[
+    #     MText,
+    #     MInlineCode,
+    #     MInlineMath,
+    # ]
 
 
 StaticPhrasingContent = Union[

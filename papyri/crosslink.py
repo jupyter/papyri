@@ -49,7 +49,7 @@ def find_all_refs(
 
     # TODO
     # here we can't compute just the dictionary and use frozenset(....values())
-    # as we may have multiple version of lisbraries; this is something that will
+    # as we may have multiple version of libraries; this is something that will
     # need to be fixed in the long run
     known_refs = []
     ref_map = {}
@@ -160,7 +160,7 @@ class IngestedBlobs(Node):
             "Receives",
             # "Notes",
             # "Signature",
-            #'Extended Summary',
+            # "Extended Summary",
             #'References'
             #'See Also'
             #'Examples'
@@ -181,7 +181,7 @@ class IngestedBlobs(Node):
         local_refs = frozenset(flat(_local_refs))
 
         visitor = PostDVR(
-            self.qa, known_refs, local_refs, aliases, version=version, config={}
+            self.qa, known_refs, local_refs, {}, aliases, version=version, config={}
         )
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if section not in self.content:
@@ -313,6 +313,7 @@ class Ingester:
                 f"TBD (examples, {path}), supposed to be QA",
                 known_refs,
                 set(),
+                {},
                 aliases,
                 version=version,
                 config={},
@@ -506,6 +507,7 @@ class Ingester:
                 f"TBD, supposed to be QA relink {key}",
                 known_refs,
                 set(),
+                {},
                 aliases,
                 version="?",
             )

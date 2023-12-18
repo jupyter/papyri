@@ -79,6 +79,7 @@ from .take2 import (
     RefInfo,
     Section,
     SeeAlsoItem,
+    SubstitutionDef,
     parse_rst_section,
 )
 from .toc import make_tree
@@ -1473,6 +1474,7 @@ class Gen:
                         key,
                         set(),
                         local_refs=set(),
+                        substitution_defs={},
                         aliases={},
                         version=self._meta["version"],
                         config=self.config.directives,
@@ -1931,6 +1933,7 @@ class Gen:
                     example.name,
                     frozenset(),
                     local_refs=frozenset(),
+                    substitution_defs={},
                     aliases={},
                     version=self.version,
                     config=self.config.directives,
@@ -2255,20 +2258,30 @@ class Gen:
                             if new_ref:
                                 _local_refs = _local_refs + new_ref
 
+            # substitution_defs: Dict[str, Union(MImage, ReplaceNode)] = {}
+            substitution_defs = {}
+            for section in doc_blob.sections:
+                for child in doc_blob.content.get(section, []):
+                    if isinstance(child, SubstitutionDef):
+                        substitution_defs[child.value] = child.children
+
             # def flat(l) -> List[str]:
             #    return [y for x in l for y in x]
             for lr1 in _local_refs:
                 assert isinstance(lr1, str)
             # lr: FrozenSet[str] = frozenset(flat(_local_refs))
             lr: FrozenSet[str] = frozenset(_local_refs)
+
             dv = DVR(
                 qa,
                 known_refs,
                 local_refs=lr,
+                substitution_defs=substitution_defs,
                 aliases={},
                 version=self.version,
                 config=self.config.directives,
             )
+
             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
             doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
             doc_blob._content = {k: dv.visit(v) for (k, v) in doc_blob._content.items()}

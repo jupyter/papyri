@@ -156,3 +156,39 @@ def test_parse_reference():
     [text, reference] = paragraph.children
     assert reference.value == "reference <to this>"
     assert text.value == "This is a "
+
+
+def test_parse_substitution_definition():
+    data1 = dedent(
+        """
+    A substitution definition block contains an embedded inline-compatible
+    directive (without the leading ".. "), such as "image" or "replace". For
+    example, the |biohazard| symbol must be used on containers used to dispose
+    of medical waste.
+
+    .. |biohazard| image :: https://upload.wikimedia.org/wikipedia/commons/c/c0/Biohazard_symbol.svg
+    """
+    )
+    data2 = dedent(
+        """
+    A substitution definition block contains an embedded inline-compatible
+    directive (without the leading ".. "), such as "image" or "replace". For
+    example, the |biohazard| symbol must be used on containers used to dispose
+    of medical waste.
+
+    .. |biohazard| replace :: **biohazard.png**
+    """
+    )
+    [section1] = parse(data1.encode(), "test_parse_substitution_definition")
+    [_, subsdef1] = section1.children
+    [node1] = subsdef1.children
+    [section2] = parse(data2.encode(), "test_parse_substitution_definition")
+    [_, subsdef2] = section2.children
+    [node2] = subsdef2.children
+    assert subsdef1.value == "|biohazard|"
+    assert node1.type == "image"
+    assert node1.url == "https://upload.wikimedia.org/wikipedia/commons/c/c0/Biohazard_symbol.svg"
+    assert node1.alt == ""
+    assert subsdef2.value == "|biohazard|"
+    assert node2.type == "replace"
+    assert node2.text == "**biohazard.png**"

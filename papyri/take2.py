@@ -159,14 +159,33 @@ class Leaf(Node):
 
 @register(4027)
 class SubstitutionDef(Node):
+    """
+    A Substitution Definition should be in the form of
+
+    .. raw:: rst
+
+        .. |value| inline_directive:: text to be inserted
+
+    Currently, the inline_directive can only be ``replace`` or ``image``. In the
+    future, we want to support any inline directives, including custom
+    user-defined directives.
+    """
+
     value: str
-    children: List[Union[MMystDirective, UnprocessedDirective]]
+    children: List[Union[ReplaceNode, MImage]]
 
     def __init__(self, value, children):
         self.value = value
         assert isinstance(children, list)
-        self.children = children
-        pass
+        assert len(children) == 1
+        assert isinstance(children[0], UnprocessedDirective)
+
+        if children[0].name == "image":
+            self.children = [MImage(url=children[0].args, alt="")]
+        elif children[0].name == "replace":
+            self.children = [ReplaceNode(value=self.value, text=children[0].args)]
+        else:
+            raise NotImplementedError
 
 
 @register(4041)
@@ -201,6 +220,8 @@ from .myst_ast import (
     MBlockquote,
     MTarget,
     MThematicBreak,
+    MImage,
+    ReplaceNode,
 )
 
 
