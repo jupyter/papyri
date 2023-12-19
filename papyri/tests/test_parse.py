@@ -1,16 +1,9 @@
 from textwrap import dedent
-from pathlib import Path
 
 import pytest
 
 from papyri import errors
-from papyri.ts import parse, Node, TSVisitor
-from tree_sitter import Language, Parser
-
-parser = Parser()
-pth = str(Path(__file__).parent.parent / "rst.so")
-RST = Language(pth, "rst")
-parser.set_language(RST)
+from papyri.ts import parse, Node, TSVisitor, parser
 
 
 # @pytest.mark.xfail(strict=True)
