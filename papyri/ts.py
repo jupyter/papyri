@@ -65,7 +65,7 @@ class Node:
     In particular we want to be able to extract whitespace information,
     which is made hard by tree sitter.
 
-    So we intercept iterating through childrens, and if the bytes start/stop
+    So we intercept iterating through children, and if the bytes start/stop
     don't match, we insert a fake Whitespace node that has similar api to tree
     sitter official nodes.
     """
@@ -81,9 +81,9 @@ class Node:
         if not self._with_whitespace:
             return [Node(n, _with_whitespace=False) for n in self.node.children]
 
-        self.node.children
         current_byte = self.start_byte
         current_point = self.start_point
+
         new_nodes = []
         if self.node.children:
             for n in self.node.children:
@@ -185,7 +185,7 @@ class Whitespace(Node):
 
 class TSVisitor:
     """
-    Tree sitter Visitor,
+    Tree sitter Visitor
 
     Walk the tree sitter tree and convert each node into our kind of internal node.
 
@@ -267,6 +267,7 @@ class TSVisitor:
             # print(f'ERROR node: {self.as_text(c)!r}, skipping')
             return []
         for c in node.children:
+            # c=<ts.Node directive>
             kind = c.type
             if kind == "::":
                 if acc and isinstance(acc[-1], inline_nodes):
@@ -560,7 +561,6 @@ class TSVisitor:
             # breakpoint()
             if pp.type == ".." and name.type == "name":
                 return [Unimplemented("untarget", self.as_text(name))]
-        # print(node.children)
         return [Unimplemented("target", self.as_text(node))]
 
     # def visit_arguments(self, node, prev_end=None):
@@ -578,20 +578,30 @@ class TSVisitor:
         return [Unimplemented("inline_target", self.as_text(node))]
 
     def visit_directive(self, node, prev_end=None):
+        """
+        Main entry point for directives.
+
+        Parses directive arguments, options and content into a MMystDirective
+        object.
+
+        Parameters
+        ----------
+        node: Node
+            The directive to parse
+        prev_end: Unknown
+
+        Returns
+        -------
+        directive: MMystDirective
+
+        """
         # TODO:
         # make it part of the type if a block directive (has, or not), a body.
-
-        # directive_name: str
-        # args0: List[str]
-        ## TODO : this is likely wrong...
-        # inner: Optional[Paragraph]
-        text = self.bytes[node.start_byte : node.end_byte].decode()
-        if "anaconda" in text:
-            print("...", text)
 
         is_substitution_definition = False
 
         if len(node.children) == 4:
+            # This directive has a body
             kinds = [n.type for n in node.children]
             if tuple(kinds) == ("type", "::", " ", "body"):
                 is_substitution_definition = True
@@ -607,9 +617,7 @@ class TSVisitor:
             _1, _role, _2 = node.children
             body_children = []
         else:
-            raise ValueError
-            assert _1.type == ".."
-            assert _2.type == "::"
+            raise ValueError(f"Wrong number of children: {len(node.children)}")
 
         if _role.end_point != _2.start_point and not is_substitution_definition:
             block_data = self.bytes[node.start_byte : node.end_byte].decode()
@@ -618,46 +626,71 @@ class TSVisitor:
             )
 
         role = self.bytes[_role.start_byte : _role.end_byte].decode()
+
         import itertools
 
         groups = itertools.groupby(body_children, lambda x: x.type)
         groups = [(k, list(v)) for k, v in groups]
 
-        if groups and groups[0][0] == "arguments":
-            arg = list(groups.pop(0)[1])
-            assert len(arg) == 1
-            argument = self.as_text(arg[0])
-        else:
-            argument = ""
-        if groups and groups[0][0] == "options":
-            # to parse
-            p0 = groups.pop(0)
-            options = []
-            assert len(p0[1]) == 1
-            opt_node = p0[1][0]
-            for field in opt_node.children:
-                assert field.type == "field"
-                if len(field.children) == 4:
-                    c1, name, c2, body = field.children
-                    options.append((self.as_text(name), self.as_text(body)))
-                elif len(field.children) == 3:
-                    c1, name, c2 = field.children
-                    options.append((self.as_text(name), ""))
-                else:
-                    assert False
+        if role == "warning":
+            # The warning directive does not take a title argument;
+            # however, the contents for the directive may be defined inline
+            # with the directive name, or as a separate block.
+            # See https://docutils.sourceforge.io/docs/ref/doctree.html#warning
+            if len(groups) == 1:
+                content_node = list(groups[0][1])
+                content = self.as_text(content_node[0])
+            elif len(groups) == 2:
+                content_node = [groups[0][1][0], groups[1][1][0]]
+                content = (
+                    self.as_text(content_node[0]) + " " + self.as_text(content_node[1])
+                )
+            else:
+                raise ValueError(f"{role} directive has no content")
 
-        else:
-            options = []
-        if groups and groups[0][0] == "content":
-            # to parse
-            content_node = list(groups.pop(0)[1])
-            assert len(content_node) == 1
-            content = self.as_text(content_node[0])
             padding = (content_node[0].start_point[1] - _1.start_point[1]) * " "
             content = dedent(padding + content)
+            argument = ""
+            options = []
+            groups = []
 
         else:
-            content = ""
+            if groups and groups[0][0] == "arguments":
+                arg = list(groups.pop(0)[1])
+                assert len(arg) == 1
+                argument = self.as_text(arg[0])
+            else:
+                argument = ""
+
+            if groups and groups[0][0] == "options":
+                # to parse
+                p0 = groups.pop(0)
+                options = []
+                assert len(p0[1]) == 1
+                opt_node = p0[1][0]
+                for field in opt_node.children:
+                    assert field.type == "field"
+                    if len(field.children) == 4:
+                        c1, name, c2, body = field.children
+                        options.append((self.as_text(name), self.as_text(body)))
+                    elif len(field.children) == 3:
+                        c1, name, c2 = field.children
+                        options.append((self.as_text(name), ""))
+                    else:
+                        assert False
+            else:
+                options = []
+
+            if groups and groups[0][0] == "content":
+                # to parse
+                content_node = list(groups.pop(0)[1])
+                assert len(content_node) == 1
+                content = self.as_text(content_node[0])
+                padding = (content_node[0].start_point[1] - _1.start_point[1]) * " "
+                content = dedent(padding + content)
+            else:
+                content = ""
+
         assert not groups
         # todo , we may want to see about the indentation of the content.
 
