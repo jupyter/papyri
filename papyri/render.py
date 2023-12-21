@@ -374,7 +374,11 @@ class HtmlRenderer:
         if html_dir:
             (html_dir / "index.html").write_text(await self.index())
 
-    async def virtual(self, module, node_name: str):
+    async def virtual(self, module: str, node_name: str):
+        """
+        Endpoint that  look for all nodes of a specific type in all
+        the known pages and render them.
+        """
         if module == "*":
             module = None
         items = list(self.store.glob((module, None, None, None)))
@@ -444,7 +448,7 @@ class HtmlRenderer:
                     config.output_dir / module / version / "gallery" / "index.html"
                 ).write_text(data)
 
-    async def gallery(self, package, version, ext=""):
+    async def gallery(self, package: str, version: str, ext=""):
         # TODO FIX
         if ":" in package:
             package, _ = package.split(":")
@@ -550,6 +554,10 @@ class HtmlRenderer:
         )
 
     def _myst_root(self, doc: IngestedBlobs) -> MRoot:
+        """
+        Convert a internal IngestedBlob document into a MyST tree
+        for rendering.
+        """
         to_suppress = []
         myst_acc: List[Any] = []
         if doc.signature:
@@ -645,8 +653,9 @@ class HtmlRenderer:
             module = qa.split(".")[0]
             return template.render(
                 current_type=current_type,
-                doc=doc,
                 myst_root=root,
+                item_line=doc.item_line,
+                item_file=doc.item_file,
                 logo=meta.get("logo", None),
                 version=meta["version"],
                 module=module,
@@ -906,7 +915,13 @@ class HtmlRenderer:
         for _, (module, version, _, path) in progress(
             narrative, description="Rendering Narrative..."
         ):
-            data = await self._serve_narrative(module, version, path)
+            try:
+                data = await self._serve_narrative(module, version, path)
+            except Exception as e:
+                e.add_note(
+                    f"rendering {module=} {version=} {path=}",
+                )
+                raise
             if config.output_dir:
                 (config.output_dir / module / version / "docs").mkdir(
                     parents=True, exist_ok=True
@@ -1084,7 +1099,24 @@ def serve(*, sidebar: bool, port=1234):
 
 
 class Resolver:
-    def __init__(self, store, prefix: str, extension: str):
+    # mapping from package name to existing (version(s))
+    # currently multiple version nor really supported.
+    # this is used when we request to reach to a page from any version of a
+    # library to know which one we should look into.
+    version: Dict[str, str]
+
+    # the rendering might under prefix, depending on how it is hosted.
+    # This should thus be prepended to generated urls.
+    # it should end and start with a `/`.
+    prefix: str
+
+    # Extension that need to be added to the end of the url, why many server
+    # are fine omitting `.html`, it might be necessary when resolving for
+    # statically generated contents.
+
+    extension: str
+
+    def __init__(self, store, prefix: str, extension: str) -> None:
         """
         Given a RefInfo to an object, resolve it to a full http-link
         with the current configuration.
@@ -1110,7 +1142,7 @@ class Resolver:
         self.prefix = prefix
         self.extension = extension
 
-        self.version: Dict[str, str] = {}
+        self.version = {}
 
         for p, v in {
             (package, version)
@@ -1118,12 +1150,22 @@ class Resolver:
         }:
             if p in self.version:
                 pass
-                # todo, likely parse version here if possible.
+                # TODO:, likely parse version here if possible.
                 # maxv = max(v, self.version[p])
                 # print("multiple version for package", p, "Trying most recent", maxv)
             self.version[p] = v
 
-    def exists_resolve(self, info) -> Tuple[bool, Optional[str]]:
+    def exists_resolve(self, info: RefInfo) -> Tuple[bool, Optional[str]]:
+        """Resolve a RefInfo to a URL, additionally return wether the link item exists
+
+        Return
+        ------
+        exists: boolean
+            Whether  the target document exists
+        url : str|None
+            If exists, URL where target document can be found
+
+        """
         module, version_number, kind, path = info
         if kind == "api":
             kind = "module"
@@ -1131,13 +1173,24 @@ class Resolver:
             if info.module in self.version:
                 version_number = self.version[info.module]
 
-        i2 = RefInfo(module, version_number, kind, path)
-        # TODO: Fix
+        query_ref = RefInfo(module, version_number, kind, path)
+        # TODO: Fix, for example in IPython narrative docs the
+        # toctree point to ``pr/*`` which is a subfolder we don't support yet:
+        #
+        # .. toctree::
+        #     :maxdepth: 2
+        #     :glob:
+        #
+        #     pr/*
         if kind == "?":
             return False, None
-        sgi = self.store.glob(i2)
+        sgi = self.store.glob(query_ref)
         if sgi:
-            exists, url = self._resolve(i2)
+            assert len(sgi) == 1, (
+                "we have no reason to have more than one reference",
+                sgi,
+            )
+            exists, url = self._resolve(query_ref)
             return exists, url
 
         # we may want to find older versions.
@@ -1145,7 +1198,11 @@ class Resolver:
         return False, None
 
     def resolve(self, info) -> str:
-        return self._resolve(info)[1]
+        exists, url = self.exists_resolve(info)
+        # TODO: this is moslty used to render navigation we should make sure that
+        # links are resolved and exists before rendering.
+        # assert exists, f"{info=} doe not exists"
+        return url
 
     def _resolve(self, info) -> Tuple[bool, str]:
         """
@@ -1157,8 +1214,9 @@ class Resolver:
             "api",
             "examples",
             "assets",
-            "?",
+            # "?",
             "docs",
+            # TODO:
             "to-resolve",
         ), repr(info)
         # assume same package/version for now.

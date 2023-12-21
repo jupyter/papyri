@@ -51,13 +51,10 @@ they belong to, and scaled with the number of references pointing them</p>
 <hr>
 
 {%if meta.get('github_slug')%}
-    GitHub : <a class='external' href='https://github.com/{{meta.github_slug}}/blob/{{meta.tag}}/{{doc.item_file}}#L{{doc.item_line}}'>{{doc.item_file}}#{{doc.item_line}}</a>
+    GitHub : <a class='external' href='https://github.com/{{meta.github_slug}}/blob/{{meta.tag}}/{{item_file}}#L{{item_line}}'>{{item_file}}#{{item_line}}</a>
 {% else %}
-    File: {{doc.item_file}}#{{doc.item_line}}
+    File: {{item_file}}#{{item_line}}
 {%endif%}<br/>
-
-type: {{doc.item_type}} <br/>
-Commit: <br/>
 
 {% if graph is defined %}
     {{d3script(graph)}}

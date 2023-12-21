@@ -261,7 +261,6 @@ class TSVisitor:
     def visit(self, node):
         self.depth += 1
         acc = []
-        prev_end = None
         # TODO: FIX
         if node.type == "ERROR":
             # print(f'ERROR node: {self.as_text(c)!r}, skipping')
@@ -280,28 +279,27 @@ class TSVisitor:
                     f"visit_{kind} not found while visiting {node}::\n{self.as_text(c)!r}"
                 )
             meth = getattr(self, "visit_" + kind)
-            new_children = meth(c, prev_end=prev_end)
+            new_children = meth(c)
             acc.extend(new_children)
-            prev_end = c.end_point
         self.depth -= 1
         acc = self._compressor(acc)
         acc = self._targetify(acc)
         return acc
 
-    def visit_citation(self, node, prev_end=None):
+    def visit_citation(self, node):
         # raise VisitCitationNotImplementedError()
         # just hlines, like ------
         return [Unimplemented("citation", self.as_text(node))]
 
-    def visit_citation_reference(self, node, prev_end=None):
+    def visit_citation_reference(self, node):
         raise VisitCitationReferenceNotImplementedError()
         # just hlines, like ------
         return []
 
-    def visit_transition(self, node, prev_end=None):
+    def visit_transition(self, node):
         return [MThematicBreak()]
 
-    def visit_reference(self, node, prev_end=None):
+    def visit_reference(self, node):
         """
         TODO:
 
@@ -324,7 +322,7 @@ class TSVisitor:
             assert trailing in ("_", "__")
         return [Directive(_text, None, None)]
 
-    def visit_interpreted_text(self, node, prev_end=None):
+    def visit_interpreted_text(self, node):
         if len(node.children) == 2:
             role, text = node.children
             assert role.type == "role"
@@ -374,10 +372,10 @@ class TSVisitor:
         )
         return [t]
 
-    def visit_standalone_hyperlink(self, node, prev_end=None):
+    def visit_standalone_hyperlink(self, node):
         return self.visit_text(node)
 
-    def visit_text(self, node, prev_end=None):
+    def visit_text(self, node):
         text = self.bytes[node.start_byte : node.end_byte].decode()
         assert not text.startswith(":func:"), breakpoint()
         t = MText(text)
@@ -385,7 +383,7 @@ class TSVisitor:
         t.end_byte = node.end_byte
         return [t]
 
-    def visit_whitespace(self, node, prev_end=None):
+    def visit_whitespace(self, node):
         content = self.bytes[node.start_byte : node.end_byte].decode()
         # assert set(content) == {' '}, repr(content)
         t = MText(" " * len(content))
@@ -394,21 +392,21 @@ class TSVisitor:
         # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
         return [t]
 
-    def visit_literal(self, node, prev_end=None):
+    def visit_literal(self, node):
         text = self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()
         assert "\n\n" not in text
         t = MInlineCode(text.replace("\n", " "))
         # print(' '*self.depth*4, t)
         return [t]
 
-    def visit_literal_block(self, node, prev_end=None):
+    def visit_literal_block(self, node):
         datas = self.bytes[node.start_byte : node.end_byte].decode()
         first_offset = node.start_point[1]
         datas = " " * first_offset + datas
         b = MCode(dedent(datas))
         return [b]
 
-    def visit_bullet_list(self, node, prev_end=None):
+    def visit_bullet_list(self, node):
         myst_acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
@@ -420,7 +418,7 @@ class TSVisitor:
             myst_acc.append(MListItem(False, self.visit(body)))
         return [MList(ordered=False, start=1, spread=False, children=myst_acc)]
 
-    def visit_section(self, node, prev_end=None):
+    def visit_section(self, node):
         # print(' '*self.depth*4, '->', node)
         # print(' '*self.depth*4, '::',self.bytes[node.start_byte: node.end_byte].decode())
         if node.children[0].type == "adornment":
@@ -478,10 +476,10 @@ class TSVisitor:
         # print(' '*self.depth*4, '->', node)
         return [Section([], title, level=level)]
 
-    def visit_block_quote(self, node, prev_end=None):
+    def visit_block_quote(self, node):
         return [MBlockquote(self.visit(node))]
 
-    def visit_paragraph(self, node, prev_end=None):
+    def visit_paragraph(self, node):
         sub = self.visit(node.with_whitespace())
         acc = []
         acc2 = []
@@ -498,24 +496,24 @@ class TSVisitor:
         p = MParagraph(compress_word(acc))
         return [p, *acc2]
 
-    def visit_line_block(self, node, prev_end=None):
+    def visit_line_block(self, node):
         # TODO
         # e.g: numpy/doc/source/user/c-info.how-to-extend.rst
         print("Skipping node", self.as_text(node))
         return []
 
-    def visit_substitution_reference(self, node, prev_end=None):
+    def visit_substitution_reference(self, node):
         # TODO
         return [SubstitutionRef(self.as_text(node))]
 
-    def visit_doctest_block(self, node, prev_end=None) -> List[MCode]:
+    def visit_doctest_block(self, node) -> List[MCode]:
         # TODO
-        return self.visit_literal_block(node, prev_end)
+        return self.visit_literal_block(node)
 
-    def visit_field(self, node, prev_end=None):
+    def visit_field(self, node):
         return []
 
-    def visit_field_list(self, node, prev_end=None) -> List[FieldList]:
+    def visit_field_list(self, node) -> List[FieldList]:
         acc = []
 
         lens = {len(f.children) for f in node.children}
@@ -544,7 +542,7 @@ class TSVisitor:
         else:
             raise ValueError("mixed len...")
 
-    def visit_enumerated_list(self, node, prev_end=None):
+    def visit_enumerated_list(self, node):
         myst_acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
@@ -552,7 +550,7 @@ class TSVisitor:
             myst_acc.append(MListItem(False, self.visit(body)))
         return [MList(ordered=True, start=1, spread=False, children=myst_acc)]
 
-    def visit_target(self, node, prev_end=None):
+    def visit_target(self, node):
         # TODO:
         # raise VisitTargetNotImplementedError()
         # self.as_text(node)
@@ -563,21 +561,21 @@ class TSVisitor:
                 return [Unimplemented("untarget", self.as_text(name))]
         return [Unimplemented("target", self.as_text(node))]
 
-    # def visit_arguments(self, node, prev_end=None):
+    # def visit_arguments(self, node):
     #    assert False
     #    return []
 
-    def visit_attribution(self, node, prev_end):
+    def visit_attribution(self, node):
         # TODO:
         print("attribution not implemented")
         return [Unimplemented("inline_target", self.as_text(node))]
 
-    def visit_inline_target(self, node, prev_end):
+    def visit_inline_target(self, node):
         # TODO:
         print("inline_target not implemented")
         return [Unimplemented("inline_target", self.as_text(node))]
 
-    def visit_directive(self, node, prev_end=None):
+    def visit_directive(self, node):
         """
         Main entry point for directives.
 
@@ -588,7 +586,6 @@ class TSVisitor:
         ----------
         node: Node
             The directive to parse
-        prev_end: Unknown
 
         Returns
         -------
@@ -697,12 +694,12 @@ class TSVisitor:
         directive = MMystDirective(role, argument, dict(options), content)
         return [directive]
 
-    def visit_footnote_reference(self, node, prev_end=None):
+    def visit_footnote_reference(self, node):
         # TODO
         # assert False, self.bytes[node.start_byte : node.end_byte].decode()
         return []
 
-    def visit_emphasis(self, node, prev_end=None):
+    def visit_emphasis(self, node):
         # TODO
         return [
             MEmphasis(
@@ -710,7 +707,7 @@ class TSVisitor:
             )
         ]
 
-    def visit_substitution_definition(self, node, prev_end=None):
+    def visit_substitution_definition(self, node):
         assert len(node.children) == 3
         _dotdot, sub, directive = node.children
         assert self.bytes[_dotdot.start_byte : _dotdot.end_byte].decode() == ".."
@@ -723,25 +720,25 @@ class TSVisitor:
             )
         ]
 
-    def visit_comment(self, node, prev_end=None):
+    def visit_comment(self, node):
         # TODO
         return [MComment(self.bytes[node.start_byte : node.end_byte].decode())]
         # raise VisitCommentNotImplementedError()
 
-    def visit_strong(self, node, prev_end=None):
+    def visit_strong(self, node):
         return [
             MStrong(
                 [MText(self.bytes[node.start_byte + 2 : node.end_byte - 2].decode())]
             )
         ]
 
-    def visit_footnote(self, node, prev_end=None):
+    def visit_footnote(self, node):
         # TODO
         # that is actually used for references
         # assert False, self.bytes[node.start_byte : node.end_byte].decode()
         return [Unimplemented("footnote", self.as_text(node))]
 
-    def visit_ERROR(self, node, prev_end=None):
+    def visit_ERROR(self, node):
         """
         Called with parsing error nodes.
         """
@@ -749,7 +746,7 @@ class TSVisitor:
         # raise TreeSitterParseError()
         return []
 
-    def visit_definition_list(self, node, prev_end=None):
+    def visit_definition_list(self, node):
         acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
