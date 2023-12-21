@@ -35,6 +35,9 @@ from .crosslink import IngestedBlobs, find_all_refs
 from .graphstore import GraphStore, Key
 from .myst_ast import (
     MLink,
+    MList,
+    MListItem,
+    MRoot,
     MText,
     MHeading,
     MParagraph,
@@ -65,12 +68,14 @@ log = logging.getLogger("papyri")
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
-def group_backrefs(
-    backrefs: List[RefInfo], LR: "LinkReifier"
-) -> Dict[str, List[MLink]]:
+def backrefs_to_myst(backrefs: List[RefInfo], LR: "LinkReifier") -> List[Any]:
     """
-    Take a list of backreferences and group them by the module they are comming from
+    Take a list of backreferences and group them by the module they are comming from,
+    then turn this into a myst list.
     """
+
+    if not backrefs:
+        return []
 
     group = defaultdict(lambda: [])
     for ref in backrefs:
@@ -82,7 +87,15 @@ def group_backrefs(
         [link] = LR.replace_RefInfo(ref)
         assert isinstance(link, MLink), link
         group[mod].append(link)
-    return group
+
+    children: Any = [MHeading(children=[MText("Backreferences")], depth=3)]
+    for mod, links in sorted(group.items()):
+        children.append(MHeading(children=[MText(f"From {mod}")], depth=4))
+        lchild = []
+        for link in links:
+            lchild.append(MListItem(children=[LR.visit(link)], spread=False))
+        children.append(MList(children=lchild, ordered=False, start=1, spread=False))
+    return children
 
 
 def minify(s: str) -> str:
@@ -121,9 +134,25 @@ def unreachable(*obj):
 
 
 def compute_siblings_II(
-    ref: str, family: Set[RefInfo]
+    ref: str, family: frozenset[RefInfo]
 ) -> Dict[str, List[Tuple[RefInfo, str]]]:
-    """ """
+    """
+    Compute the full tree of siblings for all the items.
+
+
+    Dictionary of the type:
+
+    numpy:
+
+        [(RefFor numpy.array, "array"),(RefFor sin, "sin"),....]
+
+    core:
+        [(RefFor numpy.core.masked_array, "masked_array", ...)
+    where:
+        ...
+
+
+    """
     assert isinstance(ref, str)
 
     module_versions = defaultdict(lambda: set())
@@ -132,7 +161,9 @@ def compute_siblings_II(
 
     module_versions_max = {k: max(v) for k, v in module_versions.items()}  # type: ignore [type-var]
 
-    family = {f for f in family if f.version == module_versions_max[f.module]}
+    family = frozenset(
+        {f for f in family if f.version == module_versions_max[f.module]}
+    )
 
     parts = ref.split(".") + ["+"]
     siblings = OrderedDict()
@@ -420,7 +451,7 @@ class HtmlRenderer:
         return self.env.get_template("html.tpl.j2").render(
             graph=None,
             # TODO: next 2
-            backrefs=[[], []],
+            backrefs=[],
             module="*",
             doc=doc,
             parts=list({"*": []}.items()),
@@ -528,6 +559,7 @@ class HtmlRenderer:
             figmap=figmap,
             module=package,
             parts_mods=parts.get(package, []),
+            # TODO: here
             parts=list(parts.items()),
             version=_version,
             parts_links=defaultdict(lambda: ""),
@@ -618,7 +650,7 @@ class HtmlRenderer:
         *,
         current_type: str,
         backrefs: List[RefInfo],
-        parts: Dict[str, List[Tuple[RefInfo, str]]] = dict(),
+        parts: Dict[str, List[Tuple[str, str]]] = dict(),
         parts_links=(),
         graph: str = "{}",
         meta: dict,
@@ -655,14 +687,17 @@ class HtmlRenderer:
         # Here if we have too many references we group them on where they come from.
         assert not hasattr(doc, "logo")
 
-        backrefs_ = (None, group_backrefs(backrefs, self.LR))
+        mback = backrefs_to_myst(backrefs, self.LR)
 
-        root = json.dumps(self._myst_root(doc).to_dict(), indent=2)
+        root = self._myst_root(doc)
+        root.children.extend(mback)
+
+        root_json = json.dumps(root.to_dict(), indent=2)
         try:
             module = qa.split(".")[0]
             return template.render(
                 current_type=current_type,
-                myst_root=root,
+                myst_root=root_json,
                 item_line=doc.item_line,
                 item_file=doc.item_file,
                 logo=meta.get("logo", None),
@@ -670,7 +705,6 @@ class HtmlRenderer:
                 module=module,
                 name=qa.split(":")[-1].split(".")[-1],
                 # TODO: next 1
-                backrefs=backrefs_,
                 parts_mods=parts.get(module, []),
                 parts=list(parts.items()),
                 parts_links=parts_links,
@@ -773,7 +807,11 @@ class HtmlRenderer:
         assert y_ == ref_map
         assert version is not None
 
-        siblings = compute_siblings_II(ref, known_refs)  # type: ignore
+        siblings = compute_siblings_II(ref, known_refs)
+
+        url_sib: OrderedDict[str, list[tuple[str, str]]] = OrderedDict()
+        for k, v in siblings.items():
+            url_sib[k] = [(self.resolver.must_resolve(ref), name) for ref, name in v]
 
         # End computing siblings.
         if True:  # handle if thing don't exists.
@@ -797,7 +835,7 @@ class HtmlRenderer:
                 template=template,
                 doc=doc_blob,
                 qa=ref,
-                parts=siblings,
+                parts=url_sib,
                 parts_links=parts_links,
                 backrefs=backrefs,
                 graph=json_str,
@@ -833,6 +871,11 @@ class HtmlRenderer:
                     known_refs=known_refs,
                     ref_map=ref_map,
                 )
+                url_sib: OrderedDict[str, list[tuple[str, str]]] = OrderedDict()
+                for k, v in siblings.items():
+                    url_sib[k] = [
+                        (self.resolver.must_resolve(ref), name) for ref, name in v
+                    ]
                 backward_r = [RefInfo(*x) for x in backward]
                 if graph:
                     data = self.compute_graph(set(backward), set(forward), key)
@@ -845,7 +888,7 @@ class HtmlRenderer:
                     template=template,
                     doc=doc_blob,
                     qa=qa,
-                    parts=siblings,
+                    parts=url_sib,
                     parts_links=parts_links,
                     backrefs=backward_r,
                     graph=json_str,
@@ -999,6 +1042,7 @@ class HtmlRenderer:
             meta=meta,
             logo=logo,
             module=module,
+            # TODO: here
             parts_mods=parts.get(module, []),
             parts=list(parts.items()),
             version=version,
@@ -1125,6 +1169,8 @@ class Resolver:
 
     extension: str
 
+    _cache: Dict[RefInfo, Tuple[bool, Optional[str]]] = {}
+
     def __init__(self, store, prefix: str, extension: str) -> None:
         """
         Given a RefInfo to an object, resolve it to a full http-link
@@ -1175,6 +1221,10 @@ class Resolver:
             If exists, URL where target document can be found
 
         """
+
+        if info in self._cache:
+            return self._cache[info]
+
         module, version_number, kind, path = info
         if kind == "api":
             kind = "module"
@@ -1192,6 +1242,7 @@ class Resolver:
         #
         #     pr/*
         if kind == "?":
+            self._cache[info] = (False, None)
             return False, None
         sgi = self.store.glob(query_ref)
         if sgi:
@@ -1200,10 +1251,12 @@ class Resolver:
                 sgi,
             )
             exists, url = self._resolve(query_ref)
+            self._cache[info] = (exists, url)
             return exists, url
 
         # we may want to find older versions.
 
+        self._cache[info] = (False, None)
         return False, None
 
     def resolve(self, info: RefInfo) -> Optional[str]:
@@ -1211,6 +1264,14 @@ class Resolver:
         # TODO: this is moslty used to render navigation we should make sure that
         # links are resolved and exists before rendering.
         # assert exists, f"{info=} doe not exists"
+        return url
+
+    def must_resolve(self, info: RefInfo) -> str:
+        exists, url = self.exists_resolve(info)
+        if not exists:
+            return "??"
+        assert exists, info
+        assert url is not None
         return url
 
     def _resolve(self, info) -> Tuple[bool, str]:
