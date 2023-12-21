@@ -5,6 +5,15 @@
     {%- endfor %}
 {%- endmacro %}
 
+
+
+{% macro render_myst_json(json) -%}
+    {% set key = uuid() %}
+    <div style='border: solid thin cyan' id="{{ key }}"></div>
+    <script>
+      render("{{ key }}", {"type": "root", "children":[{{ json|safe }}]})
+    </script>
+{%- endmacro %}
 {% macro render_myst(obj) -%}
     {% set astJson = obj.to_dict() %}
     {% set key = uuid() %}

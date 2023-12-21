@@ -4,12 +4,12 @@
 <div class='article'>
 
 
-{% from 'macros.tpl.j2' import render_paragraph, example, render_myst, render_II with context %}
+{% from 'macros.tpl.j2' import render_paragraph, example, render_myst_json, render_II with context %}
 {% from 'graph.tpl.j2' import d3script with context%}
 
 
 
-{{render_myst(myst_root)}}
+{{render_myst_json(myst_root)}}
 
 
 {% if backrefs[0] or backrefs[1] %}
