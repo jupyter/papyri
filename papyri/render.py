@@ -379,9 +379,12 @@ class HtmlRenderer:
         Endpoint that  look for all nodes of a specific type in all
         the known pages and render them.
         """
+        _module: Optional[str]
         if module == "*":
-            module = None
-        items = list(self.store.glob((module, None, None, None)))
+            _module = None
+        else:
+            _module = module
+        items = list(self.store.glob((_module, None, None, None)))
 
         visitor = TreeVisitor([getattr(take2, node_name)])
         acc = []
@@ -450,29 +453,35 @@ class HtmlRenderer:
 
     async def gallery(self, package: str, version: str, ext=""):
         # TODO FIX
+        _package: Optional[str]
+        _version: Optional[str]
         if ":" in package:
-            package, _ = package.split(":")
-        if package == version == "*":
-            package = version = None
+            _package, _ = package.split(":")
+        else:
+            _package = package
+        _version = version
+        if _package == "*" and _version == "*":
+            _package = None
+            _version = None
 
         figmap = defaultdict(lambda: [])
         assert isinstance(self.store, GraphStore)
-        if package is not None:
+        if _package is not None:
             meta = encoder.decode(
-                self.store.get_meta(Key(package, version, None, None))
+                self.store.get_meta(Key(_package, _version, None, None))
             )
         else:
             meta = {"logo": None}
         logo = meta["logo"]
-        res = self.store.glob((package, version, "assets", None))
-        backrefs = set()
+        res = self.store.glob((_package, _version, "assets", None))
+        backrefs: set[tuple[str, str, str, str]] = set()
         for key in res:
             brs = {tuple(x) for x in self.store.get_backref(key)}
             backrefs = backrefs.union(brs)
 
-        for key in backrefs:
-            data = encoder.decode(self.store.get(Key(*key)))
-            if "examples" in key:
+        for key2 in backrefs:
+            data = encoder.decode(self.store.get(Key(*key2)))
+            if "examples" in key2:
                 continue
             # TODO: examples can actuallly be just Sections.
             assert isinstance(data, IngestedBlobs)
@@ -481,14 +490,14 @@ class HtmlRenderer:
             for k in [
                 u.value for u in i.example_section_data if u.__class__.__name__ == "Fig"
             ]:
-                package, v, kind, _path = key
+                package, v, kind, _path = key2
                 # package, filename, link
                 impath = f"{self.prefix}{k.module}/{k.version}/img/{k.path}"
                 link = f"{self.prefix}/{package}/{v}/api/{_path}"
                 # figmap.append((impath, link, name)
                 figmap[package].append((impath, link, _path))
 
-        glist = self.store.glob((package, version, "examples", None))
+        glist = self.store.glob((package, _version, "examples", None))
         for target_key in glist:
             section = encoder.decode(self.store.get(target_key))
 
@@ -508,7 +517,7 @@ class HtmlRenderer:
 
         doc = D()
         pap_keys = self.store.glob((None, None, "meta", "papyri.cbor"))
-        parts = {package: []}
+        parts: Any = {package: []}
         for pk in pap_keys:
             mod, ver, kind, identifier = pk
             parts[package].append((RefInfo(mod, ver, "api", mod), mod))
@@ -520,7 +529,7 @@ class HtmlRenderer:
             module=package,
             parts_mods=parts.get(package, []),
             parts=list(parts.items()),
-            version=version,
+            version=_version,
             parts_links=defaultdict(lambda: ""),
             doc=doc,
         )
@@ -1197,7 +1206,7 @@ class Resolver:
 
         return False, None
 
-    def resolve(self, info) -> str:
+    def resolve(self, info: RefInfo) -> Optional[str]:
         exists, url = self.exists_resolve(info)
         # TODO: this is moslty used to render navigation we should make sure that
         # links are resolved and exists before rendering.
