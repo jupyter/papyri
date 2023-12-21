@@ -35,6 +35,9 @@ from .crosslink import IngestedBlobs, find_all_refs
 from .graphstore import GraphStore, Key
 from .myst_ast import (
     MLink,
+    MList,
+    MListItem,
+    MRoot,
     MText,
     MHeading,
     MParagraph,
@@ -65,12 +68,14 @@ log = logging.getLogger("papyri")
 CSS_DATA = HtmlFormatter(style="pastie").get_style_defs(".highlight")
 
 
-def group_backrefs(
-    backrefs: List[RefInfo], LR: "LinkReifier"
-) -> Dict[str, List[MLink]]:
+def backrefs_to_myst(backrefs: List[RefInfo], LR: "LinkReifier") -> List[Any]:
     """
-    Take a list of backreferences and group them by the module they are comming from
+    Take a list of backreferences and group them by the module they are comming from,
+    then turn this into a myst list.
     """
+
+    if not backrefs:
+        return []
 
     group = defaultdict(lambda: [])
     for ref in backrefs:
@@ -82,7 +87,15 @@ def group_backrefs(
         [link] = LR.replace_RefInfo(ref)
         assert isinstance(link, MLink), link
         group[mod].append(link)
-    return group
+
+    children: Any = [MHeading(children=[MText("Backreferences")], depth=3)]
+    for mod, links in sorted(group.items()):
+        children.append(MHeading(children=[MText(f"From {mod}")], depth=4))
+        lchild = []
+        for link in links:
+            lchild.append(MListItem(children=[LR.visit(link)], spread=False))
+        children.append(MList(children=lchild, ordered=False, start=1, spread=False))
+    return children
 
 
 def minify(s: str) -> str:
@@ -655,14 +668,17 @@ class HtmlRenderer:
         # Here if we have too many references we group them on where they come from.
         assert not hasattr(doc, "logo")
 
-        backrefs_ = group_backrefs(backrefs, self.LR)
+        mback = backrefs_to_myst(backrefs, self.LR)
 
-        root = json.dumps(self._myst_root(doc).to_dict(), indent=2)
+        root = self._myst_root(doc)
+        root.children.extend(mback)
+
+        root_json = json.dumps(root.to_dict(), indent=2)
         try:
             module = qa.split(".")[0]
             return template.render(
                 current_type=current_type,
-                myst_root=root,
+                myst_root=root_json,
                 item_line=doc.item_line,
                 item_file=doc.item_file,
                 logo=meta.get("logo", None),
@@ -670,7 +686,6 @@ class HtmlRenderer:
                 module=module,
                 name=qa.split(":")[-1].split(".")[-1],
                 # TODO: next 1
-                backrefs=backrefs_,
                 parts_mods=parts.get(module, []),
                 parts=list(parts.items()),
                 parts_links=parts_links,

@@ -12,24 +12,6 @@
 {{render_myst_json(myst_root)}}
 
 
-{% if backrefs %}
-    <h3 id='section-backrefs'>Back References</h3>
-    <p>The following pages refer to to this document either explicitly or contain code examples using this.</p>
-
-
-   {% for k,v in backrefs.items() %}
-        <h4>{{k}}</h4>
-        <details>
-            <summary>{{v | length}} Elements</summary>
-            <dl>
-            {% for r in v %}
-                <dd>{{ render_II(r) -}}</dd>
-            {% endfor %}
-            </dl>
-        </details>
-    {% endfor %}
-{% endif %}
-
 {% if graph %}
 <h3>Local connectivity graph</h3>
 <p>Hover to see nodes names; edges to Self not shown, Caped at 50 nodes.</p>
