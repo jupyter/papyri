@@ -102,9 +102,6 @@ Here are a couple of function that are of interest to explore what papyri can do
 `matplotlib.colors`
     contain a reference via ``.. _palettable: value`` and autolink ``paletable_``.
 
-`numpy.npv`
-    hase warning sections.
-
 `scipy.signal.ltisys.bode`
     contains multiple figure
 
