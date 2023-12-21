@@ -871,6 +871,11 @@ class HtmlRenderer:
                     known_refs=known_refs,
                     ref_map=ref_map,
                 )
+                url_sib: OrderedDict[str, list[tuple[str, str]]] = OrderedDict()
+                for k, v in siblings.items():
+                    url_sib[k] = [
+                        (self.resolver.must_resolve(ref), name) for ref, name in v
+                    ]
                 backward_r = [RefInfo(*x) for x in backward]
                 if graph:
                     data = self.compute_graph(set(backward), set(forward), key)
@@ -883,7 +888,7 @@ class HtmlRenderer:
                     template=template,
                     doc=doc_blob,
                     qa=qa,
-                    parts=siblings,
+                    parts=url_sib,
                     parts_links=parts_links,
                     backrefs=backward_r,
                     graph=json_str,
@@ -1164,6 +1169,8 @@ class Resolver:
 
     extension: str
 
+    _cache: Dict[RefInfo, Tuple[bool, Optional[str]]] = {}
+
     def __init__(self, store, prefix: str, extension: str) -> None:
         """
         Given a RefInfo to an object, resolve it to a full http-link
@@ -1214,6 +1221,10 @@ class Resolver:
             If exists, URL where target document can be found
 
         """
+
+        if info in self._cache:
+            return self._cache[info]
+
         module, version_number, kind, path = info
         if kind == "api":
             kind = "module"
@@ -1231,6 +1242,7 @@ class Resolver:
         #
         #     pr/*
         if kind == "?":
+            self._cache[info] = (False, None)
             return False, None
         sgi = self.store.glob(query_ref)
         if sgi:
@@ -1239,10 +1251,12 @@ class Resolver:
                 sgi,
             )
             exists, url = self._resolve(query_ref)
+            self._cache[info] = (exists, url)
             return exists, url
 
         # we may want to find older versions.
 
+        self._cache[info] = (False, None)
         return False, None
 
     def resolve(self, info: RefInfo) -> Optional[str]:
