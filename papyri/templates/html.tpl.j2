@@ -12,13 +12,12 @@
 {{render_myst_json(myst_root)}}
 
 
-{% if backrefs[0] or backrefs[1] %}
+{% if backrefs %}
     <h3 id='section-backrefs'>Back References</h3>
     <p>The following pages refer to to this document either explicitly or contain code examples using this.</p>
 
 
-    {% if backrefs[1] is not none %}
-        {% for k,v in backrefs[1].items() %}
+   {% for k,v in backrefs.items() %}
         <h4>{{k}}</h4>
         <details>
             <summary>{{v | length}} Elements</summary>
@@ -29,7 +28,6 @@
             </dl>
         </details>
     {% endfor %}
-    {% endif%}
 {% endif %}
 
 {% if graph %}

@@ -420,7 +420,7 @@ class HtmlRenderer:
         return self.env.get_template("html.tpl.j2").render(
             graph=None,
             # TODO: next 2
-            backrefs=[[], []],
+            backrefs=[],
             module="*",
             doc=doc,
             parts=list({"*": []}.items()),
@@ -655,7 +655,7 @@ class HtmlRenderer:
         # Here if we have too many references we group them on where they come from.
         assert not hasattr(doc, "logo")
 
-        backrefs_ = (None, group_backrefs(backrefs, self.LR))
+        backrefs_ = group_backrefs(backrefs, self.LR)
 
         root = json.dumps(self._myst_root(doc).to_dict(), indent=2)
         try:
