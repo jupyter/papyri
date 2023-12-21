@@ -607,34 +607,34 @@ class DirectiveVisiter(TreeReplacer):
         for line in content.splitlines():
             line = line.strip()
             if line == "self":
-                # TODO
+                # TODO in toctree one line can refer to self
                 continue
             if "<" in line and line.endswith(">"):
-                title, link = line[:-1].split("<")
+                title, url = line[:-1].split("<")
                 title = title.strip()
-                assert "<" not in link
-                toc.append([title, link])
-                l = Link(
+                assert "<" not in url
+                toc.append([title, url])
+                link = Link(
                     title,
-                    reference=RefInfo(module="", version="", kind="?", path=link),
+                    reference=RefInfo(module="", version="", kind="?", path=url),
                     kind="exists",
                     exists=True,
                     anchor=None,
                 )
-                RESOLVER.add_reference(l, link)
-                lls.append(l)
+                RESOLVER.add_reference(link, url)
+                lls.append(link)
             else:
                 assert "<" not in line
                 toc.append([None, line])
-                l = Link(
+                link = Link(
                     line,
                     reference=RefInfo(module="", version="", kind="?", path=line),
                     kind="exists",
                     exists=True,
                     anchor=None,
                 )
-                RESOLVER.add_reference(l, line)
-                lls.append(l)
+                RESOLVER.add_reference(link, line)
+                lls.append(link)
 
         self._tocs.append(toc)
 
@@ -660,7 +660,7 @@ class DirectiveVisiter(TreeReplacer):
         return [myst_directive]
 
     def replace_BlockDirective(self, block_directive: MMystDirective):
-        assert False, "we shoudl never reach there"
+        assert False, "we should never reach there"
 
     def _resolve(self, loc, text):
         """
