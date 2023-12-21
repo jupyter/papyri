@@ -657,7 +657,7 @@ class HtmlRenderer:
 
         backrefs_ = (None, group_backrefs(backrefs, self.LR))
 
-        root = self._myst_root(doc)
+        root = json.dumps(self._myst_root(doc).to_dict(), indent=2)
         try:
             module = qa.split(".")[0]
             return template.render(
