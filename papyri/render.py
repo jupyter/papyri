@@ -134,9 +134,25 @@ def unreachable(*obj):
 
 
 def compute_siblings_II(
-    ref: str, family: Set[RefInfo]
+    ref: str, family: frozenset[RefInfo]
 ) -> Dict[str, List[Tuple[RefInfo, str]]]:
-    """ """
+    """
+    Compute the full tree of siblings for all the items.
+
+
+    Dictionary of the type:
+
+    numpy:
+
+        [(RefFor numpy.array, "array"),(RefFor sin, "sin"),....]
+
+    core:
+        [(RefFor numpy.core.masked_array, "masked_array", ...)
+    where:
+        ...
+
+
+    """
     assert isinstance(ref, str)
 
     module_versions = defaultdict(lambda: set())
@@ -145,7 +161,9 @@ def compute_siblings_II(
 
     module_versions_max = {k: max(v) for k, v in module_versions.items()}  # type: ignore [type-var]
 
-    family = {f for f in family if f.version == module_versions_max[f.module]}
+    family = frozenset(
+        {f for f in family if f.version == module_versions_max[f.module]}
+    )
 
     parts = ref.split(".") + ["+"]
     siblings = OrderedDict()
@@ -541,6 +559,7 @@ class HtmlRenderer:
             figmap=figmap,
             module=package,
             parts_mods=parts.get(package, []),
+            # TODO: here
             parts=list(parts.items()),
             version=_version,
             parts_links=defaultdict(lambda: ""),
@@ -631,7 +650,7 @@ class HtmlRenderer:
         *,
         current_type: str,
         backrefs: List[RefInfo],
-        parts: Dict[str, List[Tuple[RefInfo, str]]] = dict(),
+        parts: Dict[str, List[Tuple[str, str]]] = dict(),
         parts_links=(),
         graph: str = "{}",
         meta: dict,
@@ -788,7 +807,11 @@ class HtmlRenderer:
         assert y_ == ref_map
         assert version is not None
 
-        siblings = compute_siblings_II(ref, known_refs)  # type: ignore
+        siblings = compute_siblings_II(ref, known_refs)
+
+        url_sib: OrderedDict[str, list[tuple[str, str]]] = OrderedDict()
+        for k, v in siblings.items():
+            url_sib[k] = [(self.resolver.must_resolve(ref), name) for ref, name in v]
 
         # End computing siblings.
         if True:  # handle if thing don't exists.
@@ -812,7 +835,7 @@ class HtmlRenderer:
                 template=template,
                 doc=doc_blob,
                 qa=ref,
-                parts=siblings,
+                parts=url_sib,
                 parts_links=parts_links,
                 backrefs=backrefs,
                 graph=json_str,
@@ -1014,6 +1037,7 @@ class HtmlRenderer:
             meta=meta,
             logo=logo,
             module=module,
+            # TODO: here
             parts_mods=parts.get(module, []),
             parts=list(parts.items()),
             version=version,
@@ -1226,6 +1250,14 @@ class Resolver:
         # TODO: this is moslty used to render navigation we should make sure that
         # links are resolved and exists before rendering.
         # assert exists, f"{info=} doe not exists"
+        return url
+
+    def must_resolve(self, info: RefInfo) -> str:
+        exists, url = self.exists_resolve(info)
+        if not exists:
+            return "??"
+        assert exists, info
+        assert url is not None
         return url
 
     def _resolve(self, info) -> Tuple[bool, str]:

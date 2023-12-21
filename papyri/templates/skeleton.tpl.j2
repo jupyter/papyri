@@ -6,8 +6,8 @@
                 <div class="dropdown">
                 <a href={{module}}>{{module}}</a>&nbsp;/&nbsp;
                     <div class="dropdown-content">
-                            {% for link,name in parts_mods -%}
-                                <a href="{{url(link)}}">{{link.path}}</a>
+                            {% for url,name in parts_mods -%}
+                                <a href="{{url}}">{{name}}</a>
                             {% endfor %}
                      </div>
                 </div>
@@ -40,8 +40,8 @@
                         {% endif %}
                         {% if not loop.first %}
                             <div class="dropdown-content">
-                            {% for link,name in links -%}
-                                <a href="{{url(link)}}">{{name}}</a>
+                            {% for url,name in links -%}
+                                <a href="{{url}}">{{name}}</a>
                             {% endfor %}
                             </div>
                         {% endif %}
