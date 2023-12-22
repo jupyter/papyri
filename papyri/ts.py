@@ -1,4 +1,5 @@
 import logging
+import itertools
 from pathlib import Path
 from textwrap import dedent, indent
 from typing import List
@@ -88,7 +89,7 @@ class Node:
         if self.node.children:
             for n in self.node.children:
                 if n.start_byte != current_byte:
-                    # value = self.bytes[current_byte:n.start_byte]
+                    # value = self._bytes[current_byte:n.start_byte]
                     # assert value == b' ', (value, b' ', n)
                     new_nodes.append(
                         Whitespace(
@@ -141,7 +142,7 @@ class Node:
 
     @property
     def bytes(self):
-        return self.node.bytes
+        return self.node._bytes
 
     def __init__(self, node, *, _with_whitespace=True):
         self.node = node
@@ -191,8 +192,10 @@ class TSVisitor:
 
     """
 
+    _bytes: bytes
+
     def __init__(self, bytes, root, qa):
-        self.bytes = bytes
+        self._bytes = bytes
         self.root = root
         assert qa is not None
         self.qa = qa
@@ -200,8 +203,8 @@ class TSVisitor:
         self._section_levels = {}
         self._targets = []
 
-    def as_text(self, node):
-        return self.bytes[node.start_byte : node.end_byte].decode()
+    def as_text(self, node) -> str:
+        return self._bytes[node.start_byte : node.end_byte].decode()
 
     def visit_document(self, node):
         new_node = node.without_whitespace()
@@ -376,31 +379,33 @@ class TSVisitor:
         return self.visit_text(node)
 
     def visit_text(self, node):
-        text = self.bytes[node.start_byte : node.end_byte].decode()
+        text = self.as_text(node)
         assert not text.startswith(":func:"), breakpoint()
         t = MText(text)
-        t.start_byte = node.start_byte
-        t.end_byte = node.end_byte
         return [t]
 
     def visit_whitespace(self, node):
-        content = self.bytes[node.start_byte : node.end_byte].decode()
-        # assert set(content) == {' '}, repr(content)
+        """
+        Here whitespace seem to mean both spaces and newline.
+
+        I believe we need to remove the newline, but there is some questions as
+        to whether we should replace them with just space, or suppress them if
+        preceded by spaced.
+        """
+        content = self.as_text(node)
+        # assert set(content) in ({" "}, {"\n"}), repr(content)
         t = MText(" " * len(content))
-        t.start_byte = node.start_byte
-        t.end_byte = node.end_byte
-        # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
         return [t]
 
     def visit_literal(self, node):
-        text = self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()
+        text = self.as_text(node)[2:-2]
         assert "\n\n" not in text
         t = MInlineCode(text.replace("\n", " "))
         # print(' '*self.depth*4, t)
         return [t]
 
     def visit_literal_block(self, node):
-        datas = self.bytes[node.start_byte : node.end_byte].decode()
+        datas = self.as_text(node)
         first_offset = node.start_point[1]
         datas = " " * first_offset + datas
         b = MCode(dedent(datas))
@@ -419,8 +424,6 @@ class TSVisitor:
         return [MList(ordered=False, start=1, spread=False, children=myst_acc)]
 
     def visit_section(self, node):
-        # print(' '*self.depth*4, '->', node)
-        # print(' '*self.depth*4, '::',self.bytes[node.start_byte: node.end_byte].decode())
         if node.children[0].type == "adornment":
             assert node.children[1].type == "title"
             tc = node.children[1]
@@ -514,7 +517,7 @@ class TSVisitor:
         return []
 
     def visit_field_list(self, node) -> List[FieldList]:
-        acc = []
+        acc: List[str] = []
 
         lens = {len(f.children) for f in node.children}
         if lens == {3}:  # need test here don't know why it was here.
@@ -527,9 +530,10 @@ class TSVisitor:
                 assert self.as_text(col2) == ":", col2
                 acc.append(self.as_text(name))
             return []
+            # TODO: why do we have unreachable here
             return [Options(acc)]
-
-        elif lens == {4}:
+        acc2: List[FieldListItem] = []
+        if lens == {4}:
             for list_item in node.children:
                 assert list_item.type == "field"
                 _, name, _, body = list_item.children
@@ -537,10 +541,10 @@ class TSVisitor:
                 # [_.to_json()for _ in a]
                 # [_.to_json() for _ in b]
                 f = FieldListItem(a, b)
-                acc.append(f)
-            return [FieldList(acc)]
-        else:
-            raise ValueError("mixed len...")
+                acc2.append(f)
+            return [FieldList(acc2)]
+
+        raise ValueError("mixed len...")
 
     def visit_enumerated_list(self, node):
         myst_acc = []
@@ -617,14 +621,12 @@ class TSVisitor:
             raise ValueError(f"Wrong number of children: {len(node.children)}")
 
         if _role.end_point != _2.start_point and not is_substitution_definition:
-            block_data = self.bytes[node.start_byte : node.end_byte].decode()
+            block_data = self.as_text(node)
             raise errors.SpaceAfterBlockDirectiveError(
                 f"space present in {block_data!r}"
             )
 
-        role = self.bytes[_role.start_byte : _role.end_byte].decode()
-
-        import itertools
+        role = self.as_text(_role)
 
         groups = itertools.groupby(body_children, lambda x: x.type)
         groups = [(k, list(v)) for k, v in groups]
@@ -696,46 +698,38 @@ class TSVisitor:
 
     def visit_footnote_reference(self, node):
         # TODO
-        # assert False, self.bytes[node.start_byte : node.end_byte].decode()
+        # assert False, self.as_text(node)
         return []
 
     def visit_emphasis(self, node):
         # TODO
-        return [
-            MEmphasis(
-                [MText(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode())]
-            )
-        ]
+        return [MEmphasis([MText(self.as_text(node)[1:-1])])]
 
     def visit_substitution_definition(self, node):
         assert len(node.children) == 3
         _dotdot, sub, directive = node.children
-        assert self.bytes[_dotdot.start_byte : _dotdot.end_byte].decode() == ".."
+        assert self.as_text(_dotdot) == ".."
         assert sub.type == "substitution"
         assert directive.type == "directive"
         return [
             SubstitutionDef(
-                value=self.bytes[sub.start_byte : sub.end_byte].decode(),
+                value=self.as_text(sub),
                 children=self.visit_directive(directive),
             )
         ]
 
     def visit_comment(self, node):
         # TODO
-        return [MComment(self.bytes[node.start_byte : node.end_byte].decode())]
+        return [MComment(self.as_text(node))]
         # raise VisitCommentNotImplementedError()
 
     def visit_strong(self, node):
-        return [
-            MStrong(
-                [MText(self.bytes[node.start_byte + 2 : node.end_byte - 2].decode())]
-            )
-        ]
+        return [MStrong([MText(self.as_text(node)[2:-2])])]
 
     def visit_footnote(self, node):
         # TODO
         # that is actually used for references
-        # assert False, self.bytes[node.start_byte : node.end_byte].decode()
+        # assert False, self.as_text(node)
         return [Unimplemented("footnote", self.as_text(node))]
 
     def visit_ERROR(self, node):
