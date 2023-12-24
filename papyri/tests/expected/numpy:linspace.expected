@@ -12,13 +12,13 @@ Returns num evenly spaced samples, calculated over the interval [`start`, stop
 The endpoint of the interval can optionally be excluded.
 
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ (i): versionchanged 1.16.0                                                   ┃
+┃ |?|: versionchanged 1.16.0                                                   ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
 │ Non-scalar start and stop are now supported.                                 │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ (i): versionchanged 1.20.0                                                   ┃
+┃ |?|: versionchanged 1.20.0                                                   ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
 │ Values are rounded towards -inf instead of 0 when an integer dtype is        │
 │ specified. The old behavior can still be obtained with np.linspace(start,    │
@@ -52,7 +52,7 @@ dtype : dtype, optional
   `float` is chosen even if the arguments would produce an array of integers.
 
   ┌────────────────────────────────────────────────────────────────────────────┐
-  │ (i): versionadded 1.9.0                                                    │
+  │ |?|: versionadded 1.9.0                                                    │
   └────────────────────────────────────────────────────────────────────────────┘
 axis : int, optional
   The axis in the result to store the samples.  Relevant only if start or stop
@@ -60,7 +60,7 @@ axis : int, optional
   inserted at the beginning. Use -1 to get an axis at the end.
 
   ┌────────────────────────────────────────────────────────────────────────────┐
-  │ (i): versionadded 1.16.0                                                   │
+  │ |?|: versionadded 1.16.0                                                   │
   └────────────────────────────────────────────────────────────────────────────┘
 ## Returns
 
