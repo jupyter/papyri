@@ -420,6 +420,7 @@ class Config:
     expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
     early_error: bool = True
     fail_unseen_error: bool = False
+    directives: Dict[str, str] = dataclasses.field(default_factory=lambda: {})
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -1398,10 +1399,12 @@ class Gen:
                         local_refs=set(),
                         aliases={},
                         version=self._meta["version"],
+                        config=self.config.directives,
                     )
                     blob.arbitrary = [dv.visit(s) for s in data]
                 except Exception as e:
-                    raise type(e)(f"Error in {p!r}") from e
+                    e.add_note(f"Error in {p!r}")
+                    raise
                 # if dv._tocs:
                 trees[key] = dv._tocs
 
@@ -1854,6 +1857,7 @@ class Gen:
                     local_refs=frozenset(),
                     aliases={},
                     version=self.version,
+                    config=self.config.directives,
                 )
                 s2 = dv.visit(s)
 
@@ -2181,9 +2185,18 @@ class Gen:
                 assert isinstance(lr1, str)
             # lr: FrozenSet[str] = frozenset(flat(_local_refs))
             lr: FrozenSet[str] = frozenset(_local_refs)
-            dv = DVR(qa, known_refs, local_refs=lr, aliases={}, version=self.version)
+            dv = DVR(
+                qa,
+                known_refs,
+                local_refs=lr,
+                aliases={},
+                version=self.version,
+                config=self.config.directives,
+            )
             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
             doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
+            doc_blob._content = {k: dv.visit(v) for (k, v) in doc_blob._content.items()}
+            p = doc_blob._content["Extended Summary"]
 
             for section in ["Extended Summary", "Summary", "Notes"] + sections_:
                 if section in doc_blob.content:
@@ -2214,13 +2227,15 @@ class Gen:
 
             # end processing
             assert not isinstance(doc_blob._content, str), doc_blob._content
+            p = doc_blob._content["Parameters"]
+            p.to_dict()
+            doc_blob.to_dict()
             try:
                 doc_blob.validate()
             except Exception as e:
                 e.add_note(f"Error in {qa}")
                 raise
             self.log.debug(doc_blob.signature)
-            self.log.debug(doc_blob.to_dict())
             self.put(qa, doc_blob)
             if figs:
                 self.log.debug("Found %s figures", len(figs))

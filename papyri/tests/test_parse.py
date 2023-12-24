@@ -57,8 +57,8 @@ def test_parse_directive_body():
     directive1 = Node(tree1.root_node).without_whitespace()
     directive2 = Node(tree2.root_node).without_whitespace()
 
-    tsv1 = TSVisitor(text1, directive1, "test_parse_directive_body")
-    tsv2 = TSVisitor(text2, directive2, "test_parse_directive_body")
+    tsv1 = TSVisitor(text1, "test_parse_directive_body")
+    tsv2 = TSVisitor(text2, "test_parse_directive_body")
 
     items1 = tsv1.visit(directive1)
     items2 = tsv2.visit(directive2)
@@ -70,7 +70,10 @@ def test_parse_directive_body():
         items1[0].value
         == "This directive declares a title and content in a block separated from\nthe definition by an empty new line."
     )
-    assert items1[0].children == []
+    assert (
+        " ".join([i.value for i in items1[0].children])
+        == "This directive declares a title and content in a block separated from the definition by an empty new line."
+    )
 
     assert items2[0].name == "directive"
     assert items2[0].args == "Directive title"
@@ -79,7 +82,10 @@ def test_parse_directive_body():
         items2[0].value
         == "This directive declares a title and content not separated by an empty\nnewline."
     )
-    assert items2[0].children == []
+    assert (
+        " ".join([i.value for i in items2[0].children])
+        == "This directive declares a title and content not separated by an empty newline."
+    )
 
 
 def test_parse_warning_directive():
@@ -95,7 +101,7 @@ def test_parse_warning_directive():
     text = data.strip("\n").encode()
     tree = parser.parse(text)
     directive = Node(tree.root_node)
-    tsv = TSVisitor(text, directive, "test_parse_directive_body")
+    tsv = TSVisitor(text, "test_parse_directive_body")
     new_node = directive.without_whitespace()
     items = tsv.visit(new_node)
 

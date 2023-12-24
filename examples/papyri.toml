@@ -7,6 +7,9 @@ docs_path = "~/dev/papyri/docs"
 exec = true
 exec_failure = 'raise'
 exclude= ["papyri.utils:FullQual","papyri.utils:Cannonical" ]
+[global.directives]
+mydirective='papyri.examples:_mydirective_handler'
+ 
 
 [meta]
 github_slug = 'jupyter/papyri'

@@ -10,7 +10,6 @@ from rich.segment import Segment
 from typing import Any, Optional
 from rich.console import Console, ConsoleOptions, RenderResult, Group
 from rich.panel import Panel
-from rich.box import Box
 from rich.padding import Padding
 from rich import print
 import rich
@@ -208,7 +207,7 @@ class RichVisitor:
         SYMBOL = {"warning": "/!\\", "deprecated": "[x]", "note": "(i)"}
         title, *other = node.children
         table: Table
-        color = COLOR.get(node.kind, "purple")
+        color = COLOR.get(node.kind, "bright_magenta")
         symbol = SYMBOL.get(node.kind, "|?|")
         if other:
             table = Table(border_style=color)
@@ -265,7 +264,11 @@ class RichVisitor:
         ]
 
     def visit_MCode(self, node):
-        return [pad(Panel(node.value, expand=True, title="Code", highlight=True))]
+        from rich.markup import escape
+
+        return [
+            pad(Panel(escape(node.value), expand=True, title="Code", highlight=True))
+        ]
 
     def visit_MBlockquote(self, node):
         sub = self.generic_visit(node.children)
@@ -291,11 +294,11 @@ class RichVisitor:
         return self.visit_unknown(node)
 
     def visit_MStrong(self, node):
-        return self.visit_unknown(node)
+        return (
+            [RToken("[bold]")] + self.generic_visit(node.children) + [RToken("[/bold]")]
+        )
 
     def visit_MComment(self, node):
-        return self.visit_unknown(node)
-
         return self.visit_unknown(node)
 
     def visit_MThematicBreak(self, node: MThematicBreak):
@@ -303,32 +306,3 @@ class RichVisitor:
 
     def visit_MUnimpl(self, node):
         return self.generic_visit(node.children)
-
-
-xbox = Box(
-    """
-┌─┬┐
-│ ││
-├─┼┤
-│ ││
-├─┼┤
-├─┼┤
-│ ││
-└─┴┘
-""".strip(
-        "\n"
-    )
-)
-
-
-if __name__ == "__main__":
-    print(
-        Panel(
-            Panel(
-                RTokenList.from_str(
-                    "Here is a long sentence to see if we can wrap " * 10
-                ),
-                box=xbox,
-            ),
-        )
-    )

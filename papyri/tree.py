@@ -21,20 +21,24 @@ from .myst_ast import (
     MMystDirective,
     MLink,
     MText,
-    MAdmonition,
-    MAdmonitionTitle,
     MList,
     MListItem,
-    MMath,
     MInlineMath,
     MInlineCode,
     MCode,
     MParagraph,
+    UnprocessedDirective,
 )
-from .utils import full_qual, FullQual, Cannonical
+from .utils import full_qual, FullQual, Cannonical, obj_from_qualname
 from textwrap import indent
-from .ts import parse
-from .take2 import Section
+from .directives import (
+    block_math_handler,
+    note_handler,
+    versionadded_handler,
+    versionchanged_handler,
+    deprecated_handler,
+    warning_handler,
+)
 
 log = logging.getLogger("papyri")
 
@@ -324,37 +328,42 @@ class TreeReplacer:
         assert len(res) == 1, res
         return res[0]
 
+    def _call_method(self, method, node):
+        return method(node)
+
     def generic_visit(self, node) -> List[Node]:
         assert node is not None
         assert not isinstance(node, str)
-        assert isinstance(node, Node)
+        assert isinstance(node, Node), node
         try:
             name = node.__class__.__name__
             if vmethod := getattr(self, "visit_" + name, None):
-                vmethod(node)
+                res = vmethod(node)
+                assert (
+                    res is None
+                ), f"did you meant to implement replace_{name} instead of visit_{name} ?"
             if method := getattr(self, "replace_" + name, None):
                 self._replacements.update([name])
-                new_nodes = method(node)
+                new_nodes = self._call_method(method, node)
             elif name in [
                 "Code",
                 "Comment",
-                "MComment",
                 "Directive",
                 "Example",
                 "Fig",
                 "Link",
-                "Math",
-                "MMath",
+                "MCode",
+                "MComment",
+                "MInlineCode",
                 "MInlineMath",
+                "MMath",
+                "MText",
+                "MThematicBreak",
+                "Math",
                 "Options",
                 "SeeAlsoItem",
                 "SubstitutionRef",
-                "MThematicBreak",
                 "Unimplemented",
-                "MText",
-                "MCode",
-                "MInlineCode",
-                "SubstitutionDef",
             ]:
                 return [node]
             else:
@@ -395,9 +404,18 @@ class TreeReplacer:
 Handler = Callable[[str], List[Node]]
 
 DIRECTIVE_MAP: Dict[str, Dict[str, List[Handler]]] = {}
+BLOCK_DIRECTIVE_MAP: Dict[str, Dict[str, List[Handler]]] = {}
 
 
 def directive_handler(domain, role):
+    def _inner(func):
+        DIRECTIVE_MAP.setdefault(domain, {}).setdefault(role, []).append(func)
+        return func
+
+    return _inner
+
+
+def block_directive_handler(domain, role):
     def _inner(func):
         DIRECTIVE_MAP.setdefault(domain, {}).setdefault(role, []).append(func)
         return func
@@ -499,7 +517,13 @@ class DirectiveVisiter(TreeReplacer):
     """
 
     def __init__(
-        self, qa: str, known_refs: FrozenSet[RefInfo], local_refs, aliases, version
+        self,
+        qa: str,
+        known_refs: FrozenSet[RefInfo],
+        local_refs,
+        aliases,
+        version,
+        config=None,
     ):
         """
         qa: str
@@ -517,6 +541,19 @@ class DirectiveVisiter(TreeReplacer):
         assert isinstance(qa, str), qa
         assert isinstance(known_refs, (set, frozenset)), known_refs
         assert isinstance(local_refs, (set, frozenset)), local_refs
+
+        self._handlers = {
+            "math": block_math_handler,
+            "warning": warning_handler,
+            "note": note_handler,
+            "versionadded": versionadded_handler,
+            "versionchanged": versionchanged_handler,
+            "deprecated": deprecated_handler,
+        }
+
+        for k, v in config.items():
+            self._handlers[k] = obj_from_qualname(v)
+
         self.known_refs = frozenset(known_refs)
         self.local_refs = frozenset(local_refs)
         self.qa = qa
@@ -546,58 +583,10 @@ class DirectiveVisiter(TreeReplacer):
         # assert False
         return self._block_verbatim_helper("autosummary", argument, options, content)
 
-    def _math_handler(self, argument, options, content):
-        if argument and content:
-            log.info(
-                "For consistency, please use the math directive"
-                " with all the equations in the content of the directive in %r",
-                self.qa,
-            )
-            content = argument + content
-        elif argument and not content:
-            # TODO: do we want to allow that ?
-            content = argument
-        return [MMath(content)]
-
-    def _admonition_handler_x(self, name, argument, options, content):
-        assert not options
-        if content:
-            inner = parse(content.encode(), self.qa)
-            assert len(inner) == 1
-
-            assert isinstance(inner[0], Section)
-
-            return [
-                MAdmonition(
-                    [MAdmonitionTitle([MText(f"{name} {argument}")])]
-                    + inner[0].children,
-                    kind=name,
-                )
-            ]
-        else:
-            return [
-                MAdmonition(
-                    [MAdmonitionTitle([MText(f"{name} {argument}")])], kind=name
-                )
-            ]
-
-    def _versionadded_handler(self, argument, options, content):
-        return self._admonition_handler_x("versionadded", argument, options, content)
-
-    def _note_handler(self, argument, options, content):
-        return self._admonition_handler_x("note", argument, options, content)
-
-    def _code_handler(self, argument, options, content):
+    def _code_handler(
+        self, argument: str, options: Dict[str, str], content: str
+    ) -> List[MCode]:
         return [MCode(content)]
-
-    def _versionchanged_handler(self, argument, options, content):
-        return self._admonition_handler_x("versionchanged", argument, options, content)
-
-    def _deprecated_handler(self, argument, options, content):
-        return self._admonition_handler_x("deprecated", argument, options, content)
-
-    def _warning_handler(self, argument, options, content):
-        return self._admonition_handler_x("warning", argument, options, content)
 
     def _toctree_handler(self, argument, options, content):
         assert not argument
@@ -644,24 +633,40 @@ class DirectiveVisiter(TreeReplacer):
             acc.append(MListItem(False, [MParagraph([line])]))
         return [MList(ordered=False, start=1, spread=False, children=acc)]
 
+    def replace_UnprocessedDirective(self, directive: UnprocessedDirective):
+        meth = getattr(self, "_" + directive.name + "_handler", None)
+        if meth is None:
+            meth = self._handlers.get(directive.name, None)
+        if meth:
+            # TODO: we may want to recurse here on returned items.
+            res = meth(
+                directive.args,
+                directive.options,
+                directive.value,
+            )
+            assert isinstance(res, list)
+            acc = []
+            for a in res:
+                # I believe here we may want to wrap things in Paragraph  and comact words ?
+                tr = self.generic_visit(a)
+                acc.extend(tr)
+            return acc
+
+        if directive.name not in _MISSING_DIRECTIVES:
+            _MISSING_DIRECTIVES.append(directive.name)
+            log.debug("TODO: %s", directive.name)
+
+        return [MMystDirective.from_unprocessed(directive)]
+
     def replace_MMystDirective(self, myst_directive: MMystDirective):
         meth = getattr(self, "_" + myst_directive.name + "_handler", None)
         if meth:
-            # TODO: we may want to recurse here on returned items.
-            return meth(
-                myst_directive.args,
-                myst_directive.options,
-                myst_directive.value,
-            )
-
+            assert False, "shod have gone vian unprocessed"
         if myst_directive.name not in _MISSING_DIRECTIVES:
             _MISSING_DIRECTIVES.append(myst_directive.name)
             log.debug("TODO: %s", myst_directive.name)
 
         return [myst_directive]
-
-    def replace_BlockDirective(self, block_directive: MMystDirective):
-        assert False, "we should never reach there"
 
     def _resolve(self, loc, text):
         """
@@ -832,13 +837,13 @@ def _obj_from_path(parts):
 
 
 class DVR(DirectiveVisiter):
-    def visit_Section(self, sec):
-        if sec.target:
-            # print("Section has target:", sec.target)
+    def visit_Section(self, node):
+        if node.target:
+            # print("Section has target:", node.target)
             # TODO: This is wrong, we should likely change this to the current module that get visited.
             # it likely only affects narative
             RESOLVER.add_target(
-                RefInfo("papyri", "0.0.8", "docs", sec.target), sec.target
+                RefInfo("papyri", "0.0.8", "docs", node.target), node.target
             )
 
     def replace_Fig(self, fig):

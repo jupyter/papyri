@@ -169,6 +169,60 @@ empty
 
 ────────────────────────────────────────────────────────────────────────────────
 ────────────────────────────────────────────────────────────────────────────────
+## Directive
+
+Please have a look at the source to see the custom directives. The file
+example/papyri.toml also show how to register a custom callable for a custom
+directive handler
+
+  ╭─────────────────────────────────── Code ───────────────────────────────────╮
+  │ [global.directives]                                                        │
+  │ mydirective='papyri.examples:_mydirective_handler'                         │
+  ╰────────────────────────────────────────────────────────────────────────────╯
+those are the [bold]arguments[/bold], passed as a string
+
+.. custom_directive:
+    This is custom directive handler that received:
+
+args='those are the **arguments**, passed as a ``string``',
+
+options={'the': '', 'flags': '', 'and': 'Here', 'are': 'some', 'option':
+'field'},
+    value='Beyond this is the core of the directive, it will be
+stored as a raw string\nin the value of MMystDirective without the leading
+indentation. It is the\nresponsibility of the directive handler to parse the
+directive and return\ncorresponding ast nodes for further processing.'
+
+
+.. custom_directive:
+    This is custom directive handler that received:
+
+args='',
+    options={},
+    value='A second directive to play\nwith the
+indentation level with _italic_, **bold**, are not parsed.'
+
+
+Nested directives:
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ /!\: warning                                                                 ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ This warnings should contain a deprecation:                                  │
+│                                                                              │
+│ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │
+│ ┃ [x]: deprecated 0.04                                                     ┃ │
+│ ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │
+│ │ This should be deprecated                                                │ │
+│ │                                                                          │ │
+│ │ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │ │
+│ │ ┃ (i): note                                                            ┃ │ │
+│ │ ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │ │
+│ │ │ This is just an [bold]example[/bold] and is not deprecated.          │ │ │
+│ │ │                                                                      │ │ │
+│ │ └──────────────────────────────────────────────────────────────────────┘ │ │
+│ └──────────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────────┘
 # Various test cases
 
 This paragraph should contain a literal with a new line here->| |<, in the
