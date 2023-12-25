@@ -850,11 +850,11 @@ class HtmlRenderer:
 
     async def _write_api_file(
         self,
-        tree,
-        known_refs,
-        ref_map,
-        config,
-        graph,
+        tree: Any,
+        known_refs: Any,
+        ref_map: Any,
+        config: Any,
+        graph: Any,
     ):
         template = self.env.get_template("html.tpl.j2")
         gfiles = list(self.store.glob((None, None, "module", None)))
@@ -883,7 +883,7 @@ class HtmlRenderer:
                     data = {}
                 json_str = json.dumps(data)
                 meta = encoder.decode(self.store.get_meta(key))
-                data = self.render_one(
+                html: str = self.render_one(
                     current_type="API",
                     template=template,
                     doc=doc_blob,
@@ -901,9 +901,9 @@ class HtmlRenderer:
                     )
                     tfile = config.output_dir / module / version / "api" / f"{qa}.html"
                     if config.minify:
-                        tfile.write_text(minify(data))
+                        tfile.write_text(minify(html))
                     else:
-                        tfile.write_text(data)
+                        tfile.write_text(html)
 
     async def _copy_dir(self, src_dir: Path, dest_dir: Path):
         assert dest_dir.exists()

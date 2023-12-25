@@ -180,7 +180,9 @@ class IngestedBlobs(Node):
 
         local_refs = frozenset(flat(_local_refs))
 
-        visitor = PostDVR(self.qa, known_refs, local_refs, aliases, version=version)
+        visitor = PostDVR(
+            self.qa, known_refs, local_refs, aliases, version=version, config={}
+        )
         for section in ["Extended Summary", "Summary", "Notes"] + sections_:
             if section not in self.content:
                 continue
@@ -313,6 +315,7 @@ class Ingester:
                 set(),
                 aliases,
                 version=version,
+                config={},
             )
             s_code = visitor.visit(s)
             refs = list(map(lambda s: Key(*s), visitor._targets))

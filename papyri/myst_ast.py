@@ -132,6 +132,7 @@ class MListItem(Node):
             "FlowContent",
             "PhrasingContent",
             "take2.DefList",
+            "UnprocessedDirective",
         ]
     ]
 
@@ -144,6 +145,34 @@ class MMystDirective(Node):
     options: Dict[str, str]
     value: Optional[str]
     children: List[Union["FlowContent", "PhrasingContent", None]] = []
+
+    @classmethod
+    def from_unprocessed(cls, up):
+        return cls(up.name, up.args, up.options, up.value, up.children)
+
+
+class UnserializableNode(Node):
+    _dont_serialise = True
+
+    def cbor(self, encoder):
+        assert False
+
+    def to_json(self) -> bytes:
+        assert False
+
+
+class UnprocessedDirective(UnserializableNode):
+    """
+    Placeholder for yet unprocessed directives,  after they are parsed by tree-sitter,
+    But before they are dispatched through the role resolution.
+    """
+
+    name: str
+    args: Optional[str]
+    options: Dict[str, str]
+    value: Optional[str]
+    children: List[Union["FlowContent", "PhrasingContent", None]]
+    raw: str
 
 
 @register(4055)
@@ -266,6 +295,7 @@ FlowContent = Union[
     MCode,
     MParagraph,
     # MDefinition,
+    "UnprocessedDirective",
     MHeading,
     MThematicBreak,
     MBlockquote,

@@ -2,7 +2,7 @@ import logging
 import itertools
 from pathlib import Path
 from textwrap import dedent, indent
-from typing import List
+from typing import List, Any, Dict
 
 from tree_sitter import Language, Parser
 
@@ -15,7 +15,7 @@ from .myst_ast import (
     MStrong,
     MList,
     MListItem,
-    MMystDirective,
+    UnprocessedDirective,
     MComment,
     MBlockquote,
 )
@@ -193,17 +193,32 @@ class TSVisitor:
     """
 
     _bytes: bytes
+    _qa: str
+    _section_levels: Dict[str, int]
+    _targets: List[str]
 
-    def __init__(self, bytes, root, qa):
-        self._bytes = bytes
-        self.root = root
+    def __init__(self, buf: bytes, qa: str, /):
+        """
+        A tree-visitor for TreeSitter nodes to convert into Papyri/Myst nodes.
+
+        Parameters
+        ----------
+        buf: bytes
+            bytes buffer of the document  parsed by tree-sitter.
+        qa: str
+            fully qualifed name of the object for whcih we are paring the
+            documentation. This is used only in log messages, and for debugging purpose.
+        """
+        self._bytes = buf
         assert qa is not None
-        self.qa = qa
-        self.depth = 0
+        self._qa = qa
         self._section_levels = {}
         self._targets = []
 
     def as_text(self, node) -> str:
+        """
+        Utility function to extract the original text for a given node.
+        """
         return self._bytes[node.start_byte : node.end_byte].decode()
 
     def visit_document(self, node):
@@ -212,7 +227,7 @@ class TSVisitor:
         res = [x for x in items if not isinstance(x, Whitespace)]
         return res
 
-    def _compressor(self, nodes):
+    def _compressor(self, nodes) -> List[Any]:
         """
         This is currently a workaround of a tree-sitter limitations.
         List cannot have blank lines between them, so we end up with
@@ -262,11 +277,10 @@ class TSVisitor:
         return nacc
 
     def visit(self, node):
-        self.depth += 1
         acc = []
         # TODO: FIX
         if node.type == "ERROR":
-            # print(f'ERROR node: {self.as_text(c)!r}, skipping')
+            print(f"ERROR node: {self.as_text(node)!r}, skipping")
             return []
         for c in node.children:
             # c=<ts.Node directive>
@@ -284,7 +298,6 @@ class TSVisitor:
             meth = getattr(self, "visit_" + kind)
             new_children = meth(c)
             acc.extend(new_children)
-        self.depth -= 1
         acc = self._compressor(acc)
         acc = self._targetify(acc)
         return acc
@@ -363,7 +376,7 @@ class TSVisitor:
                 "This is usually due to a missing/stray backtick, or "
                 "missing escape (`\\`) on trailing charter : %r in (%s)",
                 inner_value,
-                self.qa,
+                self._qa,
             )
             log.warning("replacing ` by ' to not crash serialiser")
             inner_value = inner_value.replace("`", "'")
@@ -401,7 +414,6 @@ class TSVisitor:
         text = self.as_text(node)[2:-2]
         assert "\n\n" not in text
         t = MInlineCode(text.replace("\n", " "))
-        # print(' '*self.depth*4, t)
         return [t]
 
     def visit_literal_block(self, node):
@@ -475,8 +487,6 @@ class TSVisitor:
             self._section_levels[pre_a + post_a] = level
 
         title = self.as_text(tc)
-        # print(' '*self.depth*4, '== Section: ', title, '==')
-        # print(' '*self.depth*4, '->', node)
         return [Section([], title, level=level)]
 
     def visit_block_quote(self, node):
@@ -583,7 +593,7 @@ class TSVisitor:
         """
         Main entry point for directives.
 
-        Parses directive arguments, options and content into a MMystDirective
+        Parses directive arguments, options and content into a UnprocessedDirective
         object.
 
         Parameters
@@ -593,11 +603,29 @@ class TSVisitor:
 
         Returns
         -------
-        directive: MMystDirective
+        directive: UnprocessedDirective
+
+
+        Notes
+        -----
+
+        The way tree sitter works when parsing directive, we will get a sequence
+        of nodes of various types, thus we must iterate over them and look at
+        their types, which is efficient in term of spaces, but as convenient
+        as term of API, thus will try to disambiguate the various case we
+        encounter to form something a bit more coherent. We want to have structs
+        which all have the same fields, and the fields potentially emtpy if
+        absent.
+
+
+        Note though that some of the directive do allow to now have any
+        arguments, or option and allow the content to start just after the
+        ``::`` marker, and we will need some spacial casing/ workaround for
+        this.
 
         """
         # TODO:
-        # make it part of the type if a block directive (has, or not), a body.
+        # maybe make it part of the type if a block directive (has, or not), a body
 
         is_substitution_definition = False
 
@@ -614,22 +642,27 @@ class TSVisitor:
             assert body.type == "body"
             assert _role.type == "type"
             body_children = body.children
+            raw = self.as_text(body)
         elif len(node.children) == 3:
+            # this rarely happens, but for example, we can find ``.. toctree::`` empty directive.
             _1, _role, _2 = node.children
             body_children = []
+            raw = ""
         else:
             raise ValueError(f"Wrong number of children: {len(node.children)}")
 
+        # Sphinx / docutils a bit more lenient
         if _role.end_point != _2.start_point and not is_substitution_definition:
-            block_data = self.as_text(node)
             raise errors.SpaceAfterBlockDirectiveError(
-                f"space present in {block_data!r}"
+                f"space present in {self.as_text(node)!r}"
             )
 
         role = self.as_text(_role)
 
         groups = itertools.groupby(body_children, lambda x: x.type)
         groups = [(k, list(v)) for k, v in groups]
+        for k, _ in groups:
+            assert k in {"arguments", "content", "options"}, k
 
         if role == "warning":
             # The warning directive does not take a title argument;
@@ -652,6 +685,7 @@ class TSVisitor:
             argument = ""
             options = []
             groups = []
+            children = []
 
         else:
             if groups and groups[0][0] == "arguments":
@@ -670,10 +704,10 @@ class TSVisitor:
                 for field in opt_node.children:
                     assert field.type == "field"
                     if len(field.children) == 4:
-                        c1, name, c2, body = field.children
+                        _c1, name, _c2, body = field.children
                         options.append((self.as_text(name), self.as_text(body)))
                     elif len(field.children) == 3:
-                        c1, name, c2 = field.children
+                        _c1, name, _c2 = field.children
                         options.append((self.as_text(name), ""))
                     else:
                         assert False
@@ -687,13 +721,17 @@ class TSVisitor:
                 content = self.as_text(content_node[0])
                 padding = (content_node[0].start_point[1] - _1.start_point[1]) * " "
                 content = dedent(padding + content)
+                children = self.visit(content_node[0])
             else:
                 content = ""
+                children = []
 
         assert not groups
         # todo , we may want to see about the indentation of the content.
 
-        directive = MMystDirective(role, argument, dict(options), content)
+        directive = UnprocessedDirective(
+            role, argument, dict(options), content, children=children, raw=raw
+        )
         return [directive]
 
     def visit_footnote_reference(self, node):
@@ -798,8 +836,7 @@ def parse(text: bytes, qa=None) -> List[Section]:
 
     tree = parser.parse(text)
     root = Node(tree.root_node)
-    tsv = TSVisitor(text, root, qa)
-    res = tsv.visit_document(root)
+    res = TSVisitor(text, qa).visit_document(root)
     ns = nest_sections(res)
     return ns
 
