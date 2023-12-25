@@ -2,16 +2,28 @@
 Attempt to render using the rich protocol.
 """
 
+from __future__ import annotations
+
 from .myst_ast import MThematicBreak, MHeading
 from dataclasses import dataclass
 from rich.segment import Segment
 from typing import Any, Optional
 from rich.console import Console, ConsoleOptions, RenderResult, Group
-from rich.panel import Panel, Box
+from rich.panel import Panel
+from rich.box import Box
 from rich.padding import Padding
 from rich import print
 import rich
 import json
+
+from rich.table import Table
+
+from typing import TYPE_CHECKING
+
+from .myst_ast import MText
+
+if TYPE_CHECKING:
+    from .myst_ast import MAdmonition, MAdmonitionTitle
 
 
 def pad(arg):
@@ -186,19 +198,28 @@ class RichVisitor:
     def visit_MLink(self, node):
         return self.generic_visit(node.children)
 
-    def visit_MAdmonitionTitle(self, node):
-        return [Panel(Unimp(str(node.to_dict())))]
+    def visit_MAdmonitionTitle(self, node: MAdmonitionTitle):
         return self.generic_visit(node.children)
 
-    def visit_MAdmonition(self, node):
+    def visit_MAdmonition(self, node: MAdmonition):
+        COLOR = {"warning": "yellow", "deprecated": "red", "note": "blue"}
+        # TODO, there seem to be some error with the printing of wide characters
+        SYMBOL = {"warning": "⚠", "deprecated": "ⓧ ", "note": "ⓘ "}
+        SYMBOL = {"warning": "/!\\", "deprecated": "[x]", "note": "(i)"}
         title, *other = node.children
-        assert title.type == "admonitionTitle"
-        acc = self.generic_visit([title])
+        table: Table
+        color = COLOR.get(node.kind, "purple")
+        symbol = SYMBOL.get(node.kind, "|?|")
         if other:
-            rd = self.generic_visit(other)
-
-            acc.append(Panel(Group(*rd)))
-        return acc
+            table = Table(border_style=color)
+            table.add_column(
+                Group(*self.generic_visit([MText(symbol + ": ")] + [title]))
+            )
+            table.add_row(Group(*self.generic_visit(other)))
+        else:
+            table = Table(border_style=color, show_header=False)
+            table.add_row(Group(*self.generic_visit([MText(symbol + ": ")] + [title])))
+        return [table]
 
     def visit_MHeading(self, node: MHeading):
         cs = [RToken("#" * (node.depth + 1) + " ")] + self.generic_visit(node.children)

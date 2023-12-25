@@ -73,9 +73,9 @@ output : ndarray
 
 ## Notes
 
-╭──────────────────────────────────────────────────────────────────────────────╮
-│ {'type': 'admonitionTitle', 'children': [{'type': 'text', 'value': 'versiona │
-╰──────────────────────────────────────────────────────────────────────────────╯
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ |?|: versionadded 1.6.0                                                      │
+└──────────────────────────────────────────────────────────────────────────────┘
 The Einstein summation convention can be used to compute many
 multi-dimensional, linear algebraic array operations. `einsum` provides a
 succinct way of representing these.
@@ -148,17 +148,17 @@ output shape is not provided in this format `einsum` will be calculated in
 implicit mode, otherwise it will be performed explicitly. The examples below
 have corresponding `einsum` calls with the two parameter methods.
 
-╭──────────────────────────────────────────────────────────────────────────────╮
-│ {'type': 'admonitionTitle', 'children': [{'type': 'text', 'value': 'versiona │
-╰──────────────────────────────────────────────────────────────────────────────╯
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ |?|: versionadded 1.10.0                                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
 Views returned from einsum are now writeable whenever the input array is
 writeable. For example, np.einsum('ijk...->kji...', a) will now have the same
 effect as np.swapaxes(a, 0, 2) <numpy.swapaxes> and np.einsum('ii->i', a) will
 return a writeable view of the diagonal of a 2D array.
 
-╭──────────────────────────────────────────────────────────────────────────────╮
-│ {'type': 'admonitionTitle', 'children': [{'type': 'text', 'value': 'versiona │
-╰──────────────────────────────────────────────────────────────────────────────╯
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ |?|: versionadded 1.12.0                                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
 Added the optimize argument which will optimize the contraction order of an
 einsum expression. For a contraction with three or more operands this can
 greatly increase the computational efficiency at the cost of a larger memory
