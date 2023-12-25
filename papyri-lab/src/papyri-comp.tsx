@@ -126,7 +126,7 @@ const SignatureRenderer = ({ node }: { node: any }) => {
     acc.push(p);
   }
   return (
-    <code className="flex my-5 group signature">
+    <code className="group signature">
       {node.kind.indexOf('async') !== -1 ||
       node.kind.indexOf('coroutine') !== -1
         ? 'async '

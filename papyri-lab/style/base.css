@@ -45,4 +45,8 @@ div#papyri-browser a:hover {
     opacity: 30%;
     color: gray;
   }
+
+  & span.param-block {
+    white-space: pre;
+  }
 }
