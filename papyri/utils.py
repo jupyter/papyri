@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import typing
+import importlib
 from datetime import timedelta
 from textwrap import dedent
 from typing import Tuple, NewType
@@ -226,3 +227,16 @@ def pos_to_nl(script: str, pos: int) -> Tuple[int, int]:
         else:
             return ln, rest
     raise RuntimeError
+
+
+def obj_from_qualname(name):
+    mod_name, sep, objs = name.partition(":")
+    module = importlib.import_module(mod_name)
+    if not sep:
+        return module
+    else:
+        obj = module
+        parts = objs.split(".")
+        for p in parts:
+            obj = getattr(obj, p)
+        return obj

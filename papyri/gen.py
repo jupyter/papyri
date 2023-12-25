@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
-import importlib
 import inspect
 import json
 import logging
@@ -80,6 +79,7 @@ from .utils import (
     full_qual,
     pos_to_nl,
     progress,
+    obj_from_qualname,
 )
 from .vref import NumpyDocString
 
@@ -187,19 +187,6 @@ def _jedi_set_cache(text, value):
 
     _cache = _JEDI_CACHE / _hashf(text)
     _cache.write_text(json.dumps(value))
-
-
-def obj_from_qualname(name):
-    mod_name, sep, objs = name.partition(":")
-    module = importlib.import_module(mod_name)
-    if not sep:
-        return module
-    else:
-        obj = module
-        parts = objs.split(".")
-        for p in parts:
-            obj = getattr(obj, p)
-        return obj
 
 
 def parse_script(

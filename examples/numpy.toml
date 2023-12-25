@@ -3,39 +3,41 @@
 module = 'numpy'
 
 exclude = [
-'numpy:tensordot',
+    'numpy:tensordot',
+    # See https://github.com/jupyter/papyri/issues/361'
+    'numpy.ma.core:MaskedArray.resize',
 ]
 
 execute_exclude_patterns = [
-'numpy._',
-'numpy.testing._priv',
-'numpy.errstate',
-'numpy.seterr',
-'numpy.bincount',
-'numpy.core._multiarray_umath.bincount',
-'numpy.core._multiarray_umath.datetime_as_string',
-'numpy.core._multiarray_umath.normalize_axis_index',
-'numpy.core._multiarray_umath.shares_memory',
-'numpy.datetime_as_string',
-'numpy.shares_memory',
-'numpy.squeeze',
-'numpy.average',
-'numpy.ctypeslib',
-'numpy.append',
-'numpy.ma.core',
-'numpy.core.umath_tests',
-# try to create a pager that waits for input
-'numpy.lookfor',
-# write directly to stdout
-'numpy.info',
-# Misc
-'numpy.distutils',
-'numpy.char.multiply',
-'numpy.polynomial.chebyshev.chebinterpolate',
-'numpy.lib.npyio._read',
-'numpy.polynomial._polybase:ABCPolyBase',
-'numpy.distutils.misc_util:Configuration.__init__',
-'numpy.ma.core:MaskedArray.resize', # First line of docstring is a directive; breaks parsing
+    'numpy._',
+    'numpy.testing._priv',
+    'numpy.errstate',
+    'numpy.seterr',
+    'numpy.bincount',
+    'numpy.core._multiarray_umath.bincount',
+    'numpy.core._multiarray_umath.datetime_as_string',
+    'numpy.core._multiarray_umath.normalize_axis_index',
+    'numpy.core._multiarray_umath.shares_memory',
+    'numpy.datetime_as_string',
+    'numpy.shares_memory',
+    'numpy.squeeze',
+    'numpy.average',
+    'numpy.ctypeslib',
+    'numpy.append',
+    'numpy.ma.core',
+    'numpy.core.umath_tests',
+    # try to create a pager that waits for input
+    'numpy.lookfor',
+    # write directly to stdout
+    'numpy.info',
+    # Misc
+    'numpy.distutils',
+    'numpy.char.multiply',
+    'numpy.polynomial.chebyshev.chebinterpolate',
+    'numpy.lib.npyio._read',
+    'numpy.polynomial._polybase:ABCPolyBase',
+    'numpy.distutils.misc_util:Configuration.__init__',
+    'numpy.ma.core:MaskedArray.resize', # First line of docstring is a directive; breaks parsing
 ]
 
 submodules = [
