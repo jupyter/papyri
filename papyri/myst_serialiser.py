@@ -18,8 +18,6 @@ base_types = {int, str, bool, type(None)}
 
 
 def serialize(instance, annotation):
-    if getattr(instance, "_dont_serialise", False):
-        assert False, breakpoint()
     try:
         if annotation in base_types:
             # print("BASE", instance)

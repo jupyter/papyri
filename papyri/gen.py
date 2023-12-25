@@ -2196,7 +2196,6 @@ class Gen:
             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
             doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
             doc_blob._content = {k: dv.visit(v) for (k, v) in doc_blob._content.items()}
-            p = doc_blob._content["Extended Summary"]
 
             for section in ["Extended Summary", "Summary", "Notes"] + sections_:
                 if section in doc_blob.content:
@@ -2227,9 +2226,6 @@ class Gen:
 
             # end processing
             assert not isinstance(doc_blob._content, str), doc_blob._content
-            p = doc_blob._content["Parameters"]
-            p.to_dict()
-            doc_blob.to_dict()
             try:
                 doc_blob.validate()
             except Exception as e:

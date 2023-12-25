@@ -333,6 +333,11 @@ foo = object()
 
 
 def annotation_with_hex_addresses(x: foo = lambda x: x):  # type:ignore [valid-type]
+    """
+    This function is a function for which the signature will have and hexadecimal addresse.
+
+    It is included to show that the hex address should be normalized.
+    """
     pass
 
 
@@ -345,7 +350,6 @@ def _mydirective_handler(args: str, options: Dict[str, str], value: str):
     acc: List[Any] = []
     for p in parsed_arguments:
         acc.extend(p.children)
-    print(acc)
 
     return [
         *acc,
