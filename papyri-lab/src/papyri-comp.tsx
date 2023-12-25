@@ -12,7 +12,6 @@ const MyLink = ({ node }: any) => {
   const parts = node.url.split('/');
   const search_term = parts[parts.length - 1];
   const f = (q: string) => {
-    console.log('sustom onclick', q, onSearch);
     onSearch(q);
   };
 
@@ -142,7 +141,7 @@ const SignatureRenderer = ({ node }: { node: any }) => {
             return (
               <>
                 <MyST ast={parameter} />
-                {', '}
+                <span className="signature-separator">{', '}</span>
               </>
             );
           }
@@ -150,7 +149,7 @@ const SignatureRenderer = ({ node }: { node: any }) => {
       </>
       {')'}
       <span className="ret-ann">
-        {'->'} {node.return_annotation.data}
+        {node.return_annotation.data ? '-> ' + node.return_annotation.data : ''}
       </span>
       :
     </code>

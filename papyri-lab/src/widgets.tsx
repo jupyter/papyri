@@ -18,6 +18,7 @@ const PapyriComponent = (): JSX.Element => {
   // list of a few pages in the database that matches
   // the current query
   const [possibilities, setPossibilities] = useState([]);
+  const [navs, setNavs] = useState<string[]>([]);
   const [root, setRoot] = useState({});
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,14 +28,28 @@ const PapyriComponent = (): JSX.Element => {
     setSearchTerm(event.target.value);
     search(event.target.value);
   };
+
+  const back = async () => {
+    navs.pop();
+    const pen = navs.pop();
+    if (pen !== undefined) {
+      console.log('Settgin search term', pen);
+      await setSearchTerm(pen);
+      console.log('... and searchg for ', pen);
+      await search(pen);
+    }
+  };
+
   const search = async (query: string) => {
     const res = await requestAPI<any>('get-example', {
       body: query,
       method: 'post'
     });
+    console.log('Got a response for', query, 'res.body=', res.body);
     // response has body (MyST–json if the query has an exact match)
     // and data if we have some close matches.
     if (res.body !== null) {
+      setNavs([...navs, query]);
       setRoot(res.body);
       setPossibilities([]);
     } else {
@@ -57,6 +72,7 @@ const PapyriComponent = (): JSX.Element => {
   return (
     <React.StrictMode>
       <input onChange={onChange} value={searchTerm} />
+      <button onClick={back}>Back</button>
       <ul>
         {possibilities.map(e => {
           return (
@@ -73,11 +89,13 @@ const PapyriComponent = (): JSX.Element => {
           );
         })}
       </ul>
-      <SearchContext.Provider value={onClick}>
-        <ThemeProvider renderers={RENDERERS}>
-          <MyPapyri node={root} />
-        </ThemeProvider>
-      </SearchContext.Provider>
+      <div className="view">
+        <SearchContext.Provider value={onClick}>
+          <ThemeProvider renderers={RENDERERS}>
+            <MyPapyri node={root} />
+          </ThemeProvider>
+        </SearchContext.Provider>
+      </div>
     </React.StrictMode>
   );
 };
