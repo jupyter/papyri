@@ -1,5 +1,5 @@
 import { requestAPI } from './handler';
-import { MyPapyri, RENDERERS } from './papyri-comp';
+import { MyPapyri, RENDERERS, SearchContext } from './papyri-comp';
 import { ReactWidget } from '@jupyterlab/apputils';
 import { ThemeProvider } from '@myst-theme/providers';
 import React, { useState } from 'react';
@@ -19,11 +19,12 @@ const PapyriComponent = (): JSX.Element => {
   // the current query
   const [possibilities, setPossibilities] = useState([]);
   const [root, setRoot] = useState({});
-  const [what, setWhat] = useState('');
+
+  const [searchTerm, setSearchTerm] = useState('');
 
   // callback when typing in the input field.
   const onChange = async (event: any) => {
-    setWhat(event.target.value);
+    setSearchTerm(event.target.value);
     search(event.target.value);
   };
   const search = async (query: string) => {
@@ -42,10 +43,11 @@ const PapyriComponent = (): JSX.Element => {
     }
   };
 
-  const onClick = (value: string) => {
-    setWhat(value);
+  const onClick = async (query: string) => {
+    console.log('On click trigger', query);
+    setSearchTerm(query);
     try {
-      search(value);
+      search(query);
     } catch (e) {
       console.error(e);
     }
@@ -54,21 +56,28 @@ const PapyriComponent = (): JSX.Element => {
 
   return (
     <React.StrictMode>
-      <input onChange={onChange} value={what} />
+      <input onChange={onChange} value={searchTerm} />
       <ul>
         {possibilities.map(e => {
           return (
             <li>
-              <a href={e} onClick={() => onClick(e)}>
+              <a
+                href={e}
+                onClick={async () => {
+                  await onClick(e);
+                }}
+              >
                 {e}
               </a>
             </li>
           );
         })}
       </ul>
-      <ThemeProvider renderers={RENDERERS}>
-        <MyPapyri node={root} />
-      </ThemeProvider>
+      <SearchContext.Provider value={onClick}>
+        <ThemeProvider renderers={RENDERERS}>
+          <MyPapyri node={root} />
+        </ThemeProvider>
+      </SearchContext.Provider>
     </React.StrictMode>
   );
 };
