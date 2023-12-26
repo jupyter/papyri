@@ -6,7 +6,6 @@
 @import 'app.css';
 
 div#papyri-browser {
-  overflow: scroll;
   padding: 15px;
 }
 
@@ -20,6 +19,34 @@ code {
   border: 1px solid orange;
 }
 
-div#papyri-browser   a:hover {
-    text-decoration: underline;
+div#papyri-browser a:hover {
+  text-decoration: underline;
+}
+
+#papyri-browser a {
+  font-weight: bold;
+}
+
+#papyri-browser .view {
+  overflow: scroll;
+  height: 100%;
+}
+
+#papyri-browser {
+  & span.signature-separator {
+    white-space: pre;
+  }
+
+  & span.default-value {
+    opacity: 30%;
+  }
+  & span.type-ann,
+  & span.ret-ann {
+    opacity: 30%;
+    color: gray;
+  }
+
+  & span.param-block {
+    white-space: pre;
+  }
 }

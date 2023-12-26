@@ -1,5 +1,5 @@
 import { requestAPI } from './handler';
-import { MyPapyri, RENDERERS } from './papyri-comp';
+import { MyPapyri, RENDERERS, SearchContext } from './papyri-comp';
 import { ReactWidget } from '@jupyterlab/apputils';
 import { ThemeProvider } from '@myst-theme/providers';
 import React, { useState } from 'react';
@@ -18,22 +18,38 @@ const PapyriComponent = (): JSX.Element => {
   // list of a few pages in the database that matches
   // the current query
   const [possibilities, setPossibilities] = useState([]);
+  const [navs, setNavs] = useState<string[]>([]);
   const [root, setRoot] = useState({});
-  const [what, setWhat] = useState('');
+
+  const [searchTerm, setSearchTerm] = useState('');
 
   // callback when typing in the input field.
   const onChange = async (event: any) => {
-    setWhat(event.target.value);
+    setSearchTerm(event.target.value);
     search(event.target.value);
   };
+
+  const back = async () => {
+    navs.pop();
+    const pen = navs.pop();
+    if (pen !== undefined) {
+      console.log('Settgin search term', pen);
+      await setSearchTerm(pen);
+      console.log('... and searchg for ', pen);
+      await search(pen);
+    }
+  };
+
   const search = async (query: string) => {
     const res = await requestAPI<any>('get-example', {
       body: query,
       method: 'post'
     });
+    console.log('Got a response for', query, 'res.body=', res.body);
     // response has body (MyST–json if the query has an exact match)
     // and data if we have some close matches.
     if (res.body !== null) {
+      setNavs([...navs, query]);
       setRoot(res.body);
       setPossibilities([]);
     } else {
@@ -42,10 +58,11 @@ const PapyriComponent = (): JSX.Element => {
     }
   };
 
-  const onClick = (value: string) => {
-    setWhat(value);
+  const onClick = async (query: string) => {
+    console.log('On click trigger', query);
+    setSearchTerm(query);
     try {
-      search(value);
+      search(query);
     } catch (e) {
       console.error(e);
     }
@@ -54,21 +71,31 @@ const PapyriComponent = (): JSX.Element => {
 
   return (
     <React.StrictMode>
-      <input onChange={onChange} value={what} />
+      <input onChange={onChange} value={searchTerm} />
+      <button onClick={back}>Back</button>
       <ul>
         {possibilities.map(e => {
           return (
             <li>
-              <a href={e} onClick={() => onClick(e)}>
+              <a
+                href={e}
+                onClick={async () => {
+                  await onClick(e);
+                }}
+              >
                 {e}
               </a>
             </li>
           );
         })}
       </ul>
-      <ThemeProvider renderers={RENDERERS}>
-        <MyPapyri node={root} />
-      </ThemeProvider>
+      <div className="view">
+        <SearchContext.Provider value={onClick}>
+          <ThemeProvider renderers={RENDERERS}>
+            <MyPapyri node={root} />
+          </ThemeProvider>
+        </SearchContext.Provider>
+      </div>
     </React.StrictMode>
   );
 };

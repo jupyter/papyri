@@ -1,6 +1,26 @@
 // Global and other papyri-myst related componets
 import { DEFAULT_RENDERERS, MyST } from 'myst-to-react';
 import React from 'react';
+import { createContext, useContext } from 'react';
+
+export const SearchContext = createContext(async (query: string) => {
+  return true;
+});
+
+const MyLink = ({ node }: any) => {
+  const onSearch = useContext(SearchContext);
+  const parts = node.url.split('/');
+  const search_term = parts[parts.length - 1];
+  const f = (q: string) => {
+    onSearch(q);
+  };
+
+  return (
+    <a onClick={() => f(search_term)}>
+      <MyST ast={node.children} />
+    </a>
+  );
+};
 
 const DefaultComponent = ({ node }: { node: any }) => {
   if (!node.children) {
@@ -106,7 +126,7 @@ const SignatureRenderer = ({ node }: { node: any }) => {
     acc.push(p);
   }
   return (
-    <code className="flex my-5 group signature">
+    <code className="group signature">
       {node.kind.indexOf('async') !== -1 ||
       node.kind.indexOf('coroutine') !== -1
         ? 'async '
@@ -121,7 +141,7 @@ const SignatureRenderer = ({ node }: { node: any }) => {
             return (
               <>
                 <MyST ast={parameter} />
-                {', '}
+                <span className="signature-separator">{', '}</span>
               </>
             );
           }
@@ -129,7 +149,7 @@ const SignatureRenderer = ({ node }: { node: any }) => {
       </>
       {')'}
       <span className="ret-ann">
-        {'->'} {node.return_annotation.data}
+        {node.return_annotation.data ? '-> ' + node.return_annotation.data : ''}
       </span>
       :
     </code>
@@ -159,7 +179,8 @@ const LOC = {
   ParameterNode: ParameterNodeRenderer,
   Param: Param,
   MUnimpl: MUnimpl,
-  DefaultComponent: DefaultComponent
+  DefaultComponent: DefaultComponent,
+  link: MyLink
 };
 export const RENDERERS = { ...DEFAULT_RENDERERS, ...LOC };
 
