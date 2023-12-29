@@ -95,6 +95,7 @@ def test_parse_warning_directive():
     .. warning:: Title
 
         The warning directive does not admit a title.
+        Just testing now.
 
     """
     )
@@ -108,7 +109,7 @@ def test_parse_warning_directive():
     assert items[0].name == "warning"
     assert items[0].args == ""
     assert items[0].options == dict()
-    assert items[0].value == "Title The warning directive does not admit a title."
+    assert items[0].value == "Title The warning directive does not admit a title.\nJust testing now."
     assert items[0].children == []
 
 

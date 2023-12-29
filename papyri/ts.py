@@ -681,7 +681,7 @@ class TSVisitor:
                 raise ValueError(f"{role} directive has no content")
 
             padding = (content_node[0].start_point[1] - _1.start_point[1]) * " "
-            content = dedent(padding + content)
+            content = dedent(padding + content).lstrip(" ")
             argument = ""
             options = []
             groups = []
