@@ -206,12 +206,21 @@ def test_self_2():
     g.collect_api_docs(
         "papyri", {"papyri", "papyri.take2:RefInfo", "papyri.take2:RefInfo.__eq__"}
     )
-    assert (
-        g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0]["dt"][
-            "children"
-        ][0]["reference"]["module"]
-        == "dask"
-    )
+    try:
+        import dask
+        assert (
+            g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0]["dt"][
+                "children"
+            ][0]["reference"]["module"]
+            == "dask"
+        )
+    except ImportError:
+        assert (
+            g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0]["dt"][
+                "children"
+            ][0]["domain"]
+            is None
+        )
 
     assert (
         g.data["papyri.take2:RefInfo"]
