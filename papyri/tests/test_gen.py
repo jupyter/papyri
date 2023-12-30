@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from papyri.gen import APIObjectInfo, BlockExecutor, Config, Gen, NumpyDocString
+from papyri.gen import APIObjectInfo, BlockExecutor, Config, Gen, NumpyDocString, Config
 
 
 @lru_cache
@@ -198,8 +198,6 @@ def test_self():
 
 
 def test_self_2():
-    from papyri.gen import Gen, Config
-
     c = Config(dry_run=True, dummy_progress=True)
     g = Gen(False, config=c)
     g.collect_package_metadata("papyri", ".", {})
@@ -207,18 +205,19 @@ def test_self_2():
         "papyri", {"papyri", "papyri.take2:RefInfo", "papyri.take2:RefInfo.__eq__"}
     )
     try:
-        import dask
+        import dask  # noqa
+
         assert (
-            g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0]["dt"][
-                "children"
-            ][0]["reference"]["module"]
+            g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0][
+                "dt"
+            ]["children"][0]["reference"]["module"]
             == "dask"
         )
-    except ImportError:
+    except ModuleNotFoundError:
         assert (
-            g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0]["dt"][
-                "children"
-            ][0]["domain"]
+            g.data["papyri"].to_dict()["arbitrary"][4]["children"][1]["children"][0][
+                "dt"
+            ]["children"][0]["domain"]
             is None
         )
 
