@@ -1058,7 +1058,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         self.obj = obj
         self.qa = qa
         self.config = config
-        self.example_section_data = Section([], None)
+        self._example_section_data = Section([], None)
         super().__init__(*args, **kwargs)
         import matplotlib
         import matplotlib.pyplot as plt
@@ -1100,7 +1100,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
 
         tok_entries = self._get_tok_entries(example)
 
-        self.example_section_data.append(
+        self._example_section_data.append(
             Code(tok_entries, got, ExecutionStatus.success)
         )
 
@@ -1118,7 +1118,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
             plt.close("all")
 
         for figname, _ in figs:
-            self.example_section_data.append(
+            self._example_section_data.append(
                 Fig(
                     RefInfo.from_untrusted(
                         self.gen.root, self.gen.version, "assets", figname
@@ -1130,16 +1130,20 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
     def report_unexpected_exception(self, out, test, example, exc_info):
         out(f"Unexpected exception after running example in `{self.qa}`", exc_info)
         tok_entries = self._get_tok_entries(example)
-        self.example_section_data.append(
+        self._example_section_data.append(
             Code(tok_entries, exc_info, ExecutionStatus.unexpected_exception)
         )
 
     def report_failure(self, out, test, example, got):
         tok_entries = self._get_tok_entries(example)
-        self.example_section_data.append(
+        self._example_section_data.append(
             Code(tok_entries, got, ExecutionStatus.failure)
         )
 
+    def get_example_section_data(self):
+        example_section_data = self._example_section_data
+        self._example_section_data = Section([], None)
+        return example_section_data
 
 class Gen:
     """
@@ -1331,7 +1335,7 @@ class Gen:
                 if exec:
                     doctest_runner.run(doctests, out=debugprint, clear_globs=False)
                     doctest_runner.globs.update(doctests.globs)
-                    example_section_data.extend(doctest_runner.example_section_data)
+                    example_section_data.extend(doctest_runner.get_example_section_data())
                 else:
                     example_section_data.append(MText(block.source))
             elif block:
