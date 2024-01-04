@@ -1327,10 +1327,12 @@ class Gen:
                 block, doctest_runner.globs, obj.__name__, filename, lineno
             )
             if config.exec and doctests.examples:
-                doctest_runner.run(doctests, out=debugprint)
+                doctest_runner.run(doctests, out=debugprint, clear_globs=False)
+                doctest_runner.globs.update(doctests.globs)
                 example_section_data.extend(doctest_runner.example_section_data)
             else:
                 example_section_data.append(MText(block))
+
         # TODO fix this if plt.close not called and still a lingering figure.
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         if len(fig_managers) != 0:
