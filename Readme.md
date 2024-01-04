@@ -284,12 +284,12 @@ collection of many papyrus scrolls.
 ## Legacy (MISC/OLD) documentation (Inaccurate):
 
 
-#### generation (papyri gen ),
+#### Generation (`papyri gen`)
 
-Which collect the documentation of a project into a doc-bundle; a number of
-doc-blobs (currently json file), with a defined semantic structure, and
+Collects the documentation of a project into a DocBundle -- a number of
+DocBlobs (currently json files), with a defined semantic structure, and
 some metadata (version of the project this documentation refers to, and
-potentially some other blobs)
+potentially some other blobs).
 
 During the generation a number of normalisation and inference can and should
 happen, for example
@@ -312,11 +312,12 @@ pandas as pd`, for example,)
 
 #### Ingestion (papyri ingest)
 
-The ingestion step take doc-bundle and/or doc-blobs and add them into a graph of
-known items; the ingestion is critical to efficiently build the collection graph
-metadata and understand which items refers to which; this allow the following:
+The ingestion step takes a DocBundle and/or DocBlobs and adds them into a graph
+of known items; the ingestion is critical to efficiently build the collection
+graph metadata and understand which items refers to which. This allows the
+following:
 
- - Update the list of backreferences to a docbundle
+ - Update the list of backreferences to a DocBundle
  - Update forward references metadata to know whether links are valid.
 
 Currently the ingestion loads all in memory and update all the bundle in place

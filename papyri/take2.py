@@ -160,7 +160,7 @@ class Leaf(Node):
 @register(4027)
 class SubstitutionDef(Node):
     value: str
-    children: List[MMystDirective]
+    children: List[Union[MMystDirective, UnprocessedDirective]]
 
     def __init__(self, value, children):
         self.value = value
@@ -192,6 +192,7 @@ from .myst_ast import (
     MList,
     MParagraph,
     MMystDirective,
+    UnprocessedDirective,
     MCode,
     MLink,
     MAdmonition,
@@ -300,6 +301,7 @@ class Section(Node):
             MList,
             MMath,
             MMystDirective,
+            UnprocessedDirective,
             MParagraph,
             MTarget,
             MText,
@@ -365,6 +367,7 @@ class Param(Node):
             DefListItem,
             DefList,
             MMystDirective,
+            UnprocessedDirective,
             MMath,
             MAdmonition,
             MBlockquote,
@@ -421,7 +424,7 @@ class Code(Node):
 def compress_word(stream) -> List[Any]:
     acc = []
     wds = ""
-    assert isinstance(stream, list)
+    assert isinstance(stream, list), stream
     for item in stream:
         if isinstance(item, MText):
             wds += item.value
@@ -525,6 +528,7 @@ class DefListItem(Node):
             MBlockquote,
             DefList,
             MMystDirective,
+            UnprocessedDirective,
             Unimplemented,
             MUnimpl,
             MAdmonition,

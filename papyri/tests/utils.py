@@ -27,6 +27,7 @@ def _process(sample: Path):
         local_refs=set(),
         aliases={},
         version="TestSuite",
+        config={},
     )
     return [dv.visit(s) for s in data]
 

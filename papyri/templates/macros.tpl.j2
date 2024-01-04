@@ -5,6 +5,15 @@
     {%- endfor %}
 {%- endmacro %}
 
+
+
+{% macro render_myst_json(json) -%}
+    {% set key = uuid() %}
+    <div style='border: solid thin cyan' id="{{ key }}"></div>
+    <script>
+      render("{{ key }}", {"type": "root", "children":[{{ json|safe }}]})
+    </script>
+{%- endmacro %}
 {% macro render_myst(obj) -%}
     {% set astJson = obj.to_dict() %}
     {% set key = uuid() %}
@@ -30,18 +39,10 @@
 {% macro render_II(obj) -%}
 
     {%- set type = obj.__class__.__name__ -%}
-       {% if type[0] == 'M' %}
+    {% if type[0] == 'M' %}
             {{ render_myst(obj) }}
-       {%- elif type == 'MMystDirective' -%}
-           {{ unreachable()}}
-           {{myst_directive(obj)}}
        {%- elif type == 'DefList' -%}
           {{ render_myst(obj) }}
-      {% elif type == 'Section' %}
-          {{unreachable(obj)}}
-           {% for item in obj %}
-               {{ render_II(item) }}
-           {% endfor %}
        {% elif type == 'FieldList' %}
            <dl> 
              {%- for item in obj.children %}
@@ -57,34 +58,7 @@
                </dd>
                {% endfor %}
            </dl>
-       {% elif type in ['Options','Unimplemented','Comment','SubstitutionRef'] %}
-           <pre class='not-implemented'>
-            {{obj}}
-           </pre>
-        {%- elif type == 'Directive' -%}
-             <!-- In theory we should never get Raw directive in final output --!>
-             {{ render_myst(obj) }}
-        {%- elif type in ('Math', 'Verbatim', 'MText','MEmphasis','MInlineCode', 'MLink') -%}
-            {{ render_myst(obj) }}
-       {% elif type == 'TocTree' %}
-            {{ unreachable()}}
-            {%if obj.children%}
-                <details class='toctree' open>
-                <summary><a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a></summary>
-                  <ul>
-                   {% for c in obj.children %}
-                       <li>{{render_II(c)}}</li>
-                   {% endfor %}
-                  </ul>
-                </details>
-            {% else %}
-                <a class="toctree" href="{{url(obj.ref)}}">{{obj.title}}</a>
-            {%endif%}
-         
-        {%- elif type in ['SubstitutionRef','Unimplemented','SubstitutionDef'] %}
-            {{unimplemented(type, obj.__class__.__name__, obj.__dict__)}}
-            <pre class='not-implemented'>{{obj}}</pre>
-        {%- else %}
+       {%- else %}
             {{unreachable(type, obj.__class__.__name__, obj.__dict__)}}
        {%- endif -%}
 {%- endmacro %}

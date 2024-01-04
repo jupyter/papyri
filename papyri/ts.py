@@ -1,7 +1,8 @@
 import logging
+import itertools
 from pathlib import Path
 from textwrap import dedent, indent
-from typing import List
+from typing import List, Any, Dict
 
 from tree_sitter import Language, Parser
 
@@ -14,7 +15,7 @@ from .myst_ast import (
     MStrong,
     MList,
     MListItem,
-    MMystDirective,
+    UnprocessedDirective,
     MComment,
     MBlockquote,
 )
@@ -65,7 +66,7 @@ class Node:
     In particular we want to be able to extract whitespace information,
     which is made hard by tree sitter.
 
-    So we intercept iterating through childrens, and if the bytes start/stop
+    So we intercept iterating through children, and if the bytes start/stop
     don't match, we insert a fake Whitespace node that has similar api to tree
     sitter official nodes.
     """
@@ -81,14 +82,14 @@ class Node:
         if not self._with_whitespace:
             return [Node(n, _with_whitespace=False) for n in self.node.children]
 
-        self.node.children
         current_byte = self.start_byte
         current_point = self.start_point
+
         new_nodes = []
         if self.node.children:
             for n in self.node.children:
                 if n.start_byte != current_byte:
-                    # value = self.bytes[current_byte:n.start_byte]
+                    # value = self._bytes[current_byte:n.start_byte]
                     # assert value == b' ', (value, b' ', n)
                     new_nodes.append(
                         Whitespace(
@@ -141,7 +142,7 @@ class Node:
 
     @property
     def bytes(self):
-        return self.node.bytes
+        return self.node._bytes
 
     def __init__(self, node, *, _with_whitespace=True):
         self.node = node
@@ -185,23 +186,40 @@ class Whitespace(Node):
 
 class TSVisitor:
     """
-    Tree sitter Visitor,
+    Tree sitter Visitor
 
     Walk the tree sitter tree and convert each node into our kind of internal node.
 
     """
 
-    def __init__(self, bytes, root, qa):
-        self.bytes = bytes
-        self.root = root
+    _bytes: bytes
+    _qa: str
+    _section_levels: Dict[str, int]
+    _targets: List[str]
+
+    def __init__(self, buf: bytes, qa: str, /):
+        """
+        A tree-visitor for TreeSitter nodes to convert into Papyri/Myst nodes.
+
+        Parameters
+        ----------
+        buf: bytes
+            bytes buffer of the document  parsed by tree-sitter.
+        qa: str
+            fully qualifed name of the object for whcih we are paring the
+            documentation. This is used only in log messages, and for debugging purpose.
+        """
+        self._bytes = buf
         assert qa is not None
-        self.qa = qa
-        self.depth = 0
+        self._qa = qa
         self._section_levels = {}
         self._targets = []
 
-    def as_text(self, node):
-        return self.bytes[node.start_byte : node.end_byte].decode()
+    def as_text(self, node) -> str:
+        """
+        Utility function to extract the original text for a given node.
+        """
+        return self._bytes[node.start_byte : node.end_byte].decode()
 
     def visit_document(self, node):
         new_node = node.without_whitespace()
@@ -209,7 +227,7 @@ class TSVisitor:
         res = [x for x in items if not isinstance(x, Whitespace)]
         return res
 
-    def _compressor(self, nodes):
+    def _compressor(self, nodes) -> List[Any]:
         """
         This is currently a workaround of a tree-sitter limitations.
         List cannot have blank lines between them, so we end up with
@@ -259,14 +277,13 @@ class TSVisitor:
         return nacc
 
     def visit(self, node):
-        self.depth += 1
         acc = []
-        prev_end = None
         # TODO: FIX
         if node.type == "ERROR":
-            # print(f'ERROR node: {self.as_text(c)!r}, skipping')
+            print(f"ERROR node: {self.as_text(node)!r}, skipping")
             return []
         for c in node.children:
+            # c=<ts.Node directive>
             kind = c.type
             if kind == "::":
                 if acc and isinstance(acc[-1], inline_nodes):
@@ -279,28 +296,26 @@ class TSVisitor:
                     f"visit_{kind} not found while visiting {node}::\n{self.as_text(c)!r}"
                 )
             meth = getattr(self, "visit_" + kind)
-            new_children = meth(c, prev_end=prev_end)
+            new_children = meth(c)
             acc.extend(new_children)
-            prev_end = c.end_point
-        self.depth -= 1
         acc = self._compressor(acc)
         acc = self._targetify(acc)
         return acc
 
-    def visit_citation(self, node, prev_end=None):
+    def visit_citation(self, node):
         # raise VisitCitationNotImplementedError()
         # just hlines, like ------
         return [Unimplemented("citation", self.as_text(node))]
 
-    def visit_citation_reference(self, node, prev_end=None):
+    def visit_citation_reference(self, node):
         raise VisitCitationReferenceNotImplementedError()
         # just hlines, like ------
         return []
 
-    def visit_transition(self, node, prev_end=None):
+    def visit_transition(self, node):
         return [MThematicBreak()]
 
-    def visit_reference(self, node, prev_end=None):
+    def visit_reference(self, node):
         """
         TODO:
 
@@ -323,7 +338,7 @@ class TSVisitor:
             assert trailing in ("_", "__")
         return [Directive(_text, None, None)]
 
-    def visit_interpreted_text(self, node, prev_end=None):
+    def visit_interpreted_text(self, node):
         if len(node.children) == 2:
             role, text = node.children
             assert role.type == "role"
@@ -361,7 +376,7 @@ class TSVisitor:
                 "This is usually due to a missing/stray backtick, or "
                 "missing escape (`\\`) on trailing charter : %r in (%s)",
                 inner_value,
-                self.qa,
+                self._qa,
             )
             log.warning("replacing ` by ' to not crash serialiser")
             inner_value = inner_value.replace("`", "'")
@@ -373,41 +388,42 @@ class TSVisitor:
         )
         return [t]
 
-    def visit_standalone_hyperlink(self, node, prev_end=None):
+    def visit_standalone_hyperlink(self, node):
         return self.visit_text(node)
 
-    def visit_text(self, node, prev_end=None):
-        text = self.bytes[node.start_byte : node.end_byte].decode()
+    def visit_text(self, node):
+        text = self.as_text(node)
         assert not text.startswith(":func:"), breakpoint()
         t = MText(text)
-        t.start_byte = node.start_byte
-        t.end_byte = node.end_byte
         return [t]
 
-    def visit_whitespace(self, node, prev_end=None):
-        content = self.bytes[node.start_byte : node.end_byte].decode()
-        # assert set(content) == {' '}, repr(content)
+    def visit_whitespace(self, node):
+        """
+        Here whitespace seem to mean both spaces and newline.
+
+        I believe we need to remove the newline, but there is some questions as
+        to whether we should replace them with just space, or suppress them if
+        preceded by spaced.
+        """
+        content = self.as_text(node)
+        # assert set(content) in ({" "}, {"\n"}), repr(content)
         t = MText(" " * len(content))
-        t.start_byte = node.start_byte
-        t.end_byte = node.end_byte
-        # print(' '*self.depth*4, t, node.start_byte, node.end_byte)
         return [t]
 
-    def visit_literal(self, node, prev_end=None):
-        text = self.bytes[node.start_byte + 2 : node.end_byte - 2].decode()
+    def visit_literal(self, node):
+        text = self.as_text(node)[2:-2]
         assert "\n\n" not in text
         t = MInlineCode(text.replace("\n", " "))
-        # print(' '*self.depth*4, t)
         return [t]
 
-    def visit_literal_block(self, node, prev_end=None):
-        datas = self.bytes[node.start_byte : node.end_byte].decode()
+    def visit_literal_block(self, node):
+        datas = self.as_text(node)
         first_offset = node.start_point[1]
         datas = " " * first_offset + datas
         b = MCode(dedent(datas))
         return [b]
 
-    def visit_bullet_list(self, node, prev_end=None):
+    def visit_bullet_list(self, node):
         myst_acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
@@ -419,9 +435,7 @@ class TSVisitor:
             myst_acc.append(MListItem(False, self.visit(body)))
         return [MList(ordered=False, start=1, spread=False, children=myst_acc)]
 
-    def visit_section(self, node, prev_end=None):
-        # print(' '*self.depth*4, '->', node)
-        # print(' '*self.depth*4, '::',self.bytes[node.start_byte: node.end_byte].decode())
+    def visit_section(self, node):
         if node.children[0].type == "adornment":
             assert node.children[1].type == "title"
             tc = node.children[1]
@@ -473,14 +487,12 @@ class TSVisitor:
             self._section_levels[pre_a + post_a] = level
 
         title = self.as_text(tc)
-        # print(' '*self.depth*4, '== Section: ', title, '==')
-        # print(' '*self.depth*4, '->', node)
         return [Section([], title, level=level)]
 
-    def visit_block_quote(self, node, prev_end=None):
+    def visit_block_quote(self, node):
         return [MBlockquote(self.visit(node))]
 
-    def visit_paragraph(self, node, prev_end=None):
+    def visit_paragraph(self, node):
         sub = self.visit(node.with_whitespace())
         acc = []
         acc2 = []
@@ -497,25 +509,25 @@ class TSVisitor:
         p = MParagraph(compress_word(acc))
         return [p, *acc2]
 
-    def visit_line_block(self, node, prev_end=None):
+    def visit_line_block(self, node):
         # TODO
         # e.g: numpy/doc/source/user/c-info.how-to-extend.rst
         print("Skipping node", self.as_text(node))
         return []
 
-    def visit_substitution_reference(self, node, prev_end=None):
+    def visit_substitution_reference(self, node):
         # TODO
         return [SubstitutionRef(self.as_text(node))]
 
-    def visit_doctest_block(self, node, prev_end=None) -> List[MCode]:
+    def visit_doctest_block(self, node) -> List[MCode]:
         # TODO
-        return self.visit_literal_block(node, prev_end)
+        return self.visit_literal_block(node)
 
-    def visit_field(self, node, prev_end=None):
+    def visit_field(self, node):
         return []
 
-    def visit_field_list(self, node, prev_end=None) -> List[FieldList]:
-        acc = []
+    def visit_field_list(self, node) -> List[FieldList]:
+        acc: List[str] = []
 
         lens = {len(f.children) for f in node.children}
         if lens == {3}:  # need test here don't know why it was here.
@@ -528,9 +540,10 @@ class TSVisitor:
                 assert self.as_text(col2) == ":", col2
                 acc.append(self.as_text(name))
             return []
+            # TODO: why do we have unreachable here
             return [Options(acc)]
-
-        elif lens == {4}:
+        acc2: List[FieldListItem] = []
+        if lens == {4}:
             for list_item in node.children:
                 assert list_item.type == "field"
                 _, name, _, body = list_item.children
@@ -538,12 +551,12 @@ class TSVisitor:
                 # [_.to_json()for _ in a]
                 # [_.to_json() for _ in b]
                 f = FieldListItem(a, b)
-                acc.append(f)
-            return [FieldList(acc)]
-        else:
-            raise ValueError("mixed len...")
+                acc2.append(f)
+            return [FieldList(acc2)]
 
-    def visit_enumerated_list(self, node, prev_end=None):
+        raise ValueError("mixed len...")
+
+    def visit_enumerated_list(self, node):
         myst_acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
@@ -551,7 +564,7 @@ class TSVisitor:
             myst_acc.append(MListItem(False, self.visit(body)))
         return [MList(ordered=True, start=1, spread=False, children=myst_acc)]
 
-    def visit_target(self, node, prev_end=None):
+    def visit_target(self, node):
         # TODO:
         # raise VisitTargetNotImplementedError()
         # self.as_text(node)
@@ -560,38 +573,64 @@ class TSVisitor:
             # breakpoint()
             if pp.type == ".." and name.type == "name":
                 return [Unimplemented("untarget", self.as_text(name))]
-        # print(node.children)
         return [Unimplemented("target", self.as_text(node))]
 
-    # def visit_arguments(self, node, prev_end=None):
+    # def visit_arguments(self, node):
     #    assert False
     #    return []
 
-    def visit_attribution(self, node, prev_end):
+    def visit_attribution(self, node):
         # TODO:
         print("attribution not implemented")
         return [Unimplemented("inline_target", self.as_text(node))]
 
-    def visit_inline_target(self, node, prev_end):
+    def visit_inline_target(self, node):
         # TODO:
         print("inline_target not implemented")
         return [Unimplemented("inline_target", self.as_text(node))]
 
-    def visit_directive(self, node, prev_end=None):
-        # TODO:
-        # make it part of the type if a block directive (has, or not), a body.
+    def visit_directive(self, node):
+        """
+        Main entry point for directives.
 
-        # directive_name: str
-        # args0: List[str]
-        ## TODO : this is likely wrong...
-        # inner: Optional[Paragraph]
-        text = self.bytes[node.start_byte : node.end_byte].decode()
-        if "anaconda" in text:
-            print("...", text)
+        Parses directive arguments, options and content into a UnprocessedDirective
+        object.
+
+        Parameters
+        ----------
+        node: Node
+            The directive to parse
+
+        Returns
+        -------
+        directive: UnprocessedDirective
+
+
+        Notes
+        -----
+
+        The way tree sitter works when parsing directive, we will get a sequence
+        of nodes of various types, thus we must iterate over them and look at
+        their types, which is efficient in term of spaces, but as convenient
+        as term of API, thus will try to disambiguate the various case we
+        encounter to form something a bit more coherent. We want to have structs
+        which all have the same fields, and the fields potentially emtpy if
+        absent.
+
+
+        Note though that some of the directive do allow to now have any
+        arguments, or option and allow the content to start just after the
+        ``::`` marker, and we will need some spacial casing/ workaround for
+        this.
+
+        """
+        # TODO:
+        # maybe make it part of the type if a block directive (has, or not), a body
 
         is_substitution_definition = False
 
         if len(node.children) == 4:
+            # This directive has a body
             kinds = [n.type for n in node.children]
             if tuple(kinds) == ("type", "::", " ", "body"):
                 is_substitution_definition = True
@@ -603,112 +642,135 @@ class TSVisitor:
             assert body.type == "body"
             assert _role.type == "type"
             body_children = body.children
+            raw = self.as_text(body)
         elif len(node.children) == 3:
+            # this rarely happens, but for example, we can find ``.. toctree::`` empty directive.
             _1, _role, _2 = node.children
             body_children = []
+            raw = ""
         else:
-            raise ValueError
-            assert _1.type == ".."
-            assert _2.type == "::"
+            raise ValueError(f"Wrong number of children: {len(node.children)}")
 
+        # Sphinx / docutils a bit more lenient
         if _role.end_point != _2.start_point and not is_substitution_definition:
-            block_data = self.bytes[node.start_byte : node.end_byte].decode()
             raise errors.SpaceAfterBlockDirectiveError(
-                f"space present in {block_data!r}"
+                f"space present in {self.as_text(node)!r}"
             )
 
-        role = self.bytes[_role.start_byte : _role.end_byte].decode()
-        import itertools
+        role = self.as_text(_role)
 
         groups = itertools.groupby(body_children, lambda x: x.type)
         groups = [(k, list(v)) for k, v in groups]
+        for k, _ in groups:
+            assert k in {"arguments", "content", "options"}, k
 
-        if groups and groups[0][0] == "arguments":
-            arg = list(groups.pop(0)[1])
-            assert len(arg) == 1
-            argument = self.as_text(arg[0])
-        else:
-            argument = ""
-        if groups and groups[0][0] == "options":
-            # to parse
-            p0 = groups.pop(0)
-            options = []
-            assert len(p0[1]) == 1
-            opt_node = p0[1][0]
-            for field in opt_node.children:
-                assert field.type == "field"
-                if len(field.children) == 4:
-                    c1, name, c2, body = field.children
-                    options.append((self.as_text(name), self.as_text(body)))
-                elif len(field.children) == 3:
-                    c1, name, c2 = field.children
-                    options.append((self.as_text(name), ""))
-                else:
-                    assert False
+        if role == "warning":
+            # The warning directive does not take a title argument;
+            # however, the contents for the directive may be defined inline
+            # with the directive name, or as a separate block.
+            # See https://docutils.sourceforge.io/docs/ref/doctree.html#warning
+            if len(groups) == 1:
+                content_node = list(groups[0][1])
+                content = self.as_text(content_node[0])
+            elif len(groups) == 2:
+                content_node = [groups[0][1][0], groups[1][1][0]]
+                content = (
+                    self.as_text(content_node[0]) + " " + self.as_text(content_node[1])
+                )
+            else:
+                raise ValueError(f"{role} directive has no content")
 
-        else:
-            options = []
-        if groups and groups[0][0] == "content":
-            # to parse
-            content_node = list(groups.pop(0)[1])
-            assert len(content_node) == 1
-            content = self.as_text(content_node[0])
             padding = (content_node[0].start_point[1] - _1.start_point[1]) * " "
             content = dedent(padding + content)
+            argument = ""
+            options = []
+            groups = []
+            children = []
 
         else:
-            content = ""
+            if groups and groups[0][0] == "arguments":
+                arg = list(groups.pop(0)[1])
+                assert len(arg) == 1
+                argument = self.as_text(arg[0])
+            else:
+                argument = ""
+
+            if groups and groups[0][0] == "options":
+                # to parse
+                p0 = groups.pop(0)
+                options = []
+                assert len(p0[1]) == 1
+                opt_node = p0[1][0]
+                for field in opt_node.children:
+                    assert field.type == "field"
+                    if len(field.children) == 4:
+                        _c1, name, _c2, body = field.children
+                        options.append((self.as_text(name), self.as_text(body)))
+                    elif len(field.children) == 3:
+                        _c1, name, _c2 = field.children
+                        options.append((self.as_text(name), ""))
+                    else:
+                        assert False
+            else:
+                options = []
+
+            if groups and groups[0][0] == "content":
+                # to parse
+                content_node = list(groups.pop(0)[1])
+                assert len(content_node) == 1
+                content = self.as_text(content_node[0])
+                padding = (content_node[0].start_point[1] - _1.start_point[1]) * " "
+                content = dedent(padding + content)
+                children = self.visit(content_node[0])
+            else:
+                content = ""
+                children = []
+
         assert not groups
         # todo , we may want to see about the indentation of the content.
 
-        directive = MMystDirective(role, argument, dict(options), content)
+        directive = UnprocessedDirective(
+            role, argument, dict(options), content, children=children, raw=raw
+        )
         return [directive]
 
-    def visit_footnote_reference(self, node, prev_end=None):
+    def visit_footnote_reference(self, node):
         # TODO
-        # assert False, self.bytes[node.start_byte : node.end_byte].decode()
+        # assert False, self.as_text(node)
         return []
 
-    def visit_emphasis(self, node, prev_end=None):
+    def visit_emphasis(self, node):
         # TODO
-        return [
-            MEmphasis(
-                [MText(self.bytes[node.start_byte + 1 : node.end_byte - 1].decode())]
-            )
-        ]
+        return [MEmphasis([MText(self.as_text(node)[1:-1])])]
 
-    def visit_substitution_definition(self, node, prev_end=None):
+    def visit_substitution_definition(self, node):
         assert len(node.children) == 3
         _dotdot, sub, directive = node.children
-        assert self.bytes[_dotdot.start_byte : _dotdot.end_byte].decode() == ".."
+        assert self.as_text(_dotdot) == ".."
         assert sub.type == "substitution"
         assert directive.type == "directive"
         return [
             SubstitutionDef(
-                value=self.bytes[sub.start_byte : sub.end_byte].decode(),
+                value=self.as_text(sub),
                 children=self.visit_directive(directive),
             )
         ]
 
-    def visit_comment(self, node, prev_end=None):
+    def visit_comment(self, node):
         # TODO
-        return [MComment(self.bytes[node.start_byte : node.end_byte].decode())]
+        return [MComment(self.as_text(node))]
         # raise VisitCommentNotImplementedError()
 
-    def visit_strong(self, node, prev_end=None):
-        return [
-            MStrong(
-                [MText(self.bytes[node.start_byte + 2 : node.end_byte - 2].decode())]
-            )
-        ]
+    def visit_strong(self, node):
+        return [MStrong([MText(self.as_text(node)[2:-2])])]
 
-    def visit_footnote(self, node, prev_end=None):
+    def visit_footnote(self, node):
         # TODO
         # that is actually used for references
-        # assert False, self.bytes[node.start_byte : node.end_byte].decode()
+        # assert False, self.as_text(node)
         return [Unimplemented("footnote", self.as_text(node))]
 
-    def visit_ERROR(self, node, prev_end=None):
+    def visit_ERROR(self, node):
         """
         Called with parsing error nodes.
         """
@@ -716,7 +778,7 @@ class TSVisitor:
         # raise TreeSitterParseError()
         return []
 
-    def visit_definition_list(self, node, prev_end=None):
+    def visit_definition_list(self, node):
         acc = []
         for list_item in node.children:
             assert list_item.type == "list_item"
@@ -774,8 +836,7 @@ def parse(text: bytes, qa=None) -> List[Section]:
 
     tree = parser.parse(text)
     root = Node(tree.root_node)
-    tsv = TSVisitor(text, root, qa)
-    res = tsv.visit_document(root)
+    res = TSVisitor(text, qa).visit_document(root)
     ns = nest_sections(res)
     return ns
 

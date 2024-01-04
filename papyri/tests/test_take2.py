@@ -2,7 +2,7 @@ import pytest
 
 from papyri.ts import parse
 
-from ..myst_ast import MMystDirective
+from ..myst_ast import UnprocessedDirective
 from ..take2 import (
     dedent_but_first,
     get_object,
@@ -12,8 +12,8 @@ from ..take2 import (
 @pytest.mark.parametrize(
     "target, type_, number",
     [
-        ("numpy", MMystDirective, 0),
-        ("numpy.linspace", MMystDirective, 2),
+        ("numpy", UnprocessedDirective, 0),
+        ("numpy.linspace", UnprocessedDirective, 2),
     ],
 )
 def test_parse_blocks(target, type_, number):

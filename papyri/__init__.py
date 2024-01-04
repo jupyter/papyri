@@ -102,9 +102,6 @@ Here are a couple of function that are of interest to explore what papyri can do
 `matplotlib.colors`
     contain a reference via ``.. _palettable: value`` and autolink ``paletable_``.
 
-`numpy.npv`
-    hase warning sections.
-
 `scipy.signal.ltisys.bode`
     contains multiple figure
 
@@ -176,7 +173,7 @@ from typing import List, Optional, Annotated
 import tomli_w
 import typer
 
-from . import examples
+from . import examples  # noqa
 
 __version__ = "0.0.8"
 
@@ -246,7 +243,7 @@ def ingest(
     dummy_progress: bool = typer.Option(False, help="Disable rich progress bar"),
 ):
     """
-    Given paths to a docbundle folder, ingest it into the known libraries.
+    Given paths to a DocBundle folder, ingest it into the known libraries.
 
     Parameters
     ----------
@@ -280,7 +277,7 @@ def install(
     relink: bool = False,
 ):
     """
-    WIP, download and install a remote docbundle
+    WIP. Download and install a remote DocBundle
     """
 
     from io import BytesIO
@@ -296,7 +293,7 @@ def install(
 
     async def get(name, version, results, progress):
         """
-        Utility to download a single docbundle and
+        Utility to download a single DocBundle and
         put it into result.
 
         """
@@ -333,7 +330,7 @@ def install(
 
     async def trio_main():
         """
-        Main trio routine to download docbundles concurently.
+        Main trio routine to download DocBundles concurently.
 
         """
         results = {}

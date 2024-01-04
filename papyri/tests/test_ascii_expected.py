@@ -12,6 +12,8 @@ expected = (HERE / "expected").glob("*")
 
 
 def _get_result_for_name(name):
+    # WARNING: This test only works if the papyri and numpy docs are generated and
+    # ingested first
     gstore = GraphStore(ingest_dir, {})
     key = next(iter(gstore.glob((None, None, "module", name))))
 

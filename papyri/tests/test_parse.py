@@ -3,7 +3,7 @@ from textwrap import dedent
 import pytest
 
 from papyri import errors
-from papyri.ts import parse
+from papyri.ts import parse, Node, TSVisitor, parser
 
 
 # @pytest.mark.xfail(strict=True)
@@ -17,7 +17,6 @@ def test_parse_space_in_directive_section():
         should raise/warn in papyri.
         It may depends on the tree-sitter rst version.
 
-
     """
     )
     pytest.raises(
@@ -26,6 +25,91 @@ def test_parse_space_in_directive_section():
         data.encode(),
         "test_parse_space_in_directive_section",
     )
+
+
+def test_parse_directive_body():
+    data1 = dedent(
+        """
+
+    .. directive:: Directive title
+
+        This directive declares a title and content in a block separated from
+        the definition by an empty new line.
+
+    """
+    )
+    data2 = dedent(
+        """
+
+    .. directive:: Directive title
+        This directive declares a title and content not separated by an empty
+        newline.
+
+    """
+    )
+
+    text1 = data1.strip("\n").encode()
+    text2 = data2.strip("\n").encode()
+
+    tree1 = parser.parse(text1)
+    tree2 = parser.parse(text2)
+
+    directive1 = Node(tree1.root_node).without_whitespace()
+    directive2 = Node(tree2.root_node).without_whitespace()
+
+    tsv1 = TSVisitor(text1, "test_parse_directive_body")
+    tsv2 = TSVisitor(text2, "test_parse_directive_body")
+
+    items1 = tsv1.visit(directive1)
+    items2 = tsv2.visit(directive2)
+
+    assert items1[0].name == "directive"
+    assert items1[0].args == "Directive title"
+    assert items1[0].options == dict()
+    assert (
+        items1[0].value
+        == "This directive declares a title and content in a block separated from\nthe definition by an empty new line."
+    )
+    assert (
+        " ".join([i.value for i in items1[0].children])
+        == "This directive declares a title and content in a block separated from the definition by an empty new line."
+    )
+
+    assert items2[0].name == "directive"
+    assert items2[0].args == "Directive title"
+    assert items2[0].options == dict()
+    assert (
+        items2[0].value
+        == "This directive declares a title and content not separated by an empty\nnewline."
+    )
+    assert (
+        " ".join([i.value for i in items2[0].children])
+        == "This directive declares a title and content not separated by an empty newline."
+    )
+
+
+def test_parse_warning_directive():
+    data = dedent(
+        """
+
+    .. warning:: Title
+
+        The warning directive does not admit a title.
+
+    """
+    )
+    text = data.strip("\n").encode()
+    tree = parser.parse(text)
+    directive = Node(tree.root_node)
+    tsv = TSVisitor(text, "test_parse_directive_body")
+    new_node = directive.without_whitespace()
+    items = tsv.visit(new_node)
+
+    assert items[0].name == "warning"
+    assert items[0].args == ""
+    assert items[0].options == dict()
+    assert items[0].value == "Title The warning directive does not admit a title."
+    assert items[0].children == []
 
 
 def test_parse_space():

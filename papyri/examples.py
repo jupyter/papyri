@@ -147,6 +147,54 @@ empty
 ----
 
 
+Directive
+---------
+
+Please have a look at the source to see the custom directives.
+The file  ``example/papyri.toml`` also show how to register a custom callable
+for a custom directive handler::
+
+
+    [global.directives]
+    mydirective='papyri.examples:_mydirective_handler'
+
+
+
+.. mydirective:: those are the **arguments**, passed as a ``string``
+    :the:
+    :flags:
+    :and: Here
+    :are: some
+    :option: field
+
+    Beyond this is the core of the directive, it will be stored as a raw string
+    in the value of MMystDirective without the leading indentation. It is the
+    responsibility of the directive handler to parse the directive and return
+    corresponding ast nodes for further processing.
+
+
+.. mydirective::
+
+   A second directive to play
+   with the indentation level with _italic_, **bold**, are not parsed.
+
+
+Nested directives:
+
+
+.. warning::
+
+    This warnings *should* contain a deprecation:
+
+    .. deprecated:: 0.04
+
+        This should be deprecated
+
+        .. note::
+
+            This is just an **example** and is not ``deprecated``.
+
+
 Various test cases
 ==================
 
@@ -158,7 +206,7 @@ but a space.
 
 """
 
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Any, List
 
 
 async def example1(
@@ -285,4 +333,34 @@ foo = object()
 
 
 def annotation_with_hex_addresses(x: foo = lambda x: x):  # type:ignore [valid-type]
+    """
+    This function is a function for which the signature will have and hexadecimal addresse.
+
+    It is included to show that the hex address should be normalized.
+    """
     pass
+
+
+def _mydirective_handler(args: str, options: Dict[str, str], value: str):
+    from .take2 import MParagraph, MText
+    from .ts import parse
+
+    parsed_arguments = parse(args.encode(), qa="custom directive")
+
+    acc: List[Any] = []
+    for p in parsed_arguments:
+        acc.extend(p.children)
+
+    return [
+        *acc,
+        MParagraph(
+            [
+                MText(
+                    f".. custom_directive:\n    This is custom directive handler that received: \n"
+                    f"    {args=}, \n"
+                    f"    {options=}, \n"
+                    f"    {value=}\n"
+                ),
+            ]
+        ),
+    ]
