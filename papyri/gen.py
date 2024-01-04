@@ -1283,7 +1283,6 @@ class Gen:
         """
         assert qa is not None
         example_code = "\n".join(example_section)
-        blocks = example_code.split("\n\n")
         import matplotlib.pyplot as plt
 
         if qa in config.exclude_jedi:
@@ -1322,14 +1321,19 @@ class Gen:
             """
             sys_stdout.write(" ".join(str(x) for x in args) + "\n")
 
+        blocks = doctest.DocTestParser().parse(example_code, name=qa)
         for block in blocks:
-            doctests = doctest.DocTestParser().get_doctest(
-                block, doctest_runner.globs, obj.__name__, filename, lineno
-            )
-            if config.exec and doctests.examples:
-                doctest_runner.run(doctests, out=debugprint, clear_globs=False)
-                doctest_runner.globs.update(doctests.globs)
-                example_section_data.extend(doctest_runner.example_section_data)
+            if isinstance(block, doctest.Example):
+                doctests = doctest.DocTest([block],
+                                           globs=doctest_runner.globs,
+                                           name=qa, filename=filename,
+                                           lineno=lineno, docstring=example_code)
+                if exec:
+                    doctest_runner.run(doctests, out=debugprint, clear_globs=False)
+                    doctest_runner.globs.update(doctests.globs)
+                    example_section_data.extend(doctest_runner.example_section_data)
+                else:
+                    example_section_data.append(MText(block.source))
             else:
                 example_section_data.append(MText(block))
 
