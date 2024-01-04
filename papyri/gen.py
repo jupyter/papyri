@@ -1334,7 +1334,7 @@ class Gen:
                     example_section_data.extend(doctest_runner.example_section_data)
                 else:
                     example_section_data.append(MText(block.source))
-            else:
+            elif block:
                 example_section_data.append(MText(block))
 
         # TODO fix this if plt.close not called and still a lingering figure.
