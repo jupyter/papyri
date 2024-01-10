@@ -334,6 +334,9 @@ class Section(Node):
     def append(self, item):
         self.children.append(item)
 
+    def extend(self, items):
+        self.children.extend(items)
+
     def empty(self):
         return len(self.children) == 0
 

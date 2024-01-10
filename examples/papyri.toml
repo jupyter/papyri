@@ -4,7 +4,7 @@ submodules = ['examples']
 examples_folder = '~/dev/papyri/docs/examples/'
 logo = "../papyri-logo.png"
 docs_path = "~/dev/papyri/docs"
-exec = true
+execute_doctests = true
 exec_failure = 'raise'
 exclude= ["papyri.utils:FullQual","papyri.utils:Cannonical" ]
 [global.directives]

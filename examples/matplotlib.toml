@@ -91,7 +91,7 @@ examples_exclude = [
 "lines_bars_and_markers/marker_reference.py",
 "lines_bars_and_markers/multivariate_marker_plot.py",
 ]
-exec = true
+execute_doctests = true
 
 [global.expected_errors]
 IncorrectInternalDocsLen = [

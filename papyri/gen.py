@@ -10,6 +10,7 @@ likely be separated into a separate module at some point.
 
 from __future__ import annotations
 
+import doctest
 import dataclasses
 import datetime
 import inspect
@@ -30,6 +31,7 @@ from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
 from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
+import io
 
 import jedi
 import tomli_w
@@ -42,7 +44,7 @@ from pygments.lexers import PythonLexer
 from rich.logging import RichHandler
 from rich.progress import BarColumn, Progress, TextColumn, track
 from there import print as print_
-from velin.examples_section_utils import InOut, splitblank, splitcode
+from matplotlib import _pylab_helpers
 
 from .common_ast import Node
 from .errors import (
@@ -279,10 +281,9 @@ from enum import Enum
 
 
 class ExecutionStatus(Enum):
-    none = "None"
-    compiled = "compiled"
-    syntax_error = "syntax_error"
-    exec_error = "exception_in_exec"
+    success = "success"
+    failure = "failure"
+    unexpected_exception = "unexpected_exception"
 
 
 def _execute_inout(item):
@@ -405,7 +406,6 @@ class Config:
     exclude: Sequence[str] = ()  # list of dotted object name to exclude from collection
     examples_folder: Optional[str] = None  # < to path ?
     submodules: Sequence[str] = ()
-    exec: bool = False
     source: Optional[str] = None
     homepage: Optional[str] = None
     docs: Optional[str] = None
@@ -420,6 +420,7 @@ class Config:
     expected_errors: Dict[str, List[str]] = dataclasses.field(default_factory=dict)
     early_error: bool = True
     fail_unseen_error: bool = False
+    execute_doctests: bool = True
     directives: Dict[str, str] = dataclasses.field(default_factory=lambda: {})
 
     def replace(self, **kwargs):
@@ -512,7 +513,7 @@ def gen_main(
     conf["fail_unseen_error"] = fail_unseen_error
     config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
     if exec_ is not None:
-        config.exec = exec_
+        config.execute_doctests = exec_
     if infer is not None:
         config.infer = infer
 
@@ -1050,6 +1051,100 @@ def _normalize_see_also(see_also: Section, qa: str):
     return new_see_also
 
 
+class PapyriDocTestRunner(doctest.DocTestRunner):
+    def __init__(self, *args, gen, obj, qa, config, **kwargs):
+        self.gen = gen
+        self.obj = obj
+        self.qa = qa
+        self.config = config
+        self._example_section_data = Section([], None)
+        super().__init__(*args, **kwargs)
+        import matplotlib
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        matplotlib.use("agg")
+
+        self.globs = {"np": np, "plt": plt, obj.__name__: obj}
+        self.globs.update(_get_implied_imports(obj))
+        for k, v in config.implied_imports.items():
+            self.globs[k] = obj_from_qualname(v)
+
+        self.figs = []
+
+    def _get_tok_entries(self, example):
+        entries = parse_script(
+            example.source, ns=self.globs, prev="", config=self.config, where=self.qa
+        )
+        if entries is None:
+            entries = [("jedi failed", "jedi failed")]
+        entries = _add_classes(entries)
+        tok_entries = [GenToken(*x) for x in entries]  # type: ignore
+        return tok_entries
+
+    def _figure_names(self):
+        """
+        File system can be case insensitive, we are not.
+        """
+        for i in count(0):
+            pat = f"fig-{self.qa}-{i}"
+            sha = sha256(pat.encode()).hexdigest()[:8]
+            yield f"{pat}-{sha}.png"
+
+    def report_start(self, out, test, example):
+        pass
+
+    def report_success(self, out, test, example, got):
+        import matplotlib.pyplot as plt
+
+        tok_entries = self._get_tok_entries(example)
+
+        self._example_section_data.append(
+            Code(tok_entries, got, ExecutionStatus.success)
+        )
+
+        figure_names = self._figure_names()
+
+        wait_for_show = self.config.wait_for_plt_show
+        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
+        figs = []
+        if fig_managers and (("plt.show" in example.source) or not wait_for_show):
+            for fig, figname in zip(fig_managers, figure_names):
+                buf = io.BytesIO()
+                fig.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
+                buf.seek(0)
+                figs.append((figname, buf.read()))
+            plt.close("all")
+
+        for figname, _ in figs:
+            self._example_section_data.append(
+                Fig(
+                    RefInfo.from_untrusted(
+                        self.gen.root, self.gen.version, "assets", figname
+                    )
+                )
+            )
+        self.figs.extend(figs)
+
+    def report_unexpected_exception(self, out, test, example, exc_info):
+        out(f"Unexpected exception after running example in `{self.qa}`", exc_info)
+        tok_entries = self._get_tok_entries(example)
+        self._example_section_data.append(
+            Code(tok_entries, exc_info, ExecutionStatus.unexpected_exception)
+        )
+
+    def report_failure(self, out, test, example, got):
+        tok_entries = self._get_tok_entries(example)
+        self._example_section_data.append(
+            Code(tok_entries, got, ExecutionStatus.failure)
+        )
+
+    def get_example_section_data(self):
+        example_section_data = self._example_section_data
+        self._example_section_data = Section([], None)
+        return example_section_data
+
+
 class Gen:
     """
     Core class to generate a DocBundle for a given library.
@@ -1126,7 +1221,7 @@ class Gen:
         self._doctree: Dict[str, str] = {}
 
     def get_example_data(
-        self, example_section, *, obj, qa: str, config, log
+        self, example_section, *, obj: Any, qa: str, config: Config, log: logging.Logger
     ) -> Tuple[Section, List[Any]]:
         """Extract example section data from a NumpyDocString
 
@@ -1148,7 +1243,7 @@ class Gen:
             have to be imported imported in docstrings. This should become a high
             level option at some point. Note that for method classes, the class should
             be made available but currently is not.
-        qa
+        qa : str
             The fully qualified name of current object
         config : Config
             Current configuration
@@ -1191,146 +1286,74 @@ class Gen:
         The capturing of matplotlib figures is also limited.
         """
         assert qa is not None
-        blocks = list(map(splitcode, splitblank(example_section)))
-        example_section_data = Section([], None)
+        example_code = "\n".join(example_section)
         import matplotlib.pyplot as plt
-        import numpy as np
 
-        acc = ""
-
-        def _figure_names():
-            """
-            File system can be case insensitive, we are not.
-            """
-            for i in count(0):
-                pat = f"fig-{qa}-{i}"
-                sha = sha256(pat.encode()).hexdigest()[:8]
-                yield f"{pat}-{sha}.png"
-
-        figure_names = _figure_names()
-
-        ns = {"np": np, "plt": plt, obj.__name__: obj}
-        ns.update(_get_implied_imports(obj))
-        for k, v in config.implied_imports.items():
-            ns[k] = obj_from_qualname(v)
-        executor = BlockExecutor(ns)
-        all_figs = []
-        # fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
-        fig_managers = executor.fig_man()
-        assert (len(fig_managers)) == 0, f"init fail in {qa} {len(fig_managers)}"
-        wait_for_show = config.wait_for_plt_show
         if qa in config.exclude_jedi:
             config = config.replace(infer=False)
             log.debug(f"Turning off type inference for func {qa!r}")
-        chunks = (it for block in blocks for it in block)
-        with executor:
-            for item in chunks:
-                figs = []
-                if not isinstance(item, InOut):
-                    assert isinstance(item.out, list)
-                    # TODO: this is false for example and need to be parsed as RST
-                    example_section_data.append(MText("\n".join(item.out)))
-                    continue
-                script, out, ce_status = _execute_inout(item)
-                raise_in_fig = None
-                did_except = False
-                if config.exec and ce_status == ExecutionStatus.compiled.value:
-                    if not wait_for_show:
-                        # we should aways have 0 figures
-                        # unless stated otherwise
-                        assert len(fig_managers) == 0
-                    try:
-                        res = object()
-                        try:
-                            res, fig_managers, sout, serr = executor.exec(script)
-                            ce_status = "execed"
-                        except Exception:
-                            if "Traceback" not in "\n".join(out):
-                                script = script.replace("\n", "\n>>> ")
-                                script = ">>> " + script
 
-                                meta_ = obj.__code__
-                                obj_fname = meta_.co_filename
-                                obj_lineno = meta_.co_firstlineno
-                                obj_name = meta_.co_name
+        sys_stdout = sys.stdout
 
-                                example_section_split = "\n".join(
-                                    example_section
-                                ).split(script)
-                                err_lineno = example_section_split[0].count("\n")
-                                log.exception(
-                                    "error in execution: "
-                                    f"{obj_fname}:{obj_lineno} ({full_qual(obj)}) in {obj_name}"
-                                    f"\n-> Example section line {err_lineno}:"
-                                    f"\n\n{script}\n",
-                                )
-                            ce_status = "exception_in_exec"
-                            if config.exec_failure != "fallback":
-                                raise
-                        if fig_managers and (
-                            ("plt.show" in script) or not wait_for_show
-                        ):
-                            raise_in_fig = True
-                            for fig, figname in zip(executor.get_figs(), figure_names):
-                                figs.append((figname, fig))
-                            plt.close("all")
-                            raise_in_fig = False
+        def dbg(*args):
+            for arg in args:
+                sys_stdout.write(f"{arg}\n")
+            sys_stdout.flush()
 
-                    except Exception:
-                        did_except = True
-                        print_(f"exception executing... {qa}")
-                        fig_managers = executor.fig_man()
-                        if raise_in_fig or config.exec_failure != "fallback":
-                            raise
-                    finally:
-                        if not wait_for_show:
-                            if fig_managers:
-                                for fig, figname in zip(
-                                    executor.get_figs(), figure_names
-                                ):
-                                    figs.append((figname, fig))
-                                    print_(
-                                        f"Still fig manager(s) open for {qa}: {figname}"
-                                    )
-                                plt.close("all")
-                            fig_managers = executor.fig_man()
-                            assert len(fig_managers) == 0, fig_managers + [
-                                did_except,
-                            ]
-                    # we've executed, we now want to compare output
-                    # in the docstring with the one we produced.
-                    if (out == repr(res)) or (res is None and out == []):
-                        pass
-                    else:
-                        pass
-                        # captured output differ TBD
-                entries = parse_script(script, ns=ns, prev=acc, config=config, where=qa)
-                if entries is None:
-                    entries = [("jedi failed", "jedi failed")]
-                entries = _add_classes(entries)
-                tok_entries = [GenToken(*x) for x in entries]  # type: ignore
+        try:
+            filename = inspect.getfile(obj)
+        except TypeError:
+            filename = None
+        try:
+            lineno = inspect.getsourcelines(obj)[1]
+        except (TypeError, OSError):
+            lineno = None
 
-                acc += "\n" + script
-                example_section_data.append(
-                    Code(tok_entries, "\n".join(item.out), ce_status)
+        doctest_runner = PapyriDocTestRunner(
+            gen=self,
+            obj=obj,
+            qa=qa,
+            config=config,
+            # TODO: Make optionflags configurable
+            optionflags=doctest.ELLIPSIS,
+        )
+        example_section_data = Section([], None)
+
+        def debugprint(*args):
+            """
+            version of print that capture current stdout to use during testing to debug
+            """
+            sys_stdout.write(" ".join(str(x) for x in args) + "\n")
+
+        blocks = doctest.DocTestParser().parse(example_code, name=qa)
+        for block in blocks:
+            if isinstance(block, doctest.Example):
+                doctests = doctest.DocTest(
+                    [block],
+                    globs=doctest_runner.globs,
+                    name=qa,
+                    filename=filename,
+                    lineno=lineno,
+                    docstring=example_code,
                 )
-                for figname, _ in figs:
-                    example_section_data.append(
-                        Fig(
-                            RefInfo.from_untrusted(
-                                self.root, self.version, "assets", figname
-                            )
-                        )
+                if config.execute_doctests:
+                    doctest_runner.run(doctests, out=debugprint, clear_globs=False)
+                    doctest_runner.globs.update(doctests.globs)
+                    example_section_data.extend(
+                        doctest_runner.get_example_section_data()
                     )
-                all_figs.extend(figs)
+                else:
+                    example_section_data.append(MText(block.source))
+            elif block:
+                example_section_data.append(MText(block))
 
-        # TODO fix this if plt.close not called and still a ligering figure.
-        fig_managers = executor.fig_man()
+        # TODO fix this if plt.close not called and still a lingering figure.
+        fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         if len(fig_managers) != 0:
             print_(f"Unclosed figures in {qa}!!")
             plt.close("all")
 
-        return processed_example_data(example_section_data), all_figs
+        return processed_example_data(example_section_data), doctest_runner.figs
 
     def clean(self, where: Path):
         """
@@ -1801,7 +1824,7 @@ class Gen:
                 script = example.read_text()
                 ce_status = "None"
                 figs = []
-                if config.exec:
+                if config.execute_doctests:
                     with executor:
                         try:
                             executor.exec(script, name=str(example))
@@ -2137,8 +2160,8 @@ class Gen:
                     continue
             if not isinstance(target_item, ModuleType):
                 arbitrary = []
-            ex = self.config.exec
-            if self.config.exec and any(
+            ex = self.config.execute_doctests
+            if self.config.execute_doctests and any(
                 qa.startswith(pat) for pat in self.config.execute_exclude_patterns
             ):
                 ex = False
@@ -2149,7 +2172,7 @@ class Gen:
                     target_item,
                     ndoc,
                     qa=qa,
-                    config=self.config.replace(exec=ex),
+                    config=self.config.replace(execute_doctests=ex),
                     aliases=collector.aliases[qa],
                     api_object=api_object,
                 )

@@ -5,6 +5,7 @@ exec_failure = "fallback"
 submodules = []
 exclude = [""
 ]
+execute_doctests = false
 [pandas.expected_errors]
 IncorrectInternalDocsLen = [
    "pandas.core.indexes.period:PeriodIndex.asof_locs",
@@ -43,3 +44,6 @@ WrongTypeAtField = [
    "pandas.core.resample:Resampler.interpolate",
    "pandas.core.generic:NDFrame.to_pickle",
 ]
+
+[global.implied_imports]
+pd = 'pandas'

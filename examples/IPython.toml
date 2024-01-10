@@ -3,7 +3,7 @@ module = 'IPython'
 logo = "img/ipython-logo.png"
 exec_failure = "fallback"
 docs_path = "~/dev/IPython/docs/source"
-exec = true
+execute_doctests = true
 execute_exclude_patterns = [
    'IPython.lib.display:Audio',
    'IPython.core.display_functions:display'

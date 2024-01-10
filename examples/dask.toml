@@ -41,3 +41,4 @@ exclude = [ "dask.utils:Dispatch",
 
 #docs_path = "~/dev/dask/docs/source"
 exec_failure = 'fallback'
+execute_doctests = false

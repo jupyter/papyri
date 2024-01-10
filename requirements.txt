@@ -11,4 +11,3 @@ textual
 there
 tree_sitter
 typer
-velin
