@@ -1,7 +1,7 @@
 [global]
 module = 'scipy'
 logo = "img/scipy_logo.png"
-exec = true
+execute_doctests = true
 submodules = [ "signal","misc"]
 exclude = [
     # OTHER.

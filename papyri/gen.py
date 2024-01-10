@@ -406,7 +406,6 @@ class Config:
     exclude: Sequence[str] = ()  # list of dotted object name to exclude from collection
     examples_folder: Optional[str] = None  # < to path ?
     submodules: Sequence[str] = ()
-    exec: bool = False
     source: Optional[str] = None
     homepage: Optional[str] = None
     docs: Optional[str] = None
@@ -514,7 +513,7 @@ def gen_main(
     conf["fail_unseen_error"] = fail_unseen_error
     config = Config(**conf, dry_run=dry_run, dummy_progress=dummy_progress)
     if exec_ is not None:
-        config.exec = exec_
+        config.execute_doctests = exec_
     if infer is not None:
         config.infer = infer
 
@@ -1145,6 +1144,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         self._example_section_data = Section([], None)
         return example_section_data
 
+
 class Gen:
     """
     Core class to generate a DocBundle for a given library.
@@ -1221,7 +1221,7 @@ class Gen:
         self._doctree: Dict[str, str] = {}
 
     def get_example_data(
-        self, example_section, *, obj, qa: str, config, log
+        self, example_section, *, obj: Any, qa: str, config: Config, log: logging.Logger
     ) -> Tuple[Section, List[Any]]:
         """Extract example section data from a NumpyDocString
 
@@ -1243,7 +1243,7 @@ class Gen:
             have to be imported imported in docstrings. This should become a high
             level option at some point. Note that for method classes, the class should
             be made available but currently is not.
-        qa
+        qa : str
             The fully qualified name of current object
         config : Config
             Current configuration
@@ -1328,14 +1328,20 @@ class Gen:
         blocks = doctest.DocTestParser().parse(example_code, name=qa)
         for block in blocks:
             if isinstance(block, doctest.Example):
-                doctests = doctest.DocTest([block],
-                                           globs=doctest_runner.globs,
-                                           name=qa, filename=filename,
-                                           lineno=lineno, docstring=example_code)
-                if config.exec:
+                doctests = doctest.DocTest(
+                    [block],
+                    globs=doctest_runner.globs,
+                    name=qa,
+                    filename=filename,
+                    lineno=lineno,
+                    docstring=example_code,
+                )
+                if config.execute_doctests:
                     doctest_runner.run(doctests, out=debugprint, clear_globs=False)
                     doctest_runner.globs.update(doctests.globs)
-                    example_section_data.extend(doctest_runner.get_example_section_data())
+                    example_section_data.extend(
+                        doctest_runner.get_example_section_data()
+                    )
                 else:
                     example_section_data.append(MText(block.source))
             elif block:
@@ -1818,7 +1824,7 @@ class Gen:
                 script = example.read_text()
                 ce_status = "None"
                 figs = []
-                if config.exec:
+                if config.execute_doctests:
                     with executor:
                         try:
                             executor.exec(script, name=str(example))
@@ -2154,8 +2160,8 @@ class Gen:
                     continue
             if not isinstance(target_item, ModuleType):
                 arbitrary = []
-            ex = self.config.exec
-            if self.config.exec and any(
+            ex = self.config.execute_doctests
+            if self.config.execute_doctests and any(
                 qa.startswith(pat) for pat in self.config.execute_exclude_patterns
             ):
                 ex = False
