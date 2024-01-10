@@ -2172,7 +2172,7 @@ class Gen:
                     target_item,
                     ndoc,
                     qa=qa,
-                    config=self.config.replace(exec=ex),
+                    config=self.config.replace(execute_doctests=ex),
                     aliases=collector.aliases[qa],
                     api_object=api_object,
                 )

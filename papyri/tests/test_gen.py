@@ -22,7 +22,7 @@ def test_find_beyond_decorators():
 
     For example the lru_decorator.
     """
-    config = Config(exec=True, infer=True)
+    config = Config(execute_doctests=True, infer=True)
     gen = Gen(dummy_progress=True, config=config)
 
     api_object = APIObjectInfo("function", "", None, None, qa=None)
@@ -88,7 +88,7 @@ def test_infer():
     ],
 )
 def test_numpy(module, submodules, objects):
-    config = Config(exec=False, infer=False, submodules=submodules)
+    config = Config(execute_doctests=False, infer=False, submodules=submodules)
     gen = Gen(dummy_progress=True, config=config)
 
     with tempfile.TemporaryDirectory() as tempdir:
@@ -116,7 +116,7 @@ def test_numpy(module, submodules, objects):
     ],
 )
 def test_numpy_2(module, submodules, objects):
-    config = Config(exec=False, infer=False, submodules=submodules)
+    config = Config(execute_doctests=False, infer=False, submodules=submodules)
     gen = Gen(dummy_progress=True, config=config)
 
     gen.collect_package_metadata(
