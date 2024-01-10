@@ -1125,7 +1125,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
                     )
                 )
             )
-        figs.extend(figs)
+        self.figs.extend(figs)
 
     def report_unexpected_exception(self, out, test, example, exc_info):
         out(f"Unexpected exception after running example in `{self.qa}`", exc_info)
