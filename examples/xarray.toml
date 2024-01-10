@@ -5,7 +5,7 @@ execute_exclude_patterns = []
 submodules = []
 
 
-exec = true
+execute_doctests = true
 exclude = [
 ]
 exec_failure = 'fallback'

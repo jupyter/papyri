@@ -63,7 +63,7 @@ submodules = [
 
 docs_path = '~/dev/numpy/doc/source'
 
-exec = true
+execute_doctests = true
 narrative_exclude = [
    'doc/source/reference/arrays.ndarray.rst',
    'doc/source/user/how-to-how-to.rst',
