@@ -1332,7 +1332,7 @@ class Gen:
                                            globs=doctest_runner.globs,
                                            name=qa, filename=filename,
                                            lineno=lineno, docstring=example_code)
-                if exec:
+                if config.exec:
                     doctest_runner.run(doctests, out=debugprint, clear_globs=False)
                     doctest_runner.globs.update(doctests.globs)
                     example_section_data.extend(doctest_runner.get_example_section_data())
