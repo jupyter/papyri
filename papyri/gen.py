@@ -1053,6 +1053,7 @@ def _normalize_see_also(see_also: Section, qa: str):
 
 class PapyriDocTestRunner(doctest.DocTestRunner):
     def __init__(self, *args, gen, obj, qa, config, **kwargs):
+        self._count = count(0)
         self.gen = gen
         self.obj = obj
         self.qa = qa
@@ -1086,7 +1087,7 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         """
         File system can be case insensitive, we are not.
         """
-        for i in count(0):
+        for i in self._count:
             pat = f"fig-{self.qa}-{i}"
             sha = sha256(pat.encode()).hexdigest()[:8]
             yield f"{pat}-{sha}.png"
