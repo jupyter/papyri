@@ -1053,6 +1053,7 @@ def _normalize_see_also(see_also: Section, qa: str):
 
 class PapyriDocTestRunner(doctest.DocTestRunner):
     def __init__(self, *args, gen, obj, qa, config, **kwargs):
+        self._count = count(0)
         self.gen = gen
         self.obj = obj
         self.qa = qa
@@ -1082,14 +1083,14 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         tok_entries = [GenToken(*x) for x in entries]  # type: ignore
         return tok_entries
 
-    def _figure_names(self):
+    def _next_figure_name(self):
         """
         File system can be case insensitive, we are not.
         """
-        for i in count(0):
-            pat = f"fig-{self.qa}-{i}"
-            sha = sha256(pat.encode()).hexdigest()[:8]
-            yield f"{pat}-{sha}.png"
+        i = next(self._count)
+        pat = f"fig-{self.qa}-{i}"
+        sha = sha256(pat.encode()).hexdigest()[:8]
+        return f"{pat}-{sha}.png"
 
     def report_start(self, out, test, example):
         pass
@@ -1103,13 +1104,12 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
             Code(tok_entries, got, ExecutionStatus.success)
         )
 
-        figure_names = self._figure_names()
-
         wait_for_show = self.config.wait_for_plt_show
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         figs = []
         if fig_managers and (("plt.show" in example.source) or not wait_for_show):
-            for fig, figname in zip(fig_managers, figure_names):
+            for fig in fig_managers:
+                figname = self._next_figure_name()
                 buf = io.BytesIO()
                 fig.canvas.figure.savefig(buf, dpi=300)  # , bbox_inches="tight"
                 buf.seek(0)
