@@ -30,7 +30,17 @@ from hashlib import sha256
 from itertools import count
 from pathlib import Path
 from types import FunctionType, ModuleType
-from typing import Any, Dict, FrozenSet, List, MutableMapping, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    List,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 import io
 
 import jedi
@@ -671,7 +681,7 @@ class DFSCollector:
         else:
             oroot = omod
 
-        if not oroot == self.root:
+        if oroot != self.root:
             return
         if obj in self.obj.values():
             return
@@ -1139,10 +1149,51 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
             Code(tok_entries, got, ExecutionStatus.failure)
         )
 
-    def get_example_section_data(self):
+    def get_example_section_data(self) -> Section:
         example_section_data = self._example_section_data
         self._example_section_data = Section([], None)
         return example_section_data
+
+    def _compact(self, example_section_data) -> Section:
+        """
+        Compact consecutive execution items that do have the same execution status.
+
+        TODO:
+
+        This is not perfect as doctest tests that the output is the same, thus when we have a multiline block
+        If any of the intermediate items produce an output, the result will be failure.
+        """
+        acc: List[Union[MText, Code]] = []
+        current_code: Optional[Code] = None
+
+        for item in example_section_data:
+            if not isinstance(item, Code):
+                if current_code is not None:
+                    acc.append(current_code)
+                    acc.append(MText(str(current_code.out)))
+                    acc.append(MText(str(current_code.ce_status)))
+                    current_code = None
+                acc.append(item)
+            else:
+                if current_code is None:
+                    assert item is not None
+                    current_code = item
+                    continue
+
+                if current_code.ce_status == item.ce_status:
+                    current_code = Code(
+                        current_code.entries + item.entries, item.out, item.ce_status
+                    )
+                else:
+                    acc.append(current_code)
+                    acc.append(MText(str(current_code.out)))
+                    acc.append(MText(str(current_code.ce_status)))
+                    assert item is not None
+                    current_code = item
+
+        if current_code:
+            acc.append(current_code)
+        return Section(acc, None)
 
 
 class Gen:
@@ -1346,6 +1397,8 @@ class Gen:
                     example_section_data.append(MText(block.source))
             elif block:
                 example_section_data.append(MText(block))
+
+        example_section_data = doctest_runner._compact(example_section_data)
 
         # TODO fix this if plt.close not called and still a lingering figure.
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
@@ -2290,10 +2343,7 @@ def is_private(path):
     Determine if a import path, or fully qualified is private.
     that usually implies that (one of) the path part starts with a single underscore.
     """
-    for p in path.split("."):
-        if p.startswith("_") and not p.startswith("__"):
-            return True
-    return False
+    return any(p.startswith("_") and not p.startswith("__") for p in path.split("."))
 
 
 def find_cannonical(qa: str, aliases: List[str]):
