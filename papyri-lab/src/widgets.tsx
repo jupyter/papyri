@@ -98,7 +98,7 @@ class PapyriComponent extends React.Component {
     return (
       <React.StrictMode>
         <input
-          onChange={this.handleInputChange}
+          onChange={this.handleInputChange.bind(this)}
           value={this.state.searchterm}
         />
         <button onClick={this.back}>Back</button>
@@ -119,7 +119,7 @@ class PapyriComponent extends React.Component {
           })}
         </ul>
         <div className="view">
-          <SearchContext.Provider value={this.onClick}>
+          <SearchContext.Provider value={this.onClick.bind(this)}>
             <ThemeProvider renderers={RENDERERS}>
               <MyPapyri node={this.state.root} />
             </ThemeProvider>
