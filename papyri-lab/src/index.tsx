@@ -1,5 +1,6 @@
 // Entry point for the Papyri jupyter Lab extension.
 //
+import { KernelSpyModel } from './kernelspy';
 import { PapyriPanel } from './widgets';
 import {
   ILayoutRestorer,
@@ -11,6 +12,7 @@ import {
   MainAreaWidget,
   WidgetTracker
 } from '@jupyterlab/apputils';
+import { INotebookTracker } from '@jupyterlab/notebook';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
 /**
@@ -21,10 +23,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
   description: 'A JupyterLab extension for papyri',
   autoStart: true,
   optional: [ISettingRegistry, ILayoutRestorer],
-  requires: [ICommandPalette],
+  requires: [ICommandPalette, INotebookTracker],
   activate: (
     app: JupyterFrontEnd,
     palette: ICommandPalette,
+    notebookTracker: INotebookTracker,
     settingRegistry: ISettingRegistry | null,
     restorer: ILayoutRestorer | null
   ) => {
@@ -81,6 +84,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
         name: () => 'papyri'
       });
     }
+
+    const kernelSpy = new KernelSpyModel(notebookTracker);
+    kernelSpy.questionMarkSubmitted.connect((_, args) => {
+      console.info('KSpy questionMarkSubmitted args:', args);
+      if (args !== undefined) {
+        console.info('DO your thing here.');
+      }
+    });
   }
 };
 
