@@ -681,7 +681,7 @@ class DFSCollector:
         else:
             oroot = omod
 
-        if not oroot == self.root:
+        if oroot != self.root:
             return
         if obj in self.obj.values():
             return
@@ -1154,21 +1154,17 @@ class PapyriDocTestRunner(doctest.DocTestRunner):
         self._example_section_data = Section([], None)
         return example_section_data
 
-
     def _compact(self, example_section_data) -> Section:
         """
-        Compact consecutive execution items that do have the same execution status. 
+        Compact consecutive execution items that do have the same execution status.
 
         TODO:
 
-        This is not perfect as doctest tests that the output is the same, thus when we have a multiline block 
+        This is not perfect as doctest tests that the output is the same, thus when we have a multiline block
         If any of the intermediate items produce an output, the result will be failure.
         """
         acc: List[Union[MText, Code]] = []
-        current_code: Optional[
-            Code
-        ] = None
-
+        current_code: Optional[Code] = None
 
         for item in example_section_data:
             if not isinstance(item, Code):
@@ -2347,10 +2343,7 @@ def is_private(path):
     Determine if a import path, or fully qualified is private.
     that usually implies that (one of) the path part starts with a single underscore.
     """
-    for p in path.split("."):
-        if p.startswith("_") and not p.startswith("__"):
-            return True
-    return False
+    return any(p.startswith("_") and not p.startswith("__") for p in path.split("."))
 
 
 def find_cannonical(qa: str, aliases: List[str]):
