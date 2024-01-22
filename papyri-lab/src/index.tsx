@@ -86,9 +86,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
     }
 
     const kernelSpy = new KernelSpyModel(notebookTracker);
-    kernelSpy.questionMarkSubmitted.connect((_, args) => {
+    kernelSpy.questionMarkSubmitted.connect((_, args: any) => {
       console.info('KSpy questionMarkSubmitted args:', args);
       if (args !== undefined) {
+        widget.content.updateSeachTerm(args.qualname);
         console.info('DO your thing here.');
       }
     });

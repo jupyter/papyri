@@ -133,15 +133,22 @@ class PapyriComponent extends React.Component {
 // This seem to be the way to have an adapter between lumino and react, and
 // allow to render react inside a JupyterLab panel
 export class PapyriPanel extends ReactWidget {
+  comp: any;
   constructor() {
     super();
     this.addClass('jp-ReactWidget');
     this.id = 'papyri-browser';
     this.title.label = 'Papyri browser';
     this.title.closable = true;
+    this.comp = React.createRef();
+  }
+
+  updateSeachTerm(str: string) {
+    this.comp.current.setSearchTerm(str);
+    this.comp.current.search(str);
   }
 
   render(): JSX.Element {
-    return <PapyriComponent />;
+    return <PapyriComponent ref={this.comp} />;
   }
 }
