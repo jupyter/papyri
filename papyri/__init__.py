@@ -695,5 +695,28 @@ def open(qualname: str):
     webbrowser.get().open("file://" + str(path), new=1)
 
 
+def load_ipython_extension(ipython):
+    import IPython
+
+    if IPython.version_info < (8, 21):
+        # bug in IPython < 8, 21 where returning more mimetypes than just text and html override the
+        # full mimebundle.
+        print("papyri extension only works with IPython >= 8.21")
+        return
+
+    def hook(obj, oinfo):
+        from papyri.utils import full_qual
+
+        # TODO:
+        # for now just return the fully qualified name of the object,
+        # so that the frontend can later use a KernelSpy to display the right
+        # page.
+        # this is not completely sufficient, we might need to get the module version.
+        # but we can extend that later.
+        return {"qualname": full_qual(obj)}
+
+    ipython.inspector.mime_hooks["x-vendor/papyri"] = hook
+
+
 if __name__ == "__main__":
     app()

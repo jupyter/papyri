@@ -33,7 +33,7 @@ const PapyriComponent = (): JSX.Element => {
     navs.pop();
     const pen = navs.pop();
     if (pen !== undefined) {
-      console.log('Settgin search term', pen);
+      console.log('Setting search term', pen);
       await setSearchTerm(pen);
       console.log('... and searchg for ', pen);
       await search(pen);
