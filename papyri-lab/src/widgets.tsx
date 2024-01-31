@@ -2,7 +2,7 @@ import { requestAPI } from './handler';
 import { MyPapyri, RENDERERS, SearchContext } from './papyri-comp';
 import { ReactWidget } from '@jupyterlab/apputils';
 import { ThemeProvider } from '@myst-theme/providers';
-import React, { useState } from 'react';
+import React from 'react';
 
 // this is a papyri react component that in the end should
 // have navigation UI and a myst renderer to display the
@@ -14,33 +14,57 @@ import React, { useState } from 'react';
 //
 // I'm going to guess it will need some configuration hook for when we click on links.
 //
-const PapyriComponent = (): JSX.Element => {
-  // list of a few pages in the database that matches
-  // the current query
-  const [possibilities, setPossibilities] = useState([]);
-  const [navs, setNavs] = useState<string[]>([]);
-  const [root, setRoot] = useState({});
-
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // callback when typing in the input field.
-  const onChange = async (event: any) => {
-    setSearchTerm(event.target.value);
-    search(event.target.value);
+//
+class PapyriComponent extends React.Component {
+  state = {
+    possibilities: [],
+    navs: [],
+    root: {},
+    searchterm: ''
   };
+  constructor(props: any) {
+    super(props);
+    this.state = {
+      possibilities: [],
+      navs: [],
+      root: {},
+      searchterm: ''
+    };
+  }
 
-  const back = async () => {
-    navs.pop();
-    const pen = navs.pop();
+  setPossibilities(pos: any) {
+    this.setState({ possibilities: pos });
+  }
+
+  setNavs(navs: any) {
+    this.setState({ navs: navs });
+  }
+
+  setRoot(root: any) {
+    this.setState({ root: root });
+  }
+
+  setSearchTerm(searchterm: string) {
+    this.setState({ searchterm: searchterm });
+  }
+
+  async handleInputChange(event: any) {
+    console.log('on change, this is', this);
+    this.setSearchTerm(event.target.value);
+    this.search(event.target.value);
+  }
+
+  async back() {
+    this.state.navs.pop();
+    const pen = this.state.navs.pop();
     if (pen !== undefined) {
       console.log('Setting search term', pen);
-      await setSearchTerm(pen);
+      await this.setSearchTerm(pen);
       console.log('... and searchg for ', pen);
-      await search(pen);
+      await this.search(pen);
     }
-  };
-
-  const search = async (query: string) => {
+  }
+  async search(query: string) {
     const res = await requestAPI<any>('get-example', {
       body: query,
       method: 'post'
@@ -49,69 +73,82 @@ const PapyriComponent = (): JSX.Element => {
     // response has body (MyST–json if the query has an exact match)
     // and data if we have some close matches.
     if (res.body !== null) {
-      setNavs([...navs, query]);
-      setRoot(res.body);
-      setPossibilities([]);
+      this.setNavs([...this.state.navs, query]);
+      this.setRoot(res.body);
+      this.setPossibilities([]);
     } else {
-      setRoot({});
-      setPossibilities(res.data);
+      this.setRoot({});
+      this.setPossibilities(res.data);
     }
-  };
+  }
 
-  const onClick = async (query: string) => {
-    console.log('On click trigger', query);
-    setSearchTerm(query);
+  async onClick(query: string) {
+    console.log('On click trigger', query, 'this is', this);
+
+    this.setSearchTerm(query);
     try {
-      search(query);
+      this.search(query);
     } catch (e) {
       console.error(e);
     }
     return false;
-  };
+  }
 
-  return (
-    <React.StrictMode>
-      <input onChange={onChange} value={searchTerm} />
-      <button onClick={back}>Back</button>
-      <ul>
-        {possibilities.map(e => {
-          return (
-            <li>
-              <a
-                href={e}
-                onClick={async () => {
-                  await onClick(e);
-                }}
-              >
-                {e}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="view">
-        <SearchContext.Provider value={onClick}>
-          <ThemeProvider renderers={RENDERERS}>
-            <MyPapyri node={root} />
-          </ThemeProvider>
-        </SearchContext.Provider>
-      </div>
-    </React.StrictMode>
-  );
-};
+  render(): JSX.Element {
+    return (
+      <React.StrictMode>
+        <input
+          onChange={this.handleInputChange.bind(this)}
+          value={this.state.searchterm}
+        />
+        <button onClick={this.back}>Back</button>
+        <ul>
+          {this.state.possibilities.map((e: any) => {
+            return (
+              <li>
+                <a
+                  href={e}
+                  onClick={async () => {
+                    await this.onClick(e);
+                  }}
+                >
+                  {e}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="view">
+          <SearchContext.Provider value={this.onClick.bind(this)}>
+            <ThemeProvider renderers={RENDERERS}>
+              <MyPapyri node={this.state.root} />
+            </ThemeProvider>
+          </SearchContext.Provider>
+        </div>
+      </React.StrictMode>
+    );
+  }
+}
 
 // This seem to be the way to have an adapter between lumino and react, and
 // allow to render react inside a JupyterLab panel
 export class PapyriPanel extends ReactWidget {
+  comp: any;
   constructor() {
     super();
     this.addClass('jp-ReactWidget');
     this.id = 'papyri-browser';
     this.title.label = 'Papyri browser';
     this.title.closable = true;
+    this.comp = React.createRef();
+  }
+
+  updateSeachTerm(str: string) {
+    this.comp.current.setSearchTerm(str);
+    this.comp.current.search(str);
   }
 
   render(): JSX.Element {
-    return <PapyriComponent />;
+    return <PapyriComponent ref={this.comp} />;
   }
 }
