@@ -4,7 +4,6 @@ from pathlib import Path
 from textwrap import dedent, indent
 from typing import List, Any, Dict
 
-from tree_sitter import Language, Parser
 
 from .myst_ast import (
     MText,
@@ -46,16 +45,25 @@ from .errors import (
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 pth = str(Path(__file__).parent / "rst.so")
 
-# replace by tree-sitter-languages once it works See https://github.com/grantjenks/py-tree-sitter-languages/issues/15
 try:
-    RST = Language(pth, "rst")
-except OSError as e:
-    raise OSError(
-        "tree-sitter-rst not found, rst parsing will not work. Please run `papyri build-parser`"
-    ) from e
+    from tree_sitter_languages import get_language, get_parser
 
-parser = Parser()
-parser.set_language(RST)
+    # language = get_language('python')
+    parser = get_parser("rst")
+except ModuleNotFoundError:
+    # replace by tree-sitter-languages once it works See https://github.com/grantjenks/py-tree-sitter-languages/issues/15
+    try:
+        from tree_sitter import Language, Parser
+
+        RST = Language(pth, "rst")
+    except OSError as e:
+        raise OSError(
+            "tree-sitter-rst not found, rst parsing will not work. Please run `papyri build-parser`"
+        ) from e
+
+    parser = Parser()
+    parser.set_language(RST)
+
 log = logging.getLogger("papyri")
 
 
