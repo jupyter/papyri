@@ -187,7 +187,10 @@ def test_parse_substitution_definition():
     [node2] = subsdef2.children
     assert subsdef1.value == "|biohazard|"
     assert node1.type == "image"
-    assert node1.url == "https://upload.wikimedia.org/wikipedia/commons/c/c0/Biohazard_symbol.svg"
+    assert (
+        node1.url
+        == "https://upload.wikimedia.org/wikipedia/commons/c/c0/Biohazard_symbol.svg"
+    )
     assert node1.alt == ""
     assert subsdef2.value == "|biohazard|"
     assert node2.type == "replace"
