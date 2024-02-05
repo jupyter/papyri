@@ -503,7 +503,7 @@ class TSVisitor:
     def visit_line_block(self, node):
         # TODO
         # e.g: numpy/doc/source/user/c-info.how-to-extend.rst
-        print("Skipping node", self.as_text(node))
+        log.warning("Skipping unimplemented line_block node: %s", self.as_text(node))
         return []
 
     def visit_substitution_reference(self, node):

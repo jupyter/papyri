@@ -2260,10 +2260,26 @@ class Gen:
 
             # substitution_defs: Dict[str, Union(MImage, ReplaceNode)] = {}
             substitution_defs = {}
+            sections = []
             for section in doc_blob.sections:
-                for child in doc_blob.content.get(section, []):
+                sections.append(doc_blob.content.get(section, []))
+            # arbitrary is usually raw RST that typically is a module docstring that can't be
+            # parsed by numpydoc
+            sections.extend(arbitrary)
+            for section in sections:
+                for child in section:
                     if isinstance(child, SubstitutionDef):
+                        if child.value in substitution_defs:
+                            self.log.warn(
+                                "The same substitution definition was found twice: %s",
+                                child.value,
+                            )
                         substitution_defs[child.value] = child.children
+
+            if substitution_defs:
+                self.log.debug(
+                    "Found substitution def for %s : %s", qa, substitution_defs
+                )
 
             # def flat(l) -> List[str]:
             #    return [y for x in l for y in x]

@@ -692,6 +692,7 @@ class DirectiveVisiter(TreeReplacer):
         This node should be removed since the actual reference has already been
         resolved.
         """
+        log.warning("discard substitution node %s", node)
         return []
 
     def replace_SubstitutionRef(self, directive):
@@ -700,15 +701,17 @@ class DirectiveVisiter(TreeReplacer):
         # an image (from the image directive.)
         if directive.value in self.substitution_defs:
             if isinstance(self.substitution_defs[directive.value][0], ReplaceNode):
-                return [MText(self.substitution_defs[directive.value][0].text)]
+                return self.substitution_defs[directive.value][0].children
             elif isinstance(self.substitution_defs[directive.value][0], MImage):
                 return [self.substitution_defs[directive.value][0]]
             else:
                 raise NotImplementedError(
-                    f"SubstitutionDef for custom inline directive {self.substitution_defs[directive.value][0]} not implemented."
+                    f"SubstitutionDef for custom inline directive "
+                    f"{self.substitution_defs[directive.value][0]} "
+                    "not implemented."
                 )
         else:
-            return [MText(directive.value)]
+            return [directive]
 
     def _resolve(self, loc, text):
         """

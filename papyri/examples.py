@@ -123,9 +123,9 @@ This is q block quote, to do, we know that Attributions are not supported right 
 Substitutions
 ~~~~~~~~~~~~~
 
-In this paragraph: |SubstitutionRef| Should be replaced...
+In this paragraph: |ALIAS| Should be replaced...
 
-.. |SubstitutionDef| replace:: ASUBSTITUTIONDEF
+.. |ALIAS| replace:: '-- SUBSTITUTION works--'
 
 
 

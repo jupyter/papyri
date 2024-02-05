@@ -64,7 +64,7 @@ from typing import Any, List, Optional, Union
 import cbor2
 from there import print
 
-from .common_ast import Node, REV_TAG_MAP, register
+from .common_ast import Node, REV_TAG_MAP, register, UnserializableNode
 from .miniserde import get_type_hints
 
 from .utils import dedent_but_first
@@ -157,8 +157,7 @@ class Leaf(Node):
     value: str
 
 
-@register(4027)
-class SubstitutionDef(Node):
+class SubstitutionDef(UnserializableNode):
     """
     A Substitution Definition should be in the form of
 
@@ -181,20 +180,24 @@ class SubstitutionDef(Node):
         assert isinstance(children[0], UnprocessedDirective)
 
         if children[0].name == "image":
+            assert len(children) == 1
             self.children = [MImage(url=children[0].args, alt="")]
         elif children[0].name == "replace":
+            assert len(children) == 1
             self.children = [ReplaceNode(value=self.value, text=children[0].args)]
         else:
-            raise NotImplementedError
+            raise NotImplementedError("Substitution def not implemented for ", children)
 
 
-@register(4041)
-class SubstitutionRef(Leaf):
+class SubstitutionRef(UnserializableNode):
     """
     This will be in the for |XXX|, and need to be replaced.
     """
 
     value: str
+
+    def __init__(self, value):
+        self.value = value
 
 
 @register(4018)

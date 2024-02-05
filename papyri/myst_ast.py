@@ -4,7 +4,7 @@ An attempt to create AST from MyST spec.
 
 from typing import List, Union, Optional, Dict
 
-from .common_ast import Node, register
+from .common_ast import Node, register, UnserializableNode
 
 from . import take2
 from . import signature
@@ -150,16 +150,6 @@ class MMystDirective(Node):
     @classmethod
     def from_unprocessed(cls, up):
         return cls(up.name, up.args, up.options, up.value, up.children)
-
-
-class UnserializableNode(Node):
-    _dont_serialise = True
-
-    def cbor(self, encoder):
-        assert False
-
-    def to_json(self) -> bytes:
-        assert False
 
 
 class UnprocessedDirective(UnserializableNode):
