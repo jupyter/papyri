@@ -69,6 +69,10 @@ from .miniserde import get_type_hints
 
 from .utils import dedent_but_first
 
+import logging
+
+log = logging.getLogger(__file__)
+
 
 register(tuple)(4444)
 
@@ -184,14 +188,20 @@ class SubstitutionDef(UnserializableNode):
             self.children = [MImage(url=children[0].args, alt="")]
         elif children[0].name == "replace":
             assert len(children) == 1
-            self.children = [ReplaceNode(value=self.value, text=children[0].args)]
+            self.children = [
+                ReplaceNode(value=self.value, text=children[0].args, children=children)
+            ]
         else:
-            raise NotImplementedError("Substitution def not implemented for ", children)
+            self.children = [
+                ReplaceNode(value=self.value, text=children[0].args, children=children)
+            ]
+            # breakpoint()
+            # raise NotImplementedError("Substitution def not implemented for ", children)
 
 
 class SubstitutionRef(UnserializableNode):
     """
-    This will be in the for |XXX|, and need to be replaced.
+    This will be in the for \|XXX\|, and need to be replaced.
     """
 
     value: str

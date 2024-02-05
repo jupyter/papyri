@@ -85,10 +85,10 @@ class UnserializableNode(Node):
     _dont_serialise = True
 
     def cbor(self, encoder):
-        assert False
+        assert False, self
 
     def to_json(self) -> bytes:
-        assert False
+        assert False, self
 
 
 TAG_MAP: Dict[Any, int] = {}

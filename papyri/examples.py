@@ -125,7 +125,18 @@ Substitutions
 
 In this paragraph: |ALIAS| Should be replaced...
 
-.. |ALIAS| replace:: '-- SUBSTITUTION works--'
+.. |ALIAS| replace:: -- SUBSTITUTION works--
+
+Substitutions should support a |WIDE|, |VARIETY|, |OF|, |REPLACEMENT|
+
+.. |WIDE| replace:: modules links like: :mod:`papyri`
+
+.. |VARIETY| replace:: text formatting with _italics_ and **bold**
+
+.. |OF| image:: inline images are likely to not work,
+
+.. |REPLACEMENT| unicode:: U+2665
+
 
 
 

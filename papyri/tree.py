@@ -38,6 +38,8 @@ from .directives import (
     note_handler,
     versionadded_handler,
     versionchanged_handler,
+    unicode_handler,
+    replace_hander,
     deprecated_handler,
     warning_handler,
 )
@@ -271,7 +273,7 @@ class TreeVisitor:
 
     def generic_visit(self, node):
         from .take2 import Options
-        from .myst_ast import MThematicBreak
+        from .myst_ast import MThematicBreak, MImage
 
         name = node.__class__.__name__
         if method := getattr(self, "visit_" + name, None):
@@ -306,7 +308,9 @@ class TreeVisitor:
             if type(node) not in self.skipped:
                 self.skipped.add(type(node))
             return {}
-        elif isinstance(node, (RefInfo, Options, MThematicBreak, SubstitutionDef)):
+        elif isinstance(
+            node, (RefInfo, Options, MThematicBreak, SubstitutionDef, MImage)
+        ):
             return {}
         else:
             raise ValueError(f"{node.__class__} has no children, no values {node}")
@@ -563,6 +567,8 @@ class DirectiveVisiter(TreeReplacer):
             "versionadded": versionadded_handler,
             "versionchanged": versionchanged_handler,
             "deprecated": deprecated_handler,
+            "unicode": unicode_handler,
+            "replace": replace_hander,
         }
 
         for k, v in config.items():
@@ -659,7 +665,7 @@ class DirectiveVisiter(TreeReplacer):
                 directive.options,
                 directive.value,
             )
-            assert isinstance(res, list)
+            assert isinstance(res, list), (res, meth)
             acc = []
             for a in res:
                 # I believe here we may want to wrap things in Paragraph  and comact words ?
@@ -692,7 +698,6 @@ class DirectiveVisiter(TreeReplacer):
         This node should be removed since the actual reference has already been
         resolved.
         """
-        log.warning("discard substitution node %s", node)
         return []
 
     def replace_SubstitutionRef(self, directive):
@@ -701,7 +706,11 @@ class DirectiveVisiter(TreeReplacer):
         # an image (from the image directive.)
         if directive.value in self.substitution_defs:
             if isinstance(self.substitution_defs[directive.value][0], ReplaceNode):
-                return self.substitution_defs[directive.value][0].children
+                assert len(self.substitution_defs[directive.value][0].children) == 1
+                return self.generic_visit(
+                    self.substitution_defs[directive.value][0].children[0]
+                )
+
             elif isinstance(self.substitution_defs[directive.value][0], MImage):
                 return [self.substitution_defs[directive.value][0]]
             else:

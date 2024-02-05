@@ -263,11 +263,7 @@ class ReplaceNode(Node):
     type = "replace"
     value: str
     text: str
-    # children: Union[
-    #     MText,
-    #     MInlineCode,
-    #     MInlineMath,
-    # ]
+    children: List[Node]
 
 
 StaticPhrasingContent = Union[
