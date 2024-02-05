@@ -74,7 +74,10 @@ def unicode_handler(argument, options, content):
 
 
 def replace_hander(argument, options, content):
-    # likely need some checks that this is indeed a Unicode char
+    # Here we likely want to parse the content/argument and recurse.
+    # which might change slightly the API.
+    # I think here if necessary we return an unprocessedDirective,
+    # and the TSVisitor should recurs with generic_visit ?
     return [MText(argument)]
 
 
