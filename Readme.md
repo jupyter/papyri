@@ -77,14 +77,24 @@ papyri enabled (left) and disabled (right).
 ![](assets/vs_math.png)
 </detail>
 
+---
+
+## Table of contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Rendering](#rendering)
+- [Architecture](#architecture)
+
 ## Installation (not fully functional):
 
-Some functionality is not yet available when installing from PyPI.
-For now you need a dev-install (see next section) to access all features.
+Some functionality is not yet available when installing from PyPI. For now you
+need a [Development installation](#development-installation) to access all
+features.
 
 You'll need Python 3.8 or newer, otherwise pip will tell you it can't find any matching distribution.
 
-Pip install from PyPI:
+Install from PyPI:
 
 ```bash
 $ pip install papyri
@@ -111,7 +121,7 @@ This will augment the `?` operator to show better documentation (when installed 
 *Papyri does not completely build its own docs yet, but you might be able to view a static rendering of it
 [here](https://pydocs.github.io/). It is not yet automatically built, so might be out of date.*
 
-### Development install
+### Development installation
 
 You may need to get a modified version of numpydoc depending on the stage of development. You will need [pip >
 21.3](https://pip.pypa.io/en/stable/news/#v21-3-1) if you want to make editable installs.
@@ -149,19 +159,19 @@ $ pytest
 
 ## Usage
 
-In the end there should be roughly 3 steps,
+Papyri relies on three steps:
 
- - IR generation (package maintainers)
- - IR installation (end user or via pip/conda)
- - IR rendering (usually IDE, CLI/webserver)
+ - IR generation (executed by package maintainers);
+ - IR installation (executed by end users or via pip/conda);
+ - IR rendering (usually executed by the IDE, CLI/webserver).
 
-### IR Generation
+### IR Generation (`papyri gen`)
 
 This is the step you want to trigger if you are building documentation using Papyri for a library you maintain. Most
 likely as an end user you will not have to issue this step and can install pre-published documentation bundles.
 This step is likely to occur only once per new release of a project.
 
-Look at the Toml files in `examples`, this will give you example configurations from some existing libraries.
+The Toml files in `examples` will give you example configurations from some existing libraries.
 
 ```
 $ ls -1 examples/*.toml
@@ -177,8 +187,8 @@ examples/skimage.toml
 
 Right now these files lives in papyri but would likely be in relevant repositories under `docs/papyri.toml` later on.
 
-It is _slow_ on full numpy/scipy; use `--no-infer` (see below) for a subpar but
-faster experience.
+> [!NOTE]
+> It is _slow_ on full numpy/scipy; use `--no-infer` (see below) for a subpar but faster experience.
 
 Use `papyri gen <path to example file>`
 
@@ -192,7 +202,16 @@ $ papyri gen examples/numpy.toml
 $ papyri gen examples/scipy.toml
 ```
 
-This will create intermediate docs files in in `~/.papyri/data/<library name>_<library_version>`
+This will create intermediate docs files in in `~/.papyri/data/<library name>_<library_version>`. See [Generation](#generation-papyri-gen) for more details.
+
+You can also generate intermediate docs files for a subset of objects using the `--only` flag. For example:
+
+```
+$ papyri gen examples/numpy.toml --only numpy:einsum
+```
+
+> [!IMPORTANT]
+> To avoid ambiguity, papyri uses [fully qualified names](#qualified-names) to refer to objects. This means that you need to use `numpy:einsum` instead of `einsum` or `numpy.einsum` to refer to the `einsum` function in the `numpy` module, for example.
 
 
 ### Installation/ingestion
@@ -210,11 +229,11 @@ You can ingest local folders with the following command:
 $ papyri ingest ~/.papyri/data/<path to folder generated at previous step>
 ```
 
-This will crosslink the newly generate folder with the existing ones.
+This will crosslink the newly generated folder with the existing ones.
 Ingested data can be found in  `~/.papyri/ingest/` but you are not supposed to
 interact with this folder with tools external to papyri.
 
-There is currently a couple of pre-built documentation bundles that can be
+There are currently a couple of pre-built documentation bundles that can be
 pre-installed, but are likely to break with each new version of papyri. We
 suggest you use the developer installation and ingestion procedure for now.
 
@@ -225,17 +244,15 @@ is of interest to you. This will likely be done by your favorite IDE, probably
 just in time when you explore documentation. Nonetheless, we've
 implemented a couple of external renderers to help debug issues.
 
-WARNING:
-
-Many rendering methods current require papyri's own docs to be built and ingested
-first.
+> [!WARNING]
+> Many rendering methods currently require papyri's own docs to be built and ingested first.
 
 ```
 $ papyri gen examples/papyri.toml
 $ papyri ingest ~/.papyri/data/papyri_0.0.7  # or any current version
 ```
 
-Or you can try to pre-install an old papyri doc bundle
+Or you can try to pre-install an old papyri doc bundle:
 
 ```
 $ papyri install papyri
@@ -243,116 +260,188 @@ $ papyri install papyri
 
 ### Standalone HTML rendering
 
+To see the rendered documentation for all packages previously ingested, run
+
+```bash
+$ papyri serve
+```
+
+This will start a live server that will render the pages on the fly.
+
+If you need to render static versions of the pages, use either of the following
+commands:
 
 ```bash
 $ papyri render  # render all the html pages statically in ~/.papyri/html
-$ papyri serve-static # start a http.server with the propoer root to serve above files.
+$ papyri serve-static # start a http.server with the proper root to serve above files.
 ```
 
-```bash
-$ papyri serve  # start a server that will render the pages on the fly (nice to debug or iterate on theme, rendering)
-```
+### Rich terminal rendering
 
-### Ascii terminal rendering (experimental)
-
+To render the documentation for a single object on a terminal, use
 
 ```
-$ papyri ascii <fully qualified names> # try to render in the terminal.
+$ papyri rich <fully qualified name>
 ```
 
-For example,
+For example:
 
 ```
-$ papyri ascii numpy.linspace
+$ papyri rich numpy:einsum  # note the colon for the fully qualified name.
 ```
 
-The next step uses urwid to provide a browsable interface in terminal.
+To use the experimental interactive Textual interface in the terminal, use
 
 ```
-$ papyri browse <fully qualified name> # urwid documentation browser.
+$ papyri textual <fully qualified name>
 ```
 
-Hacking on scrapping libraries `papyri gen --no-infer [...]` will skip type
-inference of examples. `--exec` option need to be passed to try to execute examples.
+### IPython extension
+
+To run `papyri` as an IPython extension, run:
+
+```
+$ ipython --ext papyri.ipython
+```
+
+This will start an IPython session with an augmented `?` operator.
+
+### Jupyter extension
+
+In progress.
+
+### More commands
+
+You can run `papyri` without a command to see all currently available commands.
 
 ## Papyri - Name's meaning
 
 See the legendary [Villa of Papyri](https://en.wikipedia.org/wiki/Villa_of_the_Papyri), which get its name from its
 collection of many papyrus scrolls.
 
+## Architecture
 
-## Legacy (MISC/OLD) documentation (Inaccurate):
+### Generation (`papyri gen`)
 
-
-#### Generation (`papyri gen`)
-
-Collects the documentation of a project into a DocBundle -- a number of
-DocBlobs (currently json files), with a defined semantic structure, and
+Collects the documentation of a project into a *DocBundle* -- a number of
+*DocBlobs* (currently json files), with a defined semantic structure, and
 some metadata (version of the project this documentation refers to, and
 potentially some other blobs).
 
-During the generation a number of normalisation and inference can and should
-happen, for example
+During the generation a number of normalisation and inference steps can and
+should happen. For example:
 
-  - using type inference into the `Examples` sections of docstrings and storing
+  - Using type inference into the `Examples` sections of docstrings and storing
     those as pairs (token, reference), so that you can later decide that
     clicking on `np.array` in an example brings you to numpy array
-    documentation; whether or not we are currently in the numpy doc.
-  - Parsing "See Also" into a well defined structure
-  - running Example to generate images for docs with images (not implemented)
-  - resolve package local references for example building numpy doc
-    "`zeroes_like`" is non ambiguous and shoudl be Normalized to
-    "`numpy.zeroes_like`", `~.pyplot.histogram`, normalized to
-    `matplotlib.pyplot.histogram` as the **target** and `histogram` as the text
-    ...etc.
+    documentation; whether or not we are currently in the numpy documentation;
+  - Parsing "See Also" into a well defined structure;
+  - Running examples to generate images for docs with images (partially
+    implemented);
+  - Resolve local references. For example, when building the NumPy docs,
+    `zeroes_like` is non-ambiguous and should be normalized to
+    `numpy.zeroes_like`. Similarly, `~.pyplot.histogram`, should be normalized
+    to `matplotlib.pyplot.histogram` as the **target** and `histogram` as the
+    text.
 
 The Generation step is likely project specific, as there might be import
-conventions that are per-project and should not need to be repeated (`import
-pandas as pd`, for example,)
+conventions that are defined per-project and should not need to be repeated
+(`import pandas as pd`, for example.)
 
-#### Ingestion (papyri ingest)
+The generation step is likely to be the most time consuming, and for each
+project, results in the following outputs:
+
+- A `papyri.json` file, which is a list of unique qualified names corresponding
+  to the documented objects and some metadata;
+- A `toc.json` file, ?
+- An `assets` folder, containing all the images generated during the
+  generation;
+- A `docs` folder, ?
+- An `examples` folder, ?
+- A `module` folder, containing one json file per documented object. 
+
+After the generation step, *what should have been processed*?
+
+### Ingestion (`papyri ingest`)
 
 The ingestion step takes a DocBundle and/or DocBlobs and adds them into a graph
 of known items; the ingestion is critical to efficiently build the collection
 graph metadata and understand which items refers to which. This allows the
 following:
 
- - Update the list of backreferences to a DocBundle
+ - Update the list of backreferences to a *DocBundle*;
  - Update forward references metadata to know whether links are valid.
 
-Currently the ingestion loads all in memory and update all the bundle in place
+Currently the ingestion loads all in memory and updates all the bundle in place
 but this can likely be done more efficiently.
 
 A lot more can likely be done at larger scale, like detecting if documentation
-have changed in previous version so infer for which versions of a library this
+has changed in previous versions to infer for which versions of a library this
 documentation is valid.
 
 There is also likely some curating that might need to be done at that point, as
-for example, numpy.array have an extremely large number of back-references.
+objects such as `numpy.array` have an extremely large number of back-references.
 
+### Qualified names
 
-### tree sitter info.
+To avoid ambiguity when referring to objects, papyri uses the
+*fully qualified name* of the object for its operations. This means that instead
+of a dot (`.`), we use a colon (`:`) to separate the module part from the
+object's name and sub attributes.
 
-https://tree-sitter.github.io/tree-sitter/creating-parsers
+To understand why we need this, assume the following situation: a top level
+`__init__` imports a function from a submodule that has the same name as the
+submodule:
+
+```
+# project/__init__.py
+from .sub import sub
+```
+
+This submodule defines a class (here we use lowercase for the example):
+
+```
+# project/sub.py
+class sub:
+    attribute:str
+attribute = 'hello'
+```
+
+and a second submodule is defined:
+```
+# project/attribute.py
+None
+```
+
+Using qualified names only with dots (`.`) can make it difficult to find out
+which object we are referring to, or implement the logic to find the object.
+For example, to get the object `project.sub.attribute`, one would do:
+
+```
+import project
+x = getattr(project, 'sub')
+getattr(x, 'attribute')
+```
+
+But here, because of the `from .sub import sub`, we end up getting the class
+attribute instead of the module. This ambiguity is lifted with a `:` as we now
+explicitly know the module part, and `package.sub.attribute` is distinct from
+`package.sub:attribute`. Note that `package:sub.attribute` is also
+non-ambiguous, even if not the right fully qualified name for an object.
+
+Moreover, using `:` as a separator makes the implementation much easier, as
+in the case of `package.sub:attribute` it is possible to directly execute
+`importlib.import_module('package.sub')` to obtain a reference to the `sub`
+submodule, without try/except or recursive `getattr` checking for the type of an
+object.
+
+### Tree sitter information
+
+See https://tree-sitter.github.io/tree-sitter/creating-parsers
 
 
 ### When things don't work !
 
-
 #### `SqlOperationalError`:
 
 - The DB schema likely have changed, try: `rm -rf ~/.papyri/ingest/`.
-
-#### Can't build tree-sitter:
-
-An error occurred trying to build-tree-sitter with clang, you likely have a conda environment. Install all the compilers
-in the current conda env:
-
-```
-conda install compilers
-```
-
-
-
-
-
