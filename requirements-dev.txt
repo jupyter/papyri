@@ -10,4 +10,3 @@ black
 mypy
 flake8<8
 scipy
-tree_sitter_languages
