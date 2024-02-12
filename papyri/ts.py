@@ -45,11 +45,12 @@ from .errors import (
 allowed_adorn = "=-`:.'\"~^_*+#<>"
 
 try:
-    from tree_sitter_languages import get_language, get_parser
+    from tree_sitter_languages import get_parser
 
     # language = get_language('python')
     parser = get_parser("rst")
 except ModuleNotFoundError:
+    assert False
     # replace by tree-sitter-languages once it works See https://github.com/grantjenks/py-tree-sitter-languages/issues/15
     try:
         from tree_sitter import Language, Parser
