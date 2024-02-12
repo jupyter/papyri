@@ -163,7 +163,6 @@ Directive must not have spaces before double colon::
 
 """
 
-
 import io
 import sys
 import zipfile

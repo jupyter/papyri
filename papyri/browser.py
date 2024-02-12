@@ -1,6 +1,7 @@
 """
 papyri browser
 """
+
 import sys
 from typing import List
 

@@ -7,6 +7,7 @@ representation(s)
 It should likely be the modules with the less dependencies as well as being synchronous, to be usable from most context
 and minimal installs.
 """
+
 from __future__ import annotations
 
 import json

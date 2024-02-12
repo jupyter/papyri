@@ -1,6 +1,7 @@
 """
 An attempt to create AST from MyST spec.
 """
+
 from typing import List, Union, Optional, Dict
 
 from .common_ast import Node, register
@@ -310,7 +311,7 @@ FlowContent = Union[
     "take2.DefList",
     "take2.DefListItem",
     "take2.FieldList",
-    MComment  # this seem not right but triggers an error with numpy narrative documentation
+    MComment,  # this seem not right but triggers an error with numpy narrative documentation
     # MTable,
     # MFootnoteDefinition,
 ]
