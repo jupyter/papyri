@@ -43,7 +43,6 @@ from .errors import (
 )
 
 allowed_adorn = "=-`:.'\"~^_*+#<>"
-pth = str(Path(__file__).parent / "rst.so")
 
 try:
     from tree_sitter_languages import get_language, get_parser
@@ -55,6 +54,7 @@ except ModuleNotFoundError:
     try:
         from tree_sitter import Language, Parser
 
+        pth = str(Path(__file__).parent / "rst.so")
         RST = Language(pth, "rst")
     except OSError as e:
         raise OSError(
