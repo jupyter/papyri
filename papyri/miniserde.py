@@ -64,7 +64,6 @@ either 2 Authors or 2 Reviewers.
 
 """
 
-
 from functools import lru_cache
 from typing import Union
 from typing import get_type_hints as gth

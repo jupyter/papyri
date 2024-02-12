@@ -38,9 +38,11 @@ class ParameterNode(Node):
             name=self.name,
             kind=getattr(inspect._ParameterKind, self.kind),
             default=inspect._empty if isinstance(self.default, Empty) else self.default,
-            annotation=inspect._empty
-            if isinstance(self.annotation, Empty)
-            else self.annotation,
+            annotation=(
+                inspect._empty
+                if isinstance(self.annotation, Empty)
+                else self.annotation
+            ),
         )
 
 
@@ -132,18 +134,22 @@ class Signature:
                     name=param.name,
                     annotation=annotation,
                     kind=param.kind.name,
-                    default=_empty
-                    if param.default is inspect._empty
-                    else clean_hexaddress(str(param.default)),
+                    default=(
+                        _empty
+                        if param.default is inspect._empty
+                        else clean_hexaddress(str(param.default))
+                    ),
                 )
             )
         assert isinstance(kind, str)
         return SignatureNode(
             kind=kind,
             parameters=parameters,
-            return_annotation=_empty
-            if self._sig.return_annotation is inspect._empty
-            else str(self._sig.return_annotation),
+            return_annotation=(
+                _empty
+                if self._sig.return_annotation is inspect._empty
+                else str(self._sig.return_annotation)
+            ),
             target_name=self.target_item.__name__,
         )
 

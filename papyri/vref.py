@@ -2,7 +2,6 @@
 vestigial things from velin.
 """
 
-
 import numpydoc.docscrape as nds
 
 

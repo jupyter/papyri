@@ -10,7 +10,6 @@ only store one type.
 This is a prototype of serializer that respect this layout.
 """
 
-
 from typing import Union
 from typing import get_type_hints as gth
 

@@ -2,6 +2,7 @@
 This file is meant to test the serialisation / deserialization
 of function signature to JSON.
 """
+
 from papyri.signature import Signature as SignatureObject, SignatureNode
 import json
 from typing import Union, Optional
