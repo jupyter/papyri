@@ -6,8 +6,8 @@ Return evenly spaced numbers over a specified interval.
 
 ## Extended Summary
 
-Returns num evenly spaced samples, calculated over the interval [`start`, stop
-].
+Returns num evenly spaced samples, calculated over the interval [start, stop].
+
 
 The endpoint of the interval can optionally be excluded.
 

@@ -356,6 +356,7 @@ class TreeReplacer:
                 "MComment",
                 "MInlineCode",
                 "MInlineMath",
+                "MImage",
                 "MMath",
                 "MText",
                 "MThematicBreak",
