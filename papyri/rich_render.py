@@ -21,6 +21,10 @@ from typing import TYPE_CHECKING
 
 from .myst_ast import MText
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from .myst_ast import MAdmonition, MAdmonitionTitle
 
@@ -162,6 +166,10 @@ class RichVisitor:
         res = [RToken(v) for v in part(node.value, " ")]
         assert res[-1].value != "\n"
         return res
+
+    def visit_MImage(self, node):
+        logger.warning("TODO: implement images")
+        return RToken("Image TODO").partition()
 
     def visit_MEmphasis(self, node):
         return self.generic_visit(node.children)

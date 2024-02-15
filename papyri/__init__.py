@@ -596,6 +596,8 @@ def build_parser():
     work on all platofrms
 
     """
+    # this is used just for dev of tree-sitter
+    return
     from tree_sitter import Language
 
     pth = Path(__file__).parent / "rst.so"
