@@ -1512,7 +1512,11 @@ class Gen:
 
                 blbs[key] = blob
         for k, b in blbs.items():
-            self.docs[k] = b.to_json()
+            try:
+                self.docs[k] = b.to_json()
+            except Exception as e:
+                e.add_note(f"serializing {k}")
+                raise
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
 
