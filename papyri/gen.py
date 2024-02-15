@@ -1411,7 +1411,7 @@ class Gen:
         # TODO fix this if plt.close not called and still a lingering figure.
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         if len(fig_managers) != 0:
-            self.log.debug(f"Unclosed figures in %s!!", qa)
+            self.log.debug("Unclosed figures in %s!!", qa)
             plt.close("all")
 
         return processed_example_data(example_section_data), doctest_runner.figs
