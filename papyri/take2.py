@@ -201,7 +201,7 @@ class SubstitutionDef(UnserializableNode):
 
 class SubstitutionRef(UnserializableNode):
     """
-    This will be in the for \|XXX\|, and need to be replaced.
+    This will be in the for \\|XXX\\|, and need to be replaced.
     """
 
     value: str
