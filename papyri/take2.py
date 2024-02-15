@@ -587,7 +587,7 @@ class SeeAlsoItem(Node):
     name: Link
 
     # TODO: Chck why we hav a Union Here, and if we have only Paragraphs, remove the union.
-    descriptions: List[Union[MParagraph]]
+    descriptions: List[Union[MParagraph, MComment]]
     # there are a few case when the lhs is `:func:something`... in scipy.
     type: Optional[str]
 
