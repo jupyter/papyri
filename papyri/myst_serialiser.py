@@ -17,6 +17,9 @@ base_types = {int, str, bool, type(None)}
 
 
 def serialize(instance, annotation):
+    assert not getattr(
+        instance, "_dont_serialise", None
+    ), f"Should not have to serialize {instance}"
     try:
         if annotation in base_types:
             # print("BASE", instance)

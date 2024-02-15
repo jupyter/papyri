@@ -209,6 +209,9 @@ class SubstitutionRef(UnserializableNode):
     def __init__(self, value):
         self.value = value
 
+    def to_json(self):
+        assert False
+
 
 @register(4018)
 class Unimplemented(Node):

@@ -1389,8 +1389,15 @@ class Gen:
                     docstring=example_code,
                 )
                 if config.execute_doctests:
-                    doctest_runner.run(doctests, out=debugprint, clear_globs=False)
-                    doctest_runner.globs.update(doctests.globs)
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore",
+                            "FigureCanvasAgg is non-interactive.*",
+                            UserWarning,
+                        )
+
+                        doctest_runner.run(doctests, out=debugprint, clear_globs=False)
+                        doctest_runner.globs.update(doctests.globs)
                     example_section_data.extend(
                         doctest_runner.get_example_section_data()
                     )
@@ -1404,7 +1411,7 @@ class Gen:
         # TODO fix this if plt.close not called and still a lingering figure.
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         if len(fig_managers) != 0:
-            print_(f"Unclosed figures in {qa}!!")
+            self.log.debug(f"Unclosed figures in %s!!", qa)
             plt.close("all")
 
         return processed_example_data(example_section_data), doctest_runner.figs
@@ -1528,7 +1535,11 @@ class Gen:
         """
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
-            (where / "module" / (k + ".json")).write_bytes(v.to_json())
+            try:
+                (where / "module" / (k + ".json")).write_bytes(v.to_json())
+            except Exception as e:
+                e.add_note(f"serializing {k}")
+                raise
 
     def partial_write(self, where):
         self.write_api(where)

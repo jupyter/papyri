@@ -444,7 +444,8 @@ class Ingester:
                 )
 
             except Exception as e:
-                raise RuntimeError(f"error writing to {path}") from e
+                e.add_note(f"error writing to {path} {key}")
+                raise
 
     def relink(self) -> None:
         gstore = self.gstore
