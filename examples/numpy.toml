@@ -90,3 +90,6 @@ docspage = 'https://numpy.org/doc/1.26/'
 [global.expected_errors]
 VisitCitationReferenceNotImplementedError = ["numpy.fft"]
 
+[global.substitution_definitions]
+version = '1.2.3'
+

@@ -99,6 +99,8 @@ from .vref import NumpyDocString
 # delayed import
 if True:
     from .myst_ast import MText
+    from .myst_ast import ReplaceNode
+    from .myst_ast import MParagraph
 
 
 class ErrorCollector:
@@ -433,6 +435,7 @@ class Config:
     fail_unseen_error: bool = False
     execute_doctests: bool = True
     directives: Dict[str, str] = dataclasses.field(default_factory=lambda: {})
+    substitution_definitions: Dict[str, str] = dataclasses.field(default_factory=dict)
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -1456,6 +1459,18 @@ class Gen:
         trees = {}
         title_map = {}
         blbs = {}
+        global_substitutions = {}
+        for k, v in self.config.substitution_definitions.items():
+            res = ts.parse(v.encode(), qa="global_substitution")
+            # HERE are some assumptions as we are parsing a "full document" with tree sitter
+            # this is going to give a single Section with a single paragraph.
+            sec: Section
+            [sec] = res
+            assert isinstance(sec, Section)
+            [par] = sec.children
+            assert isinstance(par, MParagraph)
+            par: MParagraph
+            global_substitutions["|" + k + "|"] = [ReplaceNode(k, v, par.children)]
         with self.progress() as p2:
             task = p2.add_task("Parsing narrative", total=len(files))
 
@@ -1477,11 +1492,16 @@ class Gen:
                 blob = DocBlob.new()
                 key = ":".join(parts)[:-4]
                 try:
+                    from copy import copy
+
+                    G = copy(global_substitutions)
+                    G.update({})
+                    ref_set: frozenset[RefInfo] = frozenset({})
                     dv = DVR(
                         key,
-                        set(),
+                        ref_set,
                         local_refs=set(),
-                        substitution_defs={},
+                        substitution_defs=G,
                         aliases={},
                         version=self._meta["version"],
                         config=self.config.directives,

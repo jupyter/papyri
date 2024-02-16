@@ -313,8 +313,8 @@ class Ingester:
                 f"TBD (examples, {path}), supposed to be QA",
                 known_refs,
                 set(),
-                {},
-                aliases,
+                substitution_defs={},
+                aliases=aliases,
                 version=version,
                 config={},
             )

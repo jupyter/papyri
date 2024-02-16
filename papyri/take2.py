@@ -207,6 +207,8 @@ class SubstitutionRef(UnserializableNode):
     value: str
 
     def __init__(self, value):
+        assert value.startswith("|")
+        assert value.endswith("|")
         self.value = value
 
     def to_json(self):

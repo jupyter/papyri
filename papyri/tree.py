@@ -8,7 +8,7 @@ import logging
 
 from collections import Counter, defaultdict
 from functools import lru_cache
-from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
+from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable, Union
 
 from .take2 import (
     Directive,
@@ -533,12 +533,15 @@ class DirectiveVisiter(TreeReplacer):
 
     """
 
+    substitution_defs: Dict[str, Union[ReplaceNode, MImage]]
+
     def __init__(
         self,
         qa: str,
         known_refs: FrozenSet[RefInfo],
         local_refs,
         substitution_defs,
+        *,
         aliases,
         version,
         config=None,
