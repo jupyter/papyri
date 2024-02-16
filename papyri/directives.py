@@ -68,5 +68,18 @@ def versionchanged_handler(argument, options, content):
     return admonition_helper("versionchanged", argument, options, content)
 
 
+def unicode_handler(argument, options, content):
+    # likely need some checks that this is indeed a Unicode char
+    return [MText(chr(int("0x" + argument[2:], 0)))]
+
+
+def replace_hander(argument, options, content):
+    # Here we likely want to parse the content/argument and recurse.
+    # which might change slightly the API.
+    # I think here if necessary we return an unprocessedDirective,
+    # and the TSVisitor should recurs with generic_visit ?
+    return [MText(argument)]
+
+
 def deprecated_handler(argument, options, content):
     return admonition_helper("deprecated", argument, options, content)

@@ -79,6 +79,7 @@ from .take2 import (
     RefInfo,
     Section,
     SeeAlsoItem,
+    SubstitutionDef,
     parse_rst_section,
 )
 from .toc import make_tree
@@ -98,6 +99,8 @@ from .vref import NumpyDocString
 # delayed import
 if True:
     from .myst_ast import MText
+    from .myst_ast import ReplaceNode
+    from .myst_ast import MParagraph
 
 
 class ErrorCollector:
@@ -432,6 +435,7 @@ class Config:
     fail_unseen_error: bool = False
     execute_doctests: bool = True
     directives: Dict[str, str] = dataclasses.field(default_factory=lambda: {})
+    substitution_definitions: Dict[str, str] = dataclasses.field(default_factory=dict)
 
     def replace(self, **kwargs):
         return dataclasses.replace(self, **kwargs)
@@ -1388,8 +1392,15 @@ class Gen:
                     docstring=example_code,
                 )
                 if config.execute_doctests:
-                    doctest_runner.run(doctests, out=debugprint, clear_globs=False)
-                    doctest_runner.globs.update(doctests.globs)
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore",
+                            "FigureCanvasAgg is non-interactive.*",
+                            UserWarning,
+                        )
+
+                        doctest_runner.run(doctests, out=debugprint, clear_globs=False)
+                        doctest_runner.globs.update(doctests.globs)
                     example_section_data.extend(
                         doctest_runner.get_example_section_data()
                     )
@@ -1403,7 +1414,7 @@ class Gen:
         # TODO fix this if plt.close not called and still a lingering figure.
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         if len(fig_managers) != 0:
-            print_(f"Unclosed figures in {qa}!!")
+            self.log.debug("Unclosed figures in %s!!", qa)
             plt.close("all")
 
         return processed_example_data(example_section_data), doctest_runner.figs
@@ -1448,6 +1459,18 @@ class Gen:
         trees = {}
         title_map = {}
         blbs = {}
+        global_substitutions = {}
+        for k, v in self.config.substitution_definitions.items():
+            res = ts.parse(v.encode(), qa="global_substitution")
+            # HERE are some assumptions as we are parsing a "full document" with tree sitter
+            # this is going to give a single Section with a single paragraph.
+            sec: Section
+            [sec] = res
+            assert isinstance(sec, Section)
+            [par] = sec.children
+            assert isinstance(par, MParagraph)
+            par: MParagraph
+            global_substitutions["|" + k + "|"] = [ReplaceNode(k, v, par.children)]
         with self.progress() as p2:
             task = p2.add_task("Parsing narrative", total=len(files))
 
@@ -1469,10 +1492,16 @@ class Gen:
                 blob = DocBlob.new()
                 key = ":".join(parts)[:-4]
                 try:
+                    from copy import copy
+
+                    G = copy(global_substitutions)
+                    G.update({})
+                    ref_set: frozenset[RefInfo] = frozenset({})
                     dv = DVR(
                         key,
-                        set(),
+                        ref_set,
                         local_refs=set(),
+                        substitution_defs=G,
                         aliases={},
                         version=self._meta["version"],
                         config=self.config.directives,
@@ -1503,7 +1532,11 @@ class Gen:
 
                 blbs[key] = blob
         for k, b in blbs.items():
-            self.docs[k] = b.to_json()
+            try:
+                self.docs[k] = b.to_json()
+            except Exception as e:
+                e.add_note(f"serializing {k}")
+                raise
 
         self._doctree = {"tree": make_tree(trees), "titles": title_map}
 
@@ -1526,7 +1559,11 @@ class Gen:
         """
         (where / "module").mkdir(exist_ok=True)
         for k, v in self.data.items():
-            (where / "module" / (k + ".json")).write_bytes(v.to_json())
+            try:
+                (where / "module" / (k + ".json")).write_bytes(v.to_json())
+            except Exception as e:
+                e.add_note(f"serializing {k}")
+                raise
 
     def partial_write(self, where):
         self.write_api(where)
@@ -1931,6 +1968,7 @@ class Gen:
                     example.name,
                     frozenset(),
                     local_refs=frozenset(),
+                    substitution_defs={},
                     aliases={},
                     version=self.version,
                     config=self.config.directives,
@@ -2255,20 +2293,46 @@ class Gen:
                             if new_ref:
                                 _local_refs = _local_refs + new_ref
 
+            # substitution_defs: Dict[str, Union(MImage, ReplaceNode)] = {}
+            substitution_defs = {}
+            sections = []
+            for section in doc_blob.sections:
+                sections.append(doc_blob.content.get(section, []))
+            # arbitrary is usually raw RST that typically is a module docstring that can't be
+            # parsed by numpydoc
+            sections.extend(arbitrary)
+            for section in sections:
+                for child in section:
+                    if isinstance(child, SubstitutionDef):
+                        if child.value in substitution_defs:
+                            self.log.warn(
+                                "The same substitution definition was found twice: %s",
+                                child.value,
+                            )
+                        substitution_defs[child.value] = child.children
+
+            if substitution_defs:
+                self.log.debug(
+                    "Found substitution def for %s : %s", qa, substitution_defs
+                )
+
             # def flat(l) -> List[str]:
             #    return [y for x in l for y in x]
             for lr1 in _local_refs:
                 assert isinstance(lr1, str)
             # lr: FrozenSet[str] = frozenset(flat(_local_refs))
             lr: FrozenSet[str] = frozenset(_local_refs)
+
             dv = DVR(
                 qa,
                 known_refs,
                 local_refs=lr,
+                substitution_defs=substitution_defs,
                 aliases={},
                 version=self.version,
                 config=self.config.directives,
             )
+
             doc_blob.arbitrary = [dv.visit(s) for s in arbitrary]
             doc_blob.example_section_data = dv.visit(doc_blob.example_section_data)
             doc_blob._content = {k: dv.visit(v) for (k, v) in doc_blob._content.items()}

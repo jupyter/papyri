@@ -6,6 +6,8 @@ exclude = [
     'numpy:tensordot',
     # See https://github.com/jupyter/papyri/issues/361'
     'numpy.ma.core:MaskedArray.resize',
+    # Contain a table that messes up the substitution ref
+    'numpy:isscalar'
 ]
 
 execute_exclude_patterns = [
@@ -87,4 +89,7 @@ docspage = 'https://numpy.org/doc/1.26/'
 
 [global.expected_errors]
 VisitCitationReferenceNotImplementedError = ["numpy.fft"]
+
+[global.substitution_definitions]
+version = '1.2.3'
 

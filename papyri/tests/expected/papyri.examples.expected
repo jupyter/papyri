@@ -142,27 +142,9 @@ now.
 
 ### Substitutions
 
-In this paragraph:
-{
-  "type": "SubstitutionRef",
-  "value": "|SubstitutionRef|"
-} Should be
-replaced...
+In this paragraph: ASUBSTITUTIONDEF Should be replaced...
 
-{
-  "type": "SubstitutionDef",
-  "value": "|SubstitutionDef|",
-  "children": [
-    {
-      "type": "mystDirective",
-      "name": "replace",
-      "args": "ASUBSTITUTIONDEF",
-      "options": {},
-      "value": "",
-      "children": []
-    }
-  ]
-}## Quotes
+## Quotes
 
 Quotes are not implemented yet in the parser, this section below will appear
 empty

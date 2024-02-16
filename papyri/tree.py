@@ -8,7 +8,7 @@ import logging
 
 from collections import Counter, defaultdict
 from functools import lru_cache
-from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable
+from typing import Any, Dict, FrozenSet, List, Set, Tuple, Callable, Union
 
 from .take2 import (
     Directive,
@@ -22,11 +22,13 @@ from .myst_ast import (
     MLink,
     MText,
     MList,
+    MImage,
     MListItem,
     MInlineMath,
     MInlineCode,
     MCode,
     MParagraph,
+    ReplaceNode,
     UnprocessedDirective,
 )
 from .utils import full_qual, FullQual, Cannonical, obj_from_qualname
@@ -36,6 +38,8 @@ from .directives import (
     note_handler,
     versionadded_handler,
     versionchanged_handler,
+    unicode_handler,
+    replace_hander,
     deprecated_handler,
     warning_handler,
 )
@@ -259,13 +263,17 @@ def resolve_(
 
 
 class TreeVisitor:
+    """
+    Checks or modifies nodes in place.
+    """
+
     def __init__(self, find):
         self.skipped = set()
         self.find = find
 
     def generic_visit(self, node):
         from .take2 import Options
-        from .myst_ast import MThematicBreak
+        from .myst_ast import MThematicBreak, MImage
 
         name = node.__class__.__name__
         if method := getattr(self, "visit_" + name, None):
@@ -296,12 +304,13 @@ class TreeVisitor:
                     for k, v in self.generic_visit(c).items():
                         acc.setdefault(k, []).extend(v)
             return acc
-
         elif hasattr(node, "value"):
             if type(node) not in self.skipped:
                 self.skipped.add(type(node))
             return {}
-        elif isinstance(node, (RefInfo, Options, MThematicBreak, SubstitutionDef)):
+        elif isinstance(
+            node, (RefInfo, Options, MThematicBreak, SubstitutionDef, MImage)
+        ):
             return {}
         else:
             raise ValueError(f"{node.__class__} has no children, no values {node}")
@@ -332,6 +341,10 @@ class TreeReplacer:
         return method(node)
 
     def generic_visit(self, node) -> List[Node]:
+        """
+        Detects node type and dispatches to "visit_<type>" or "replace_<type>"
+        methods.
+        """
         assert node is not None
         assert not isinstance(node, str)
         assert isinstance(node, Node), node
@@ -345,6 +358,7 @@ class TreeReplacer:
             if method := getattr(self, "replace_" + name, None):
                 self._replacements.update([name])
                 new_nodes = self._call_method(method, node)
+
             elif name in [
                 "Code",
                 "Comment",
@@ -354,6 +368,7 @@ class TreeReplacer:
                 "Link",
                 "MCode",
                 "MComment",
+                "MImage",
                 "MInlineCode",
                 "MInlineMath",
                 "MImage",
@@ -365,6 +380,7 @@ class TreeReplacer:
                 "SeeAlsoItem",
                 "SubstitutionRef",
                 "Unimplemented",
+                "ReplaceNode",
             ]:
                 return [node]
             else:
@@ -517,11 +533,15 @@ class DirectiveVisiter(TreeReplacer):
 
     """
 
+    substitution_defs: Dict[str, Union[ReplaceNode, MImage]]
+
     def __init__(
         self,
         qa: str,
         known_refs: FrozenSet[RefInfo],
         local_refs,
+        substitution_defs,
+        *,
         aliases,
         version,
         config=None,
@@ -550,6 +570,8 @@ class DirectiveVisiter(TreeReplacer):
             "versionadded": versionadded_handler,
             "versionchanged": versionchanged_handler,
             "deprecated": deprecated_handler,
+            "unicode": unicode_handler,
+            "replace": replace_hander,
         }
 
         for k, v in config.items():
@@ -557,6 +579,7 @@ class DirectiveVisiter(TreeReplacer):
 
         self.known_refs = frozenset(known_refs)
         self.local_refs = frozenset(local_refs)
+        self.substitution_defs = substitution_defs
         self.qa = qa
         self.local: List[str] = []
         self.total: List[Tuple[Any, str]] = []
@@ -645,7 +668,7 @@ class DirectiveVisiter(TreeReplacer):
                 directive.options,
                 directive.value,
             )
-            assert isinstance(res, list)
+            assert isinstance(res, list), (res, meth)
             acc = []
             for a in res:
                 # I believe here we may want to wrap things in Paragraph  and comact words ?
@@ -660,14 +683,47 @@ class DirectiveVisiter(TreeReplacer):
         return [MMystDirective.from_unprocessed(directive)]
 
     def replace_MMystDirective(self, myst_directive: MMystDirective):
+        """
+        Detects MyST directives that are not handled, and adds them to the
+        list of missing directives.
+        """
         meth = getattr(self, "_" + myst_directive.name + "_handler", None)
         if meth:
-            assert False, "shod have gone vian unprocessed"
+            assert False, "should have gone via unprocessed"
         if myst_directive.name not in _MISSING_DIRECTIVES:
             _MISSING_DIRECTIVES.append(myst_directive.name)
             log.debug("TODO: %s", myst_directive.name)
 
         return [myst_directive]
+
+    def replace_SubstitutionDef(self, node):
+        """
+        This node should be removed since the actual reference has already been
+        resolved.
+        """
+        return []
+
+    def replace_SubstitutionRef(self, directive):
+        # Return the corresponding substitution definition.
+        # TODO: This should be either Text (from the replace directive) or
+        # an image (from the image directive.)
+        if directive.value in self.substitution_defs:
+            if isinstance(self.substitution_defs[directive.value][0], ReplaceNode):
+                assert len(self.substitution_defs[directive.value][0].children) == 1
+                return self.generic_visit(
+                    self.substitution_defs[directive.value][0].children[0]
+                )
+
+            elif isinstance(self.substitution_defs[directive.value][0], MImage):
+                return [self.substitution_defs[directive.value][0]]
+            else:
+                raise NotImplementedError(
+                    f"SubstitutionDef for custom inline directive "
+                    f"{self.substitution_defs[directive.value][0]} "
+                    "not implemented."
+                )
+        else:
+            return [directive]
 
     def _resolve(self, loc, text):
         """
@@ -692,6 +748,9 @@ class DirectiveVisiter(TreeReplacer):
                 return target_qa
 
     def replace_Directive(self, directive: Directive):
+        """
+        Returns a new node to replace the directive.
+        """
         domain, role = directive.domain, directive.role
         if domain is None:
             domain = "py"

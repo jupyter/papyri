@@ -24,7 +24,14 @@ exclude = [
     "scipy.stats._continuous_distns:crystalball_gen._pdf",
     
     # assert len(tsc) in (0, 1), (tsc, data)
-    "scipy.io.matlab._mio5"
+    "scipy.io.matlab._mio5",
+
+    # non quoted ||u|| lead to substitution ref
+    "scipy.linalg._decomp_update:qr_insert",
+    "scipy.stats._ksstats:kolmogn",
+    "scipy.optimize._trustregion:BaseQuadraticSubproblem.get_boundaries_intersections",
+    "scipy.sparse.linalg._expm_multiply:LazyOperatorNormInfo.d"
+
             ]
 exclude_jedi = [
     "scipy.linalg._sketches.clarkson_woodruff_transform",

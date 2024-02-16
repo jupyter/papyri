@@ -123,9 +123,20 @@ This is q block quote, to do, we know that Attributions are not supported right 
 Substitutions
 ~~~~~~~~~~~~~
 
-In this paragraph: |SubstitutionRef| Should be replaced...
+In this paragraph: |ALIAS| Should be replaced...
 
-.. |SubstitutionDef| replace:: ASUBSTITUTIONDEF
+.. |ALIAS| replace:: -- SUBSTITUTION works--
+
+Substitutions should support a |WIDE|, |VARIETY|, |OF|, |REPLACEMENT|
+
+.. |WIDE| replace:: modules links like: :mod:`papyri`
+
+.. |VARIETY| replace:: text formatting with _italics_ and **bold**
+
+.. |OF| image:: inline images are likely to not work,
+
+.. |REPLACEMENT| unicode:: U+2665
+
 
 
 

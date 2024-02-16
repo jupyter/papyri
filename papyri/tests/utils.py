@@ -25,6 +25,7 @@ def _process(sample: Path):
         str(sample),
         frozenset(),
         local_refs=set(),
+        substitution_defs={},
         aliases={},
         version="TestSuite",
         config={},

@@ -81,6 +81,19 @@ class Node(Base):
         )
 
 
+class UnserializableNode(Node):
+    _dont_serialise = True
+
+    def cbor(self, encoder):
+        assert False, self
+
+    def to_json(self) -> bytes:
+        assert False, self
+
+    def to_dict(self):
+        assert False, self
+
+
 TAG_MAP: Dict[Any, int] = {}
 REV_TAG_MAP: Dict[int, Any] = {}
 
