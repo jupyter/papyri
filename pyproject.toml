@@ -24,7 +24,6 @@ dependencies = [
     "rich",
     "tomli_w",
     "typer>=0.9",
-    "urwid",
     "velin",
     # "tree_sitter", # tree sitter does not currently provide builds for all platform. tree-sitter-builds is an
     # alternative build that provide more wheels.

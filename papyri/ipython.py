@@ -6,33 +6,32 @@ from IPython.core.magic import Magics, line_magic, magics_class
 # The class MUST call this class decorator at creation time
 @magics_class
 class Papyri(Magics):
+    
     @line_magic
     def pinfo(self, parameter_s="", namespaces=None):
         """Provide detailed information about an object.
 
         '%pinfo object' is just a synonym for object? or ?object."""
 
-        from papyri.browser import main
+        from papyri.textual import main
         from papyri.gen import full_qual
 
         pinfo, qmark1, oname, qmark2 = re.match(
             r"(pinfo )?(\?*)(.*?)(\??$)", parameter_s
         ).groups()
 
-        if _ := main(parameter_s):
-            return
-        else:
-            parts_1 = oname.split(".")
-            other = []
-            name, *other = parts_1
 
-            obj = self.shell.user_ns.get(name, None)
-            for o in other:
-                obj = getattr(obj, o)
-            if obj is not None:
-                qa = full_qual(obj)
-                if _ := main(qa):
-                    return
+        parts_1 = oname.split(".")
+        other = []
+        name, *other = parts_1
+
+        obj = self.shell.user_ns.get(name, None)
+        for o in other:
+            obj = getattr(obj, o)
+        if obj is not None:
+            qa = full_qual(obj)
+            if _ := main(qa):
+                return
 
         # print 'pinfo par: <%s>' % parameter_s  # dbg
         # detail_level: 0 -> obj? , 1 -> obj??
