@@ -1388,6 +1388,12 @@ class Gen:
                     docstring=example_code,
                 )
                 if config.execute_doctests:
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore",
+                            message="is non-interactive, and thus cannot be shown",
+                            category=UserWarning,
+                        )
                     doctest_runner.run(doctests, out=debugprint, clear_globs=False)
                     doctest_runner.globs.update(doctests.globs)
                     example_section_data.extend(
@@ -1403,7 +1409,7 @@ class Gen:
         # TODO fix this if plt.close not called and still a lingering figure.
         fig_managers = _pylab_helpers.Gcf.get_all_fig_managers()
         if len(fig_managers) != 0:
-            print_(f"Unclosed figures in {qa}!!")
+            # print_(f"Unclosed figures in {qa}!!")
             plt.close("all")
 
         return processed_example_data(example_section_data), doctest_runner.figs

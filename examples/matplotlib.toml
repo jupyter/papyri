@@ -17,6 +17,12 @@ execute_exclude_patterns = [
  "matplotlib._api:check_isinstance",
  "matplotlib._api:check_in_list",
  "matplotlib._api:check_getitem",
+ # examples are not meant to be executed, 
+ # contain undefined variables
+ "matplotlib.axes._axes:Axes.text"
+ # Method in example used as standalone function,-> missing self
+ "matplotlib.axes._axes:Axes.axhline"
+ "matplotlib.axes._axes:Axes.axvline"
    ]
 examples_exclude = [
 # jedi inference issue

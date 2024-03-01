@@ -8,7 +8,6 @@ exclude = [ "dask.utils:Dispatch",
             # target not implemented
             'dask.highlevelgraph:HighLevelGraph.visualize',
             'dask.array.overlap:map_overlap',
-            'dask.order:graph_metrics',
             # AssertionError : Serialisation proble
             "dask.array.routines:matmul",
             "dask.array.routines:rot90",
