@@ -21,7 +21,7 @@ execute_exclude_patterns = [
  # contain undefined variables
  "matplotlib.axes._axes:Axes.text"
  # Method in example used as standalone function,-> missing self
- "matplotlib.axes._axes:Axes.axhline"
+ "matplotlib.axes._axes:Axes.axhline",
  "matplotlib.axes._axes:Axes.axvline"
    ]
 examples_exclude = [
