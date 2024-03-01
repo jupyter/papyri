@@ -174,7 +174,7 @@ import typer
 
 from . import examples  # noqa
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 logo = r"""
   ___                    _
