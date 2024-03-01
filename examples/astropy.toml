@@ -1,7 +1,7 @@
 [global]
 module = 'astropy'
 logo = "img/astropy_project_logo.svg"
-exclude = [             "astropy.utils.misc:OrderedDescriptorContainer",
+exclude = [
                         # VisitTargetNotImplementedError
                         "astropy.utils.data:download_file",
                         #"ExecError-<class 'ValueError'>": [
