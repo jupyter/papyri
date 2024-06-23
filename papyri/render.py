@@ -1470,7 +1470,7 @@ async def rich_render(
     )
     try:
         for it in _rich_render(key, store):
-            console.print(it)
+            console.print(str(type(it)))
     except Exception as e:
         e.add_note(f"rendering {key=}")
         raise
