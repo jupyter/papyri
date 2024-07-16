@@ -175,7 +175,7 @@ class RichVisitor:
         return self.generic_visit(node.children)
 
     def visit_MInlineCode(self, node):
-        return RToken(node.value, "m.inline_code").partition()
+        return RToken(node.value, "cyan").partition()
 
     def visit_MList(self, node):
         return [pad(RichBlocks(self.generic_visit(node.children), "mlist"))]
@@ -200,7 +200,7 @@ class RichVisitor:
             content += f":{node.role}:"
         content += f"`{node.value}`"
 
-        return RToken(content, "m.directive").partition()
+        return RToken(content, "cyan").partition()
 
     def visit_MLink(self, node):
         return self.generic_visit(node.children)
@@ -234,9 +234,9 @@ class RichVisitor:
 
     def visit_Param(self, node):
         cs = [
-            RToken(node.param, "param"),
+            RToken(node.param, "cyan"),
             RToken(" : "),
-            RToken(node.type_, "param_type"),
+            RToken(node.type_, "cyan"),
             RToken("\n"),
         ]
         sub = self.generic_visit(node.desc)

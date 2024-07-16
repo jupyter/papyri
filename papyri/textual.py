@@ -56,13 +56,12 @@ class Signature(Label):
 
 
 class Body(Static):
-    def __init__(self, title=None, body=None):
+    def __init__(self, item):
         super().__init__()
-        self.title = title
-        self.body = body
+        self.item = item
 
     def render(self) -> RenderResult:
-        return f"{self.title}: \n {self.body}"
+        return self.item
 
 
 class PapyriApp(App):
@@ -73,27 +72,32 @@ class PapyriApp(App):
     ]
     CSS_PATH = Path("static/papyri.tcss")
 
-    def run(self, qualname=None, blob=None, **kwargs):
-        self.qualname = qualname
-        self.blob = blob
+    def run(self, name, **kwargs):
+        from papyri.graphstore import GraphStore
+        from papyri.render import _rich_render
+        store = GraphStore(ingest_dir, {})
+        key = next(iter(store.glob((None, None, "module", name))))
+
+        self.things =  _rich_render(key, store)
         super().run(**kwargs)
 
     def compose(self) -> ComposeResult:
         """
         Renders the layout on screen.
         """
+        from rich.console import Group
 
-        if self.blob.signature:
-            signature = self.blob.signature
-        else:
-            signature = None
+        #if self.blob.signature:
+        #    signature = self.blob.signature
+        #else:
+        #    signature = None
         # content = str(self.blob.content)
 
         yield Container(
             Header(),
-            Signature(qualname=self.qualname, signature=signature),
+            #Signature(qualname=self.qualname, signature=signature),
             VerticalScroll(
-                *[Body(title=k, body=v) for k, v in self.blob.content.items()]
+                *[Body(t) for t in self.things]
             ),
             Footer(),
         )
@@ -124,18 +128,9 @@ def guess_load(qualname):
 
 
 def main(qualname: str):
-    if not isinstance(qualname, str):
-        from types import ModuleType
-
-        if isinstance(qualname, ModuleType):
-            qualname = qualname.__name__
-        else:
-            qualname = qualname.__module__ + "." + qualname.__qualname__
-
-    blob = guess_load(qualname)
 
     app = PapyriApp()
-    app.run(qualname, blob)
+    app.run(qualname)
 
 
 def setup() -> None:
