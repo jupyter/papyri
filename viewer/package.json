@@ -24,7 +24,7 @@
   "dependencies": {
     "@astrojs/node": "^10.0.5",
     "@astrojs/react": "^5.0.0",
-    "astro": "^6.1.6",
+    "astro": "^6.1.10",
     "better-sqlite3": "^12.9.0",
     "cbor-x": "^1.6.4",
     "katex": "^0.16.45",
