@@ -24,7 +24,7 @@
     "@node-rs/argon2": "^2.0.2",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.1",
-    "astro": "^6.1.10",
+    "astro": "^6.4.6",
     "better-sqlite3": "^12.9.0",
     "cbor-x": "^1.6.4",
     "katex": "^0.16.45",
