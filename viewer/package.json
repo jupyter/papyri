@@ -23,7 +23,7 @@
     "@astrojs/react": "^5.0.0",
     "@node-rs/argon2": "^2.0.2",
     "@simplewebauthn/browser": "^13.3.0",
-    "@simplewebauthn/server": "^13.3.1",
+    "@simplewebauthn/server": "^13.3.2",
     "astro": "^6.1.10",
     "better-sqlite3": "^12.9.0",
     "cbor-x": "^1.6.4",
