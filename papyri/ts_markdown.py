@@ -314,12 +314,52 @@ class MarkdownVisitor:
         title = tuple(self.visit_inline_fragment(inline)) if inline is not None else ()
         return [Section([], self._strip_title(title), level=level)]
 
-    @staticmethod
-    def _strip_title(title: tuple[Any, ...]) -> tuple[Any, ...]:
-        """Drop the trailing whitespace Text node, matching ``visit_section``."""
-        if title and title[-1] == Text(" "):
-            return title[:-1]
-        return title
+    def _strip_title(self, title: tuple[Any, ...]) -> tuple[Any, ...]:
+        """Normalise heading inline content into valid ``Section.title``.
+
+        Drops the trailing whitespace ``Text`` node (matching
+        ``ts.visit_section``) and removes images, which ``PhrasingContent``
+        excludes on purpose: a badge appended to an H1
+        (``# Project ![CI](badge.svg)``) is decoration, not part of the
+        heading, and a title is projected to a plain string for slugs and
+        tab labels.
+        """
+        nodes = self._without_images(list(title))
+        # Trailing whitespace is either the gap the inline grammar leaves at
+        # the end of a heading, or what a stripped trailing badge left behind.
+        while nodes and isinstance(nodes[-1], Text):
+            trimmed = nodes[-1].value.rstrip()
+            if trimmed:
+                nodes[-1] = Text(trimmed)
+                break
+            nodes.pop()
+        return tuple(nodes)
+
+    def _without_images(self, nodes: list[Any]) -> list[Any]:
+        """Recursively drop ``Image`` nodes, descending through wrappers.
+
+        A link-wrapped badge (``[![CI](badge.svg)](ci-url)``) reaches a title
+        through ``Link``, so stripping only the top level is not enough.  A
+        wrapper left empty is dropped with it: a link whose entire content
+        was a badge is decoration, and keeping it would put a bare URL in the
+        heading text.
+        """
+        out: list[Any] = []
+        for node in nodes:
+            if isinstance(node, Image):
+                self._drop("image_in_heading")
+                continue
+            if isinstance(node, Link):
+                children = self._without_images(list(node.children))
+                if children:
+                    out.append(Link(tuple(children), node.url, node.title))
+            elif isinstance(node, Emphasis | Strong):
+                children = self._without_images(list(node.children))
+                if children:
+                    out.append(type(node)(tuple(children)))
+            else:
+                out.append(node)
+        return out
 
     def _code_body(self, node: Any) -> str:
         content = [
@@ -382,6 +422,13 @@ def _parse_cached(text: bytes) -> tuple[list[Section], tuple[tuple[str, int], ..
     error-reporting metadata and does not affect the result, so the warning it
     labels is emitted by the caller rather than from inside the cache.
     """
+    # tree-sitter-markdown's block grammar needs a terminating line ending:
+    # without one the *whole document* parses as a single ERROR node and
+    # yields no sections at all.  CommonMark treats end-of-input as ending
+    # the final line, so normalising here matches the spec rather than
+    # papering over it.
+    if text and not text.endswith(b"\n"):
+        text = text + b"\n"
     tree = block_parser.parse(text)
     visitor = MarkdownVisitor(text)
     visitor.collect_link_defs(tree.root_node)

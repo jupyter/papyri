@@ -455,7 +455,7 @@ class Paragraph(Node):
     """Block-level paragraph containing inline content."""
 
     type = "paragraph"
-    children: tuple[PhrasingContent | UnimplementedInline, ...]
+    children: tuple[ParagraphContent | UnimplementedInline, ...]
 
 
 @register(4053)
@@ -675,9 +675,11 @@ class Target(Node):
 class Image(Node):
     """Image.  ``url`` is the asset path; ``alt`` is the alt text.
 
-    Both block-level (RST ``.. image::``) and inline (markdown
-    ``![alt](url)``), hence its presence in ``PhrasingContent`` as well as
-    ``FlowContent``.
+    Block-level from RST (``.. image::`` is a directive) and inline from
+    markdown (``![alt](url)``).  It is therefore in ``FlowContent``,
+    ``ParagraphContent`` and ``LinkContent`` — but *not* in
+    ``PhrasingContent``, which would also make it legal in a
+    ``Section.title``.
     """
 
     type = "image"
@@ -1188,11 +1190,18 @@ StaticPhrasingContent: TypeAlias = (
     | Unimplemented
 )
 
-PhrasingContent: TypeAlias = StaticPhrasingContent | Emphasis | Strong | Link | Image
+PhrasingContent: TypeAlias = StaticPhrasingContent | Emphasis | Strong | Link
 
 # Link text: everything inline except a nested Link, which markdown and RST
-# both forbid.
+# both forbid.  ``Image`` is admitted because ``[![badge](img)](url)`` is in
+# nearly every README.
 LinkContent: TypeAlias = StaticPhrasingContent | Emphasis | Strong | Image
+
+# Paragraph body: phrasing plus ``Image``.  Markdown's ``![alt](url)`` is
+# genuinely inline and can sit mid-sentence, but ``Image`` is deliberately
+# kept out of ``PhrasingContent`` itself so it cannot appear in a
+# ``Section.title``.
+ParagraphContent: TypeAlias = PhrasingContent | Image
 
 FlowContent: TypeAlias = (
     Code

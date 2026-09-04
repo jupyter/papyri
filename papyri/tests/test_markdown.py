@@ -151,7 +151,7 @@ def test_inline_image() -> None:
 
 def test_badge_image_inside_link() -> None:
     """``[![badge](img)](url)`` — ubiquitous in READMEs, and the reason
-    ``Image`` had to become valid phrasing content."""
+    ``Image`` is admitted to ``LinkContent``."""
     (paragraph,) = _body("[![License](badge.svg)](https://example.com/license)")
     assert paragraph.children[0] == Link(
         (Image("badge.svg", "License"),), "https://example.com/license", ""
@@ -280,6 +280,41 @@ def test_frontmatter_is_dropped() -> None:
 
 def test_empty_document() -> None:
     assert parse(b"", "test") == []
+
+
+def test_document_without_trailing_newline() -> None:
+    """The block grammar turns a document whose last line has no line ending
+    into a single ERROR node, losing every section.  ``parse`` normalises the
+    input instead, matching CommonMark's treatment of end-of-input."""
+    [section] = parse(b"# Plain", "test")
+    assert section_title_text(section.title) == "Plain"
+
+    [section] = parse(b"text only", "test")
+    assert section.children == (Paragraph((Text("text only"),)),)
+
+
+def test_image_is_stripped_from_heading() -> None:
+    """``Image`` is deliberately absent from ``PhrasingContent``, so a badge
+    appended to a heading cannot be represented — it is decoration, and the
+    title is projected to a plain string for slugs and tab labels."""
+    [section] = _parse("# AST Types ![CI](badge.svg)")
+    assert section.title == (Text("AST Types"),)
+
+
+def test_badge_link_is_stripped_from_heading() -> None:
+    """A link whose entire content was a badge goes with it, rather than
+    leaving a bare URL behind in the heading text."""
+    [section] = _parse("# Project [![CI](badge.svg)](https://ci.example.com)")
+    assert section.title == (Text("Project"),)
+
+
+def test_real_link_survives_in_heading() -> None:
+    [section] = _parse("# See [the docs](https://example.com) first")
+    assert section.title == (
+        Text("See "),
+        Link((Text("the docs"),), "https://example.com", ""),
+        Text(" first"),
+    )
 
 
 def test_gen_visitor_accepts_markdown_ir() -> None:
