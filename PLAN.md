@@ -146,6 +146,11 @@ layers. Do not write CBOR into the bundle directory or JSON into the artifact.
 
 - RST parsing uses `py-tree-sitter-rst` (PyPI) on top of `tree-sitter >= 0.24`.
   Do not reintroduce `tree_sitter_languages` or `tree-sitter-language-pack`.
+- Markdown parsing uses `tree-sitter-markdown` (PyPI) on the same
+  `tree-sitter` runtime. It ships *two* grammars — `language()` (block) and
+  `inline_language()` — and the inline one emits no text nodes, so plain
+  prose is the byte gap between named children. `papyri/ts_markdown.py`
+  handles both facts; see its module docstring.
 - `numpy`, `scipy`, `astropy`, `IPython` in the CI matrix drift frequently;
   pin each matrix entry to a known-good version or xfail with a reason.
 - TypeScript is split across two packages (Microsoft's documented TS 7
@@ -221,6 +226,21 @@ layers. Do not write CBOR into the bundle directory or JSON into the artifact.
     *measured* problem.
 
 ## Open work — Gen (Python)
+
+- **Wire markdown narrative sources into `papyri gen`.** `papyri/ts_markdown.py`
+  parses CommonMark into the same `list[Section]` IR that `papyri/ts.py`
+  produces from RST, but nothing calls it yet. To finish the feature:
+  `_scan_narrative_sources` / `collect_narrative_docs` (`papyri/gen.py`) glob
+  `**/*.rst` only, and need a suffix dispatch plus a markdown counterpart to
+  `_extract_rst_targets` — markdown has no `.. _label:`, so cross-doc anchors
+  have to come from heading slugs, and the doc-key derivation (`[:-4]` for
+  `.rst`) is suffix-specific. Deliberately kept out of the parser PR: the
+  anchor scheme is a design decision, not plumbing.
+  Scope note: this covers *limited markdown inclusions* (READMEs,
+  changelogs, short narrative pages). Directives have no markdown spelling —
+  MyST's `:::{note}` belongs to the second-producer experiment below, not
+  here. Raw HTML is dropped with a warning per the no-raw-HTML invariant,
+  which is the main fidelity loss on real-world READMEs.
 
 - **Typed qa forms (NewType) instead of ambiguous strings.** At least three
   string shapes travel through gen/tree under the name "qa" and are told

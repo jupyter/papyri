@@ -181,6 +181,7 @@ papyri/                   Python package (IR producer + CLI)
   node_serializer.py      CBOR serialization for nodes
   serde.py                Generic dataclass round-trip (JSON or CBOR)
   ts.py                   tree-sitter RST parser wrapper
+  ts_markdown.py          tree-sitter Markdown parser (same list[Section] output)
   tree.py                 RST→IR visitor (directive handlers live here)
   ingested_doc.py         IngestedDoc (CBOR tag 4010) — deserialization for CLI readers
   graphstore.py           Python graphstore (read-only; write side is TS)
@@ -303,6 +304,10 @@ the graphstore and blob store is rebuildable via `POST /api/reingest`.
 - RST parsing uses `py-tree-sitter-rst` (PyPI) on top of `tree-sitter >= 0.24`.
   The parser is constructed via `tree_sitter.Parser(tree_sitter.Language(tree_sitter_rst.language()))`.
   Do not reintroduce `tree_sitter_languages` or `tree-sitter-language-pack`.
+- Markdown parsing uses `tree-sitter-markdown` (PyPI) on the same runtime.
+  It ships two grammars (`language()` for blocks, `inline_language()` for
+  inline), and the inline grammar emits no text nodes — prose is the byte gap
+  between named children. `papyri/ts_markdown.py` handles both.
 - The bundle directory (`papyri gen` output) is JSON — intentionally
   human-readable. CBOR starts at `papyri pack`. Do not write CBOR into the
   bundle directory, and do not write JSON into the `.papyri` artifact or
@@ -390,6 +395,7 @@ See `viewer/PLAN.md` for the detailed milestone tracker.
 - IR gen: `papyri/gen.py`.
 - RST→IR visitor + directive handlers: `papyri/tree.py`.
 - RST parsing via tree-sitter: `papyri/ts.py`.
+- Markdown parsing via tree-sitter: `papyri/ts_markdown.py`.
 - IR node types: `papyri/nodes.py`, `papyri/node_base.py`.
 - Cross-link read access: `papyri/ingested_doc.py`, `papyri/graphstore.py`.
 - Ingest engine: `ingest/src/ingest.ts`.

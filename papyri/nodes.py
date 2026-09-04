@@ -404,10 +404,16 @@ class Strong(Node):
 @register(4049)
 class Link(Node):
     """Inline hyperlink.  ``url`` is the destination; ``title`` is the
-    hover text (empty string when absent)."""
+    hover text (empty string when absent).
+
+    Children are the full inline vocabulary rather than only the static
+    subset: markdown link text routinely nests emphasis and images
+    (``[**bold** link](url)``, ``[![badge](img)](url)``), which RST's
+    hyperlink syntax cannot express.
+    """
 
     type = "link"
-    children: tuple[StaticPhrasingContent, ...]
+    children: tuple[LinkContent, ...]
     url: str
     title: str
 
@@ -667,7 +673,12 @@ class Target(Node):
 
 @register(4062)
 class Image(Node):
-    """Inline image.  ``url`` is the asset path; ``alt`` is the alt text."""
+    """Image.  ``url`` is the asset path; ``alt`` is the alt text.
+
+    Both block-level (RST ``.. image::``) and inline (markdown
+    ``![alt](url)``), hence its presence in ``PhrasingContent`` as well as
+    ``FlowContent``.
+    """
 
     type = "image"
     url: str
@@ -1177,7 +1188,11 @@ StaticPhrasingContent: TypeAlias = (
     | Unimplemented
 )
 
-PhrasingContent: TypeAlias = StaticPhrasingContent | Emphasis | Strong | Link
+PhrasingContent: TypeAlias = StaticPhrasingContent | Emphasis | Strong | Link | Image
+
+# Link text: everything inline except a nested Link, which markdown and RST
+# both forbid.
+LinkContent: TypeAlias = StaticPhrasingContent | Emphasis | Strong | Image
 
 FlowContent: TypeAlias = (
     Code

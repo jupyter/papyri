@@ -22,6 +22,7 @@ dependencies = [
     "tomli_w",
     "tree-sitter>=0.24",
     "py-tree-sitter-rst>=0.2.2",
+    "tree-sitter-markdown>=0.5.1",
     "typer>=0.9",
 ]
 
