@@ -1481,7 +1481,7 @@ class DirectiveVisiter(TreeReplacer):
                     kind="module",
                     path=target_qa,
                 )
-                return [CrossRef(text, ri, "module")]
+                return [self._ref_to_crossref(text, ri, "module")]
         role_desc = directive.role or "(default)"
         # Bare backticks (no explicit role) are routinely used for variable
         # names; Sphinx's autolink default role degrades to plain text

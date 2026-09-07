@@ -68,8 +68,6 @@ function dispositionName(filename: string): string {
   return safe.length > 0 ? safe : "asset";
 }
 
-export const prerender = false;
-
 export const GET: APIRoute = async ({ params }) => {
   const { pkg, ver, asset } = params;
   if (!pkg || !ver || !asset) {
