@@ -19,7 +19,7 @@ execute_doctests = true
 execute_exclude_patterns = [
    'IPython.core.display_functions:display'
 ]
-submodules = ['lib.deepreload', 'lib.demo']
+submodules = ['lib.deepreload', 'lib.demo', 'core.guarded_eval','terminal.embed', 'core.debugger','terminal.debugger']
 
 exclude = []
 # Exclude Sphinx-generated API stubs and build artefacts that are not
