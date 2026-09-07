@@ -1315,6 +1315,15 @@ Findings are filed as open work above; what landed in this pass:
 - `assertBundle` deep shape validation (`bundle.ts`).
 
 ### Viewer
+- Static snapshot of the whole store: `PAPYRI_STATIC=1 pnpm build:static`
+  prerenders every public page of every ingested bundle into `dist/client/`.
+  Astro renders the same templates in both modes; only URL *enumeration* is
+  new (`lib/static-paths.ts`, walking the graph + blob store). Dynamic
+  islands, query-string endpoints, the diff form and all auth/admin routes
+  are omitted, not shimmed (`isStaticBuild()`, `lib/static.ts`).
+  `scripts/check-static-links.mjs` fails CI if a template links to a page no
+  enumerator emitted. Follow-ups (sub-path hosting, `/latest/` deep links,
+  build scale) in `viewer/PLAN.md`.
 - Async storage+graph layer: `BlobStore`/`GraphDb`/`RawStore`, built per-request
   by `backends.ts`; pages call `getBackends()`; xref batched per page.
 - In-process upload `PUT /api/bundle` (gunzip → CBOR decode → `ingestBundle`);

@@ -27,6 +27,7 @@ import { extname } from "node:path";
 import type { APIRoute } from "astro";
 import { loadAsset } from "../../../../../lib/ir-reader.ts";
 import { getBackends } from "../../../../../lib/backends.ts";
+import { assetParams } from "../../../../../lib/static-paths.ts";
 import { slugToQualname } from "../../../../../lib/slugs.ts";
 import { isSafeSegment } from "../../../../../lib/paths.ts";
 
@@ -50,6 +51,11 @@ const SECURITY_HEADERS: Record<string, string> = {
   "x-content-type-options": "nosniff",
 };
 
+// Every URL this route serves, for the static build. Ignored in server mode,
+// where routes are rendered on demand.
+export async function getStaticPaths() {
+  return (await assetParams(await getBackends())).map((params) => ({ params }));
+}
 /**
  * Reduce an asset filename to something safe to interpolate into a
  * `Content-Disposition` header. Anything outside the safe set — including

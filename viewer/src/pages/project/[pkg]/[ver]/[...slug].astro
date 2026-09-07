@@ -7,6 +7,7 @@ import {
 } from "../../../../lib/ir-reader.ts";
 import { getBackrefs } from "../../../../lib/graph.ts";
 import { getBackends } from "../../../../lib/backends.ts";
+import { qualnameParams } from "../../../../lib/static-paths.ts";
 import { buildQualnamePageView } from "../../../../lib/qualname-page.ts";
 import { buildXrefResolver } from "../../../../lib/xref.ts";
 import { linkForBundle, linkForQualname } from "../../../../lib/links.ts";
@@ -17,8 +18,13 @@ import Signature from "../../../../components/Signature.astro";
 import InlineMemberDoc from "../../../../components/InlineMemberDoc.astro";
 import QualnameDocSections from "../../../../components/QualnameDocSections.astro";
 import BundleLayout from "../../../../layouts/BundleLayout.astro";
+import { isStaticBuild } from "../../../../lib/static.ts";
 
-export const prerender = false;
+// Every URL this route serves, for the static build. Ignored in server mode,
+// where routes are rendered on demand.
+export async function getStaticPaths() {
+  return (await qualnameParams(await getBackends())).map((params) => ({ params }));
+}
 
 const { pkg, ver, slug } = Astro.params;
 
@@ -109,7 +115,9 @@ const hasMembers = memberGroups.some((g) => g.items.length > 0);
 
 // Inlinable = non-private members from all groups except Submodules.
 // The server:defer islands on InlineMemberDoc fetch these individually in the
-// background after the parent page has responded.
+// background after the parent page has responded. A static snapshot has no
+// server to fetch from, so there they are rendered eagerly instead — same
+// component, same output, just paid for at build time.
 const inlineItems = memberGroups
   .filter((g) => g.title !== "Submodules")
   .flatMap((g) => g.items)
@@ -207,18 +215,30 @@ const crumbs = qualnameAncestors(qualname).map((qa) => ({
         )}
         {inlineItems.length > 0 ? (
           <div class="inline-members-list">
-            {inlineItems.map((item) => (
-              <InlineMemberDoc
-                server:defer
-                pkg={pkg}
-                ver={actualVer}
-                qualname={item.qualname}
-                label={item.label}
-                href={item.href}
-                githubSlug={githubSlug}
-                sourceRef={sourceRef}
-              />
-            ))}
+            {inlineItems.map((item) =>
+              isStaticBuild() ? (
+                <InlineMemberDoc
+                  pkg={pkg}
+                  ver={actualVer}
+                  qualname={item.qualname}
+                  label={item.label}
+                  href={item.href}
+                  githubSlug={githubSlug}
+                  sourceRef={sourceRef}
+                />
+              ) : (
+                <InlineMemberDoc
+                  server:defer
+                  pkg={pkg}
+                  ver={actualVer}
+                  qualname={item.qualname}
+                  label={item.label}
+                  href={item.href}
+                  githubSlug={githubSlug}
+                  sourceRef={sourceRef}
+                />
+              )
+            )}
           </div>
         ) : null}
       </section>

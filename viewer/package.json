@@ -8,6 +8,8 @@
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",
+    "build:static": "PAPYRI_STATIC=1 astro build",
+    "check:static-links": "node scripts/check-static-links.mjs",
     "preview": "astro preview",
     "serve": "node ./dist/server/entry.mjs",
     "astro": "astro",
@@ -15,8 +17,9 @@
     "lint": "eslint src --ext .ts,.tsx,.astro",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run tests/",
+    "test:watch": "vitest tests/",
+    "seed-store": "vitest run scripts/seed-store.test.ts"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.5",

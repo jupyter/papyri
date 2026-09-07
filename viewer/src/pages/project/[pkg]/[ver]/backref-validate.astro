@@ -1,9 +1,14 @@
 ---
-export const prerender = false;
+// Every URL this route serves, for the static build. Ignored in server mode,
+// where routes are rendered on demand.
+export async function getStaticPaths() {
+  return (await bundleParams(await getBackends())).map((params) => ({ params }));
+}
 
 import BundleLayout from "../../../../layouts/BundleLayout.astro";
 import { resolveVersion } from "../../../../lib/ir-reader.ts";
 import { getBackends } from "../../../../lib/backends.ts";
+import { bundleParams } from "../../../../lib/static-paths.ts";
 import { getBrokenBackrefs, type BrokenBackref } from "../../../../lib/graph.ts";
 import { linkForBundle, linkForRef } from "../../../../lib/links.ts";
 

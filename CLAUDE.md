@@ -54,7 +54,9 @@ latency on it was far too high.
   long-running Node.js server (`@astrojs/node`, `output: "server"`) for both
   local dev (`pnpm dev`) and the hosted VPS deployment (`pnpm build` + `pnpm
   serve`). When building the viewer, think about what the hosted service will
-  need.
+  need. `PAPYRI_STATIC=1 pnpm build:static` renders the
+  whole ingested store to static HTML instead — the same templates, with URLs
+  enumerated by `src/lib/static-paths.ts`; see `viewer/PLAN.md`.
 - There is no Python-side rendering. Do not add any.
 
 ## Audience
@@ -362,6 +364,7 @@ the graphstore and blob store is rebuildable via `POST /api/reingest`.
 | `PAPYRI_INGEST_DB` | viewer | SQLite graph DB (default `~/.papyri/ingest/papyri.db`) |
 | `PAPYRI_AUTH_DB` | viewer | SQLite auth DB — users, sessions, roles, projects, memberships, upload tokens; separate from the graph store (default `~/.papyri/auth.db`) |
 | `PAPYRI_SITE` | viewer build | Canonical external origin for canonical-URL generation behind a reverse proxy |
+| `PAPYRI_STATIC` | viewer build | `1` builds a static snapshot (`pnpm build:static`) instead of the SSR server: every public page of every ingested bundle is prerendered into `dist/client/`. Dynamic islands, the diff form, the raw-IR link and all auth/admin routes are omitted. |
 | `PAPYRI_USERNAME` / `PAPYRI_PASSWORD` | viewer | Seed an initial admin user into the auth DB on first run (only when no users exist) |
 | `PAPYRI_DEV_SEED` | viewer | Seed a demo admin (`admin`/`password`) when the auth DB is empty: `1` forces (even in a build), `0` disables; unset = on under `pnpm dev` only |
 | `PAPYRI_VERSION` | `papyri upload` | Overrides the `papyri-upload/<version>` User-Agent string |

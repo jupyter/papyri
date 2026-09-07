@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly PAPYRI_BUILD_COMMIT: string;
   /** Astro adapter baked in at build time (currently always "node"). */
   readonly PAPYRI_BUILD_ADAPTER: string;
+  /** True while rendering a static snapshot (`PAPYRI_STATIC=1`). See lib/static.ts. */
+  readonly PAPYRI_STATIC_BUILD: boolean;
   /** Copyright line in the site footer. Footer hidden when all PAPYRI_FOOTER_* are unset. */
   readonly PAPYRI_FOOTER_COPYRIGHT: string;
   /** "Privacy policy" link URL in the site footer. */

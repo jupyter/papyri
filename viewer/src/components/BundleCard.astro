@@ -6,6 +6,7 @@
 import { loadBundleNav } from "../lib/nav.ts";
 import { getBackends } from "../lib/backends.ts";
 import { linkForBundle, linkForPkg } from "../lib/links.ts";
+import { urlVersionForLatest } from "../lib/static.ts";
 
 interface Props {
   pkg: string;
@@ -21,7 +22,7 @@ const nav = await loadBundleNav(blobStore, pkg, latest);
 const docCount = nav.docs.length + nav.tutorials.length;
 const exampleCount = nav.examples.length;
 const summary = typeof nav.meta.summary === "string" ? nav.meta.summary : null;
-const docsHref = linkForBundle(pkg, "latest");
+const docsHref = linkForBundle(pkg, urlVersionForLatest(latest));
 const detailHref = linkForPkg(pkg);
 ---
 

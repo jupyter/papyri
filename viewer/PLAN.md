@@ -143,6 +143,40 @@ exploration and are kept because they stand on their own:
       hands it to `Ingester.ingestBundle(node)` — no temp dir, no `tar`
       spawn. Write path uses subquery-based link inserts so a single
       `db.batch([…])` is atomic.
+- [x] **Static snapshot of the whole store.** `PAPYRI_STATIC=1` flips
+      `output` to `"static"`; each public route's `getStaticPaths` returns
+      an enumerator from `src/lib/static-paths.ts`, which walks the graph
+      and blob store (a crawler cannot reach pages nothing links to).
+      Astro renders the *same* templates in both modes, so the two cannot
+      diverge in content; the only mode-dependent code is
+      `isStaticBuild()` in `src/lib/static.ts`, and every use of it drops
+      an affordance that needs a live server rather than changing how
+      anything renders. `scripts/check-static-links.mjs` (run in CI)
+      fails if any emitted page links to a page no enumerator produced.
+
+      Omitted from a snapshot, by decision: every dynamic island (per-bundle
+      and global text search, the node browser), the query-string endpoints
+      behind them, the raw-IR link, the version diff form, and all
+      auth/admin/upload routes. Class members render eagerly because
+      `server:defer` has no server to defer to. `/latest/` is not emitted —
+      cards link concrete versions, since aliasing would mean a second full
+      copy of the largest bundle.
+
+      Open follow-ups:
+      - **Sub-path hosting.** `linkFor*` emits root-absolute paths, so a
+        snapshot only works at a domain root. Needs a `withBase()` pass over
+        `src/lib/links.ts` (plus the literal `href="/"` / `/favicon.png` /
+        island fetch URLs that bypass it today) before `base` can be honoured.
+      - **`/latest/` deep links.** Nothing serves them in a snapshot. Cheapest
+        fix: a redirect script in `404.astro` that reads a prerendered
+        `bundles.json` — needs a host that serves `404.html`.
+      - **Build scale.** Measured only on a one-bundle store (571 pages, ~5s).
+        A numpy+scipy+matplotlib store is the real test; `BundleLayout` runs
+        several SQLite queries per page and eager members double the render
+        work for class-heavy bundles.
+      - **`file://` browsing** is not achievable: browsers block `fetch()`
+        from `file://`, so any data-loading island is dead there. Serve with
+        `python -m http.server -d dist/client`.
 - [x] **Raw bundle archive.** Every `PUT /api/bundle` archives the
       compressed `.papyri.gz` bytes to `_raw/<pkg>/<ver>.papyri.gz`
       (`<ingest-dir>/_raw/` on the filesystem) before ingest runs.
@@ -171,11 +205,12 @@ exist today, and there is no Cloudflare adapter, `wrangler.toml`, or
 
 ## Open questions
 
-- Static export: **parked** (decided 2026-07). Not an active deployment
-  target — the SSR server is the only story, and "static export hardening"
-  is off the open-work list. Worth re-adding later as a *local,
-  single-project* mode: a static snapshot is a good way to debug one
-  project's docs without running the full service.
+- Static export: **un-parked and implemented** (2026-09), whole-store
+  rather than the single-project mode the parked note imagined.
+  `PAPYRI_STATIC=1 pnpm build:static` prerenders every public page of every
+  ingested bundle to `dist/client/`. The SSR server remains the deployment
+  target; the snapshot is a second consumer of the same templates, not a
+  fork of them. Remaining questions are listed under Milestones below.
 - Encoding convergence: if everything moves to a single encoding (CBOR or
   JSON), `ir-reader` gets simpler. Until then it handles both.
 - IR-drift policy: pin a "known-good" IR version, or accept best-effort

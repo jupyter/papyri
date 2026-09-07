@@ -4,10 +4,16 @@
 import { listIngestedPackages, type IngestedPackage } from "../../../lib/ir-reader.ts";
 import { loadBundleNav } from "../../../lib/nav.ts";
 import { getBackends } from "../../../lib/backends.ts";
+import { packageParams } from "../../../lib/static-paths.ts";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import { linkForBundle, linkForDiff } from "../../../lib/links.ts";
+import { isStaticBuild, urlVersionForLatest } from "../../../lib/static.ts";
 
-export const prerender = false;
+// Every URL this route serves, for the static build. Ignored in server mode,
+// where routes are rendered on demand.
+export async function getStaticPaths() {
+  return (await packageParams(await getBackends())).map((params) => ({ params }));
+}
 
 const { pkg } = Astro.params;
 if (!pkg) return new Response("Not found", { status: 404 });
@@ -177,7 +183,7 @@ const defaultTo = entry.versions[0]!;
               rows.map((r) => {
                 const isLatest = r.version === entry.latest;
                 const browseHref = isLatest
-                  ? linkForBundle(pkg, "latest")
+                  ? linkForBundle(pkg, urlVersionForLatest(entry.latest))
                   : linkForBundle(pkg, r.version);
                 return (
                   <tr>
@@ -202,7 +208,7 @@ const defaultTo = entry.versions[0]!;
       </section>
 
       {
-        entry.versions.length >= 2 ? (
+        entry.versions.length >= 2 && !isStaticBuild() ? (
           <section class="diff-picker">
             <h2>Compare versions</h2>
             <form method="get" action={linkForDiff(pkg)}>

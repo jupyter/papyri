@@ -13,6 +13,7 @@ import { getBackends } from "../lib/backends.ts";
 import { getVersionStatus, equivalentLatestHref } from "../lib/version-utils.ts";
 import { getVersionDigests } from "../lib/graph.ts";
 import { linkForBundle, linkForQualname, linkForDoc, linkForExample } from "../lib/links.ts";
+import { isStaticBuild } from "../lib/static.ts";
 import "../styles/global.css";
 
 interface Props {
@@ -44,8 +45,9 @@ const {
   rawKind,
   rawPath,
 } = Astro.props;
+// The raw-IR endpoint is query-string driven, so it has no static form.
 const rawJsonHref =
-  rawKind && rawPath
+  rawKind && rawPath && !isStaticBuild()
     ? `/api/${pkg}/${ver}/raw.json?kind=${rawKind}&path=${encodeURIComponent(rawPath)}`
     : null;
 const { blobStore, graphDb } = await getBackends();

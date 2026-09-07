@@ -4,6 +4,7 @@
 
 import type { BlobStore, GraphDb } from "papyri-ingest";
 import { collectImages, type FoundImgNode } from "./ir-reader.ts";
+import { linkForAsset } from "./links.ts";
 import { walkBundle, type PageRef } from "./bundle-walk.ts";
 
 export type { PageRef };
@@ -58,7 +59,7 @@ export async function collectBundleImages(
       if (ref?.kind === "assets" && ref.module && ref.version && ref.path) {
         const found: FoundImgNode = {
           kind: "Figure",
-          src: `/assets/${ref.module}/${ref.version}/${String(ref.path).replace(/:/g, "$")}`,
+          src: linkForAsset(ref.module, ref.version, String(ref.path)),
           assetPath: String(ref.path),
         };
         const page: PageRef = {

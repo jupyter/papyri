@@ -5,13 +5,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import BundleCard from "../components/BundleCard.astro";
 import BundleGridSearch from "../components/BundleGridSearch.tsx";
 import { isAuthenticated } from "../lib/auth.ts";
-
-export const prerender = false;
+import { isStaticBuild } from "../lib/static.ts";
 
 const { graphDb } = await getBackends();
 const packages = await listIngestedPackages(graphDb);
 
-const authenticated = await isAuthenticated(Astro);
+const authenticated = isStaticBuild() ? false : await isAuthenticated(Astro);
+// Cross-bundle text search is a live query against every bundle; a snapshot
+// has no server to run it (see lib/static.ts).
+const showTextSearch = !isStaticBuild();
 
 const bundlesForFilter = packages.map((p) => ({
   pkg: p.pkg,
@@ -30,7 +32,13 @@ const bundlesForFilter = packages.map((p) => ({
         </>
       )
     }
-    <a href="/text-search/">Search text</a> across every bundle.
+    {
+      showTextSearch && (
+        <>
+          <a href="/text-search/">Search text</a> across every bundle.
+        </>
+      )
+    }
   </p>
 
   {

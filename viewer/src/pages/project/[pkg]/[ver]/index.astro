@@ -2,11 +2,16 @@
 import { loadBundleNav } from "../../../../lib/nav.ts";
 import { resolveVersion } from "../../../../lib/ir-reader.ts";
 import { getBackends } from "../../../../lib/backends.ts";
+import { bundleParams } from "../../../../lib/static-paths.ts";
 import { linkForBackrefValidate, linkForQualname, linkForValidate } from "../../../../lib/links.ts";
 import { countBrokenBackrefs } from "../../../../lib/graph.ts";
 import BundleLayout from "../../../../layouts/BundleLayout.astro";
 
-export const prerender = false;
+// Every URL this route serves, for the static build. Ignored in server mode,
+// where routes are rendered on demand.
+export async function getStaticPaths() {
+  return (await bundleParams(await getBackends())).map((params) => ({ params }));
+}
 
 const { pkg, ver } = Astro.params;
 if (!pkg || !ver) return new Response(null, { status: 404 });

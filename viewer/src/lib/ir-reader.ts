@@ -108,7 +108,7 @@ export async function listModules(
   for (const k of keys) {
     const rel = k.slice(prefix.length);
     if (!rel || rel.includes("/")) continue;
-    out.push(rel.endsWith(".cbor") ? rel.slice(0, -5) : rel);
+    out.push(rel);
   }
   out.sort();
   return out;
@@ -259,17 +259,11 @@ export async function loadModule(
   version: string,
   qualname: string
 ): Promise<IngestedDoc> {
-  // Ingester writes `module/<qualname>` (no .cbor) on the gen→ingest path,
-  // but older bundles or alternate writers may have used `.cbor`. Try both.
-  let bytes = await blobStore.get({ module: pkg, version, kind: "module", path: qualname });
-  if (!bytes) {
-    bytes = await blobStore.get({
-      module: pkg,
-      version,
-      kind: "module",
-      path: `${qualname}.cbor`,
-    });
-  }
+  // The blob path is the qualname verbatim (`Ingester.ingestBundle` stages
+  // `{ kind: "module", path: qa }`). There is no `.cbor` suffix to fall back
+  // to, and guessing one would shadow real qualnames: `papyri.node_base:Node`
+  // and the `Node.cbor` method both exist in papyri's own bundle.
+  const bytes = await blobStore.get({ module: pkg, version, kind: "module", path: qualname });
   if (!bytes) throw new Error(`module not found: ${pkg}/${version}/${qualname}`);
   const obj = decodeIR<IRNode>(bytes);
   if (obj && (obj as IRNode).__type === "IngestedDoc") {

@@ -58,18 +58,23 @@ describe("fs-facing helpers", () => {
     ]);
   });
 
-  it("listModules: missing module/ -> [], files listed, .cbor stripped", async () => {
+  it("listModules: missing module/ -> [], filenames are qualnames verbatim", async () => {
     const store = new FsBlobStore(dir);
     expect(await listModules(store, "pkg", "1.0")).toEqual([]);
 
     const modDir = join(dir, "pkg", "1.0", "module");
     await mkdir(modDir, { recursive: true });
-    await writeFile(join(modDir, "numpy.fft$fft"), "x");
-    await writeFile(join(modDir, "numpy.linalg$svd.cbor"), "x");
+    await writeFile(join(modDir, "papyri.node_base:Node"), "x");
+    // A method genuinely named `cbor`. Stripping a trailing ".cbor" would
+    // collapse this onto the class above and lose the page.
+    await writeFile(join(modDir, "papyri.node_base:Node.cbor"), "x");
     // Subdirectories are ignored (rel.includes("/")).
     await mkdir(join(modDir, "subdir"));
     await writeFile(join(modDir, "subdir", "ignored"), "x");
 
-    expect(await listModules(store, "pkg", "1.0")).toEqual(["numpy.fft$fft", "numpy.linalg$svd"]);
+    expect(await listModules(store, "pkg", "1.0")).toEqual([
+      "papyri.node_base:Node",
+      "papyri.node_base:Node.cbor",
+    ]);
   });
 });

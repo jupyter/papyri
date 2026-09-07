@@ -77,9 +77,12 @@ describe("loadModule (CBOR roundtrip)", () => {
     expect(s.return_annotation.__type).toBe("Empty");
   });
 
-  it("falls back to .cbor when the bare filename is absent", async () => {
+  it("reads the blob at the qualname verbatim, with no .cbor guessing", async () => {
+    // A qualname ending in ".cbor" is a real method, not a suffixed filename:
+    // guessing would make `pkg:bar` resolve to the `pkg:bar.cbor` page.
     const store = await writeBlob("pkg:bar.cbor", bytesBar);
-    expect((await loadModule(store, "pkg", "1.0", "pkg:bar")).qa).toBe("pkg:bar");
+    await expect(loadModule(store, "pkg", "1.0", "pkg:bar")).rejects.toThrow("module not found");
+    expect((await loadModule(store, "pkg", "1.0", "pkg:bar.cbor")).qa).toBe("pkg:bar");
   });
 
   it("wraps unregistered inner tags as UnknownNode", async () => {

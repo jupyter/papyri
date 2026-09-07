@@ -4,6 +4,7 @@
 // view-model in `nav.ts`; API is the per-bundle search island + the compact
 // qualname list.
 import BundleSearch from "./BundleSearch.tsx";
+import { isStaticBuild } from "../lib/static.ts";
 import BundleSidebarTocItem from "./BundleSidebarTocItem.astro";
 import DocSwitcher, { type VersionEntry } from "./DocSwitcher.tsx";
 import {
@@ -213,17 +214,37 @@ const expandedTocHrefs = collectExpandedHrefs(nav.toc, activeTocHref);
   <nav class="sidebar-section">
     <h3 class="sidebar-heading">Browse</h3>
     <ul class="sidebar-list sidebar-flat">
-      <li><a href={linkForTextSearch(nav.pkg, nav.version)}>Text search</a></li>
+      {
+        /* Text search and the node browser are live queries served by
+           islands; a snapshot omits them (see lib/static.ts). */
+        !isStaticBuild() && (
+          <li>
+            <a href={linkForTextSearch(nav.pkg, nav.version)}>Text search</a>
+          </li>
+        )
+      }
       <li><a href={linkForImages(nav.pkg, nav.version)}>Images</a></li>
-      <li><a href={linkForNodeType(nav.pkg, nav.version, "math")}>Math</a></li>
-      <li><a href={linkForNodeType(nav.pkg, nav.version, "code")}>Code</a></li>
-      <li><a href={linkForNodes(nav.pkg, nav.version)}>All nodes</a></li>
+      {
+        !isStaticBuild() && (
+          <>
+            <li>
+              <a href={linkForNodeType(nav.pkg, nav.version, "math")}>Math</a>
+            </li>
+            <li>
+              <a href={linkForNodeType(nav.pkg, nav.version, "code")}>Code</a>
+            </li>
+            <li>
+              <a href={linkForNodes(nav.pkg, nav.version)}>All nodes</a>
+            </li>
+          </>
+        )
+      }
     </ul>
   </nav>
 
   <nav class="sidebar-section sidebar-api">
     <h3 class="sidebar-heading">API</h3>
-    <BundleSearch client:load pkg={nav.pkg} ver={nav.version} />
+    {!isStaticBuild() && <BundleSearch client:load pkg={nav.pkg} ver={nav.version} />}
     <ul class="sidebar-list sidebar-qualnames">
       {
         apiTreeItems.map((item) => (

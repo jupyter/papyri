@@ -49,6 +49,17 @@ jobs:
       - name: Build (no bundles)
         run: pnpm --filter papyri-viewer run build
 
+      # Static snapshot of a real bundle. The link check is what stops the
+      # URLs templates emit and the URLs `lib/static-paths.ts` enumerates from
+      # drifting apart: a link to a page nothing enumerated fails here.
+      - name: Static build + link check
+        env:
+          PAPYRI_INGEST_DIR: ${{ runner.temp }}/papyri-ingest
+        run: |
+          pnpm --filter papyri-viewer run seed-store
+          pnpm --filter papyri-viewer run build:static
+          pnpm --filter papyri-viewer run check:static-links
+
   check-docker-build:
     runs-on: ubuntu-latest
     permissions:

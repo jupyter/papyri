@@ -5,9 +5,13 @@
 import SettingsMenu from "./SettingsMenu.tsx";
 import UserMenu from "./UserMenu.tsx";
 import { getSessionUser } from "../lib/auth.ts";
+import { isStaticBuild } from "../lib/static.ts";
 
-const user = await getSessionUser(Astro);
+// A static snapshot has no sessions: never read the session cookie, and drop
+// both the avatar menu and the login link (there is nothing to log in to).
+const user = isStaticBuild() ? null : await getSessionUser(Astro);
 const authenticated = user !== null;
+const showLogin = !isStaticBuild();
 ---
 
 <header class="site-header">
@@ -27,11 +31,11 @@ const authenticated = user !== null;
           isAdmin={user.is_admin}
           githubUsername={user.github_username}
         />
-      ) : (
+      ) : showLogin ? (
         <a href="/login" class="site-login-link">
           Login
         </a>
-      )
+      ) : null
     }
   </div>
 </header>

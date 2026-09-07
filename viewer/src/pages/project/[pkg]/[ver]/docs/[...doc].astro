@@ -10,13 +10,18 @@ import {
 } from "../../../../../lib/ir-reader.ts";
 import { buildDocPageView } from "../../../../../lib/doc-page.ts";
 import { getBackends } from "../../../../../lib/backends.ts";
+import { docParams } from "../../../../../lib/static-paths.ts";
 import { buildXrefResolver } from "../../../../../lib/xref.ts";
 import { loadBundleNav, flattenToc } from "../../../../../lib/nav.ts";
 import { linkForBundle, linkForDoc } from "../../../../../lib/links.ts";
 import IrNode from "../../../../../components/IrNode.astro";
 import BundleLayout from "../../../../../layouts/BundleLayout.astro";
 
-export const prerender = false;
+// Every URL this route serves, for the static build. Ignored in server mode,
+// where routes are rendered on demand.
+export async function getStaticPaths() {
+  return (await docParams(await getBackends())).map((params) => ({ params }));
+}
 
 const { pkg, ver, doc: docParam } = Astro.params;
 if (!pkg || !ver || !docParam) {
