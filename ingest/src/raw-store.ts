@@ -36,6 +36,8 @@ export interface RawStore {
    * removed. Idempotent — clearing an already-empty archive returns 0.
    */
   clear(): Promise<number>;
+  /** Remove one archived bundle (and its metadata). Idempotent. */
+  delete(pkg: string, ver: string): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +104,11 @@ export class FsRawStore implements RawStore {
     }
     results.sort((a, b) => a.pkg.localeCompare(b.pkg) || a.ver.localeCompare(b.ver));
     return results;
+  }
+
+  async delete(pkg: string, ver: string): Promise<void> {
+    await rm(this.fullPath(pkg, ver), { force: true });
+    await rm(this.metaPath(pkg, ver), { force: true });
   }
 
   async clear(): Promise<number> {

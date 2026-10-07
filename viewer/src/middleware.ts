@@ -23,6 +23,7 @@ const ADMIN_ONLY_PREFIXES = [
   "/api/ir-stats.json",
   "/api/clear",
   "/api/clear-raw",
+  "/api/delete-bundle",
   "/api/reingest",
   "/api/inventory",
   "/api/stats",
