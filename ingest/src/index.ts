@@ -25,6 +25,9 @@ export { isSafeUrl } from "./url-safety.js";
 
 export { collectForwardRefs, collectForwardRefsFromSection } from "./visitor.js";
 
+export { deleteBundle } from "./delete-bundle.js";
+export type { DeleteBundleResult } from "./delete-bundle.js";
+
 export { FsRawStore } from "./raw-store.js";
 export type { RawStore, RawMeta } from "./raw-store.js";
 

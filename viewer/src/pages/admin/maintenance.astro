@@ -5,17 +5,47 @@ import { getBackends } from "../../lib/backends.ts";
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import ReingestPanel from "../../components/ReingestPanel.tsx";
 import ClearGraphstoreButton from "../../components/ClearGraphstoreButton.tsx";
+import DeleteBundlePanel from "../../components/DeleteBundlePanel.tsx";
 import DropRawBundlesButton from "../../components/DropRawBundlesButton.tsx";
 
 export const prerender = false;
 
-const { rawStore } = await getBackends();
+const { rawStore, graphDb } = await getBackends();
 const rawEntries = await rawStore.list();
+const ingestedRows = await graphDb.all<{ module: string; version: string }>(
+  "SELECT module, version FROM bundles"
+);
+const bundleMap = new Map<
+  string,
+  { pkg: string; ver: string; ingested: boolean; archived: boolean }
+>();
+for (const r of ingestedRows) {
+  bundleMap.set(`${r.module}@${r.version}`, {
+    pkg: r.module,
+    ver: r.version,
+    ingested: true,
+    archived: false,
+  });
+}
+for (const r of rawEntries) {
+  const key = `${r.pkg}@${r.ver}`;
+  const e = bundleMap.get(key) ?? { pkg: r.pkg, ver: r.ver, ingested: false, archived: false };
+  e.archived = true;
+  bundleMap.set(key, e);
+}
+const bundleEntries = [...bundleMap.values()].sort(
+  (a, b) => a.pkg.localeCompare(b.pkg) || a.ver.localeCompare(b.ver)
+);
 ---
 
 <AdminLayout title="Admin · Maintenance — Papyri" active="maintenance">
   <section class="admin-section">
     <ReingestPanel client:load entries={rawEntries} />
+  </section>
+
+  <section class="admin-section">
+    <h2>Delete a bundle</h2>
+    <DeleteBundlePanel client:load entries={bundleEntries} />
   </section>
 
   <section class="admin-section">
