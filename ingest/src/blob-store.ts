@@ -43,6 +43,12 @@ export interface BlobStore {
    * already-empty store is a no-op.
    */
   clear(): Promise<number>;
+  /**
+   * Delete every blob (and meta.cbor) of one bundle, leaving other bundles and
+   * the raw archive alone. Returns the number of blobs deleted (excluding
+   * meta). Idempotent.
+   */
+  deleteBundle(module: string, version: string): Promise<number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +123,13 @@ export class FsBlobStore implements BlobStore {
       await rm(join(this.root, e.name), { recursive: true, force: true });
       count++;
     }
+    return count;
+  }
+
+  async deleteBundle(module: string, version: string): Promise<number> {
+    const dir = safeJoin(this.root, module, version);
+    const count = (await this.list(`${module}/${version}/`)).length;
+    await rm(dir, { recursive: true, force: true });
     return count;
   }
 
