@@ -93,7 +93,7 @@ jobs:
         sleep 1 # time for coverage to write its stuff
         papyri pack
         tree ~/.papyri/data
-    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
         name: doc-bundles-${{matrix.lib}}
         path: ~/.papyri/data/*.papyri
@@ -168,7 +168,7 @@ jobs:
         n=$(find "$bundle/docs" -type f | wc -l)
         echo "Narrative doc count: $n"
         test "$n" -gt 5 || { echo "expected >5 narrative docs, got $n"; exit 1; }
-    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
         name: doc-bundles-IPython-main
         path: ~/.papyri/data/*.papyri
