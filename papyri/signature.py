@@ -190,7 +190,7 @@ class Signature:
                     default=(
                         _empty
                         if param.default is inspect._empty
-                        else clean_hexaddress(str(param.default))
+                        else clean_hexaddress(repr(param.default))
                     ),
                 )
             )

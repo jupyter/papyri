@@ -45,13 +45,11 @@ export function annText(
 
 /**
  * Return the default value as a plain string, or null for Empty/missing.
- * An empty-string default renders as `''` so it stays visible — the IR stores
- * defaults as `str(value)`, which is the empty string for `param=""` and would
- * otherwise produce a blank ` = ` with nothing after it.
+ * The IR stores defaults as `repr(value)`, so string defaults keep their quotes.
  */
 export function defaultText(def: SigParamT["default"]): string | null {
   if (def == null) return null;
-  if (typeof def === "string") return def === "" ? "''" : def;
+  if (typeof def === "string") return def;
   return null;
 }
 
