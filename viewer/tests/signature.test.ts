@@ -4,13 +4,7 @@ import { annText, defaultText } from "../src/lib/signature.ts";
 describe("defaultText", () => {
   it("returns plain string defaults unchanged", () => {
     expect(defaultText("1")).toBe("1");
-    expect(defaultText("hi")).toBe("hi");
-  });
-
-  it("renders an empty-string default as '' so it stays visible", () => {
-    // The IR stores defaults as str(value); for `param=""` that is the empty
-    // string, which would otherwise render as a blank ` = ` with nothing after.
-    expect(defaultText("")).toBe("''");
+    expect(defaultText("'hi'")).toBe("'hi'");
   });
 
   it("returns null for Empty/missing defaults", () => {

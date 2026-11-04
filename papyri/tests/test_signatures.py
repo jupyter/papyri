@@ -425,3 +425,18 @@ def test_f1(func: Callable[..., Any]) -> None:
     )
     node_back = SignatureNode.from_json(bytes_)
     assert node_back == node
+
+
+def test_string_defaults_keep_quotes() -> None:
+    def func(sep=",", fill=" ", newline="\n", empty="", count=1, none=None):
+        pass
+
+    defaults = {p.name: p.default for p in SignatureObject(func).to_node().parameters}
+    assert defaults == {
+        "sep": "','",
+        "fill": "' '",
+        "newline": "'\\n'",
+        "empty": "''",
+        "count": "1",
+        "none": "None",
+    }
