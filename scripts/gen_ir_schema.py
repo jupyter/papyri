@@ -38,6 +38,7 @@ def _flatten(ann: typing.Any, out: set[str], inside_array: bool) -> bool:
     empty arrays show up as a 0-pill rather than going missing.
     """
     origin = typing.get_origin(ann)
+    print("Hello World2")
     if isinstance(ann, types.UnionType) or origin is typing.Union:
         is_array = False
         for arg in ann.__args__:
